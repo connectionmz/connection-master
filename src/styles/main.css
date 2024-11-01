@@ -1,0 +1,12 @@
+.link
+{
+    border:  1px solid #f1f1f1;
+    padding: 6px;
+    border-radius: 12px;
+}
+.bg-pink{
+    background-color: pink;
+}
+.bg-black{
+    background-color: #333;
+}
