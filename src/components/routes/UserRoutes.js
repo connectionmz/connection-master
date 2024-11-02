@@ -39,6 +39,9 @@ import Anunciar from '../Anunciar';
 import Propostas from '../Propostas';
 import DetalhesProposta from '../DetalhesProposta';
 import ConcursoDetalhes from '../ConcursoDetalhes';
+import CallCenterModule from '../CallCenterModule';
+import LogisticaModule from '../LogisticaModule';
+import InqueritosModule from '../InqueritosModule';
 
 const UserRoutes = ({ user }) => (
   <Routes>
@@ -80,6 +83,9 @@ const UserRoutes = ({ user }) => (
     <Route path="/analytics" element={<Analytics />} />
     <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesProposta />} />
     <Route path="/setup" element={<Home user={user} />} />
+    <Route path="/callcenter" element={<CallCenterModule />} />
+    <Route path="/logistica" element={<LogisticaModule />} />
+    <Route path="/inqueritos" element={<InqueritosModule />} />
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 )

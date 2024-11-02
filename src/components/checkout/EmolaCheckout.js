@@ -12,10 +12,41 @@ const EmolaCheckout = ({ planPrice, userDb }) => {
   const [notification, setNotification] = useState({ open: false, message: '', severity: '' });
 
   const planos = {
-    basico: { name: 'Básico', price: 250, modules: { moduloFaturacao: { limit: 10 }, moduloSMS: { limit: 25 } } },
-    pro: { name: 'Pro', price: 500, modules: { moduloFaturacao: { limit: 40 }, moduloSMS: { limit: 100 }, moduloMarket: { limit: 50 } } },
-    premium: { name: 'Premium', price: 750, modules: { moduloFaturacao: { limit: 'ilimitado' }, moduloSMS: { limit: 150 }, moduloMarket: { limit: 'ilimitado' }, moduloAnalytics: { limit: 'ilimitado' } } },
+    basico: {
+      name: 'Básico',
+      price: 300, 
+      modules: {
+        moduloFaturacao: { limit: 10 },
+        moduloSMS: { limit: 30 }, 
+      }
+    },
+    pro: {
+      name: 'Pro',
+      price: 600,
+      modules: {
+        moduloFaturacao: { limit: 40 },
+        moduloSMS: { limit: 200 },
+        moduloMarket: { limit: 'ilimitado' },
+        moduloInquerito: { limit: 20 },
+        moduloCallCenter: { limit: 50 },
+        moduloLogistica: { limit: 50 }
+      }
+    },
+    premium: {
+      name: 'Premium',
+      price: 900, 
+      modules: {
+        moduloFaturacao: { limit: 'ilimitado' },
+        moduloSMS: { limit: 'ilimitado' },
+        moduloMarket: { limit: 'ilimitado' },
+        moduloAnalytics: { limit: 'ilimitado' },
+        moduloInquerito: { limit: 'ilimitado' },
+        moduloCallCenter: { limit: 'ilimitado' },
+        moduloLogistica: { limit: 'ilimitado' }
+      }
+    },
   };
+  
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {

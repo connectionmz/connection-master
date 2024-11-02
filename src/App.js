@@ -7,7 +7,7 @@ import Header from './components/Header';
 import { ThemeProvider } from './context/ThemeContext';
 import Footer from './components/Footer';
 import { auth, db } from './fb';
-import { ref, get } from 'firebase/database'; 
+import { ref, get, set } from 'firebase/database'; 
 import ClipLoader from "react-spinners/ClipLoader"; 
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -36,7 +36,9 @@ const App = () => {
           endereco: companyData.endereco || 'Endereço da Empresa',
         });
 
-        setSubscriptionActive(companyData.status);
+        setSubscriptionActive(companyData.subscriptions.status);
+
+        await set(ref(db, `company/${user.uid}/lastLogin`), new Date().toISOString());
       } else {
         setSubscriptionActive(false);
       }
@@ -51,11 +53,7 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-       if(user){
         fetchUserDataAndSubscription(user);
-       }else{
-       window.location='/auth'
-       }
       } else {
         setUserData(null);
         setSubscriptionActive(false);

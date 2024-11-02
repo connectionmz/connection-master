@@ -1,21 +1,28 @@
 import { useNavigate } from 'react-router-dom';
-import { FaTools, FaReceipt, FaStore, FaSms, FaChartBar, FaAd } from 'react-icons/fa'; 
+import { FaTools, FaReceipt, FaStore, FaSms, FaChartBar, FaAd, FaPhone, FaTruck, FaPoll } from 'react-icons/fa';
 
 const ModuleGrid = ({ activeModules }) => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
+  // Todos os módulos possíveis
   const allModules = [
     { name: 'Analytics', link: '/analytics', icon: <FaChartBar size={40} />, key: 'moduloAnalytics' },
     { name: 'Proforma', link: '/faturacao', icon: <FaReceipt size={40} />, key: 'moduloFaturacao' },
     { name: 'Market', link: '/market', icon: <FaStore size={40} />, key: 'moduloMarket' },
     { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloCampaign' },
-    { name: 'SMS', link: '/sms', icon: <FaSms size={40} />, key: 'moduloSMS' }
+    { name: 'SMS', link: '/sms', icon: <FaSms size={40} />, key: 'moduloSMS' },
+    { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter' },
+    { name: 'Logística', link: '/logistica', icon: <FaTruck size={40} />, key: 'moduloLogistica' },
+    { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' }
   ];
 
+  // Filtrar módulos ativos
   const activeModulesArray = allModules.filter(module => activeModules[module.key]);
 
   const handleModuleClick = (module) => {
-    navigate(module.link); 
+    if (activeModules[module.key]) {
+      navigate(module.link);
+    }
   };
 
   return (
@@ -26,11 +33,11 @@ const ModuleGrid = ({ activeModules }) => {
           activeModulesArray.map((module) => (
             <div
               key={module.name}
-              className="flex flex-col items-center cursor-pointer"
-              onClick={() => handleModuleClick(module)} 
+              className="flex flex-col items-center cursor-pointer hover:bg-gray-200 p-4 rounded-md transition-all duration-150"
+              onClick={() => handleModuleClick(module)}
             >
               <div className="bg-gray-100 p-4 rounded-md">
-                {module.icon} 
+                {module.icon}
               </div>
               <p className="mt-2 text-sm text-gray-600">{module.name}</p>
             </div>

@@ -14,8 +14,6 @@ import { CameraAlt, ExitToApp } from '@mui/icons-material'
 const Apx = () => {
   const [userData, setUserData] = useState({}); 
   const [loading, setLoading] = useState(true);
-  const [availableModules, setAvailableModules] = useState(["Call Center", "Logística", "Inquérito"]);
-  const [selectedModule, setSelectedModule] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,25 +45,7 @@ const Apx = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  const handleAddModule = async () => {
-    if (!selectedModule) return;
-
-    // Garante que activeModules é um array
-    const updatedModules = [...(userData.activeModules || []), selectedModule];
-
-    try {
-      await update(ref(db, `company/${auth.currentUser.uid}`), {
-        activeModules: updatedModules
-      });
-      setUserData((prevData) => ({
-        ...prevData,
-        activeModules: updatedModules
-      }));
-      setSelectedModule("");
-    } catch (error) {
-      console.error("Error updating modules: ", error);
-    }
-  };
+ 
 
   const handleLogout = () => {
     signOut(auth).then(() => navigate('/auth')).catch((error) => console.error("Logout Error: ", error));
@@ -101,22 +81,7 @@ const Apx = () => {
       
       <ModuleGrid activeModules={userData.activeModules || []} />
 
-      <div className="my-4">
-        <select 
-          value={selectedModule} 
-          onChange={(e) => setSelectedModule(e.target.value)} 
-          className="w-full p-2 border rounded-lg">
-          <option value="">Selecione um módulo para adicionar</option>
-          {availableModules.map((module) => (
-            <option key={module} value={module}>{module}</option>
-          ))}
-        </select>
-        <button 
-          onClick={handleAddModule} 
-          className="w-full mt-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg shadow-md transition duration-300 ease-in-out">
-          Adicionar Módulo
-        </button>
-      </div>
+
 
       <div 
         className="w-full logout-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"

@@ -27,7 +27,7 @@ const Checkout = ({user}) => {
     const planos = {
       basico: {
         name: 'Básico',
-        price: 1,
+        price: 250,
       },
       pro: {
         name: 'Pro',
@@ -40,7 +40,6 @@ const Checkout = ({user}) => {
     };
 
     const selectedPlan = planos[plan?.toLowerCase()];
-    console.log(selectedPlan)
 
 
     if (selectedPlan) {
