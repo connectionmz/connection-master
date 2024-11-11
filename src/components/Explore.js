@@ -3,7 +3,7 @@ import { get, ref, onValue } from 'firebase/database';
 import { db } from '../fb';
 import { useNavigate } from 'react-router-dom';
 
-const Explore = () => {
+const Explore = ({user}) => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,10 +24,12 @@ const Explore = () => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const companyList = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
+          const companyList = Object.keys(data)
+            .map((key) => ({
+              id: key,
+              ...data[key],
+            }))
+            .filter(company => company.provincia === user && company?.subscriptions?.status); 
           setCompanies(companyList);
         }
       } catch (error) {
@@ -36,7 +38,7 @@ const Explore = () => {
         setLoading(false);
       }
     };
-
+    
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
     const tipoEntidadeRef = ref(db, 'tipos_entidades');

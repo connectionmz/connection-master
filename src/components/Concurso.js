@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
+import { getDatabase, ref, onValue, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../fb'; 
 import { onAuthStateChanged } from 'firebase/auth';
 
-const Concurso = () => {
-    const [concursos, setConcursos] = useState([]);
+const Cotacoes = () => {
+    const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [loggedInUser, setLoggedInUser] = useState(null); 
     const navigate = useNavigate();
@@ -18,46 +18,46 @@ const Concurso = () => {
     }, []);
 
     useEffect(() => {
-        const concursosRef = ref(db, 'concursos');
-        onValue(concursosRef, (snapshot) => {
-            const concursosData = snapshot.val() || {};
-            const concursosList = Object.entries(concursosData).map(([id, data]) => ({
+        const cotacoesRef = ref(db, 'cotacoes');
+        onValue(cotacoesRef, (snapshot) => {
+            const cotacoesData = snapshot.val() || {};
+            const cotacoesList = Object.entries(cotacoesData).map(([id, data]) => ({
                 id,
                 ...data,
             }));
-            setConcursos(concursosList);
+            setCotacoes(cotacoesList);
         });
     }, []);
 
-    const handlePublishConcurso = () => navigate('/publicar-concurso');
+    const handlePublishCotacao = () => navigate('/publicar-cotacao');
 
-    const deleteConcurso = (concursoId) => {
-        remove(ref(db, `concursos/${concursoId}`))
-            .then(() => console.log(`Concurso ${concursoId} excluído.`))
-            .catch((error) => console.error('Erro ao excluir o concurso: ', error));
+    const deleteCotacao = (cotacaoId) => {
+        remove(ref(db, `cotacoes/${cotacaoId}`))
+            .then(() => console.log(`Cotação ${cotacaoId} excluída.`))
+            .catch((error) => console.error('Erro ao excluir a cotação: ', error));
     };
 
-    const handleConcursoClick = (id, companyId) => navigate(`/concurso/${id}/${companyId}`);
+    const handleCotacaoClick = (id, companyId) => navigate(`/cotacao/${id}/${companyId}`);
 
     const isExpired = (datalimite) => new Date() > new Date(datalimite);
 
-    const filteredConcursos = concursos.filter(concurso => {
-        if (activeTab === 'recentes') return new Date().toDateString() === new Date(concurso.timestamp).toDateString();
-        if (activeTab === 'expiradas') return isExpired(concurso.datalimite);
-        if (activeTab === 'Fechada') return concurso.status === 'Fechada';
-        if (activeTab === 'minhas') return concurso?.company?.id === loggedInUser?.uid;
+    const filteredCotacoes = cotacoes.filter(cotacao => {
+        if (activeTab === 'recentes') return new Date().toDateString() === new Date(cotacao.timestamp).toDateString();
+        if (activeTab === 'expiradas') return isExpired(cotacao.datalimite);
+        if (activeTab === 'Fechada') return cotacao.status === 'Fechada';
+        if (activeTab === 'minhas') return cotacao?.company?.id === loggedInUser?.uid;
         return true;
     });
 
     return (
         <div className="p-4">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-xl font-semibold">Concursos</h1>
+                <h1 className="text-xl font-semibold">Cotações</h1>
                 <button 
                     className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                    onClick={handlePublishConcurso}
+                    onClick={handlePublishCotacao}
                 >
-                    Emitir
+                    Emitir Cotação
                 </button>
             </div>
 
@@ -74,24 +74,24 @@ const Concurso = () => {
             </div>
 
             <div>
-                {filteredConcursos.length ? (
+                {filteredCotacoes.length ? (
                     <div className="space-y-4">
-                        {filteredConcursos.map(concurso => (
+                        {filteredCotacoes.map(cotacao => (
                             <div 
-                                key={concurso.id} 
-                                className={`p-4 border rounded-lg bg-white shadow-md cursor-pointer ${isExpired(concurso.datalimite) ? 'bg-gray-200' : ''}`}
-                                onClick={() => handleConcursoClick(concurso.id, concurso.company?.id)}
+                                key={cotacao.id} 
+                                className={`p-4 border rounded-lg bg-white shadow-md cursor-pointer ${isExpired(cotacao.datalimite) ? 'bg-gray-200' : ''}`}
+                                onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
                             >
-                                <h3 className="text-md font-bold mb-2">{concurso?.title}</h3>
-                                <p className="text-gray-500">Data Limite: {new Date(concurso.datalimite).toLocaleDateString()}</p>
+                                <h3 className="text-md font-bold mb-2">{cotacao?.title}</h3>
+                                <p className="text-gray-500">Data Limite: {new Date(cotacao.datalimite).toLocaleDateString()}</p>
                                 <div className="flex items-center mb-4">
-                                    <img src={concurso.company?.logoUrl || 'https://via.placeholder.com/64'} alt={concurso.company?.nome || 'Empresa Desconhecida'} className="w-16 h-16 object-cover rounded-full mr-4" />
+                                    <img src={cotacao.company?.logoUrl || 'https://via.placeholder.com/64'} alt={cotacao.company?.nome || 'Empresa Desconhecida'} className="w-16 h-16 object-cover rounded-full mr-4" />
                                     <div>
-                                        <h2 className="text-lg font-semibold">{concurso.company?.nome || 'Empresa Desconhecida'}</h2>
+                                        <h2 className="text-lg font-semibold">{cotacao.company?.nome || 'Empresa Desconhecida'}</h2>
                                     </div>
                                 </div>
-                                {loggedInUser?.uid === concurso?.company?.id && (
-                                    <button onClick={() => deleteConcurso(concurso?.id)} className="text-red-500 hover:underline ml-4">
+                                {loggedInUser?.uid === cotacao?.company?.id && (
+                                    <button onClick={() => deleteCotacao(cotacao?.id)} className="text-red-500 hover:underline ml-4">
                                         Excluir
                                     </button>
                                 )}
@@ -99,11 +99,11 @@ const Concurso = () => {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-600">Nenhum concurso disponível.</p>
+                    <p className="text-gray-600">Nenhuma cotação disponível.</p>
                 )}
             </div>
         </div>
     );
 };
 
-export default Concurso;
+export default Cotacoes;

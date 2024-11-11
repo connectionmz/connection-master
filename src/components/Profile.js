@@ -13,7 +13,7 @@ const Profile = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('Publicados');
     const [userData, setUserData] = useState(null);
-    const [social, setSocial] = useState({ twitter: '', linkedin: '', instagram: '', website: '' });
+    const [social, setSocial] = useState({ linkedin: '', instagram: '', website: '' });
     const [loading, setLoading] = useState(true);
     const [posts, setPosts] = useState([]);
     const [cotacoes, setCotacoes] = useState([]);
@@ -305,7 +305,6 @@ const handleDeletePost = (postToDelete) => {
         )}
       </div>
     </div>
-            {/* Scrollable Tabs */}
             <div className="overflow-x-auto mt-8 border-b border-gray-200">
                 <div className="flex justify-center space-x-4">
                     <button onClick={() => setActiveTab('inicio')} className={`py-2 px-6 ${activeTab === 'inicio' ? 'border-b-2 border-blue-500' : ''}`}>Início</button>

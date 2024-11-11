@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, Logout, Edit, CameraAlt, Language, Store, RequestQuote, Message } from "@mui/icons-material";
+import { VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, Logout, Edit, CameraAlt, Language, Store, RequestQuote, Message, Phone } from "@mui/icons-material";
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push } from 'firebase/database'; 
 import { auth, db } from '../fb'; 
 import PostGallery from './PostGallery';
 
-const CompanyProfile = ({user}) => {
+const CompanyProfile = ({ user }) => {
     const { id } = useParams(); 
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('inicio');
@@ -14,15 +14,13 @@ const CompanyProfile = ({user}) => {
     const [social, setSocial] = useState({ twitter: '', linkedin: '', instagram: '', website: '' });
     const [loading, setLoading] = useState(true);
     const [cotacoes, setCotacoes] = useState([]);
-    const [hasProModule, setHasProModule] = useState(false); 
-    const [hasFaturacaoModule, setHasFaturacaoModule] = useState(false); 
+    const [modules, setModules] = useState({});
     const [smsLimit, setSmsLimit] = useState(0); 
     const userId = id;
     const [posts, setPosts] = useState([]);
+    const [visits, setVisits] = useState([]);
 
     useEffect(() => {
-
-        console.log(user)
         if (userId) {
             const fetchData = async () => {
                 try {
@@ -30,12 +28,14 @@ const CompanyProfile = ({user}) => {
                     const socialRef = ref(db, `company/${userId}/social`);
                     const postsRef = ref(db, `company/${userId}/publishedPhotos`);
                     const cotacoesRef = ref(db, `cotacoes`);
+                    const visitasRef = ref(db, `company/${userId}/visitas`);
 
-                    const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot] = await Promise.all([
+                    const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot, visitasSnapshot] = await Promise.all([
                         get(companyRef),
                         get(socialRef),
                         get(cotacoesRef),
-                        get(postsRef)
+                        get(postsRef),
+                        get(visitasRef)
                     ]);
 
                     if (companySnapshot.exists()) {
@@ -45,24 +45,19 @@ const CompanyProfile = ({user}) => {
                             ...companyData,
                             photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
                             coverPhotoURL: companyData.coverUrl || "https://via.placeholder.com/600x200",
-                            displayName: companyData.nome || 'Nome da Empresa',
-                            username: companyData.id || 'ID da Empresa',
-                            endereco: companyData.endereco || 'Endereço da Empresa'
+                            displayName: companyData.nome || 'A carregar',
+                            username: companyData.id || 'A carregar',
+                            endereco: companyData.endereco || 'A carregar'
                         });
 
-                        setHasProModule(companyData.activeModules?.moduloMarket?.limit === "ilimitado");
-                        setHasFaturacaoModule(companyData.activeModules?.moduloFaturacao?.limit === "ilimitado");
+                        setModules(companyData.activeModules || {});
                         setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
                         
-                        const visitasRef = ref(db, `company/${userId}/visitas`);
                         const newVisitRef = push(visitasRef);
-                        const visitorId = user.id; 
-                        const visitorName = user.nome || 'Visitante Anônimo'; 
-                        const timestamp = new Date().toISOString(); 
                         await update(newVisitRef, {
-                            visitorId,
-                            visitorName,
-                            timestamp
+                            visitorId: user.id, 
+                            visitorName: user.nome || 'Visitante Anônimo', 
+                            timestamp: new Date().toISOString()
                         });
                     }
 
@@ -75,12 +70,13 @@ const CompanyProfile = ({user}) => {
                     }
                     if (cotacoesSnapshot.exists()) {
                         const cotacoesData = cotacoesSnapshot.val();
-                        if (cotacoesData) {
-                            const userCotacoes = Object.keys(cotacoesData).filter(key => 
-                                cotacoesData[key].company && cotacoesData[key].company.id === userId
-                            );
-                            setCotacoes(userCotacoes.map(key => cotacoesData[key]));
-                        }
+                        const userCotacoes = Object.keys(cotacoesData).filter(key => 
+                            cotacoesData[key].company && cotacoesData[key].company.id === userId
+                        );
+                        setCotacoes(userCotacoes.map(key => cotacoesData[key]));
+                    }
+                    if (visitasSnapshot.exists()) {
+                        setVisits(Object.values(visitasSnapshot.val()));
                     }
 
                 } catch (error) {
@@ -95,7 +91,7 @@ const CompanyProfile = ({user}) => {
         } else {
             navigate('/auth');
         }
-    }, [userId, navigate]);
+    }, [userId, navigate, user]);
 
     const handleCotacaoClick = (id, companyId) => {
         console.log(id);
@@ -142,9 +138,35 @@ const CompanyProfile = ({user}) => {
                         )}
                     </div>
                 );
+            case 'sobre':
+                return (
+                    <div className="p-4">
+                        <h2 className="text-lg font-bold mb-4">Informações da Empresa</h2>
+                        <ul className="text-gray-600 space-y-2">
+                            <li><strong>NUIT:</strong> {mCompany?.nuit || 'Não informado'}</li>
+                            <li><strong>Endereço:</strong> {mCompany?.endereco || 'Não informado'}</li>
+                            <li><strong>Província:</strong> {mCompany?.provincia || 'Não informado'}</li>
+                            <li><strong>Sector:</strong> {mCompany?.sector || 'Não informado'}</li>
+                            <li><strong>Subtipo de Entidade:</strong> {mCompany?.subtipoEntidade || 'Não informado'}</li>
+                            <li><strong>Tipo de Entidade:</strong> {mCompany?.tipoEntidade || 'Não informado'}</li>
+                        </ul>
+                    </div>
+                );
             default:
                 return <div className="text-center text-gray-500 mt-6">Nenhum conteúdo disponível.</div>;
         }
+    };
+
+    const renderModuleButton = (moduleName, label, icon) => {
+        if (modules[moduleName]?.limit === "ilimitado") {
+            return (
+                <button onClick={() => navigate(`/${moduleName}/${userId}`)} className="text-gray-600">
+                    {icon}
+                    <span className="ml-2">{label}</span>
+                </button>
+            );
+        }
+        return null;
     };
     
     return (
@@ -163,36 +185,58 @@ const CompanyProfile = ({user}) => {
                     <p className="text-gray-600">{userData?.bio}</p>
                 </div>  
                 <div className="flex justify-center mt-6 space-x-4">
-                    {hasProModule && (
-                        <button onClick={() => navigate(`/stores/${userId}`)}>
-                            <Store className="text-green-500" />
-                        </button>
+                    {renderModuleButton("moduloMarket", "Loja", <Store className="text-green-500" />)}
+                    {renderModuleButton("moduloFaturacao", "Faturação", <RequestQuote className="text-blue-500" />)}
+                    {userData.contacto && (
+                        <a href={`tel:${userData.contacto}`} className="text-gray-600">
+                            <Phone className="text-green-500" />
+                        </a>
                     )}
-                    {hasFaturacaoModule && (
-                        <button onClick={() => navigate(`/rfq/${userId}`)}>
-                            <RequestQuote className="text-blue-500" />
-                        </button>
-                    )}                   
-                    {social.twitter && <a href={social.twitter}><Twitter className="text-blue-500" /></a>}
-                    {social.linkedin && <a href={social.linkedin}><LinkedIn className="text-blue-700" /></a>}
-                    {social.instagram && <a href={social.instagram}><Instagram className="text-pink-500" /></a>}
-                    {social.website && <a href={social.website}><Language className="text-gray-600" /></a>}
+                    {social.twitter && (
+                        <a href={social.twitter} target="_blank" rel="noopener noreferrer">
+                            <Twitter className="text-blue-500" />
+                        </a>
+                    )}
+                    {social.linkedin && (
+                        <a href={social.linkedin} target="_blank" rel="noopener noreferrer">
+                            <LinkedIn className="text-blue-700" />
+                        </a>
+                    )}
+                    {social.instagram && (
+                        <a href={social.instagram} target="_blank" rel="noopener noreferrer">
+                            <Instagram className="text-pink-500" />
+                        </a>
+                    )}
                 </div>
             </div>
-            <div className="overflow-x-auto mt-8 border-b border-gray-200">
-                <div className="flex justify-center space-x-4">
-                    <button onClick={() => setActiveTab('inicio')} className={`py-2 px-6 ${activeTab === 'inicio' ? 'text-blue-600 border-blue-600' : 'text-gray-600'} border-b-2`}>
-                        Início
-                    </button>
-                    <button onClick={() => setActiveTab('Publicados')} className={`py-2 px-6 ${activeTab === 'Publicados' ? 'text-blue-600 border-blue-600' : 'text-gray-600'} border-b-2`}>
-                        Publicações
-                    </button>
-                    <button onClick={() => setActiveTab('liked')} className={`py-2 px-6 ${activeTab === 'liked' ? 'text-blue-600 border-blue-600' : 'text-gray-600'} border-b-2`}>
-                        Cotações
-                    </button>
-                </div>
-            </div>
-            <div className="mt-8 max-w-5xl mx-auto">
+            <div className="flex justify-center mt-8 space-x-6 border-b-2 border-gray-200 pb-4">
+    <button 
+        onClick={() => setActiveTab('inicio')} 
+        className={`px-4 py-2 font-medium ${activeTab === 'inicio' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-blue-500'}`}
+    >
+        Início
+    </button>
+    <button 
+        onClick={() => setActiveTab('sobre')} 
+        className={`px-4 py-2 font-medium ${activeTab === 'sobre' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-blue-500'}`}
+    >
+        Sobre
+    </button>
+    <button 
+        onClick={() => setActiveTab('Publicados')} 
+        className={`px-4 py-2 font-medium ${activeTab === 'Publicados' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-blue-500'}`}
+    >
+        Publicações
+    </button>
+    <button 
+        onClick={() => setActiveTab('liked')} 
+        className={`px-4 py-2 font-medium ${activeTab === 'liked' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-blue-500'}`}
+    >
+        Cotações
+    </button>
+</div>
+
+            <div className="p-4">
                 {renderContent()}
             </div>
         </div>

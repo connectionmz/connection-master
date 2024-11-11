@@ -1,44 +1,43 @@
 import { useState } from 'react';
-import { ref, update } from 'firebase/database'; // Importa as funções do Firebase
+import { ref, update } from 'firebase/database';
 import { db } from '../fb';
-import Snackbar from '@mui/material/Snackbar'; // Importação do Snackbar
-import Alert from '@mui/material/Alert'; // Importação do Alert
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import { EditorText } from '../utils/formUtils';
 
 const EditProfile = ({ user }) => {
-  const [formData, setFormData] = useState({
+  const initialData = {
     nome: user.nome || '',
     bio: user.bio || '',
     contacto: user.contacto || '',
     endereco: user.endereco || '',
     provincia: user.provincia || '',
     missaoVisaoValores: user.missaoVisaoValores || '',
-    facebookUrl: user.facebook || '',
+    facebook: user.facebook || '',
     whatsappUrl: user.contacto ? `https://wa.me/${user.contacto}` : '',
-    instagramUrl: user.instagram || '',
-    linkedinUrl: user.linkedin || '',
+    instagram: user.instagram || '',
+    linkedin: user.linkedin || '',
     website: user.website || ''
-  });
+  };
+  const [formData, setFormData] = useState(initialData);
 
-  // Estados para o Snackbar
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevFormData) => ({
-      ...prevFormData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-      ...(name === 'contacto' && { whatsappUrl: `https://wa.me/${value}` }) // Atualiza automaticamente o URL do WhatsApp
+      ...(name === 'contacto' && { whatsappUrl: `https://wa.me/${value}` }) // Atualiza o WhatsApp URL quando 'contacto' muda
     }));
   };
 
   const handleEditorChange = (content) => {
-    setFormData((prevFormData) => ({
-      ...prevFormData,
-      missaoVisaoValores: content
-    }));
+    setFormData((prev) => ({ ...prev, missaoVisaoValores: content }));
   };
 
   const handleSubmit = async (e) => {
@@ -52,164 +51,76 @@ const EditProfile = ({ user }) => {
       provincia: formData.provincia,
       missaoVisaoValores: formData.missaoVisaoValores,
       social: {
-        facebook: formData.facebookUrl,
-        whatsapp: formData.whatsappUrl,
-        instagram: formData.instagramUrl,
-        linkedin: formData.linkedinUrl,
+        facebook: formData.facebook,
+        whatsapp: formData.whatsappUrl, 
+        instagram: formData.instagram,
+        linkedin: formData.linkedin,
         website: formData.website
       }
     };
 
     try {
       await update(ref(db, `company/${user.id}`), companyUpdate);
-      setSnackbarMessage('Dados atualizados com sucesso');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      setSnackbar({ open: true, message: 'Dados atualizados com sucesso', severity: 'success' });
     } catch (error) {
-      setSnackbarMessage('Erro ao atualizar dados');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      setSnackbar({ open: true, message: 'Erro ao atualizar dados', severity: 'error' });
     }
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
+
+  const renderInput = (label, name, type = "text", disabled = false) => (
+    <div>
+      <label>{label}</label>
+      <input
+        type={type}
+        name={name}
+        value={formData[name]}
+        onChange={handleInputChange}
+        className="border p-2 w-full"
+        disabled={disabled}
+      />
+    </div>
+  );
 
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-4 p-4">
-        <div>
-          <label>Nome</label>
-          <input
-            type="text"
-            name="nome"
-            value={formData.nome}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
-
-        <div>
-          <label>Bio</label>
-          <input
-            type="text"
-            name="bio"
-            value={formData.bio}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
-
-        <div>
-          <label>Contacto</label>
-          <input
-            type="text"
-            name="contacto"
-            value={formData.contacto}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
-
-        <div>
-          <label>Endereço</label>
-          <input
-            type="text"
-            name="endereco"
-            value={formData.endereco}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
-
-        <div>
-          <label>Província</label>
-          <input
-            type="text"
-            name="provincia"
-            value={formData.provincia}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
+        {renderInput("Nome", "nome")}
+        {renderInput("Bio", "bio")}
+        {renderInput("Contacto", "contacto")}
+        {renderInput("Endereço", "endereco")}
+        {renderInput("Província", "provincia")}
 
         <div>
           <label>Missão, Visão e Valores</label>
           <EditorText
             description={formData.missaoVisaoValores}
-            setDescription={handleEditorChange} // Usa a função específica para o EditorText
+            setDescription={handleEditorChange}
           />
         </div>
 
-        <div>
-          <label>Facebook URL</label>
-          <input
-            type="text"
-            name="facebookUrl"
-            value={formData.facebookUrl}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
+        {renderInput("Facebook URL", "facebook")}
+        {renderInput("WhatsApp URL", "whatsappUrl", "text", true)}
+        {renderInput("Instagram URL", "instagram")}
+        {renderInput("LinkedIn URL", "linkedin")}
+        {renderInput("Website", "website")}
 
-        <div>
-          <label>WhatsApp URL</label>
-          <input
-            type="text"
-            name="whatsappUrl"
-            value={formData.whatsappUrl}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-            disabled 
-          />
-        </div>
-
-        <div>
-          <label>Instagram URL</label>
-          <input
-            type="text"
-            name="instagramUrl"
-            value={formData.instagramUrl}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
-
-        <div>
-          <label>LinkedIn URL</label>
-          <input
-            type="text"
-            name="linkedinUrl"
-            value={formData.linkedinUrl}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
-
-        <div>
-          <label>Website</label>
-          <input
-            type="text"
-            name="website"
-            value={formData.website}
-            onChange={handleInputChange}
-            className="border p-2 w-full"
-          />
-        </div>
         <button type="submit" className="bg-blue-500 text-white p-2 rounded">
           Salvar
         </button>
       </form>
 
       <Snackbar
-        open={snackbarOpen}
+        open={snackbar.open}
         autoHideDuration={4000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-          {snackbarMessage}
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
         </Alert>
       </Snackbar>
     </div>

@@ -11,12 +11,10 @@ const Home = ({ user }) => {
   return (
     <>
       <div className="content-container">
-      <StorieList /> 
-
+        <StorieList user={user.provincia}/> 
         <NotificationMessage /> 
         <Banner /> 
         <ServicosExternos /> 
-        
         <div className="marquee-container">
           <p className="marquee-text">Anúncio de utilidade pública</p>
         </div>

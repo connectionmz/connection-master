@@ -59,7 +59,7 @@ const UserRoutes = ({ user }) => (
     <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhes />} />
     <Route path="/enviar-proposta/:id/:companyId" element={<EnviarProposta  user={user}/>} />
     <Route path="/publicar-concurso" element={<PublicarConcurso user={user}/>} />
-    <Route path="/explore" element={<Explore />} /> 
+    <Route path="/explore" element={<Explore user={user.provincia}/>} /> 
     <Route path="/profile" element={<Profile />} />
     <Route path="/apx" element={<Apx />} />
     <Route path="/faturacao" element={<Faturacao user={user}/>} />

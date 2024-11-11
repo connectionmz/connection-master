@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../fb';
 import { useNavigate } from 'react-router-dom';
 
-const StorieList = () => {
+const StorieList = ({ user }) => {
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);  
   const [error, setError] = useState(null);      
@@ -23,7 +23,8 @@ const StorieList = () => {
               id: key,
               ...value,
             }))
-            .filter(company => company.status === true); 
+            .filter(company => company?.provincia === user.provincia && company?.subscriptions?.status);
+
           setStories(companiesArray);
         }
         setLoading(false); 
@@ -34,7 +35,7 @@ const StorieList = () => {
       }
     );
     return () => unsubscribe();  
-  }, []);
+  }, [user.provincia]);
 
   const handleCompanyClick = (companyId) => {
     navigate(`/vperfil/${companyId}`);
@@ -57,7 +58,7 @@ const StorieList = () => {
   }
 
   return (
-    <div className="flex space-x-4 p-4 bg-white rounded-lg overflow-x-auto" style={{margin:'6px'}}>
+    <div className="flex space-x-4 p-4 bg-white rounded-lg overflow-x-auto" style={{ margin: '6px' }}>
       {stories.map(store => (
         <div 
           key={store.id} 
