@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { get, onValue, ref, set } from 'firebase/database';
+import { get, onValue, push, ref, set, update } from 'firebase/database';
 import { auth, db } from '../fb';
 import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 
@@ -28,6 +28,11 @@ const CompanyDataForm = () => {
   const [subsectores, setSubsectores] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
   const [subtiposEntidade, setSubtiposEntidade] = useState([]);
+  const [planos, setPlanos] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState('-OAdf-ytJBr1y8KFk328'); 
+  const [selectedMetodo, setSelectedMetodo] = useState('cash'); 
+  const [recorrente, setRecorrente] = useState(false); 
+
 
   useEffect(() => {
     const provinciasRef = ref(db, 'provincias');
@@ -38,6 +43,27 @@ const CompanyDataForm = () => {
     onValue(sectoresRef, (snapshot) => setSectores(snapshot.val() || []));
     onValue(tipoEntidadeRef, (snapshot) => setTiposEntidades(snapshot.val() || []));
   }, []);
+
+  
+  const fetchPlanos = async () => {
+    const planosRef = ref(db, `planos`);
+    try {
+      const planosSnapshot = await get(planosRef);
+      const planosData = planosSnapshot.val();
+
+      if (planosData) {
+        const planosArray = Object.keys(planosData).map((key) => ({
+          id: key,
+          ...planosData[key],
+        }));
+        setPlanos(planosArray);
+      } else {
+        console.log("Nenhum plano encontrado.");
+      }
+    } catch (error) {
+      console.error("Erro ao obter os planos:", error);
+    } 
+  };
 
   const handleSectorChange = (e) => {
     const selectedSector = e.target.value;
@@ -69,7 +95,7 @@ const CompanyDataForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
+  
     try {
       const user = auth.currentUser;
       if (user) {
@@ -80,17 +106,51 @@ const CompanyDataForm = () => {
           await uploadBytes(fileRef, companyData.logo);
           logoUrl = await getDownloadURL(fileRef);
         }
-
-        const dataWithLogoUrl = { ...companyData, id: user.uid, logoUrl: logoUrl };
-        await set(ref(db, 'company/' + user.uid), dataWithLogoUrl);
-        navigate('/pricing');
-      } else throw new Error('Usuário não autenticado');
+  
+        const planoSelecionado = planos.find((plano) => plano.id === selectedPlan);
+        const currentDate = new Date();
+        const expiryDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1)).toISOString().split('T')[0];
+  
+        const dataWithLogoUrl = {
+          ...companyData,
+          id: user.uid,
+          logoUrl,
+          subscriptions: {
+            plan: {
+              name: planoSelecionado?.name,
+              price: planoSelecionado?.price,
+              modules: planoSelecionado?.modules,
+              duration: '1 mês',
+            },
+            payment: { amount: planoSelecionado?.price, method: selectedMetodo },
+            status: 'active',
+            expiryDate,
+            recurring: recorrente,
+          },
+          activeModules: planoSelecionado?.modules,
+        };
+  
+        // Salva os dados da empresa e da assinatura no Firebase
+        await set(ref(db, `company/${user.uid}`), dataWithLogoUrl);
+        await push(ref(db, `subscriptions/${user.uid}`), dataWithLogoUrl.subscriptions);
+  
+        alert('Dados salvos e pagamento realizado com sucesso!');
+        // navigate('/pricing');
+  
+      } else {
+        throw new Error('Usuário não autenticado');
+      }
     } catch (error) {
       setErrorMessage('Ocorreu um erro ao enviar os dados. Tente novamente.');
+      console.error('Erro no handleSubmit:', error);
     } finally {
       setIsLoading(false);
     }
   };
+  
+
+ 
+  fetchPlanos()
 
   const inputStyles = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500";
 
@@ -159,7 +219,6 @@ const CompanyDataForm = () => {
               </select>
             </label>
           )}
-   {/* Campo para Tipo de Entidade */}
    <label className="block mt-4 text-sm font-medium text-gray-600">
             Tipo de Entidade
             <select name="tipoEntidade" value={companyData.tipoEntidade} onChange={handleEntidadeChange} required className={inputStyles}>
@@ -172,7 +231,6 @@ const CompanyDataForm = () => {
             </select>
           </label>
 
-          {/* Campo para Subtipo de Entidade */}
           {subtiposEntidade.length > 0 && (
             <label className="block mt-4 text-sm font-medium text-gray-600">
               Subtipo de Entidade
@@ -200,7 +258,6 @@ const CompanyDataForm = () => {
                 className={inputStyles}
               />
             </div>
-           {/* Campo de Seleção de Província */}
           <div className="form-group mt-4">
             <label htmlFor="provincia" className="block text-sm font-medium text-gray-600">Província</label>
             <select 
@@ -218,7 +275,6 @@ const CompanyDataForm = () => {
             </select>
           </div>
 
-          {/* Campo de Seleção de Distrito */}
           <div className="form-group mt-4">
             <label htmlFor="distrito" className="block text-sm font-medium text-gray-600">Distrito</label>
             <select 

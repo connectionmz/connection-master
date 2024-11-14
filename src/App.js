@@ -10,7 +10,6 @@ import { auth, db } from './fb';
 import { ref, get, set } from 'firebase/database'; 
 import ClipLoader from "react-spinners/ClipLoader"; 
 import { onAuthStateChanged } from 'firebase/auth';
-
 import { UserProvider } from './context/UserProfileContext';
 import UserRoutes from './components/routes/UserRoutes';
 import NonSubscriberRoutes from './components/routes/NonSubscriberRoutes';
@@ -19,6 +18,7 @@ const App = () => {
   const [userData, setUserData] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false); 
+  const [allCompanyData, setAllCompanyData] = useState(null); // Para armazenar todos os dados da Realtime DB
 
   const fetchUserDataAndSubscription = async (user) => {
     try {
@@ -42,6 +42,18 @@ const App = () => {
       } else {
         setSubscriptionActive(false);
       }
+
+      // Carregar todos os dados da Realtime Database
+      const allDataRef = ref(db, 'company'); // Caminho para a coleção de empresas
+      const allDataSnapshot = await get(allDataRef);
+
+      if (allDataSnapshot.exists()) {
+        const allData = allDataSnapshot.val();
+        setAllCompanyData(allData); // Armazenando todos os dados no estado
+      } else {
+        console.log('Não há dados disponíveis.');
+      }
+
     } catch (error) {
       console.error('Erro ao buscar os dados da empresa:', error);
       setSubscriptionActive(false);
