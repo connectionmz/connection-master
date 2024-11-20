@@ -1,4 +1,4 @@
-import { onValue, ref } from 'firebase/database';
+import { ref, get } from 'firebase/database';
 import React, { useEffect, useState } from 'react';
 import { db } from '../fb';
 import { useNavigate } from 'react-router-dom';
@@ -9,33 +9,35 @@ const StorieList = ({ user }) => {
   const [error, setError] = useState(null);      
   const navigate = useNavigate();
 
+  console.log(user)
+
   const defaultLogoUrl = 'https://via.placeholder.com/150'; 
 
   useEffect(() => {
-    const companiesRef = ref(db, 'company');
-    const unsubscribe = onValue(
-      companiesRef,
-      (snapshot) => {
-        const companiesData = snapshot.val();
-        if (companiesData) {
-          const companiesArray = Object.entries(companiesData)
-            .map(([key, value]) => ({
+    const fetchCompanies = async () => {
+      try {
+        const companiesRef = ref(db, 'company');
+        const snapshot = await get(companiesRef);
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const companyList = Object.keys(data)
+            .map((key) => ({
               id: key,
-              ...value,
+              ...data[key],
             }))
-            .filter(company => company?.provincia === user.provincia && company?.subscriptions?.status);
-
-          setStories(companiesArray);
+            .filter(company => company.provincia === user && company?.subscriptions?.status); // Corrigido para acessar user.provincia
+          setStories(companyList);
         }
-        setLoading(false); 
-      },
-      (error) => {
-        setError('Erro ao carregar as empresas.'); 
-        setLoading(false); 
+      } catch (error) {
+        setError('Erro ao carregar empresas: ' + error.message);
+      } finally {
+        setLoading(false);
       }
-    );
-    return () => unsubscribe();  
-  }, [user.provincia]);
+    };
+
+    fetchCompanies();  // Chama a função corretamente dentro do useEffect
+
+  }, [user.provincia]);  // A dependência é o user.provincia
 
   const handleCompanyClick = (companyId) => {
     navigate(`/vperfil/${companyId}`);

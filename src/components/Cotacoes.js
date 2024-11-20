@@ -8,6 +8,8 @@ const Cotacoes = () => {
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes'); // Controla a tab ativa
     const [loggedInUser, setLoggedInUser] = useState(null); // Estado para o usuário logado
+    const [snackbarMessage, setSnackbarMessage] = useState(''); // Mensagem para o snackbar
+    const [snackbarOpen, setSnackbarOpen] = useState(false); // Estado para controle da visibilidade do snackbar
     const navigate = useNavigate();
 
     // Listener para autenticação do usuário
@@ -19,7 +21,6 @@ const Cotacoes = () => {
                 setLoggedInUser(null); // Nenhum usuário logado
             }
         });
-
 
         return () => {
             unsubscribeAuth();
@@ -48,16 +49,19 @@ const Cotacoes = () => {
         navigate('/publicar-cotacao');
     };
 
-
     const deleteCotacao = (cotacaoId) => {
-        const cotacaoRef = ref(db, `cotacoes/${cotacaoId}`);
-        remove(cotacaoRef)
-            .then(() => {
-                console.log(`Cotação ${cotacaoId} excluída.`);
-            })
-            .catch((error) => {
-                console.error('Erro ao excluir a cotação: ', error);
-            });
+        if (window.confirm('Tem certeza que deseja excluir esta cotação?')) {
+            const cotacaoRef = ref(db, `cotacoes/${cotacaoId}`);
+            remove(cotacaoRef)
+                .then(() => {
+                    setSnackbarMessage('Cotação excluída com sucesso!');
+                    setSnackbarOpen(true);
+                    setTimeout(() => setSnackbarOpen(false), 3000); // Esconde o snackbar após 3 segundos
+                })
+                .catch((error) => {
+                    console.error('Erro ao excluir a cotação: ', error);
+                });
+        }
     };
 
     const handleCotacaoClick = (id, companyId) => {
@@ -86,7 +90,6 @@ const Cotacoes = () => {
                 console.error('Erro ao atualizar o status da cotação: ', error);
             });
     };
-
 
     const renderCotacao = (cotacao, expired) => (
         <div 
@@ -175,31 +178,31 @@ const Cotacoes = () => {
 
             {/* Tabs */}
             <div className="flex border-b mb-4 overflow-x-auto scrollbar-hide">
-    <button
-        className={`py-2 px-4 ${activeTab === 'recentes' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-        onClick={() => setActiveTab('recentes')}
-    >
-        Recentes
-    </button>
-    <button
-        className={`py-2 px-4 ${activeTab === 'expiradas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-        onClick={() => setActiveTab('expiradas')}
-    >
-        Expiradas
-    </button>
-    <button
-        className={`py-2 px-4 ${activeTab === 'Fechada' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-        onClick={() => setActiveTab('Fechada')}
-    >
-        Fechada
-    </button>
-    <button
-        className={`py-2 px-4 ${activeTab === 'minhas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-        onClick={() => setActiveTab('minhas')}
-    >
-        Minhas Cotações
-    </button>
-</div>
+                <button
+                    className={`py-2 px-4 ${activeTab === 'recentes' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                    onClick={() => setActiveTab('recentes')}
+                >
+                    Recentes
+                </button>
+                <button
+                    className={`py-2 px-4 ${activeTab === 'expiradas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                    onClick={() => setActiveTab('expiradas')}
+                >
+                    Expiradas
+                </button>
+                <button
+                    className={`py-2 px-4 ${activeTab === 'Fechada' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                    onClick={() => setActiveTab('Fechada')}
+                >
+                    Fechada
+                </button>
+                <button
+                    className={`py-2 px-4 ${activeTab === 'minhas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                    onClick={() => setActiveTab('minhas')}
+                >
+                    Minhas Cotações
+                </button>
+            </div>
 
             {/* Cotacoes List */}
             <div>
@@ -214,6 +217,13 @@ const Cotacoes = () => {
                     <p className="text-gray-600">Nenhuma cotação disponível.</p>
                 )}
             </div>
+
+            {/* Snackbar */}
+            {snackbarOpen && (
+                <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white p-4 rounded-lg shadow-md">
+                    {snackbarMessage}
+                </div>
+            )}
         </div>
     );
 };

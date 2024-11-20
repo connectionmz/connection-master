@@ -186,6 +186,18 @@ const CompanyDataForm = () => {
                 className={inputStyles}
               />
             </div>
+            <div className="form-group">
+              <label htmlFor="contacto" className="block text-sm font-medium text-gray-600">Contacto</label>
+              <input 
+                type="text" 
+                id="contacto" 
+                name="contacto" 
+                value={companyData.contacto} 
+                onChange={handleChange} 
+                required 
+                className={inputStyles}
+              />
+            </div>
           </div>
 
           <label className="block mt-4 text-sm font-medium text-gray-600">
