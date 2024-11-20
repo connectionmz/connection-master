@@ -29,14 +29,12 @@ const AuthCreate = () => {
 
     await set(userRef, userData);
 
-    localStorage.setItem('user', JSON.stringify(userData));
 
     const companyRef = ref(db, 'company/' + user.uid);
     try {
       const snapshot = await get(companyRef);
       if (snapshot.exists()) {
         const companyData = snapshot.val();
-        localStorage.setItem('company', JSON.stringify(companyData));
       } else {
         console.log('Dados da empresa não encontrados.');
       }

@@ -6,7 +6,7 @@ const ModuleGrid = ({ activeModules }) => {
 
   // Todos os módulos possíveis
   const allModules = [
-    { name: 'Analytics', link: '/analytics', icon: <FaChartBar size={40} />, key: 'moduloAnalytics' },
+    //{ name: 'Analytics', link: '/analytics', icon: <FaChartBar size={40} />, key: 'moduloAnalytics' },
     { name: 'Proforma', link: '/faturacao', icon: <FaReceipt size={40} />, key: 'moduloFaturacao' },
     { name: 'Market', link: '/market', icon: <FaStore size={40} />, key: 'moduloMarket' },
     { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloCampaign' },
@@ -16,7 +16,6 @@ const ModuleGrid = ({ activeModules }) => {
     { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' }
   ];
 
-  // Filtrar módulos ativos
   const activeModulesArray = allModules.filter(module => activeModules[module.key]);
 
   const handleModuleClick = (module) => {

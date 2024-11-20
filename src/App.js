@@ -39,6 +39,7 @@ const App = () => {
         setSubscriptionActive(companyData.subscriptions.status);
 
         await set(ref(db, `company/${user.uid}/lastLogin`), new Date().toISOString());
+        console.log(userData)
       } else {
         setSubscriptionActive(false);
       }
