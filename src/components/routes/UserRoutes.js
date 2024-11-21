@@ -49,7 +49,6 @@ const UserRoutes = ({ user }) => (
     <Route path="/" element={<Home user={user} />} />
     <Route path="/auth" element={<Auth />} />
     <Route path="/search" element={<ConnectionsSearch />} />
-    
     <Route path="/create" element={<AuthCreate />} />
     <Route path="/market" element={<Market user={user}/>} />
     <Route path="/campaign" element={<Campaign />} />

@@ -157,17 +157,7 @@ const CompanyProfile = ({ user }) => {
         }
     };
 
-    const renderModuleButton = (moduleName, label, icon) => {
-        if (modules[moduleName]?.limit === "ilimitado") {
-            return (
-                <button onClick={() => navigate(`/${moduleName}/${userId}`)} className="text-gray-600">
-                    {icon}
-                    <span className="ml-2">{label}</span>
-                </button>
-            );
-        }
-        return null;
-    };
+
     
     return (
         <div className="bg-white min-h-screen">
@@ -185,8 +175,28 @@ const CompanyProfile = ({ user }) => {
                     <p className="text-gray-600">{userData?.bio}</p>
                 </div>  
                 <div className="flex justify-center mt-6 space-x-4">
-                    {renderModuleButton("moduloMarket", "Loja", <Store className="text-green-500" />)}
-                    {renderModuleButton("moduloFaturacao", "Faturação", <RequestQuote className="text-blue-500" />)}
+                <div className="flex space-x-4 mt-4">
+    {/* Botão para Navegar para a Loja */}
+    <button
+        onClick={() => navigate(`/stores/${userId}`)}
+        className="flex flex-col items-center text-gray-600 hover:text-green-500"
+        title="Ir para a Loja"
+    >
+        <Store className="text-green-500" />
+        <span className="text-xs mt-1">Loja</span>
+    </button>
+
+    {/* Botão para Navegar para RFQ */}
+    <button
+        onClick={() => navigate(`/rfq/${userId}`)}
+        className="flex flex-col items-center text-gray-600 hover:text-green-500"
+        title="Solicitação de Cotação"
+    >
+        <RequestQuote className="text-green-500" />
+        <span className="text-xs mt-1">Cotações</span>
+    </button>
+</div>
+
                     {userData.contacto && (
                         <a href={`tel:${userData.contacto}`} className="text-gray-600">
                             <Phone className="text-green-500" />

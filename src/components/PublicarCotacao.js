@@ -12,7 +12,7 @@ import Alert from '@mui/material/Alert';
 const PublicarCotacao = ({ user }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [items, setItems] = useState([]); // Inicialmente vazio
+    const [items, setItems] = useState([]); 
     const [deadline, setDeadline] = useState('');
     const [sector, setSector] = useState('');
     const [loading, setLoading] = useState(false);
@@ -73,6 +73,10 @@ const PublicarCotacao = ({ user }) => {
                 setSnackbarMessage('Cotação publicada com sucesso!');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
+
+                setTimeout(() => {
+                    navigate('/cotacao'); // Exemplo: rota para página de confirmação
+                }, 2000);
     
                 const empresasRef = ref(db, 'company'); 
                 const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));

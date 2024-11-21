@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../fb'; 
 import { onAuthStateChanged } from 'firebase/auth';
 
-const Cotacoes = () => {
+const Concursos = () => {
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [loggedInUser, setLoggedInUser] = useState(null); 
@@ -43,26 +43,24 @@ const Cotacoes = () => {
 
     const filteredCotacoes = cotacoes.filter(cotacao => {
         if (activeTab === 'recentes') return new Date().toDateString() === new Date(cotacao.timestamp).toDateString();
-        if (activeTab === 'expiradas') return isExpired(cotacao.datalimite);
+        if (activeTab === 'expirados') return isExpired(cotacao.datalimite);
         if (activeTab === 'Fechada') return cotacao.status === 'Fechada';
-        if (activeTab === 'minhas') return cotacao?.company?.id === loggedInUser?.uid;
+        if (activeTab === 'meus') return cotacao?.company?.id === loggedInUser?.uid;
         return true;
     });
 
     return (
         <div className="p-4">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-xl font-semibold">Cotações</h1>
+                <h1 className="text-xl font-semibold">Concursos</h1>
                 <button 
                     className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                    onClick={handlePublishCotacao}
-                >
-                    Emitir Cotação
+                    onClick={handlePublishCotacao}>
+                    Publicar Concurso 
                 </button>
             </div>
-
             <div className="flex border-b mb-4 overflow-x-auto">
-                {['recentes', 'expiradas', 'Fechada', 'minhas'].map(tab => (
+                {['recentes', 'expirados', 'Fechada', 'meus'].map(tab => (
                     <button
                         key={tab}
                         className={`py-2 px-4 ${activeTab === tab ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
@@ -72,7 +70,6 @@ const Cotacoes = () => {
                     </button>
                 ))}
             </div>
-
             <div>
                 {filteredCotacoes.length ? (
                     <div className="space-y-4">
@@ -99,11 +96,11 @@ const Cotacoes = () => {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-600">Nenhuma cotação disponível.</p>
+                    <p className="text-gray-600 text-center">Nenhum concurso disponível.</p>
                 )}
             </div>
         </div>
     );
 };
 
-export default Cotacoes;
+export default Concursos;

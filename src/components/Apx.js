@@ -74,7 +74,7 @@ const Apx = () => {
           alt="User"
           className="rounded-full w-10 h-10 border border-gray-300"/>
         <div>
-          <p className="font-bold">{userData.nome} - {userData.sector}</p>
+          <p className="font-bold">{userData.nome}</p>
           <p className="text-sm text-gray-600"><small>{userData.sector}</small></p>
         </div>
       </Link>

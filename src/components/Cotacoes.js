@@ -56,7 +56,7 @@ const Cotacoes = () => {
                 .then(() => {
                     setSnackbarMessage('Cotação excluída com sucesso!');
                     setSnackbarOpen(true);
-                    setTimeout(() => setSnackbarOpen(false), 3000); // Esconde o snackbar após 3 segundos
+                    setTimeout(() => setSnackbarOpen(false), 3000);
                 })
                 .catch((error) => {
                     console.error('Erro ao excluir a cotação: ', error);
