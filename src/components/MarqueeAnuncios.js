@@ -41,8 +41,8 @@ const MarqueeAnuncios = () => {
               className="mx-8 cursor-pointer flex items-center space-x-2"
               onClick={() => handleOpenModal(anuncio)}
             >
-              <FaBuilding className="text-yellow-400" />
-              <strong>{anuncio.empresa || 'Empresa Desconhecida'}:</strong> 
+            
+              <strong>{anuncio.company || 'Empresa Desconhecida'}:</strong> 
               <span>{anuncio.title}</span>
             </span>
           ))}
@@ -60,16 +60,15 @@ const MarqueeAnuncios = () => {
               <img src={selectedAnuncio.contentUrl} alt="Anúncio" className="w-full h-auto rounded-lg mt-4" />
             )}
 
-            {selectedAnuncio.contentType === 'pdf' && (
+
               <a
-                href={selectedAnuncio.contentUrl}
+                href={selectedAnuncio.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 underline mt-4 inline-block"
-              >
+                className="text-blue-600 underline mt-4 inline-block">
                 Baixar o documento
-              </a>
-            )}
+              </a> 
+              <br/>
 
             {selectedAnuncio.contentType === 'text' && (
               <p className="mt-4 text-gray-700">{selectedAnuncio.contentText}</p>
