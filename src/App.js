@@ -39,24 +39,21 @@ const App = () => {
         setSubscriptionActive(companyData.subscriptions.status);
 
         await set(ref(db, `company/${user.uid}/lastLogin`), new Date().toISOString());
-        console.log(userData)
       } else {
         setSubscriptionActive(false);
       }
 
-      // Carregar todos os dados da Realtime Database
-      const allDataRef = ref(db, 'company'); // Caminho para a coleção de empresas
+      const allDataRef = ref(db, 'company'); 
       const allDataSnapshot = await get(allDataRef);
 
       if (allDataSnapshot.exists()) {
         const allData = allDataSnapshot.val();
-        setAllCompanyData(allData); // Armazenando todos os dados no estado
+        setAllCompanyData(allData); 
       } else {
         console.log('Não há dados disponíveis.');
       }
 
     } catch (error) {
-      console.error('Erro ao buscar os dados da empresa:', error);
       setSubscriptionActive(false);
     } finally {
       setLoading(false);
