@@ -6,7 +6,6 @@ import { Avatar, IconButton } from '@mui/material';
 import { auth } from '../fb';
 
 const Footer = ({ user }) => {
-  console.log(user)
   const handleProfileClick = () => {
     if (user) {
       window.location = '/apx' 

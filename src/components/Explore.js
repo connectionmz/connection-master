@@ -46,19 +46,16 @@ const Explore = ({user}) => {
     onValue(provinciasRef, (snapshot) => {
       const provinciasData = snapshot.val() || [];
       setProvincias(provinciasData);
-      console.log('Provincias:', provinciasData);
     });
 
     onValue(sectoresRef, (snapshot) => {
       const sectoresData = snapshot.val() || [];
       setSectores(sectoresData);
-      console.log('Sectores:', sectoresData);
     });
 
     onValue(tipoEntidadeRef, (snapshot) => {
       const tipoEntidadeData = snapshot.val() || [];
       setTiposEntidades(tipoEntidadeData);
-      console.log('tipoEntidadeData:', tipoEntidadeData);
     });
 
     fetchCompanies(); 

@@ -9,8 +9,6 @@ const StorieList = ({ user }) => {
   const [error, setError] = useState(null);      
   const navigate = useNavigate();
 
-  console.log(user)
-
   const defaultLogoUrl = 'https://via.placeholder.com/150'; 
 
   useEffect(() => {
@@ -25,7 +23,7 @@ const StorieList = ({ user }) => {
               id: key,
               ...data[key],
             }))
-            .filter(company => company.provincia === user && company?.subscriptions?.status); // Corrigido para acessar user.provincia
+            .filter(company => company.provincia === user && company?.subscriptions?.status);
           setStories(companyList);
         }
       } catch (error) {
@@ -35,9 +33,8 @@ const StorieList = ({ user }) => {
       }
     };
 
-    fetchCompanies();  // Chama a função corretamente dentro do useEffect
-
-  }, [user.provincia]);  // A dependência é o user.provincia
+    fetchCompanies(); 
+  }, [user.provincia]);  
 
   const handleCompanyClick = (companyId) => {
     navigate(`/vperfil/${companyId}`);
@@ -65,13 +62,11 @@ const StorieList = ({ user }) => {
         <div 
           key={store.id} 
           className="flex flex-col items-center space-y-2 w-24 sm:w-32 lg:w-40 cursor-pointer"
-          onClick={() => handleCompanyClick(store.id)}
-        >
+          onClick={() => handleCompanyClick(store.id)}>
           <img
             src={store.logoUrl || defaultLogoUrl}
             alt={`Logotipo de ${store.nome}`}
-            className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full border-2 border-blue-500"
-          />
+            className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full border-2 border-blue-500"/>
           <span className="text-xs sm:text-sm lg:text-base text-gray-800 text-center truncate max-w-[120px] uppercase">
             <marquee>{store.nome}</marquee>
           </span>
