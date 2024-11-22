@@ -88,6 +88,8 @@ const UserRoutes = ({ user }) => (
     <Route path="/callcenter" element={<CallCenterModule />} />
     <Route path="/logistica" element={<LogisticaModule />} />
     <Route path="/inqueritos" element={<InqueritosModule />} />
+    <Route path="/auth" element={<Auth user={user} />} />
+    <Route path="/create" element={<AuthCreate user={user} />} />
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 )

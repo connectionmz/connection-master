@@ -6,9 +6,9 @@ import { Avatar, IconButton } from '@mui/material';
 import { auth } from '../fb';
 
 const Footer = ({ user }) => {
-  const [mUser] = useAuthState(auth); 
+  console.log(user)
   const handleProfileClick = () => {
-    if (mUser) {
+    if (user) {
       window.location = '/apx' 
     } else {
       window.location = '/auth' 
@@ -37,13 +37,13 @@ const Footer = ({ user }) => {
           <span className="text-xs">Empresas</span>
         </Link>
         <IconButton onClick={handleProfileClick} className="flex flex-col items-center text-white">
-          {mUser ? (
+          {user ? (
             <>
-              <Avatar src={user?.logoUrl || mUser.photoURL} alt={user?.logoUrl || 'Perfil'} /> 
+              <Avatar src={user?.logoUrl || user.photoURL} alt={user?.logoUrl || 'Perfil'} /> 
             </>
           ) : (
             <>
-              <LoginIcon />
+              <LoginIcon onClick={handleProfileClick} className="flex flex-col items-center text-white"/>
               <span className="text-xs">Login</span>
             </>
           )}
