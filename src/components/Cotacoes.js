@@ -1,24 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../fb'; // Certifique-se de importar o auth do Firebase
+import { auth, db } from '../fb'; 
 import { onAuthStateChanged } from 'firebase/auth';
 
 const Cotacoes = () => {
     const [cotacoes, setCotacoes] = useState([]);
-    const [activeTab, setActiveTab] = useState('recentes'); // Controla a tab ativa
-    const [loggedInUser, setLoggedInUser] = useState(null); // Estado para o usuário logado
-    const [snackbarMessage, setSnackbarMessage] = useState(''); // Mensagem para o snackbar
-    const [snackbarOpen, setSnackbarOpen] = useState(false); // Estado para controle da visibilidade do snackbar
+    const [activeTab, setActiveTab] = useState('recentes');
+    const [loggedInUser, setLoggedInUser] = useState(null); 
+    const [snackbarMessage, setSnackbarMessage] = useState(''); 
+    const [snackbarOpen, setSnackbarOpen] = useState(false); 
     const navigate = useNavigate();
 
-    // Listener para autenticação do usuário
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (user) {
-                setLoggedInUser(user); // Defina o usuário logado
+                setLoggedInUser(user); 
             } else {
-                setLoggedInUser(null); // Nenhum usuário logado
+                setLoggedInUser(null); 
             }
         });
 
@@ -30,7 +29,6 @@ const Cotacoes = () => {
     useEffect(() => {
         const cotacoesRef = ref(db, 'cotacoes');
 
-        // Listener para cotações
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val() || {};
             const cotacoesList = Object.entries(cotacoesData).map(([id, data]) => ({
@@ -94,7 +92,9 @@ const Cotacoes = () => {
     const renderCotacao = (cotacao, expired) => (
         <div 
             key={cotacao.id} 
-            className={`p-4 border rounded-lg bg-white shadow-md cursor-pointer ${expired ? 'bg-gray-200' : ''}`}
+            className={`p-6 border rounded-xl bg-white shadow-lg transform hover:scale-105 transition-transform duration-200 cursor-pointer ${
+                expired ? 'bg-gray-100 opacity-70' : ''
+            }`}
             onClick={() => handleCotacaoClick(cotacao.id, cotacao.company.id)}
             title={expired ? 'Cotação expirada' : ''}
         >
@@ -102,46 +102,63 @@ const Cotacoes = () => {
                 <img 
                     src={cotacao.company?.logoUrl || 'https://via.placeholder.com/64'} 
                     alt={cotacao.company?.nome || 'Empresa Desconhecida'} 
-                    className="w-16 h-16 object-cover rounded-full mr-4"
+                    className="w-16 h-16 object-cover rounded-full border mr-4"
                 />
                 <div>
-                    <h2 className="text-lg font-semibold">
+                    <h2 className="text-lg font-semibold text-gray-800">
                         {cotacao.company?.nome || 'Empresa Desconhecida'}
                     </h2>
+                    <p className="text-sm text-gray-500">
+                        {expired ? 'Expirada' : 'Ativa'}
+                    </p>
                 </div>
             </div>
-            {loggedInUser?.uid === cotacao?.company?.id && (
-                    <button
-                        onClick={() => deleteCotacao(cotacao?.id)}
-                        className="text-red-500 hover:underline ml-4"
-                    >
-                        Excluir
-                    </button>
-                )}
-            <h3 className="text-md font-bold mb-2">{cotacao?.title}</h3>
-            <p className="text-gray-500 mb-1">
-                Data de Publicação: {new Date(cotacao?.timestamp).toLocaleDateString()}
+            <h3 className="text-lg font-bold text-blue-600 truncate mb-3">
+                {cotacao?.title}
+            </h3>
+            <p className="text-sm text-gray-500 mb-2">
+                Publicada em: <span className="font-medium">{new Date(cotacao?.timestamp).toLocaleDateString()}</span>
             </p>
-            <p className={`text-${expired ? 'red-500' : 'gray-500'} mb-1`}>
+            <p className={`text-sm font-semibold mb-4 ${
+                expired ? 'text-red-500' : 'text-gray-800'
+            }`}>
                 {expired ? 'Cotação Expirada' : `Data Limite: ${new Date(cotacao.datalimite).toLocaleDateString()}`}
             </p>
-            <div className="space-y-2 mt-4">
+            <div className="space-y-2">
                 {(cotacao.items || []).map((item, itemIndex) => (
-                    <div key={itemIndex} className="flex items-start mb-4">
+                    <div key={itemIndex} className="grid grid-cols-12 items-center gap-4 mb-2">
                         <img 
                             src={item.imageUrl || 'https://via.placeholder.com/64'} 
                             alt={item.name} 
-                            className="w-16 h-16 object-cover rounded mr-4"
+                            className="col-span-3 w-full h-16 object-cover rounded border"
                         />
-                        <div>
-                            <h4 className="text-md font-semibold">{item.name}</h4>
-                            <p className="text-gray-500">{item.description}</p>
+                        <div className="col-span-9">
+                            <h4 className="text-sm font-medium text-gray-800 truncate">
+                                {item.name}
+                            </h4>
+                            <p className="text-sm text-gray-500 truncate">
+                                {item.description}
+                            </p>
                         </div>
                     </div>
                 ))}
             </div>
+            {loggedInUser?.uid === cotacao?.company?.id && (
+                <div className="flex justify-end mt-4">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation(); 
+                            deleteCotacao(cotacao?.id);
+                        }}
+                        className="text-sm text-red-500 hover:text-red-600 font-semibold"
+                    >
+                        Excluir Cotação
+                    </button>
+                </div>
+            )}
         </div>
     );
+    
 
     const filteredCotacoes = () => {
         switch (activeTab) {
@@ -200,7 +217,7 @@ const Cotacoes = () => {
                     className={`py-2 px-4 ${activeTab === 'minhas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
                     onClick={() => setActiveTab('minhas')}
                 >
-                    Minhas Cotações
+                    Minhas 
                 </button>
             </div>
 
