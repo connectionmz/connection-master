@@ -7,8 +7,8 @@ const app = express();
 app.use(cors()); 
 app.use(bodyParser.json());
 
-const accountSid = 'ACf76472290af52e54e814946eeab76ddf'; 
-const authToken = 'bc3c31c2315793e1084c408504021c48'; 
+const accountSid = 'AC53b8d7f44f6c38a449c20aa0199da682'; 
+const authToken = '1b4da83f52349275638851d48ad47bb5'; 
 
 const client = twilio(accountSid, authToken);
 
@@ -19,33 +19,27 @@ app.post('/send-sms', async (req, res) => {
     return res.status(400).send('Required parameter "message" is missing.');
   }
 
+  const phoneNumber = '+258840237100'; 
+
   const phoneRegex = /^\+\d{1,15}$/;
 
-  for (const phoneNumber of to) {
-    if (!phoneRegex.test(phoneNumber)) {
-      return res.status(400).send(`Invalid phone number format: ${phoneNumber}`);
-    }
+  if (!phoneRegex.test(phoneNumber)) {
+    return res.status(400).send(`Invalid phone number format: ${phoneNumber}`);
   }
 
   try {
-    const sendPromises = to.map(phoneNumber => {
-      return client.messages.create({
-        body: message,
-        from: '+18148133628', 
-        to: phoneNumber
-      });
+    const result = await client.messages.create({
+      body: message,
+      from: '+16812466142',
+      to: phoneNumber, 
     });
 
-    const results = await Promise.all(sendPromises);
-
-    res.status(200).send(`Messages sent: ${results.map(msg => msg.sid).join(', ')}`);
+    res.status(200).send(`Message sent: ${result.sid}`);
   } catch (error) {
     console.error('Error sending SMS:', error);
     res.status(500).send(`Failed to send SMS: ${error.message}`);
   }
 });
-
-
 
 app.post('/send-message', (req, res) => {
   const { message, to } = req.body;

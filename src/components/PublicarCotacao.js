@@ -54,44 +54,69 @@ const PublicarCotacao = ({ user }) => {
         e.preventDefault();
         setLoading(true);
         setSnackbarMessage('');
-    
+      
         if (user) {
             try {
+                // Referência ao banco de dados para cotação
                 const cotacaoRef = ref(db, 'cotacoes');
-                const newCotacaoRef = push(cotacaoRef);
-                await set(newCotacaoRef, {
+                const newCotacaoRef = push(cotacaoRef); // Cria uma nova cotação com um ID único
+                const cotacaoId = newCotacaoRef.key; // Obtém o ID gerado da cotação
+                
+                // Gerando o link da cotação
+                const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`; // Supondo que você tenha uma URL no formato
+    
+                // Salvando a cotação no Firebase usando o ID gerado
+                await set(ref(db, `cotacoes/${cotacaoId}`), { // Usando o ID no caminho
                     title,
                     description,
+                    id:cotacaoId,
                     items,
                     company: user,
                     sector,
                     timestamp: new Date().toISOString(),
                     datalimite: new Date(deadline).toISOString(),
-                    status: 'open'
+                    status: 'open',
+                    link: linkDoPedido // Armazenando o link para referência
                 });
     
                 setSnackbarMessage('Cotação publicada com sucesso!');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
-
-                setTimeout(() => {
-                    navigate('/cotacao'); // Exemplo: rota para página de confirmação
-                }, 2000);
     
-                const empresasRef = ref(db, 'company'); 
+                // Buscar empresas do setor selecionado
+                const empresasRef = ref(db, 'company');
                 const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));
     
                 const snapshot = await get(setorQuery);
                 if (snapshot.exists()) {
                     const empresas = snapshot.val();
+                    console.log('Empresas no setor:', empresas); 
     
                     for (const key in empresas) {
                         const empresa = empresas[key];
-                        const message = `Nova cotação no seu setor:\n\nTítulo: ${title}\nDescrição: ${description}\nData Limite: ${deadline}`;
-                        const to = empresa.contacto; 
+                        const message = `
+                            📝 Nova Cotação para sua Empresa 📊\n
+                            📝 ${user.nome} 📊\n
+                            Título: ${title}\n
+                            Descrição: ${description}\n
+                            Data Limite: ${deadline}\n
+                            Setor de Atividade: ${sector}\n
+                            
+                            Se desejar mais informações ou para realizar uma cotação, por favor, entre em contato conosco.\n
+                            
+                            Acesse: ${linkDoPedido}\n
+                            
+                            Atenciosamente,\n
+                            📞 ${user.nome || 'Nome da Empresa'} | ${user.contacto || 'Sem Contato'}\n
+                            📞 ${user.contacto || 'Sem Contato'}
+                        `;
     
+                        const to = empresa.contacto;
                         await sendMessage(message, to);
+                        console.log(message);
                     }
+                } else {
+                    console.log('Nenhuma empresa encontrada para este setor.');
                 }
             } catch (error) {
                 setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
@@ -107,6 +132,7 @@ const PublicarCotacao = ({ user }) => {
             setOpenSnackbar(true);
         }
     };
+    
     
     
 

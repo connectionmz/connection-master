@@ -10,7 +10,6 @@ import { db } from '../fb';
 import { ref, get } from 'firebase/database';
 import MarqueeAnuncios from './MarqueeAnuncios';
 
-
 const Home = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
 

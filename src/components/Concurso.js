@@ -5,7 +5,7 @@ import { auth, db } from '../fb';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const Concursos = () => {
-    const [cotacoes, setCotacoes] = useState([]);
+    const [concursos, setconcursos] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [loggedInUser, setLoggedInUser] = useState(null); 
     const navigate = useNavigate();
@@ -18,34 +18,36 @@ const Concursos = () => {
     }, []);
 
     useEffect(() => {
-        const cotacoesRef = ref(db, 'cotacoes');
-        onValue(cotacoesRef, (snapshot) => {
-            const cotacoesData = snapshot.val() || {};
-            const cotacoesList = Object.entries(cotacoesData).map(([id, data]) => ({
+        const concursosRef = ref(db, 'concursos');
+        onValue(concursosRef, (snapshot) => {
+            const concursosData = snapshot.val() || {};
+            const concursosList = Object.entries(concursosData).map(([id, data]) => ({
                 id,
                 ...data,
             }));
-            setCotacoes(cotacoesList);
+            setconcursos(concursosList);
+            console.log('Concursos List: ', concursosList); 
         });
     }, []);
+    
 
-    const handlePublishCotacao = () => navigate('/publicar-cotacao');
+    const handlePublishconcurso = () => navigate('/publicar-concurso');
 
-    const deleteCotacao = (cotacaoId) => {
-        remove(ref(db, `cotacoes/${cotacaoId}`))
-            .then(() => console.log(`Cotação ${cotacaoId} excluída.`))
+    const deleteconcurso = (concursoId) => {
+        remove(ref(db, `concursos/${concursoId}`))
+            .then(() => console.log(`Cotação ${concursoId} excluída.`))
             .catch((error) => console.error('Erro ao excluir a cotação: ', error));
     };
 
-    const handleCotacaoClick = (id, companyId) => navigate(`/cotacao/${id}/${companyId}`);
+    const handleconcursoClick = (id, companyId) => navigate(`/concursos/${id}/${companyId}`);
 
     const isExpired = (datalimite) => new Date() > new Date(datalimite);
 
-    const filteredCotacoes = cotacoes.filter(cotacao => {
-        if (activeTab === 'recentes') return new Date().toDateString() === new Date(cotacao.timestamp).toDateString();
-        if (activeTab === 'expirados') return isExpired(cotacao.datalimite);
-        if (activeTab === 'Fechada') return cotacao.status === 'Fechada';
-        if (activeTab === 'meus') return cotacao?.company?.id === loggedInUser?.uid;
+    const filteredconcursos = concursos.filter(concurso => {
+        if (activeTab === 'recentes') return new Date().toDateString() === new Date(concurso.timestamp).toDateString();
+        if (activeTab === 'expirados') return isExpired(concurso.datalimite);
+        if (activeTab === 'Fechada') return concurso.status === 'Fechada';
+        if (activeTab === 'meus') return concurso?.company?.id === loggedInUser?.uid;
         return true;
     });
 
@@ -55,7 +57,7 @@ const Concursos = () => {
                 <h1 className="text-xl font-semibold">Concursos</h1>
                 <button 
                     className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                    onClick={handlePublishCotacao}>
+                    onClick={handlePublishconcurso}>
                     Publicar Concurso 
                 </button>
             </div>
@@ -71,26 +73,29 @@ const Concursos = () => {
                 ))}
             </div>
             <div>
-                {filteredCotacoes.length ? (
+                {filteredconcursos.length ? (
                     <div className="space-y-4">
-                        {filteredCotacoes.map(cotacao => (
+                        {filteredconcursos.map(concurso => (
                             <div 
-                                key={cotacao.id} 
-                                className={`p-4 border rounded-lg bg-white shadow-md cursor-pointer ${isExpired(cotacao.datalimite) ? 'bg-gray-200' : ''}`}
-                                onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
-                            >
-                                <h3 className="text-md font-bold mb-2">{cotacao?.title}</h3>
-                                <p className="text-gray-500">Data Limite: {new Date(cotacao.datalimite).toLocaleDateString()}</p>
+                                key={concurso.id} 
+                                className={`p-4 border rounded-lg bg-white shadow-md cursor-pointer ${isExpired(concurso.datalimite) ? 'bg-gray-200' : ''}`}
+                                onClick={() => handleconcursoClick(concurso.id, concurso.company?.id)}>
+                                <h3 className="text-md font-bold mb-2">{concurso?.titulo}</h3>
+                                <p >Prazo de Propostas: {concurso.prazo}</p>
+                                <p >Valor Estimado: {concurso.valorEstimado}</p>
                                 <div className="flex items-center mb-4">
-                                    <img src={cotacao.company?.logoUrl || 'https://via.placeholder.com/64'} alt={cotacao.company?.nome || 'Empresa Desconhecida'} className="w-16 h-16 object-cover rounded-full mr-4" />
+                                    <img src={concurso.company?.logoUrl || 'https://via.placeholder.com/64'} alt={concurso.company?.nome || 'Empresa Desconhecida'} className="w-16 h-16 object-cover rounded-full mr-4" />
                                     <div>
-                                        <h2 className="text-lg font-semibold">{cotacao.company?.nome || 'Empresa Desconhecida'}</h2>
+                                        <h2 className="text-lg font-semibold">{concurso.company?.nome || 'Empresa Desconhecida'}</h2>
                                     </div>
                                 </div>
-                                {loggedInUser?.uid === cotacao?.company?.id && (
-                                    <button onClick={() => deleteCotacao(cotacao?.id)} className="text-red-500 hover:underline ml-4">
+                                {loggedInUser?.uid === concurso?.company?.id && (
+                                   <>
+                                   <span> sector:{concurso.sector}</span>
+                                    <button onClick={() => deleteconcurso(concurso?.id)} className="text-red-500 hover:underline ml-4">
                                         Excluir
                                     </button>
+                                    </>
                                 )}
                             </div>
                         ))}
@@ -100,7 +105,6 @@ const Concursos = () => {
                 )}
             </div>
         </div>
-    );
-};
-
-export default Concursos;
+    )
+}
+export default Concursos
