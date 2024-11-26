@@ -43,9 +43,12 @@ import CallCenterModule from '../CallCenterModule';
 import LogisticaModule from '../LogisticaModule';
 import InqueritosModule from '../InqueritosModule';
 import ConnectionsSearch from '../ConnectionsSearch';
+import CreateUsers from '../CreateUsers';
 
 const UserRoutes = ({ user }) => (
   <Routes>
+          <Route path="/createUsers" element={<CreateUsers/>} />
+
     <Route path="/" element={<Home user={user} />} />
     <Route path="/auth" element={<Auth />} />
     <Route path="/search" element={<ConnectionsSearch />} />

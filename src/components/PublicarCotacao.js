@@ -8,6 +8,7 @@ import ReactQuill from 'react-quill';
 import { EditorText, SectorDeActividades } from '../utils/formUtils';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import { saveContentToInboxBasedSector } from './SaveToInbox';
 
 const PublicarCotacao = ({ user }) => {
     const [title, setTitle] = useState('');
@@ -54,46 +55,50 @@ const PublicarCotacao = ({ user }) => {
         e.preventDefault();
         setLoading(true);
         setSnackbarMessage('');
-      
+    
         if (user) {
             try {
                 // Referência ao banco de dados para cotação
                 const cotacaoRef = ref(db, 'cotacoes');
                 const newCotacaoRef = push(cotacaoRef); // Cria uma nova cotação com um ID único
                 const cotacaoId = newCotacaoRef.key; // Obtém o ID gerado da cotação
-                
+    
                 // Gerando o link da cotação
-                const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`; // Supondo que você tenha uma URL no formato
+                const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
     
                 // Salvando a cotação no Firebase usando o ID gerado
-                await set(ref(db, `cotacoes/${cotacaoId}`), { // Usando o ID no caminho
+                await set(ref(db, `cotacoes/${cotacaoId}`), {
                     title,
                     description,
-                    id:cotacaoId,
+                    id: cotacaoId,
                     items,
                     company: user,
                     sector,
                     timestamp: new Date().toISOString(),
                     datalimite: new Date(deadline).toISOString(),
                     status: 'open',
-                    link: linkDoPedido // Armazenando o link para referência
+                    link: linkDoPedido
                 });
     
                 setSnackbarMessage('Cotação publicada com sucesso!');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
     
-                // Buscar empresas do setor selecionado
                 const empresasRef = ref(db, 'company');
                 const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));
     
                 const snapshot = await get(setorQuery);
                 if (snapshot.exists()) {
                     const empresas = snapshot.val();
-                    console.log('Empresas no setor:', empresas); 
     
                     for (const key in empresas) {
                         const empresa = empresas[key];
+    
+                        if (!empresa.nuit) {
+                            console.warn(`Empresa ${key} não possui um ID (nuit). Ignorando...`);
+                            continue;
+                        }
+    
                         const message = `
                             📝 Nova Cotação para sua Empresa 📊\n
                             📝 ${user.nome} 📊\n
@@ -101,19 +106,18 @@ const PublicarCotacao = ({ user }) => {
                             Descrição: ${description}\n
                             Data Limite: ${deadline}\n
                             Setor de Atividade: ${sector}\n
-                            
                             Se desejar mais informações ou para realizar uma cotação, por favor, entre em contato conosco.\n
-                            
                             Acesse: ${linkDoPedido}\n
-                            
                             Atenciosamente,\n
-                            📞 ${user.nome || 'Nome da Empresa'} | ${user.contacto || 'Sem Contato'}\n
-                            📞 ${user.contacto || 'Sem Contato'}
+                            📞 ${user.nome || 'Nome da Empresa'} | ${user.contacto || 'Sem Contato'}
                         `;
     
-                        const to = empresa.contacto;
-                        await sendMessage(message, to);
-                        console.log(message);
+                        await saveContentToInboxBasedSector(
+                            message,
+                            empresa.userId,
+                            'Novo pedido de cotação',
+                            sector
+                        );
                     }
                 } else {
                     console.log('Nenhuma empresa encontrada para este setor.');
@@ -132,6 +136,8 @@ const PublicarCotacao = ({ user }) => {
             setOpenSnackbar(true);
         }
     };
+    
+
     
     
     
