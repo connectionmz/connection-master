@@ -125,6 +125,9 @@ const Auth = ({ data }) => {
           <p className="text-gray-600 font-bold">
             Ainda não tem uma conta? <a href="/create" className="text-blue-500 hover:underline">Cadastre-se</a>
           </p>
+          <p className="mt-2">
+            <a href="/forget-password" className="text-blue-500 hover:underline">Esqueceu sua senha?</a>
+          </p>
           <p className="mt-2 text-xs">
             Ao continuar, você aceita nossos Termos de Uso e confirma que leu nossa 
             <a href="/terms" className="text-blue-500 hover:underline"> Termos & Políticas.</a>

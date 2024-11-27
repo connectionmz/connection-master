@@ -9,6 +9,8 @@ import { auth } from '../../fb';
 import { onAuthStateChanged } from 'firebase/auth';
 import StoreDetails from '../StoreDetails';
 import CreateUsers from '../CreateUsers';
+import ForgetPassword from '../password/ForgetPassword';
+import ChangePassword from '../password/ChangePassword';
 
 const NonSubscriberRoutes = ({userDb}) => {
   const [user, setUser] = useState(null); 
@@ -55,7 +57,8 @@ const NonSubscriberRoutes = ({userDb}) => {
       <Route path="/pricing" element={<Payment user={userDb} />} />
       <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
       <Route path="/stores/:storeId" element={<StoreDetails />} />
-
+      <Route path="/forget-password" element={<ForgetPassword />} />
+      <Route path="/change-password" element={<ChangePassword user={user} />} />
 
       <Route path="*" element={<Navigate to="/" />} />
 

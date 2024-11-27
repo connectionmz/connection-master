@@ -130,13 +130,11 @@ const CompanyDataForm = () => {
           activeModules: planoSelecionado?.modules,
         };
   
-        // Salva os dados da empresa e da assinatura no Firebase
         await set(ref(db, `company/${user.uid}`), dataWithLogoUrl);
         await push(ref(db, `subscriptions/${user.uid}`), dataWithLogoUrl.subscriptions);
   
         alert('Dados salvos e pagamento realizado com sucesso!');
-        // navigate('/pricing');
-  
+        window.location.reload();  
       } else {
         throw new Error('Usuário não autenticado');
       }

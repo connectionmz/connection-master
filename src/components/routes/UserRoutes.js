@@ -44,6 +44,8 @@ import LogisticaModule from '../LogisticaModule';
 import InqueritosModule from '../InqueritosModule';
 import ConnectionsSearch from '../ConnectionsSearch';
 import CreateUsers from '../CreateUsers';
+import ForgetPassword from '../password/ForgetPassword';
+import ChangePassword from '../password/ChangePassword';
 
 const UserRoutes = ({ user }) => (
   <Routes>
@@ -92,6 +94,8 @@ const UserRoutes = ({ user }) => (
     <Route path="/logistica" element={<LogisticaModule />} />
     <Route path="/inqueritos" element={<InqueritosModule />} />
     <Route path="/auth" element={<Auth user={user} />} />
+    <Route path="/forget-password" element={<ForgetPassword />} />
+    <Route path="/change-password" element={<ChangePassword user={user} />} />
     <Route path="/create" element={<AuthCreate user={user} />} />
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>
