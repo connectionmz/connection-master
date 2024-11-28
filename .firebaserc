@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "connectiopos"
-  }
+    "default": "connectiopos",
+    "staging": "connections-d1be1"
+  },
+  "targets": {},
+  "etags": {}
 }

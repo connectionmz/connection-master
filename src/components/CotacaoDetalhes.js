@@ -16,7 +16,7 @@ const CotacaoDetalhes = () => {
     
     // Increment views count
     update(cotacaoRef, {
-      views: increment(1)
+      views: increment(1),
     });
 
     // Fetch the cotacao details
@@ -47,7 +47,7 @@ const CotacaoDetalhes = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url)
       .then(() => alert('Link copiado! Pronto para partilhar.'))
-      .catch(err => alert('Erro ao copiar o link', err));
+      .catch((err) => alert('Erro ao copiar o link', err));
   };
 
   const handleVerPropostas = () => {
@@ -63,89 +63,91 @@ const CotacaoDetalhes = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <div className="flex items-center mb-8 border p-4 rounded-lg bg-gray-50 shadow-sm">
+    <div className="max-w-6xl mx-auto p-8 bg-gray-50 shadow-lg rounded-xl">
+      <div className="flex items-center gap-6 mb-10 p-6 rounded-lg bg-white shadow">
         <img
           src={cotacao.company.logoUrl || 'default-logo.png'}
           alt={cotacao.company.nome}
-          className="w-16 h-16 rounded-full mr-6"
+          className="w-20 h-20 rounded-full object-cover"
         />
         <div>
-          <p className="text-sm font-semibold text-gray-700">{cotacao.company.nome}</p>
-          <p className="text-sm text-gray-500">Estado: {cotacao.status}</p>
-          <div className="flex justify-between text-sm text-gray-600 mb-6 space-x-4">
-            <div className="flex items-center">
-              <RemoveRedEye className="w-5 h-5 text-blue-500 mr-2" />
-              <p>{cotacao.views || 0}</p>
+          <h2 className="text-xl font-bold text-gray-800">{cotacao.company.nome}</h2>
+          <p className="text-sm text-gray-500">Estado: <span className="font-medium">{cotacao.status}</span></p>
+          <div className="flex items-center gap-6 mt-4 text-gray-600">
+            <div className="flex items-center gap-2">
+              <RemoveRedEye className="text-blue-500" />
+              <p>{cotacao.views || 0} visualizações</p>
             </div>
-            <div className="flex items-center">
-              <AdsClick className="w-5 h-5 text-green-500 mr-2" />
-              <p>{cotacao.clicks || 0}</p>
+            <div className="flex items-center gap-2">
+              <AdsClick className="text-green-500" />
+              <p>{cotacao.clicks || 0} cliques</p>
             </div>
-            <div className="flex items-center">
-              <Inbox className="w-5 h-5 text-yellow-500 mr-2" />
-              <p>{cotacao.proposals ? cotacao.proposals.length : 0}</p>
+            <div className="flex items-center gap-2">
+              <Inbox className="text-yellow-500" />
+              <p>{cotacao.proposals ? cotacao.proposals.length : 0} propostas</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-8 text-right">
-        <p className="text-gray-500 text-sm mb-4">
-          Data Limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT', {
+      <div className="flex justify-between items-center mb-10">
+        <p className="text-gray-500">
+          Data Limite: <span className="font-semibold text-gray-800">{new Date(cotacao.datalimite).toLocaleDateString('pt-PT', {
             day: '2-digit',
             month: 'long',
-            year: 'numeric'
-          })}
+            year: 'numeric',
+          })}</span>
         </p>
-
-        <div className="flex justify-end space-x-4">
+       <p>
+       <div className="flex items-center">
           {isCompanyOwner ? (
             <button
               onClick={handleVerPropostas}
-              className="bg-blue-600 text-white py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition">
-              Propostas
+              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition"
+            >
+              Ver Propostas
             </button>
           ) : (
             <button
               onClick={handleEnviarProposta}
-              className="bg-blue-600 text-white py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition"
+              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition"
             >
-              Proposta
+              Enviar Proposta
             </button>
           )}
           <button
             onClick={handleBaixarPedido}
-            className="bg-green-600 text-white py-2 px-4 rounded-lg shadow hover:bg-green-700 transition"
+            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg shadow hover:bg-green-700 transition"
           >
-            Baixar
+            Baixar Pedido
           </button>
           <button
             onClick={handlePartilhar}
-            className="bg-gray-600 text-white py-2 px-4 rounded-lg shadow hover:bg-gray-700 transition"
+            className="px-6 py-2 bg-gray-600 text-white font-medium rounded-lg shadow hover:bg-gray-700 transition"
           >
             Partilhar
           </button>
         </div>
+       </p>
       </div>
 
-      <h4 className="font-bold text-gray-800 mb-6 border-b pb-4">{cotacao.title}</h4>
-      <p className="text-gray-600 text-lg mb-6" dangerouslySetInnerHTML={{ __html: cotacao.description }}></p>
+      <h3 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-4">{cotacao.title}</h3>
+      <p className="text-gray-700 leading-relaxed mb-10" dangerouslySetInnerHTML={{ __html: cotacao.description }} />
 
       <div>
-        <h4 className="text-2xl font-semibold text-gray-800 mb-6">Itens Solicitados</h4>
+        <h4 className="text-xl font-semibold text-gray-800 mb-6">Itens Solicitados</h4>
         {cotacao.items && cotacao.items.length > 0 ? (
           <ul className="space-y-6">
             {cotacao.items.map((item, index) => (
-              <li key={index} className="flex items-center bg-gray-50 p-4 rounded-lg shadow-sm">
+              <li key={index} className="flex items-center gap-6 bg-white p-4 rounded-lg shadow">
                 <img
                   src={item.imageUrl}
                   alt={item.name}
-                  className="w-24 h-24 object-cover rounded-lg mr-6"
+                  className="w-24 h-24 object-cover rounded-lg"
                 />
                 <div>
-                  <h4 className="text-lg font-medium text-gray-700">{item.name}</h4>
-                  <p className="text-gray-600">{item.description}</p>
+                  <h5 className="text-lg font-medium text-gray-800">{item.name}</h5>
+                  <p className="text-sm text-gray-600">{item.description}</p>
                 </div>
               </li>
             ))}
