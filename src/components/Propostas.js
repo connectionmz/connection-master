@@ -39,7 +39,7 @@ const Propostas = () => {
             <tr>
               <th className="px-4 py-2 border-b text-left text-gray-600">Empresa</th>
               <th className="px-4 py-2 border-b text-left text-gray-600">Status</th>
-              <th className="px-4 py-2 border-b text-left text-gray-600">Detalhes</th>
+              <th className="px-4 py-2 border-b text-left text-gray-600">#</th>
             </tr>
           </thead>
           <tbody>

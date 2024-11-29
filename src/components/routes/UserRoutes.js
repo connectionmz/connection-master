@@ -46,6 +46,7 @@ import ConnectionsSearch from '../ConnectionsSearch';
 import CreateUsers from '../CreateUsers';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
+import VerifyCompany from '../VerifyCompany';
 
 const UserRoutes = ({ user }) => (
   <Routes>
@@ -97,6 +98,7 @@ const UserRoutes = ({ user }) => (
     <Route path="/forget-password" element={<ForgetPassword />} />
     <Route path="/change-password" element={<ChangePassword user={user} />} />
     <Route path="/create" element={<AuthCreate user={user} />} />
+    <Route path="/verify" element={<VerifyCompany user={user} />} />
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 )

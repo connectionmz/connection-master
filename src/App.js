@@ -18,6 +18,7 @@ const App = () => {
   const [userData, setUserData] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false); 
+  const [isVerified, setIsVerified] = useState(false)
   const [allCompanyData, setAllCompanyData] = useState(null); // Para armazenar todos os dados da Realtime DB
 
   const fetchUserDataAndSubscription = async (user) => {
@@ -27,6 +28,11 @@ const App = () => {
 
       if (companySnapshot.exists()) {
         const companyData = companySnapshot.val();
+
+        setIsVerified(companyData.isVerified)
+
+        console.log(isVerified)
+
         setUserData({
           ...companyData,
           photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
@@ -42,10 +48,8 @@ const App = () => {
       } else {
         setSubscriptionActive(false);
       }
-
       const allDataRef = ref(db, 'company'); 
       const allDataSnapshot = await get(allDataRef);
-
       if (allDataSnapshot.exists()) {
         const allData = allDataSnapshot.val();
         setAllCompanyData(allData); 
@@ -90,7 +94,7 @@ const App = () => {
           <div className="App">
             <Header />
             <div className='content'>
-              {subscriptionActive ? (
+              {subscriptionActive && isVerified ? (
                 <UserRoutes user={userData} />
               ) : (
                 <NonSubscriberRoutes userDb={userData} />

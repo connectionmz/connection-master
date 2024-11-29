@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom'; 
+import { Routes, Route, Navigate } from 'react-router-dom'; 
 import Auth from '../Auth';
 import Payment from '../Payment';
 import CompanyDataForm from '../CompanyDataForm';
@@ -8,13 +8,14 @@ import Checkout from '../checkout';
 import { auth } from '../../fb';
 import { onAuthStateChanged } from 'firebase/auth';
 import StoreDetails from '../StoreDetails';
-import CreateUsers from '../CreateUsers';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
+import VerifyCompany from '../VerifyCompany';
 
-const NonSubscriberRoutes = ({userDb}) => {
+const NonSubscriberRoutes = ({ userDb }) => {
   const [user, setUser] = useState(null); 
   const [loading, setLoading] = useState(true);
+
 
 
   useEffect(() => {
@@ -29,9 +30,13 @@ const NonSubscriberRoutes = ({userDb}) => {
 
     return () => unsubscribe();
   }, []);
+
   if (loading) {
-    return <div>Carregando...</div>; 
+    return <div>Carregando...</div>;
   }
+
+  const isVerified = userDb && userDb.isVerified;
+
   return (
     <Routes>
       {user ? (
@@ -40,10 +45,14 @@ const NonSubscriberRoutes = ({userDb}) => {
             <Route path="/" element={<CompanyDataForm />} />
           ) : (
             <>
-              {userDb.status === false ? (
-                <Route path="/" element={<Payment user={user} />} />
+              {!isVerified ? (
+                <Route path="/" element={<Navigate to="/verify" />} />
               ) : (
-                <Route path="/" element={<Payment user={user} />} />
+                <>
+                  <Route path="/" element={<Payment user={user} />} />
+                  <Route path="/pricing" element={<Payment user={userDb} />} />
+                  <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
+                </>
               )}
             </>
           )}
@@ -54,13 +63,13 @@ const NonSubscriberRoutes = ({userDb}) => {
       <Route path="/auth" element={<Auth user={user} />} />
       <Route path="/create" element={<AuthCreate user={user} />} />
       <Route path="/setup" element={<CompanyDataForm />} />
-      <Route path="/pricing" element={<Payment user={userDb} />} />
-      <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
       <Route path="/stores/:storeId" element={<StoreDetails />} />
       <Route path="/forget-password" element={<ForgetPassword />} />
       <Route path="/change-password" element={<ChangePassword user={user} />} />
+      <Route path="/verify" element={<VerifyCompany user={userDb} />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
-  );
+  )
 }
+
 export default NonSubscriberRoutes;
