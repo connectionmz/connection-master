@@ -7,15 +7,20 @@ const ForgetPassword = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false); // Novo estado para desabilitar os campos
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    setIsDisabled(true); // Desabilita os campos durante o envio
     try {
       await sendPasswordResetEmail(auth, email);
       setMessage('E-mail de redefinição de senha enviado com sucesso!');
+      setEmail(''); // Limpa o campo de e-mail
+      window.location='/auth'
     } catch (error) {
       setMessage('Erro ao enviar e-mail de redefinição: ' + error.message);
     } finally {
+      setIsDisabled(false); // Reabilita os campos
       setShowSnackbar(true);
     }
   };
@@ -34,13 +39,17 @@ const ForgetPassword = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isDisabled} // Desabilita o campo quando necessário
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition duration-300"
+            className={`w-full text-white py-2 px-4 rounded-lg transition duration-300 ${
+              isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-800'
+            }`}
+            disabled={isDisabled} // Desabilita o botão quando necessário
           >
-            Enviar e-mail de redefinição
+            {isDisabled ? 'Enviando...' : 'Enviar e-mail de redefinição'}
           </button>
         </form>
       </div>

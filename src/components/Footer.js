@@ -43,7 +43,7 @@ const Footer = ({ user }) => {
           ) : (
             <>
               <LoginIcon onClick={handleProfileClick} className="flex flex-col items-center text-white"/>
-              <span className="text-xs">Login</span>
+              <span className="text-xs text-white">Login</span>
             </>
           )}
         </IconButton>

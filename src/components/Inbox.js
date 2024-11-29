@@ -44,7 +44,6 @@ const Inbox = () => {
   const handleOpenMessage = (message) => {
     setSelectedMessage(message);
     markAsRead(message.id);
-    console.log(message.content.url)
   };
 
   const unreadMessages = messages.filter(message => !message.opened);
@@ -59,7 +58,7 @@ const Inbox = () => {
           <p>{new Date(selectedMessage.timestamp).toLocaleString()}</p>
           <p className="text-gray-600 text-lg mb-6" dangerouslySetInnerHTML={{ __html: selectedMessage.proposal }}></p>
           <p>
-          <Link to={selectedMessage.content.url} target="_blank" rel="noopener noreferrer">
+          <Link to={selectedMessage.content.url}  rel="noopener noreferrer">
             Ir ao conteúdo
           </Link>
 </p>          <button onClick={() => setSelectedMessage(null)} className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg">Voltar</button>

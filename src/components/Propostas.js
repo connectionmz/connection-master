@@ -25,7 +25,6 @@ const Propostas = () => {
     });
   }, [id]);
 
-  // Navegar para o componente de detalhes da proposta
   const handlePropostaClick = (propostaId) => {
     navigate(`/cotacao/${id}/proposta/${propostaId}`);
   };
@@ -38,7 +37,7 @@ const Propostas = () => {
         <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
           <thead>
             <tr>
-              <th className="px-4 py-2 border-b text-left text-gray-600">Nome</th>
+              <th className="px-4 py-2 border-b text-left text-gray-600">Empresa</th>
               <th className="px-4 py-2 border-b text-left text-gray-600">Status</th>
               <th className="px-4 py-2 border-b text-left text-gray-600">Detalhes</th>
             </tr>
@@ -50,12 +49,12 @@ const Propostas = () => {
                 className="hover:bg-gray-50 cursor-pointer" 
                 onClick={() => handlePropostaClick(proposta.id)}
               >
-                <td className="px-4 py-2 border-b text-gray-700">{proposta.from.nome}</td>
+                <td className="px-4 py-2 border-b text-gray-700"><small><a href=''>{proposta.from.nome}</a></small></td>
                 <td className="px-4 py-2 border-b text-gray-500">
                   {proposta.status || 'Pendente'}
                 </td>
                 <td className="px-4 py-2 border-b text-blue-600 underline">
-                  Ver Detalhes
+                 Abrir
                 </td>
               </tr>
             ))}

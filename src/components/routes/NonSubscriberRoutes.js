@@ -59,12 +59,8 @@ const NonSubscriberRoutes = ({userDb}) => {
       <Route path="/stores/:storeId" element={<StoreDetails />} />
       <Route path="/forget-password" element={<ForgetPassword />} />
       <Route path="/change-password" element={<ChangePassword user={user} />} />
-
       <Route path="*" element={<Navigate to="/" />} />
-
     </Routes>
   );
 }
-
-
 export default NonSubscriberRoutes;
