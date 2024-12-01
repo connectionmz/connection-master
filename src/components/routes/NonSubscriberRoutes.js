@@ -10,13 +10,10 @@ import { onAuthStateChanged } from 'firebase/auth';
 import StoreDetails from '../StoreDetails';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
-import VerifyCompany from '../VerifyCompany';
 
 const NonSubscriberRoutes = ({ userDb }) => {
   const [user, setUser] = useState(null); 
   const [loading, setLoading] = useState(true);
-
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -35,7 +32,7 @@ const NonSubscriberRoutes = ({ userDb }) => {
     return <div>Carregando...</div>;
   }
 
-  const isVerified = userDb && userDb.isVerified;
+  const isVerified = userDb;
 
   return (
     <Routes>
@@ -45,15 +42,9 @@ const NonSubscriberRoutes = ({ userDb }) => {
             <Route path="/" element={<CompanyDataForm />} />
           ) : (
             <>
-              {!isVerified ? (
-                <Route path="/" element={<Navigate to="/verify" />} />
-              ) : (
-                <>
-                  <Route path="/" element={<Payment user={user} />} />
-                  <Route path="/pricing" element={<Payment user={userDb} />} />
-                  <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
-                </>
-              )}
+              <Route path="/" element={<Payment user={user} />} />
+              <Route path="/pricing" element={<Payment user={userDb} />} />
+              <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
             </>
           )}
         </>
@@ -66,10 +57,9 @@ const NonSubscriberRoutes = ({ userDb }) => {
       <Route path="/stores/:storeId" element={<StoreDetails />} />
       <Route path="/forget-password" element={<ForgetPassword />} />
       <Route path="/change-password" element={<ChangePassword user={user} />} />
-      <Route path="/verify" element={<VerifyCompany user={userDb} />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
-  )
-}
+  );
+};
 
 export default NonSubscriberRoutes;

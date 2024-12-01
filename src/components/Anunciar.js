@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FaUpload, FaTrash, FaEdit } from 'react-icons/fa';
+import { FaUpload } from 'react-icons/fa';
 import { getDownloadURL, ref as createStorageRef, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../fb';
 import { ref, push, set, onValue, remove, update } from 'firebase/database';
+import Checkout from './checkout/Checkout';
 
 const Anunciar = ({ user }) => {
   const [file, setFile] = useState(null);
@@ -14,6 +15,13 @@ const Anunciar = ({ user }) => {
   const [activeTab, setActiveTab] = useState('meusAnuncios');
   const [anuncios, setAnuncios] = useState([]);
   const [selectedAnuncio, setSelectedAnuncio] = useState(null);
+  const [days, setDays] = useState(1); // Tempo em dias
+  const [totalCost, setTotalCost] = useState(150); // Custo inicial (1 dia)
+
+  const MAX_DAYS = 30; // Limite máximo de dias para anúncio
+  const COST_PER_DAY = 150; // Custo por 24 horas
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState(''); // Para armazenar o número de celular
 
   useEffect(() => {
     const anunciosRef = ref(db, 'banners');
@@ -31,8 +39,19 @@ const Anunciar = ({ user }) => {
     });
   }, [user.id]);
 
+  useEffect(() => {
+    // Calcula o custo total com base nos dias selecionados
+    setTotalCost(days * COST_PER_DAY);
+  }, [days]);
+
   const handleFileChange = (e) => {
     if (e.target.files[0]) setFile(e.target.files[0]);
+  };
+
+  const handlePaymentSuccess = (paymentDetails) => {
+    // Fechar o modal e permitir upload
+    setIsCheckoutOpen(false);
+    handleUpload();
   };
 
   const handleUpload = () => {
@@ -67,11 +86,15 @@ const Anunciar = ({ user }) => {
       link,
       uploadedAt: new Date().toISOString(),
       companyId: user.id,
+      days,
+      totalCost,
     });
     setTitle('');
     setDescription('');
     setLink('');
     setFile(null);
+    setDays(1);
+    setPhoneNumber('');
   };
 
   const handleDelete = (id) => {
@@ -99,18 +122,15 @@ const Anunciar = ({ user }) => {
       <div className="tabs flex justify-center">
         <button
           onClick={() => setActiveTab('meusAnuncios')}
-          className={`px-4 py-2 ${activeTab === 'meusAnuncios' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-        >
+          className={`px-4 py-2 ${activeTab === 'meusAnuncios' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
           Meus Anúncios
         </button>
         <button
           onClick={() => setActiveTab('anunciar')}
-          className={`px-4 py-2 ${activeTab === 'anunciar' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-        >
+          className={`px-4 py-2 ${activeTab === 'anunciar' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
           Anunciar
         </button>
       </div>
-
       {activeTab === 'meusAnuncios' && (
         <div className="mt-4">
           <h2 className="text-xl font-bold mb-4">Meus Anúncios</h2>
@@ -132,7 +152,6 @@ const Anunciar = ({ user }) => {
           )}
         </div>
       )}
-
       {activeTab === 'anunciar' && (
         <div className="mt-4">
           <h2 className="text-2xl font-bold mb-4">Anunciar</h2>
@@ -141,66 +160,60 @@ const Anunciar = ({ user }) => {
             placeholder="Título do anúncio"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full border p-2 mb-3 rounded"
-          />
+            className="w-full border p-2 mb-3 rounded"/>
           <textarea
             placeholder="Descrição do anúncio"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full border p-2 mb-3 rounded"
-          />
+            className="w-full border p-2 mb-3 rounded"/>
           <input
             type="text"
             placeholder="Link externo (opcional)"
             value={link}
             onChange={(e) => setLink(e.target.value)}
-            className="w-full border p-2 mb-3 rounded"
-          />
+            className="w-full border p-2 mb-3 rounded"/>
           <input type="file" onChange={handleFileChange} className="mb-3" />
+          <label className="block mb-3">
+            <span>Tempo do anúncio (1 a {MAX_DAYS} dias):</span>
+            <input
+              type="number"
+              min="1"
+              max={MAX_DAYS}
+              value={days}
+              onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), MAX_DAYS))}
+              className="border p-2 rounded w-full"
+            />
+          </label>
+          <p className="text-sm text-gray-600 mb-3">
+            Valor total: <strong>{totalCost} Mt</strong>
+          </p>
+          <label className="block mb-3">
+            <span>Número de celular:</span>
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="Insira seu número de telefone"
+              className="w-full border p-2 rounded"
+            />
+          </label>
           <button
-            onClick={handleUpload}
-            className="flex items-center bg-blue-500 text-white px-4 py-2 rounded"
-            disabled={uploading}
+            onClick={() => setIsCheckoutOpen(true)}
+            disabled={!phoneNumber}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
           >
-            {uploading ? 'Carregando...' : <FaUpload className="mr-2" />}
-            {uploading ? '' : 'Upload'}
+            Avançar para Pagamento
           </button>
         </div>
       )}
-
-      {selectedAnuncio && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
-            <h2 className="text-lg font-bold mb-4">Editar Anúncio</h2>
-            <input
-              type="text"
-              placeholder="Título do anúncio"
-              value={selectedAnuncio.title}
-              onChange={(e) => setSelectedAnuncio({ ...selectedAnuncio, title: e.target.value })}
-              className="w-full border p-2 mb-3 rounded"
-            />
-            <textarea
-              placeholder="Descrição do anúncio"
-              value={selectedAnuncio.description}
-              onChange={(e) => setSelectedAnuncio({ ...selectedAnuncio, description: e.target.value })}
-              className="w-full border p-2 mb-3 rounded"
-            />
-            <input
-              type="text"
-              placeholder="Link externo"
-              value={selectedAnuncio.link}
-              onChange={(e) => setSelectedAnuncio({ ...selectedAnuncio, link: e.target.value })}
-              className="w-full border p-2 mb-3 rounded"
-            />
-            <div className="flex justify-end">
-              <button onClick={() => setSelectedAnuncio(null)} className="bg-gray-300 px-4 py-2 rounded mr-2">
-                Cancelar
-              </button>
-              <button onClick={updateAnuncio} className="bg-blue-500 text-white px-4 py-2 rounded">
-                Salvar Alterações
-              </button>
-            </div>
-          </div>
+      {isCheckoutOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Checkout
+            user={user}
+            planPrice={totalCost}
+            phoneNumber={phoneNumber}
+            onPaymentSuccess={handlePaymentSuccess}
+          />
         </div>
       )}
     </div>

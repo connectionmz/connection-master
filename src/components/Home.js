@@ -30,6 +30,8 @@ const Home = ({ user }) => {
   return (
     <>
       <div className="content-container">
+      <MarqueeAnuncios/>
+
         <StorieList user={user.provincia}/> 
         <NotificationMessage /> 
         <Banner /> 

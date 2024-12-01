@@ -1,46 +1,71 @@
 import React, { useEffect, useState } from 'react';
 import { ref, get } from 'firebase/database';
-import { onAuthStateChanged } from 'firebase/auth'; 
+import { onAuthStateChanged } from 'firebase/auth';
 import ManageStore from './market/ManageStore';
 import CreateStoreForm from './market/CreateStoreForm';
-import { db, auth } from '../fb'; 
+import { db, auth } from '../fb';
 
 const Market = () => {
     const [storeExists, setStoreExists] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [storeId, setStoreId] = useState(null); 
+    const [storeId, setStoreId] = useState(null);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const checkStoreExists = async (userId) => {
-            const storeRef = ref(db, `stores/${userId}`);
-            const storeSnapshot = await get(storeRef);
-            if (storeSnapshot.exists()) {
-                setStoreExists(true);
-            } else {
-                setStoreExists(false);
+            try {
+                const storeRef = ref(db, `stores/${userId}`);
+                const storeSnapshot = await get(storeRef);
+
+                if (storeSnapshot.exists()) {
+                    setStoreExists(true);
+                } else {
+                    setStoreExists(false);
+                }
+            } catch (err) {
+                console.error('Erro ao verificar loja:', err);
+                setError('Ocorreu um erro ao carregar as informações da loja. Tente novamente mais tarde.');
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-                setStoreId(user.uid); 
+                setStoreId(user.uid);
                 checkStoreExists(user.uid);
             } else {
                 setStoreId(null);
+                setStoreExists(null);
                 setLoading(false);
             }
         });
 
-        return () => unsubscribe(); 
+        return () => unsubscribe();
     }, []);
 
     if (loading) {
-        return <p>Carregando...</p>;
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <p className="text-lg font-semibold text-gray-600">Carregando...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <p className="text-lg text-red-500">{error}</p>
+            </div>
+        );
     }
 
     if (!storeId) {
-        return <p>Utilizador não está logado.</p>; 
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <p className="text-lg font-semibold text-gray-600">Por favor, faça login para acessar o Market.</p>
+            </div>
+        );
     }
 
     return (

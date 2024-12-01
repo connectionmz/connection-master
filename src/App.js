@@ -94,7 +94,7 @@ const App = () => {
           <div className="App">
             <Header />
             <div className='content'>
-              {subscriptionActive && isVerified ? (
+              {subscriptionActive ? (
                 <UserRoutes user={userData} />
               ) : (
                 <NonSubscriberRoutes userDb={userData} />
