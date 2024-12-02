@@ -170,9 +170,7 @@ const PublicarCotacao = ({ user }) => {
             <h1 className="text-2xl font-semibold mb-4">Pedido de Cotação</h1>
             <form onSubmit={handleSubmit}>
                 <div className="mb-4">
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                        Título do Pedido
-                    </label>
+                    
                     <input 
                         type="text" 
                         value={title}
@@ -183,18 +181,14 @@ const PublicarCotacao = ({ user }) => {
                     />
                 </div>
                 <div className="mb-4">
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                        Descrição Geral
-                    </label>
+                    
                     <EditorText
                         description={description}
                         setDescription={setDescription}
                     />
                 </div>
                 <div className="mb-4">
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                        Data Limite para a Cotação
-                    </label>
+                    
                     <input 
                         type="date"
                         value={deadline}
@@ -204,14 +198,13 @@ const PublicarCotacao = ({ user }) => {
                     />
                 </div>
                 <div className="mb-4">
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                        Sector de Atividade
-                    </label>
+                    
                     <SectorDeActividades 
                         companyData={{ sector }} 
                         handleChange={handleSectorChange} 
                         inputStyles="w-full px-3 py-2 border rounded"/>
                 </div>
+                
                 {items.map((item, index) => (
                     <div key={index} className="mb-4 border p-4 rounded">
                         <div className="flex justify-between items-center mb-2">
@@ -224,9 +217,7 @@ const PublicarCotacao = ({ user }) => {
                             </button>
                         </div>
                         <div className="mb-2">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                                Nome do Produto/Serviço
-                            </label>
+                            
                             <input 
                                 type="text"
                                 value={item.name}
@@ -236,9 +227,7 @@ const PublicarCotacao = ({ user }) => {
                                 required/>
                         </div>
                         <div className="mb-2">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                                Descrição do Produto/Serviço
-                            </label>
+                            
                             <textarea 
                                 value={item.description}
                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
@@ -247,9 +236,7 @@ const PublicarCotacao = ({ user }) => {
                                 rows="2"/>
                         </div>
                         <div className="mb-2">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                                Imagem do Produto/Serviço
-                            </label>
+                            
                             <input 
                                 type="file"
                                 onChange={(e) => handleImageChange(index, e)}

@@ -309,7 +309,6 @@ const handleDeletePost = (postToDelete) => {
                 <div className="flex justify-center space-x-4">
                     <button onClick={() => setActiveTab('inicio')} className={`py-2 px-6 ${activeTab === 'inicio' ? 'border-b-2 border-blue-500' : ''}`}>Início</button>
                     <button onClick={() => setActiveTab('Publicados')} className={`py-2 px-6 ${activeTab === 'Publicados' ? 'border-b-2 border-blue-500' : ''}`}>Publicados</button>
-                    <button onClick={() => setActiveTab('liked')} className={`py-2 px-6 ${activeTab === 'liked' ? 'border-b-2 border-blue-500' : ''}`}>Cotações</button>
                 </div>
             </div>
             

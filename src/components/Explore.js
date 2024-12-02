@@ -170,7 +170,6 @@ const totalCompanies = filteredCompanies.length;
         </div>
       )}
 
-      {/* Lista de Empresas */}
     <div className="company-list grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       {filteredCompanies.map((company) => (
         <div

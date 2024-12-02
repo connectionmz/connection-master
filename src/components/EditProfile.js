@@ -6,6 +6,8 @@ import Alert from '@mui/material/Alert';
 import { EditorText } from '../utils/formUtils';
 
 const EditProfile = ({ user }) => {
+
+  console.log(user)
   const initialData = {
     nome: user.nome || '',
     bio: user.bio || '',

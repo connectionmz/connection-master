@@ -49,6 +49,49 @@ export const SectorDeActividades = ({ companyData, handleChange, inputStyles }) 
   );
 };
 
+export const TipoEntidade = ({ companyData, handleChange, inputStyles }) => {
+  const [tipoEntidade, setTipoEntidade] = useState([]);
+
+  useEffect(() => {
+    const tipoEntidadeRef = ref(db, 'tipos_entidades');
+    onValue(tipoEntidadeRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const tipoEntidadeList = Object.values(data).map(item => item.setor); 
+        setTipoEntidade(tipoEntidadeList);
+      } else {
+        setTipoEntidade([]);
+      }
+    });
+  }, []);
+
+  return (
+    <div className="form-group mt-4">
+      <label htmlFor="sector" className="block text-sm font-medium text-gray-700">
+       Tipo de Entidades
+      </label>
+      <select
+        id="sector"
+        name="sector"
+        value={companyData.sector}
+        onChange={handleChange}
+        required
+        className={inputStyles}
+      >
+        {tipoEntidade.length > 0 ? (
+          tipoEntidade.map((entidade, index) => (
+            <option key={index} value={entidade}>
+              {entidade}
+            </option>
+          ))
+        ) : (
+          <option value="">Carregando Tipo de entidade...</option>
+        )}
+      </select>
+    </div>
+  );
+};
+
 export const Provincias = ({ companyData, handleChange, inputStyles }) => { 
   return (
     <div className="form-group">
@@ -97,3 +140,4 @@ export const EditorText = ({ description, setDescription }) => {
     />
   );
 };
+

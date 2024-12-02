@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, set, get } from 'firebase/database';
+import { ref, set, get, push } from 'firebase/database';
 import { db } from '../fb'; // Caminho correto para o Firebase
-import { Snackbar } from '@mui/material'; // Import do Snackbar
-import MuiAlert from '@mui/material/Alert'; // Import do MuiAlert
+import { Snackbar, TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import MuiAlert from '@mui/material/Alert';
+
 
 const CriarProforma = ({ user }) => {
     const [cliente, setCliente] = useState('');
@@ -17,11 +18,67 @@ const CriarProforma = ({ user }) => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const [clientes, setClientes] = useState([]);
-
+    const [isAddingCliente, setIsAddingCliente] = useState(false); // Estado para mostrar o formulário de novo cliente
+    const [openModal, setOpenModal] = useState(false);
+    const [novoCliente, setNovoCliente] = useState({
+        nome: '',
+        email: '',
+        telefone: '',
+        endereco: '',
+    });
     useEffect(() => {
         // Aqui você pode carregar os clientes da base de dados
-        // Exemplo: fetchClientes();
+        fetchClientes();
+        console.log(user)
     }, []);
+
+    // Função para carregar os clientes
+    const fetchClientes = async () => {
+        const clientesRef = ref(db, `clientes/${user.id}`);
+        const snapshot = await get(clientesRef);
+        const data = snapshot.val();
+        if (data) {
+            setClientes(Object.values(data)); // Carregar clientes existentes
+        }
+    };
+
+
+    const handleOpenModal = () => {
+        setNovoCliente({ nome: '', email: '', telefone: '', endereco: '' });
+        setOpenModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setOpenModal(false);
+    };
+
+   
+    const handleAddNewCliente = async () => {
+        const { nome, email, telefone, endereco } = novoCliente;
+
+        if (!nome.trim() || !email.trim() || !telefone.trim() || !endereco.trim()) {
+            setSnackbarMessage('Todos os campos são obrigatórios.');
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            return;
+        }
+
+        try {
+            const clienteRef = push(ref(db, `clientes/${user.id}`));
+            await set(clienteRef, { nome, email, telefone, endereco });
+            setClientes([...clientes, { id: clienteRef.key, ...novoCliente }]);
+            setSnackbarMessage('Cliente adicionado com sucesso!');
+            setSnackbarSeverity('success');
+            handleCloseModal();
+        } catch (error) {
+            console.error('Erro ao adicionar cliente:', error);
+            setSnackbarMessage('Erro ao adicionar cliente.');
+            setSnackbarSeverity('error');
+        } finally {
+            setOpenSnackbar(true);
+        }
+    };
+
 
     // Adicionar um novo item à lista
     const handleAddItem = () => {
@@ -127,27 +184,32 @@ const CriarProforma = ({ user }) => {
         setOpenSnackbar(false);
     };
 
+
     return (
         <div className="p-6 max-w-3xl mx-auto">
             <h1 className="text-3xl font-semibold mb-6">Criar Nova Proforma</h1>
 
             <form onSubmit={handleSalvar} className="space-y-6">
-                <div>
+            <div>
                     <label className="block text-gray-700">Cliente (Opcional)</label>
-                    <select
-                        value={cliente}
-                        onChange={(e) => setCliente(e.target.value)}
-                        className="w-full p-2 border rounded"
-                    >
-                        <option value="">Selecione um cliente</option>
-                        {clientes.map((c) => (
-                            <option key={c.id} value={c.nome}>
-                                {c.nome}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="flex items-center space-x-2">
+                        <select
+                            value={cliente}
+                            onChange={(e) => setCliente(e.target.value)}
+                            className="w-full p-2 border rounded"
+                        >
+                            <option value="">Selecione um cliente</option>
+                            {clientes.map((c, index) => (
+                                <option key={index} value={c.nome}>
+                                    {c.nome}
+                                </option>
+                            ))}
+                        </select>
+                        <Button onClick={handleOpenModal} variant="contained" color="primary">
+                             Cliente +
+                        </Button>
+                    </div>
                 </div>
-
                 <div className="flex space-x-4">
                     <div className="flex-1">
                         <label className="block text-gray-700">Data de Emissão</label>
@@ -248,7 +310,48 @@ const CriarProforma = ({ user }) => {
                     {loading ? 'Salvando...' : 'Salvar Proforma'}
                 </button>
             </form>
-
+{/* Modal de novo cliente */}
+<Dialog open={openModal} onClose={handleCloseModal}>
+                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        margin="dense"
+                        label="Nome"
+                        fullWidth
+                        value={novoCliente.nome}
+                        onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="E-mail"
+                        fullWidth
+                        value={novoCliente.email}
+                        onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Telefone"
+                        fullWidth
+                        value={novoCliente.telefone}
+                        onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Endereço"
+                        fullWidth
+                        value={novoCliente.endereco}
+                        onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseModal} color="secondary">
+                        Cancelar
+                    </Button>
+                    <Button onClick={handleAddNewCliente} color="primary">
+                        Adicionar
+                    </Button>
+                </DialogActions>
+            </Dialog>
             <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
                 <MuiAlert elevation={6} variant="filled" onClose={handleCloseSnackbar} severity={snackbarSeverity}>
                     {snackbarMessage}
