@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, auth } from '../fb'; 
+import { db, auth } from '../fb';
 import { ref, onValue, increment, update } from 'firebase/database';
-import { AdsClick, Inbox, RemoveRedEye } from '@mui/icons-material';
+import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload } from '@mui/icons-material';
 
 const CotacaoDetalhes = () => {
   const { id, companyId } = useParams();
   const [cotacao, setCotacao] = useState(null);
-  const [isCompanyOwner, setIsCompanyOwner] = useState(false); 
-  const [propostas, setPropostas] = useState([]); 
+  const [isCompanyOwner, setIsCompanyOwner] = useState(false);
+  const [propostas, setPropostas] = useState([]);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const cotacaoRef = ref(db, `cotacoes/${id}`);
-    
+
     // Increment views count
     update(cotacaoRef, {
       views: increment(1),
@@ -36,7 +36,7 @@ const CotacaoDetalhes = () => {
   }, [id]);
 
   const handleEnviarProposta = () => {
-    navigate(`/enviar-proposta/${id}/${companyId}`); 
+    navigate(`/enviar-proposta/${id}/${companyId}`);
   };
 
   const handleBaixarPedido = () => {
@@ -45,35 +45,39 @@ const CotacaoDetalhes = () => {
 
   const handlePartilhar = () => {
     const url = window.location.href;
-    navigator.clipboard.writeText(url)
+    navigator.clipboard
+      .writeText(url)
       .then(() => alert('Link copiado! Pronto para partilhar.'))
       .catch((err) => alert('Erro ao copiar o link', err));
   };
 
   const handleVerPropostas = () => {
     if (propostas.length > 0) {
-      navigate(`/propostas/${id}/propostas`); 
+      navigate(`/propostas/${id}/propostas`);
     } else {
-      alert("Nenhuma proposta foi recebida ainda.");
+      alert('Nenhuma proposta foi recebida ainda.');
     }
   };
 
   if (!cotacao) {
-    return <p>Carregando...</p>;
+    return <div className="text-center text-gray-500">Carregando...</div>;
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-8 bg-gray-50 shadow-lg rounded-xl">
-      <div className="flex items-center gap-6 mb-10 p-6 rounded-lg bg-white shadow">
+    <div className="max-w-5xl mx-auto p-4 sm:p-8 bg-gray-100 shadow-lg rounded-lg">
+      {/* Informações da Empresa */}
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-10 bg-white p-6 rounded-lg shadow">
         <img
           src={cotacao.company.logoUrl || 'default-logo.png'}
           alt={cotacao.company.nome}
-          className="w-20 h-20 rounded-full object-cover"
+          className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover"
         />
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">{cotacao.company.nome}</h2>
-          <p className="text-sm text-gray-500">Estado: <span className="font-medium">{cotacao.status}</span></p>
-          <div className="flex items-center gap-6 mt-4 text-gray-600">
+        <div className="text-center sm:text-left">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-gray-800">{cotacao.company.nome}</h2>
+          <p className="text-sm text-gray-500">
+            Estado: <span className="font-medium text-gray-800">{cotacao.status}</span>
+          </p>
+          <div className="flex flex-wrap justify-center sm:justify-start gap-4 mt-4 text-gray-600">
             <div className="flex items-center gap-2">
               <RemoveRedEye className="text-blue-500" />
               <p>{cotacao.views || 0} visualizações</p>
@@ -84,22 +88,25 @@ const CotacaoDetalhes = () => {
             </div>
             <div className="flex items-center gap-2">
               <Inbox className="text-yellow-500" />
-              <p>{cotacao.proposals ? cotacao.proposals.length : 0} propostas</p>
+              <p>{cotacao.proposals ? propostas.length : 0} propostas</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-10">
-        <p className="text-gray-500">
-          Data Limite: <span className="font-semibold text-gray-800">{new Date(cotacao.datalimite).toLocaleDateString('pt-PT', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-          })}</span>
+      {/* Ações */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mb-8 bg-white p-4 rounded-lg shadow">
+        <p className="text-gray-600 text-center sm:text-left">
+          Data Limite:{' '}
+          <span className="font-semibold text-gray-800">
+            {new Date(cotacao.datalimite).toLocaleDateString('pt-PT', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </span>
         </p>
-       <p>
-       <div className="flex items-center">
+        <div className="flex flex-wrap gap-4 justify-center sm:justify-end">
           {isCompanyOwner ? (
             <button
               onClick={handleVerPropostas}
@@ -117,35 +124,46 @@ const CotacaoDetalhes = () => {
           )}
           <button
             onClick={handleBaixarPedido}
-            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg shadow hover:bg-green-700 transition"
+            className="px-6 py-2 flex items-center gap-2 bg-green-600 text-white font-medium rounded-lg shadow hover:bg-green-700 transition"
           >
+            <FileDownload />
             Baixar Pedido
           </button>
           <button
             onClick={handlePartilhar}
-            className="px-6 py-2 bg-gray-600 text-white font-medium rounded-lg shadow hover:bg-gray-700 transition"
+            className="px-6 py-2 flex items-center gap-2 bg-gray-600 text-white font-medium rounded-lg shadow hover:bg-gray-700 transition"
           >
+            <Share />
             Partilhar
           </button>
         </div>
-       </p>
       </div>
 
-      <h3 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-4">{cotacao.title}</h3>
-      <p className="text-gray-700 leading-relaxed mb-10" dangerouslySetInnerHTML={{ __html: cotacao.description }} />
+      {/* Descrição */}
+      <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">{cotacao.title}</h3>
+        <p
+          className="text-gray-700 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: cotacao.description }}
+        />
+      </div>
 
-      <div>
-        <h4 className="text-xl font-semibold text-gray-800 mb-6">Itens Solicitados</h4>
+      {/* Itens Solicitados */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h4 className="text-xl font-semibold text-gray-800 mb-4">Itens Solicitados</h4>
         {cotacao.items && cotacao.items.length > 0 ? (
-          <ul className="space-y-6">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {cotacao.items.map((item, index) => (
-              <li key={index} className="flex items-center gap-6 bg-white p-4 rounded-lg shadow">
+              <li
+                key={index}
+                className="flex flex-col items-center gap-4 bg-gray-50 p-4 rounded-lg shadow hover:bg-gray-100 transition"
+              >
                 <img
                   src={item.imageUrl}
                   alt={item.name}
-                  className="w-24 h-24 object-cover rounded-lg"
+                  className="w-full h-32 object-cover rounded-lg"
                 />
-                <div>
+                <div className="text-center">
                   <h5 className="text-lg font-medium text-gray-800">{item.name}</h5>
                   <p className="text-sm text-gray-600">{item.description}</p>
                 </div>
@@ -153,7 +171,7 @@ const CotacaoDetalhes = () => {
             ))}
           </ul>
         ) : (
-          <p className="text-gray-600">Nenhum item disponível.</p>
+          <p className="text-gray-600 text-center">Nenhum item disponível.</p>
         )}
       </div>
     </div>

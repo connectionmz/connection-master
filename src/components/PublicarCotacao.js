@@ -83,6 +83,8 @@ const PublicarCotacao = ({ user }) => {
                 setSnackbarMessage('Cotação publicada com sucesso!');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
+
+                window.location='/cotacao'
     
                 const empresasRef = ref(db, 'company');
                 const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));
