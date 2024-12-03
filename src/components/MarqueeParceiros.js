@@ -1,77 +1,86 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../fb';
 import { ref, get } from 'firebase/database';
-import { FaBuilding } from 'react-icons/fa';
 import '../styles/main.css';
 
 const MarqueeParceiros = () => {
-  const [anuncios, setAnuncios] = useState([]);
-  const [selectedAnuncio, setSelectedAnuncio] = useState(null);
+  const [parceiros, setParceiros] = useState([]);
+  const [selectedParceiro, setSelectedParceiro] = useState(null);
 
-  const fetchAnuncios = async () => {
+  // Função para buscar parceiros do Firebase
+  const fetchParceiros = async () => {
     try {
-      const snapshot = await get(ref(db, 'publicAnnouncements'));
+      const snapshot = await get(ref(db, 'parceiros'));
       if (snapshot.exists()) {
-        setAnuncios(Object.values(snapshot.val()));
+        setParceiros(Object.values(snapshot.val()));
       }
     } catch (error) {
-      console.error('Erro ao buscar anúncios:', error);
+      console.error('Erro ao buscar parceiros:', error);
     }
   };
 
   useEffect(() => {
-    fetchAnuncios();
+    fetchParceiros();
   }, []);
 
-  const handleOpenModal = (anuncio) => {
-    setSelectedAnuncio(anuncio);
+  const handleOpenModal = (parceiro) => {
+    setSelectedParceiro(parceiro);
   };
 
   const handleCloseModal = () => {
-    setSelectedAnuncio(null);
+    setSelectedParceiro(null);
   };
 
   return (
     <div>
-      <div className="overflow-hidden bg-blue-600 text-white p-4 mb-6">
+      {/* Marquee dos parceiros */}
+      <div className="overflow-hidden  p-4 mb-6">
         <div className="whitespace-nowrap animate-marquee">
-          {anuncios.map((anuncio, index) => (
+          {parceiros.map((parceiro, index) => (
             <span
               key={index}
               className="mx-8 cursor-pointer flex items-center space-x-2"
-              onClick={() => handleOpenModal(anuncio)}
+              onClick={() => handleOpenModal(parceiro)}
             >
-            
-              <strong>{anuncio.company || 'Empresa Desconhecida'}:</strong> 
-              <span>{anuncio.title}</span>
+              {parceiro.logoUrl && (
+                <img
+                  src={parceiro.logoUrl}
+                  alt={`Logo de ${parceiro.nome}`}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              )}
+              <strong>{parceiro.nome || 'Nome desconhecido'}</strong>
             </span>
           ))}
         </div>
       </div>
 
-      {selectedAnuncio && (
+      {/* Modal com detalhes do parceiro */}
+      {selectedParceiro && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 md:w-1/2 max-h-screen overflow-y-auto">
-            <h2 className="text-xl font-bold mb-2">
-              {selectedAnuncio.title} - {selectedAnuncio.empresa}
-            </h2>
-
-            {selectedAnuncio.contentType === 'image' && (
-              <img src={selectedAnuncio.contentUrl} alt="Anúncio" className="w-full h-auto rounded-lg mt-4" />
+            <h2 className="text-xl font-bold mb-4">{selectedParceiro.nome}</h2>
+            <p>
+              <strong>Email:</strong> {selectedParceiro.email || 'Não informado'}
+            </p>
+            <p>
+              <strong>Telefone:</strong> {selectedParceiro.telefone || 'Não informado'}
+            </p>
+            <p>
+              <strong>Tipo:</strong> {selectedParceiro.tipo || 'Desconhecido'}
+            </p>
+            {selectedParceiro.mensagem && (
+              <p className="mt-4 text-gray-700">
+                <strong>Mensagem:</strong> {selectedParceiro.mensagem}
+              </p>
             )}
 
-
-              <a
-                href={selectedAnuncio.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline mt-4 inline-block">
-                Baixar o documento
-              </a> 
-              <br/>
-
-            {selectedAnuncio.contentType === 'text' && (
-              <p className="mt-4 text-gray-700">{selectedAnuncio.contentText}</p>
+            {selectedParceiro.logoUrl && (
+              <img
+                src={selectedParceiro.logoUrl}
+                alt={`Logo de ${selectedParceiro.nome}`}
+                className="w-full h-auto rounded-lg mt-4"
+              />
             )}
 
             <button

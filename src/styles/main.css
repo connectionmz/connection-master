@@ -10,14 +10,20 @@
 .bg-black{
     background-color: #333;
 }
+
+  /* Estilo para o marquee */
 @keyframes marquee {
-    0% { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
   }
   
   .animate-marquee {
-    display: inline-block;
-    white-space: nowrap;
     animation: marquee 15s linear infinite;
+    display: flex;
+    align-items: center;
   }
   

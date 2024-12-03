@@ -9,6 +9,7 @@ import ServicosExternos from './ServicosExternos';
 import { db } from '../fb';
 import { ref, get } from 'firebase/database';
 import MarqueeAnuncios from './MarqueeAnuncios';
+import MarqueeParceiros from './MarqueeParceiros';
 
 const Home = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
@@ -30,7 +31,7 @@ const Home = ({ user }) => {
   return (
     <>
       <div className="content-container">
-      <MarqueeAnuncios/>
+      <MarqueeParceiros/>
 
         <StorieList user={user.provincia}/> 
         <NotificationMessage /> 
