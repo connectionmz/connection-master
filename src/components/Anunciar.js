@@ -15,10 +15,10 @@ const Anunciar = ({ user }) => {
   const [activeTab, setActiveTab] = useState('meusAnuncios');
   const [anuncios, setAnuncios] = useState([]);
   const [selectedAnuncio, setSelectedAnuncio] = useState(null);
-  const [days, setDays] = useState(1); // Tempo em dias
-  const [totalCost, setTotalCost] = useState(150); // Custo inicial (1 dia)
+  const [days, setDays] = useState(1); 
+  const [totalCost, setTotalCost] = useState(30);
 
-  const MAX_DAYS = 30; // Limite máximo de dias para anúncio
+  const MAX_DAYS = 30; 
   const COST_PER_DAY = 150; // Custo por 24 horas
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState(''); // Para armazenar o número de celular

@@ -11,7 +11,6 @@ const ConnectionsSearch = () => {
     if (!query.trim()) return;
     setIsSearching(true);
 
-    // Simulação de resultados de pesquisa
     const results = [
       { id: 1, title: `Resultado para "${query}"`, description: `Descrição do resultado para "${query}".` },
       { id: 2, title: `Mais sobre "${query}"`, description: `Mais detalhes sobre "${query}" encontrados.` },
