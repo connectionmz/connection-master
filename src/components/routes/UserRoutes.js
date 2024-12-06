@@ -103,7 +103,7 @@ const UserRoutes = ({ user }) => (
   {/* Módulos */}
   <Route path="/callcenter" element={<CallCenterModule />} />
   <Route path="/logistica" element={<LogisticaModule />} />
-  <Route path="/inqueritos" element={<InqueritosModule />} />
+  <Route path="/inqueritos" element={<InqueritosModule user={user}/>} />
   
 
   {/* Outros */}

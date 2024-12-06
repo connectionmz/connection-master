@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
 import { ref, push } from 'firebase/database';
 import { db } from '../fb';
+import { Provincias, SectorDeActividades } from '../utils/formUtils';
 
-const CriarInquerito = () => {
+const CriarInquerito = ({user}) => {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [setor, setSetor] = useState('');
+  const [setor, setSector] = useState('');
   const [tipoInquerito, setTipoInquerito] = useState('');
   const [perguntas, setPerguntas] = useState([]);
+  const [provincias, setProvincias] = useState('');
+  
 
-  const opcoesSetores = [
-    'Saúde',
-    'Educação',
-    'Tecnologia',
-    'Agricultura',
-    'Serviços Financeiros',
-  ];
 
   const tiposInqueritos = [
     'Satisfação do Cliente',
@@ -49,6 +45,14 @@ const CriarInquerito = () => {
     setPerguntas(novasPerguntas);
   };
 
+  const handleProvinciaChange = (e) => {
+    setProvincias(e.target.value); 
+  };
+
+  const handleSectorChange = (e) => {
+    setSector(e.target.value);
+};
+  
   const salvarInquerito = () => {
     if (!titulo || !descricao || !setor || !tipoInquerito || perguntas.length === 0) {
       alert('Por favor, preencha todos os campos.');
@@ -59,6 +63,8 @@ const CriarInquerito = () => {
     const novoInquerito = {
       title: titulo,
       description: descricao,
+      provincia:provincias,
+      company:user.id,
       setor,
       tipoInquerito,
       questions: perguntas,
@@ -69,7 +75,7 @@ const CriarInquerito = () => {
 
     setTitulo('');
     setDescricao('');
-    setSetor('');
+    setSector('');
     setTipoInquerito('');
     setPerguntas([]);
     alert('Inquérito criado com sucesso!');
@@ -92,18 +98,17 @@ const CriarInquerito = () => {
         className="border p-2 w-full mb-4"
       ></textarea>
 
-      <select
-        value={setor}
-        onChange={(e) => setSetor(e.target.value)}
-        className="border p-2 w-full mb-4"
-      >
-        <option value="">Selecione o Setor de Atividade</option>
-        {opcoesSetores.map((opcao, index) => (
-          <option key={index} value={opcao}>
-            {opcao}
-          </option>
-        ))}
-      </select>
+<SectorDeActividades
+  companyData={setor}
+  handleChange={handleSectorChange} 
+  inputStyles="border p-2 w-full mb-4"
+/>
+<Provincias
+  companyData={provincias}
+  handleChange={handleProvinciaChange}
+  inputStyles="border p-2 w-full mb-4"
+/>
+
 
       <select
         value={tipoInquerito}
