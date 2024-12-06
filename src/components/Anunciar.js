@@ -19,10 +19,9 @@ const Anunciar = ({ user }) => {
   const [totalCost, setTotalCost] = useState(30);
 
   const MAX_DAYS = 30; 
-  const COST_PER_DAY = 150; // Custo por 24 horas
+  const COST_PER_DAY = 30; 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState(''); // Para armazenar o número de celular
-
+  const [phoneNumber, setPhoneNumber] = useState('');
   useEffect(() => {
     const anunciosRef = ref(db, 'banners');
     onValue(anunciosRef, (snapshot) => {
@@ -40,7 +39,6 @@ const Anunciar = ({ user }) => {
   }, [user.id]);
 
   useEffect(() => {
-    // Calcula o custo total com base nos dias selecionados
     setTotalCost(days * COST_PER_DAY);
   }, [days]);
 
@@ -49,7 +47,6 @@ const Anunciar = ({ user }) => {
   };
 
   const handlePaymentSuccess = (paymentDetails) => {
-    // Fechar o modal e permitir upload
     setIsCheckoutOpen(false);
     handleUpload();
   };

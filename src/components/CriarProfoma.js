@@ -25,7 +25,11 @@ const CriarProforma = ({ user }) => {
         email: '',
         telefone: '',
         endereco: '',
+        nuit: '',
+        empresa: '',
+        notas: '',
     });
+    
     useEffect(() => {
         // Aqui você pode carregar os clientes da base de dados
         fetchClientes();
@@ -310,48 +314,71 @@ const CriarProforma = ({ user }) => {
                     {loading ? 'Salvando...' : 'Salvar Proforma'}
                 </button>
             </form>
-{/* Modal de novo cliente */}
-<Dialog open={openModal} onClose={handleCloseModal}>
-                <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        margin="dense"
-                        label="Nome"
-                        fullWidth
-                        value={novoCliente.nome}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
-                    />
-                    <TextField
-                        margin="dense"
-                        label="E-mail"
-                        fullWidth
-                        value={novoCliente.email}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
-                    />
-                    <TextField
-                        margin="dense"
-                        label="Telefone"
-                        fullWidth
-                        value={novoCliente.telefone}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
-                    />
-                    <TextField
-                        margin="dense"
-                        label="Endereço"
-                        fullWidth
-                        value={novoCliente.endereco}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseModal} color="secondary">
-                        Cancelar
-                    </Button>
-                    <Button onClick={handleAddNewCliente} color="primary">
-                        Adicionar
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <Dialog open={openModal} onClose={handleCloseModal}>
+    <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+    <DialogContent>
+        <TextField
+            margin="dense"
+            label="Nome"
+            fullWidth
+            value={novoCliente.nome}
+            onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+        />
+        <TextField
+            margin="dense"
+            label="E-mail"
+            fullWidth
+            value={novoCliente.email}
+            onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+        />
+        <TextField
+            margin="dense"
+            label="Telefone"
+            fullWidth
+            value={novoCliente.telefone}
+            onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+        />
+        <TextField
+            margin="dense"
+            label="Endereço"
+            fullWidth
+            value={novoCliente.endereco}
+            onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+        />
+        <TextField
+            margin="dense"
+            label="NUIT"
+            fullWidth
+            value={novoCliente.nuit}
+            onChange={(e) => setNovoCliente({ ...novoCliente, nuit: e.target.value })}
+        />
+        <TextField
+            margin="dense"
+            label="Empresa"
+            fullWidth
+            value={novoCliente.empresa}
+            onChange={(e) => setNovoCliente({ ...novoCliente, empresa: e.target.value })}
+        />
+        <TextField
+            margin="dense"
+            label="Notas"
+            multiline
+            rows={3}
+            fullWidth
+            value={novoCliente.notas}
+            onChange={(e) => setNovoCliente({ ...novoCliente, notas: e.target.value })}
+        />
+    </DialogContent>
+    <DialogActions>
+        <Button onClick={handleCloseModal} color="secondary">
+            Cancelar
+        </Button>
+        <Button onClick={handleAddNewCliente} color="primary">
+            Adicionar
+        </Button>
+    </DialogActions>
+</Dialog>
+
             <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
                 <MuiAlert elevation={6} variant="filled" onClose={handleCloseSnackbar} severity={snackbarSeverity}>
                     {snackbarMessage}
