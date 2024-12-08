@@ -18,10 +18,7 @@ export const saveContentToInbox = (content, idCompany, title) => {
         const isDuplicate = Object.values(existingMessages).some(
           (message) => message.title === title.trim() || message.content === content.trim()
         );
-
         if (isDuplicate) {
-
-          SaveLogError('savetoInbox','Mensagem duplicada detectada. Não será salva novamente.')
           return Promise.resolve('Mensagem duplicada detectada.');
         }
       }
@@ -34,7 +31,7 @@ export const saveContentToInbox = (content, idCompany, title) => {
       };
 
       return set(newMessageRef, newMessage).then(() => {
-        console.log('Mensagem salva com sucesso no inbox!');
+        console.log('');
       });
     })
     .catch((error) => {
@@ -60,7 +57,7 @@ export const saveContentToInboxBasedSector = (content, idCompany, title, sector)
 
     return set(newMessageRef, newMessage)
       .then(() => {
-        console.log('Mensagem salva com sucesso no inbox!');
+        console.log('');
       })
       .catch((error) => {
         console.error('Erro ao salvar a mensagem no inbox: ', error);

@@ -74,7 +74,7 @@ const App = () => {
           }
   
           saveContentToInbox(contentMessage, user, messageTitle)
-            .then(() => console.log('Notificação salva com sucesso no inbox!'))
+            .then(() => console.log(''))
             .catch((error) =>
               SaveLogError('app', 'Erro ao salvar notificação no inbox: '+ error)
             );
@@ -94,7 +94,6 @@ const App = () => {
 
         setIsVerified(companyData.isVerified)
 
-        console.log(companyData)
 
         setUserData({
           ...companyData,
@@ -119,11 +118,9 @@ const App = () => {
       if (allDataSnapshot.exists()) {
         const allData = allDataSnapshot.val();
         setAllCompanyData(allData); 
-      } else {
-        console.log('Não há dados disponíveis.');
       }
-
     } catch (error) {
+      SaveLogError('app', error)
       setSubscriptionActive(false);
     } finally {
       setLoading(false);
