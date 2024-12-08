@@ -7,12 +7,14 @@ import Header from './components/Header';
 import { ThemeProvider } from './context/ThemeContext';
 import Footer from './components/Footer';
 import { auth, db } from './fb';
-import { ref, get, set } from 'firebase/database'; 
+import { ref, get, set, onValue } from 'firebase/database'; 
 import ClipLoader from "react-spinners/ClipLoader"; 
 import { onAuthStateChanged } from 'firebase/auth';
 import { UserProvider } from './context/UserProfileContext';
 import UserRoutes from './components/routes/UserRoutes';
 import NonSubscriberRoutes from './components/routes/NonSubscriberRoutes';
+import { saveContentToInbox } from './components/SaveToInbox';
+import { SaveLogError } from './utils/SaveLogError';
 
 const App = () => {
   const [userData, setUserData] = useState(null); 
@@ -20,6 +22,67 @@ const App = () => {
   const [subscriptionActive, setSubscriptionActive] = useState(false); 
   const [isVerified, setIsVerified] = useState(false)
   const [allCompanyData, setAllCompanyData] = useState(null); // Para armazenar todos os dados da Realtime DB
+
+  const fetchNewContentAndNotify = (user) => {
+    const sections = ['concursos', 'cotacoes', 'publicAnnouncements', 'surveys'];
+  
+    sections.forEach((section) => {
+      const sectionRef = ref(db, `${section}`);
+  
+      onValue(sectionRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          return;
+        }
+  
+        const sectionData = snapshot.val();
+  
+        Object.keys(sectionData).forEach((key) => {
+          const data = sectionData[key];
+  
+          let contentMessage = '';
+          let messageTitle = '';
+  
+          switch (section) {
+            case 'concursos':
+              contentMessage = `Novo concurso: ${data.titulo || 'Sem título'}`;
+              messageTitle = data.titulo || 'Sem título';
+              break;
+            case 'cotacoes':
+              contentMessage = `Novo pedido de cotações: ${data.title || 'Sem título'}`;
+              messageTitle = data.title || 'Sem título';
+              break;
+            case 'publicAnnouncements':
+              contentMessage = `Novo anúncio público: ${data.content || 'Conteúdo indisponível'}`;
+              messageTitle = data.content || 'Sem título';
+              break;
+            case 'surveys':
+              contentMessage = `Nova pesquisa disponível: ${data.title || 'Sem título'}`;
+              messageTitle = data.title || 'Sem título';
+              break;
+            default:
+              contentMessage = data.content || 'Conteúdo indisponível';
+              messageTitle = 'Sem título';
+          }
+  
+          if (!contentMessage || !user || !messageTitle) {
+            console.error('Parâmetros inválidos detectados:', {
+              contentMessage,
+              userId: user,
+              messageTitle,
+            });
+            return;
+          }
+  
+          saveContentToInbox(contentMessage, user, messageTitle)
+            .then(() => console.log('Notificação salva com sucesso no inbox!'))
+            .catch((error) =>
+              SaveLogError('app', 'Erro ao salvar notificação no inbox: '+ error)
+            );
+        });
+      });
+    });
+  };
+  
 
   const fetchUserDataAndSubscription = async (user) => {
     try {
@@ -31,7 +94,7 @@ const App = () => {
 
         setIsVerified(companyData.isVerified)
 
-        console.log(isVerified)
+        console.log(companyData)
 
         setUserData({
           ...companyData,
@@ -45,6 +108,9 @@ const App = () => {
         setSubscriptionActive(companyData.subscriptions.status);
 
         await set(ref(db, `company/${user.uid}/lastLogin`), new Date().toISOString());
+
+
+        fetchNewContentAndNotify(user.uid);
       } else {
         setSubscriptionActive(false);
       }
