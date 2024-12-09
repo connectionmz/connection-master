@@ -116,18 +116,9 @@ const CompanyDataForm = () => {
           id: user.uid,
           logoUrl,
           subscriptions: {
-            plan: {
-              name: planoSelecionado?.name,
-              price: planoSelecionado?.price,
-              modules: planoSelecionado?.modules,
-              duration: '1 mês',
-            },
-            payment: { amount: planoSelecionado?.price, method: selectedMetodo },
             status: 'active',
-            expiryDate,
             recurring: recorrente,
           },
-          activeModules: planoSelecionado?.modules,
         };
   
         await set(ref(db, `company/${user.uid}`), dataWithLogoUrl);

@@ -92,6 +92,9 @@ const App = () => {
       if (companySnapshot.exists()) {
         const companyData = companySnapshot.val();
 
+
+        console.log(companyData)
+
         setIsVerified(companyData.isVerified)
 
 

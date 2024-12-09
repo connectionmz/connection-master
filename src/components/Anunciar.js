@@ -209,8 +209,7 @@ const Anunciar = ({ user }) => {
             user={user}
             planPrice={totalCost}
             phoneNumber={phoneNumber}
-            onPaymentSuccess={handlePaymentSuccess}
-          />
+            onPaymentSuccess={handlePaymentSuccess}/>
         </div>
       )}
     </div>

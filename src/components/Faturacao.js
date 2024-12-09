@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ref, get } from 'firebase/database'; // Certifique-se de que estás a importar corretamente o Firebase
 import { db } from '../fb';
 import { useNavigate } from 'react-router-dom';
+import { UpdatePayment } from './UpdatePayment';
 
 const Faturacao = ({ user }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -10,6 +11,9 @@ const Faturacao = ({ user }) => {
     const navigate = useNavigate();
 
     useEffect(() => {
+
+        UpdatePayment(user)
+
         const fetchInvoices = async () => {
             try {
                 const invoicesRef = ref(db, `invoices/${user.id}`);

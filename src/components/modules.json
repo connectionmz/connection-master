@@ -1,0 +1,114 @@
+{
+  "modulos": [
+    {
+      "key": "moduloProforma",
+      "name": "Proforma",
+      "description": "Emita fatura proforma para diversas empresas dentro e fora da plataforma, com integração ao módulo Market.",
+      "benefits": [
+        "Emissão de faturas proforma personalizadas",
+        "Integração automática ao módulo Market",
+        "Facilitação de processos financeiros"
+      ],
+      "price": "1000 MT/mês"
+    },
+    {
+      "key": "moduloMarket",
+      "name": "Market",
+      "description": "Crie um mercado online e venda produtos ou serviços.",
+      "benefits": [
+        "Criação de mercado online personalizado",
+        "Venda de produtos e serviços diretamente",
+        "Maior visibilidade dos seus produtos"
+      ],
+      "price": "800 MT (taxa única)"
+    },
+    {
+      "key": "moduloAnunciar",
+      "name": "Anunciar",
+      "description": "Anuncie produtos ou serviços para empresas e setores existentes na plataforma.",
+      "benefits": [
+        "Anúncios segmentados por setores e empresas",
+        "Visibilidade ampliada dos seus produtos e serviços",
+        "Possibilidade de definir a duração dos anúncios"
+      ],
+      "price": "30 MT/dia (máximo de 30 dias)"
+    },
+    {
+      "key": "moduloCallCenter",
+      "name": "Call Center",
+      "description": "Nossa equipa comunica-se constantemente com a sua empresa para não perder nenhuma oportunidade de negócio.",
+      "benefits": [
+        "Comunicação constante com sua empresa",
+        "Ligações informativas sobre oportunidades de negócios",
+        "Garantia de acompanhamento próximo"
+      ],
+      "price": "1200 MT/mês"
+    },
+    {
+      "key": "moduloInquerito",
+      "name": "Inquérito",
+      "description": "Envie inquéritos personalizados para empresas existentes na plataforma.",
+      "benefits": [
+        "Envio de até 10 inquéritos personalizados por mês",
+        "Coleta de feedback estratégico",
+        "Análise de dados coletados"
+      ],
+      "price": "700 MT/mês"
+    },
+    {
+      "key": "moduloSMS",
+      "name": "SMS",
+      "description": "Envie mensagens SMS em massa diretamente para os clientes.",
+      "benefits": [
+        "Envio rápido de mensagens",
+        "Alcance direto aos clientes",
+        "Capacidade de mensagens personalizadas"
+      ],
+      "price": "500 MT/mês"
+    },
+    {
+      "key": "moduloLogistica",
+      "name": "Logística",
+      "description": "Otimize a entrega e transporte de produtos da sua empresa.",
+      "benefits": [
+        "Gestão eficiente de entregas",
+        "Redução de custos logísticos",
+        "Integração com outros módulos"
+      ],
+      "price": "1500 MT/mês"
+    },
+    {
+      "key": "moduloFaturacao",
+      "name": "Faturação",
+      "description": "Automatize a emissão e gestão de faturas.",
+      "benefits": [
+        "Emissão rápida de faturas",
+        "Gestão de pagamentos facilitada",
+        "Histórico completo de faturação"
+      ],
+      "price": "900 MT/mês"
+    },
+    {
+      "key": "moduloCampaign",
+      "name": "Campanhas",
+      "description": "Crie e gerencie campanhas de marketing para atrair mais clientes.",
+      "benefits": [
+        "Criação de campanhas personalizadas",
+        "Análise de desempenho das campanhas",
+        "Maior alcance de marketing"
+      ],
+      "price": "1000 MT/campanha"
+    },
+    {
+      "key": "moduloAnalytics",
+      "name": "Analytics",
+      "description": "Monitore e analise os dados da sua empresa para decisões estratégicas.",
+      "benefits": [
+        "Análise detalhada de dados",
+        "Relatórios personalizados",
+        "Melhoria na tomada de decisões"
+      ],
+      "price": "1200 MT/mês"
+    }
+  ]
+}

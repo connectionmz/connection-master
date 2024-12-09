@@ -47,10 +47,11 @@ import CreateUsers from '../CreateUsers';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
 import VerifyCompany from '../VerifyCompany';
+import PagamentoModulo from '../PagamentoModulo';
 
 const UserRoutes = ({ user }) => (
   <Routes>
-          <Route path="/createUsers" element={<CreateUsers/>} />
+  <Route path="/createUsers" element={<CreateUsers/>} />
   {/* Home */}
   <Route path="/" element={<Home user={user} />} />
   <Route path="/setup" element={<Home user={user} />} />
@@ -104,7 +105,7 @@ const UserRoutes = ({ user }) => (
   <Route path="/callcenter" element={<CallCenterModule />} />
   <Route path="/logistica" element={<LogisticaModule />} />
   <Route path="/inqueritos" element={<InqueritosModule user={user}/>} />
-  
+  <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
 
   {/* Outros */}
   <Route path="/search" element={<ConnectionsSearch />} />
@@ -117,7 +118,6 @@ const UserRoutes = ({ user }) => (
   <Route path="/inbox" element={<Inbox />} />
   <Route path="/analytics" element={<Analytics />} />
 
-  {/* Redirecionamento Padrão */}
   <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 )
