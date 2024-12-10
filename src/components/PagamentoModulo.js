@@ -12,6 +12,7 @@ const PagamentoModulo = ({ user }) => {
   const navigate = useNavigate();
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
+  // Busca os módulos na base de dados
   useEffect(() => {
     const modulesRef = ref(db, `modules/modulos`);
 
@@ -25,6 +26,7 @@ const PagamentoModulo = ({ user }) => {
     return () => unsubscribe();
   }, []);
 
+  // Filtra o módulo atual com base na chave (moduleKey)
   useEffect(() => {
     if (modules.length > 0) {
       const foundModule = modules.find((mod) => mod.key === moduleKey);
@@ -32,6 +34,7 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [modules, moduleKey]);
 
+  // Caso o módulo não seja encontrado
   if (!currentModule) {
     return (
       <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
@@ -40,20 +43,24 @@ const PagamentoModulo = ({ user }) => {
     );
   }
 
+  // Tratamento do sucesso do pagamento
   const handlePaymentSuccess = (paymentDetails) => {
     console.log('Detalhes do pagamento:', paymentDetails);
     setPaymentSuccess(true);
-   
-const moduleKey = 'moduleKey1';
-const paymentDetails = {
-  amount: 500,
-  method: 'M-PESA',
-};
 
-UpdatePayment(user, moduleKey, paymentDetails);
+    // Atualiza o pagamento no banco de dados
+    UpdatePayment(user, currentModule.key, {
+      amount: paymentDetails.amount,
+      method: paymentDetails.method,
+    });
 
+    // Redireciona para a página inicial
+    //navigate('/');
+  };
 
-    //navigate('/'); // Redireciona para a página inicial
+  // Limpeza do preço: remove textos extras e converte para número
+  const cleanPrice = (price) => {
+    return parseInt(price.replace(/[^\d]/g, '')); // Remove tudo que não for dígito
   };
 
   return (
@@ -62,15 +69,24 @@ UpdatePayment(user, moduleKey, paymentDetails);
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-semibold text-gray-700 mb-2">{currentModule.name}</h2>
         <p className="text-gray-600 mb-4">{currentModule.description}</p>
-        <p className="text-lg font-bold text-gray-800 mb-6">Preço: {currentModule.price}</p>
-        
+        <p className="text-lg font-bold text-gray-800 mb-6">
+          Preço: {currentModule.price}
+        </p>
+
+        {/* Componente de pagamento */}
         {!paymentSuccess && (
-         <PayModuleCheckout
-         user={user}
-         planPrice={parseInt(currentModule.price.replace('MT', '').replace('/mês', '').replace('(taxa única)', '').trim())}
-         onPaymentSuccess={handlePaymentSuccess}
-       />
-       
+          <PayModuleCheckout
+            user={user}
+            planPrice={cleanPrice(currentModule.price)} // Limpa e envia o preço correto
+            onPaymentSuccess={handlePaymentSuccess}
+          />
+        )}
+
+        {/* Confirmação de pagamento */}
+        {paymentSuccess && (
+          <div className="text-green-500 font-semibold mt-4">
+            Pagamento concluído com sucesso!
+          </div>
         )}
       </div>
     </div>

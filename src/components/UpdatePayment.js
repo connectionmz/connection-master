@@ -1,28 +1,33 @@
-import { ref, update, push, set } from 'firebase/database';
+import { ref, update, push, set, remove } from 'firebase/database';
 import { db } from '../fb'; // Importa a instância do Firebase
 
+/**
+ * Atualiza o pagamento e salva os dados no Firebase.
+ * @param {Object} user - Objeto com informações do usuário.
+ * @param {string} moduleKey - Chave do módulo pago.
+ * @param {Object} paymentDetails - Detalhes do pagamento (quantia, método).
+ */
 export const UpdatePayment = (user, moduleKey, paymentDetails) => {
   console.log("Dados do utilizador:", user);
   console.log("Dados do pagamento:", paymentDetails);
 
-  const { id: userId, displayName } = user;
+  const { id: userId, displayName } = user; // Extrai informações do usuário
   const currentDate = new Date();
-  const month = currentDate.getMonth() + 1; // Mês atual (1-12)
+  const month = currentDate.getMonth() + 1; // Mês atual (base 1)
   const year = currentDate.getFullYear(); // Ano atual
 
-  // Referências para o Firebase
-  const userActiveModulesRef = ref(db, `users/${userId}/activeModules`);
-  const userSubscriptionsRef = ref(db, `subscriptions/${userId}/${year}/${month}`);
+  // Referências no Firebase
+  const activeModulesRef = ref(db, `company/${userId}/activeModules/${moduleKey}`);
+  const subscriptionsRef = ref(db, `subscriptions/${userId}/${year}/${month}`);
 
-  // Atualiza activeModules com o módulo pago
-  const updates = {};
-  updates[`/users/${userId}/activeModules/${moduleKey}`] = {
+  // Dados para o módulo ativo
+  const activeModuleData = {
     paidAt: currentDate.toISOString(),
     moduleKey: moduleKey,
     status: 'active',
   };
 
-  // Salva os detalhes de pagamento em subscriptions
+  // Dados do pagamento
   const paymentData = {
     moduleKey: moduleKey,
     amount: paymentDetails.amount,
@@ -31,16 +36,41 @@ export const UpdatePayment = (user, moduleKey, paymentDetails) => {
     userName: displayName || 'Cliente Anônimo',
   };
 
+  // Executa a atualização
   try {
-    // Atualiza o campo activeModules
-    update(userActiveModulesRef, updates);
+    // Atualiza o módulo ativo em "company/userId/activeModules"
+    set(activeModulesRef, activeModuleData);
 
-    // Salva os detalhes em subscriptions
-    const newPaymentRef = push(userSubscriptionsRef); // Gera um ID único
+    // Adiciona os detalhes do pagamento em "subscriptions"
+    const newPaymentRef = push(subscriptionsRef);
     set(newPaymentRef, paymentData);
 
     console.log('Pagamento atualizado com sucesso!');
   } catch (error) {
     console.error('Erro ao atualizar pagamento:', error);
+  }
+};
+
+export const DeleteActiveModule = (userId, moduleKey) => {
+  // Verifica se os parâmetros obrigatórios foram passados
+  if (!userId || !moduleKey) {
+    console.error('ID do usuário e chave do módulo são obrigatórios.');
+    return;
+  }
+
+  // Caminho da referência no Firebase
+  const activeModuleRef = ref(db, `company/${userId}/activeModules/${moduleKey}`);
+
+  try {
+    // Remove o módulo ativo do Firebase
+    remove(activeModuleRef)
+      .then(() => {
+        console.log(`Módulo ${moduleKey} removido com sucesso para o usuário ${userId}.`);
+      })
+      .catch((error) => {
+        console.error('Erro ao remover o módulo ativo:', error);
+      });
+  } catch (error) {
+    console.error('Erro inesperado ao remover o módulo ativo:', error);
   }
 };
