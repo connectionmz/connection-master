@@ -93,7 +93,6 @@ const App = () => {
         const companyData = companySnapshot.val();
 
 
-        console.log(companyData)
 
         setIsVerified(companyData.isVerified)
 
