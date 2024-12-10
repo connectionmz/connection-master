@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../fb';
 import { ref, get } from 'firebase/database';
-import { FaBuilding } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom'; // Navegação com React Router
 import '../styles/main.css';
 
 const MarqueeAnuncios = () => {
   const [anuncios, setAnuncios] = useState([]);
   const [selectedAnuncio, setSelectedAnuncio] = useState(null);
+  const navigate = useNavigate();
 
   const fetchAnuncios = async () => {
     try {
@@ -31,9 +32,14 @@ const MarqueeAnuncios = () => {
     setSelectedAnuncio(null);
   };
 
+  const handleVerMais = () => {
+    navigate('/noticiados');
+  };
+
   return (
-    <div>
-      <div className="overflow-hidden bg-blue-600 text-white p-4 mb-6">
+    <div className="flex items-center bg-blue-600 text-white p-4 mb-6">
+      {/* Marquee */}
+      <div className="flex-grow overflow-hidden">
         <div className="whitespace-nowrap animate-marquee">
           {anuncios.map((anuncio, index) => (
             <span
@@ -41,34 +47,49 @@ const MarqueeAnuncios = () => {
               className="mx-8 cursor-pointer flex items-center space-x-2"
               onClick={() => handleOpenModal(anuncio)}
             >
-            
-              <strong>{anuncio.company || 'Empresa Desconhecida'}:</strong> 
+              <strong>{anuncio.company || 'Empresa Desconhecida'}:</strong>
               <span>{anuncio.title}</span>
             </span>
           ))}
         </div>
       </div>
 
+      {/* Botão "Ver Mais" fixo */}
+      <div className="ml-4 flex-shrink-0">
+        <button
+          onClick={handleVerMais}
+          className="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-gray-200 transition"
+        >
+          Ver Mais
+        </button>
+      </div>
+
+      {/* Modal */}
       {selectedAnuncio && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 md:w-1/2 max-h-screen overflow-y-auto">
             <h2 className="text-xl font-bold mb-2">
-              {selectedAnuncio.title} - {selectedAnuncio.empresa}
+              {selectedAnuncio.title} - {selectedAnuncio.company || 'Empresa Desconhecida'}
             </h2>
 
             {selectedAnuncio.contentType === 'image' && (
-              <img src={selectedAnuncio.contentUrl} alt="Anúncio" className="w-full h-auto rounded-lg mt-4" />
+              <img
+                src={selectedAnuncio.contentUrl}
+                alt="Anúncio"
+                className="w-full h-auto rounded-lg mt-4"
+              />
             )}
 
-
+            {selectedAnuncio.fileUrl && (
               <a
                 href={selectedAnuncio.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 underline mt-4 inline-block">
+                className="text-blue-600 underline mt-4 inline-block"
+              >
                 Baixar o documento
-              </a> 
-              <br/>
+              </a>
+            )}
 
             {selectedAnuncio.contentType === 'text' && (
               <p className="mt-4 text-gray-700">{selectedAnuncio.contentText}</p>

@@ -142,7 +142,6 @@ const PublicarConcurso = ({ user }) => {
 
     return (
         <div className="p-4">
-            <h2>Publicar Concurso</h2>
             <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                     <label htmlFor="titulo" className="block">Título do Concurso</label>
@@ -155,7 +154,6 @@ const PublicarConcurso = ({ user }) => {
                         className="border p-2 w-full"
                     />
                 </div>
-
                 <div className="mb-4">
                     <label htmlFor="entidade" className="block">Entidade Promotora</label>
                     <input
@@ -164,8 +162,7 @@ const PublicarConcurso = ({ user }) => {
                         value={formData.entidade}
                         onChange={handleChange}
                         required
-                        className="border p-2 w-full"
-                    />
+                        className="border p-2 w-full"/>
                 </div>
                 <div className="mb-4">
                     <label htmlFor="prazo" className="block">Prazo de Apresentação de Propostas</label>
@@ -175,8 +172,7 @@ const PublicarConcurso = ({ user }) => {
                         value={formData.prazo}
                         onChange={handleChange}
                         required
-                        className="border p-2 w-full"
-                    />
+                        className="border p-2 w-full"/>
                 </div>
                 <div className="mb-4">
                     <label htmlFor="contato" className="block">Contato (Telefone/E-mail)</label>

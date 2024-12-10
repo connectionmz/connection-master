@@ -48,6 +48,7 @@ import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
 import VerifyCompany from '../VerifyCompany';
 import PagamentoModulo from '../PagamentoModulo';
+import Noticiados from '../Noticiados';
 
 const UserRoutes = ({ user }) => (
   <Routes>
@@ -117,6 +118,8 @@ const UserRoutes = ({ user }) => (
   <Route path="/terms" element={<Terms />} />
   <Route path="/inbox" element={<Inbox />} />
   <Route path="/analytics" element={<Analytics />} />
+  <Route path="/noticiados" element={<Noticiados />} />
+  
 
   <Route path="*" element={<Navigate to="/" />} />
   </Routes>

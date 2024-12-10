@@ -26,10 +26,8 @@ const Concursos = () => {
                 ...data,
             }));
             setconcursos(concursosList);
-            console.log('Concursos List: ', concursosList); 
         });
     }, []);
-    
 
     const handlePublishconcurso = () => navigate('/publicar-concurso');
 
