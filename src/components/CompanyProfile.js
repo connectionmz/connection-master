@@ -141,13 +141,10 @@ const CompanyProfile = ({ user }) => {
             case 'sobre':
                 return (
                     <div className="p-4">
-                        <h2 className="text-lg font-bold mb-4">Informações da Empresa</h2>
                         <ul className="text-gray-600 space-y-2">
-                            <li><strong>NUIT:</strong> {mCompany?.nuit || 'Não informado'}</li>
                             <li><strong>Endereço:</strong> {mCompany?.endereco || 'Não informado'}</li>
                             <li><strong>Província:</strong> {mCompany?.provincia || 'Não informado'}</li>
                             <li><strong>Sector:</strong> {mCompany?.sector || 'Não informado'}</li>
-                            <li><strong>Subtipo de Entidade:</strong> {mCompany?.subtipoEntidade || 'Não informado'}</li>
                             <li><strong>Tipo de Entidade:</strong> {mCompany?.tipoEntidade || 'Não informado'}</li>
                         </ul>
                     </div>
@@ -156,9 +153,6 @@ const CompanyProfile = ({ user }) => {
                 return <div className="text-center text-gray-500 mt-6">Nenhum conteúdo disponível.</div>;
         }
     };
-
-
-    
     return (
         <div className="bg-white min-h-screen">
             <div className="relative">
@@ -197,9 +191,12 @@ const CompanyProfile = ({ user }) => {
     </button>
 </div>
 
-                    {userData.contacto && (
+    <p>
+    {userData.contacto && (
                         <a href={`tel:${userData.contacto}`} className="text-gray-600">
                             <Phone className="text-green-500" />
+                            <span className="text-xs mt-1">Ligar</span>
+
                         </a>
                     )}
                     {social.twitter && (
@@ -217,6 +214,7 @@ const CompanyProfile = ({ user }) => {
                             <Instagram className="text-pink-500" />
                         </a>
                     )}
+    </p>
                 </div>
             </div>
             <div className="flex justify-center mt-8 space-x-6 border-b-2 border-gray-200 pb-4">

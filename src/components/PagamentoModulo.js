@@ -55,7 +55,7 @@ const PagamentoModulo = ({ user }) => {
     });
 
     // Redireciona para a página inicial
-    //navigate('/');
+    navigate('/apx');
   };
 
   // Limpeza do preço: remove textos extras e converte para número
