@@ -1,21 +1,19 @@
 import { useNavigate } from 'react-router-dom';
-import { FaReceipt, FaStore, FaSms, FaAd, FaPhone, FaTruck, FaPoll } from 'react-icons/fa';
-
+import { FaReceipt, FaStore, FaAd, FaSms, FaPhone, FaPoll, FaTruckLoading, FaStar } from 'react-icons/fa';
 const ModuleGrid = ({ activeModules }) => {
   const navigate = useNavigate();
 
-  // Todos os módulos possíveis
   const allModules = [
-    { name: 'Proforma', link: '/faturacao', icon: <FaReceipt size={40} />, key: 'moduloFaturacao' },
+    { name: 'Proforma', link: '/faturacao', icon: <FaReceipt size={40} />, key: 'moduloProforma' },
     { name: 'Market', link: '/market', icon: <FaStore size={40} />, key: 'moduloMarket' },
-    { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloCampaign' },
+    { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloAnunciar' },
     { name: 'SMS', link: '/sms', icon: <FaSms size={40} />, key: 'moduloSMS' },
     { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter' },
-    { name: 'Logística', link: '/logistica', icon: <FaTruck size={40} />, key: 'moduloLogistica' },
-    { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' }
+    { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement' },
+    { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
+    { name: 'Destacar', link: '/destacar', icon: <FaStar size={40} />, key: 'moduloDestacar' }
   ];
 
-  // Função para redirecionar quando um módulo inativo é clicado
   const handleAcquireModule = (module) => {
     navigate(`/pagamento-modulo/${module.key}`);
   };

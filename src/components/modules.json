@@ -67,15 +67,15 @@
       "price": "500 MT/mês"
     },
     {
-      "key": "moduloLogistica",
-      "name": "Logística",
-      "description": "Otimize a entrega e transporte de produtos da sua empresa.",
+      "key": "moduloProcurement",
+      "name": "Procurement",
+      "description": "A plataforma encontra exatamente o que você procura e traz as melhores opções para a sua empresa.",
       "benefits": [
-        "Gestão eficiente de entregas",
-        "Redução de custos logísticos",
-        "Integração com outros módulos"
+        "Busca detalhada e personalizada de produtos ou serviços",
+        "Facilidade na obtenção de orçamentos",
+        "Entrega de soluções prontas e precisas"
       ],
-      "price": "1500 MT/mês"
+      "price": "5000 MT/mês"
     },
     {
       "key": "moduloFaturacao",
@@ -109,6 +109,17 @@
         "Melhoria na tomada de decisões"
       ],
       "price": "1200 MT/mês"
+    },
+    {
+      "key": "moduloDestacar",
+      "name": "Destacar",
+      "description": "Coloque sua empresa em destaque e tenha o melhor seguimento de negócios possíveis.",
+      "benefits": [
+        "Maior visibilidade na plataforma",
+        "Destaque para setores relevantes",
+        "Aumento de oportunidades de negócios"
+      ],
+      "price": "2000 MT/mês"
     }
   ]
 }
