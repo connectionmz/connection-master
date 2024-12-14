@@ -19,7 +19,7 @@ const CompanyDataForm = () => {
     subsectores: [],
     tipoEntidade: '',
     subtipoEntidade: '',
-    capacidadeProducao: '', // Adicionado para setores específicos
+    capacidadeProducao: '', 
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -133,6 +133,9 @@ const CompanyDataForm = () => {
           ...companyData,
           id: user.uid,
           logoUrl,
+          subscriptions: {
+            status: 'active',
+          },
           createdAt: new Date().toISOString(),
         };
 
@@ -140,8 +143,7 @@ const CompanyDataForm = () => {
         await set(ref(db, `company/${user.uid}`), dataToSave);
         await push(ref(db, `subscriptions/${user.uid}`), { status: 'active' });
 
-        alert('Dados salvos com sucesso!');
-        navigate('/dashboard');
+        window.location.reload();
       } else {
         throw new Error('Usuário não autenticado');
       }
