@@ -6,6 +6,8 @@ import Alert from '@mui/material/Alert';
 import { Tabs, Tab, Box } from '@mui/material';
 import { EditorText } from '../utils/formUtils';
 import ChangePassword from './password/ChangePassword';
+import DadosBancarios from './DadosBancarios';
+import DadosEmpresariais from './DadosEmpresariais';
 
 const InputField = ({ label, name, value, onChange, type = "text", disabled = false }) => (
   <div className="mb-4">
@@ -19,7 +21,7 @@ const InputField = ({ label, name, value, onChange, type = "text", disabled = fa
       disabled={disabled}
     />
   </div>
-);
+)
 
 const EditProfileTabs = ({ user }) => {
   const initialData = {
@@ -117,24 +119,20 @@ const EditProfileTabs = ({ user }) => {
             </button>
           </form>
         )}
-
         {tabIndex === 1 && (
           <div>
             <ChangePassword/>
           </div>
         )}
-
         {tabIndex === 2 && (
           <div>
-            <h2 className="text-xl font-bold mb-4">Dados Bancários</h2>
-            {/* Adicione campos para dados bancários aqui */}
+            <DadosBancarios user={user}/>
           </div>
         )}
 
         {tabIndex === 3 && (
           <div>
-            <h2 className="text-xl font-bold mb-4">Dados Empresariais</h2>
-            {/* Adicione campos para dados empresariais aqui */}
+            <DadosEmpresariais user={user}/>
           </div>
         )}
       </Box>

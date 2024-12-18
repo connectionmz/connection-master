@@ -140,6 +140,15 @@ const App = () => {
   }, []);
 
 
+  if (loading) {
+    return (
+      <div className="loader-container">
+        <ClipLoader color="#4A90E2" loading={loading} size={100} />
+        <p className="loading-text">Carregando, por favor aguarde...</p>
+      </div>
+    );
+  }
+
 
   return (
     <ThemeProvider>

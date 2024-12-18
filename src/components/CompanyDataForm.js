@@ -9,6 +9,7 @@ const CompanyDataForm = () => {
 
   const [companyData, setCompanyData] = useState({
     nome: '',
+    sigla: '', // Novo campo para Sigla
     nuit: '',
     contacto: '',
     endereco: '',
@@ -161,6 +162,18 @@ const CompanyDataForm = () => {
                 id="nome" 
                 name="nome" 
                 value={companyData.nome} 
+                onChange={handleChange} 
+                required 
+                className={inputStyles}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sigla" className="block text-sm font-medium text-gray-600">Sigla</label> {/* Novo campo para Sigla */}
+              <input 
+                type="text" 
+                id="sigla" 
+                name="sigla" 
+                value={companyData.sigla} 
                 onChange={handleChange} 
                 required 
                 className={inputStyles}
