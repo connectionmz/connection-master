@@ -21,7 +21,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false); 
   const [isVerified, setIsVerified] = useState(false)
-  const [allCompanyData, setAllCompanyData] = useState(null); // Para armazenar todos os dados da Realtime DB
+  const [allCompanyData, setAllCompanyData] = useState(null); 
 
   const fetchNewContentAndNotify = (user) => {
     const sections = ['concursos', 'cotacoes', 'publicAnnouncements', 'surveys'];
@@ -72,7 +72,6 @@ const App = () => {
             });
             return;
           }
-  
           saveContentToInbox(contentMessage, user, messageTitle)
             .then(() => console.log(''))
             .catch((error) =>
@@ -92,10 +91,7 @@ const App = () => {
       if (companySnapshot.exists()) {
         const companyData = companySnapshot.val();
 
-
-
         setIsVerified(companyData.isVerified)
-
 
         setUserData({
           ...companyData,
@@ -143,14 +139,7 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="loader-container">
-        <ClipLoader color="#4A90E2" loading={loading} size={100} />
-        <p className="loading-text">Carregando, por favor aguarde...</p>
-      </div>
-    );
-  }
+
 
   return (
     <ThemeProvider>

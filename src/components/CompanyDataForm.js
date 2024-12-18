@@ -31,7 +31,6 @@ const CompanyDataForm = () => {
   const [tiposEntidades, setTiposEntidades] = useState([]);
   const [subtiposEntidade, setSubtiposEntidade] = useState([]);
 
-  // Lista de setores que exigem Capacidade de Produção
   const sectoresComCapacidade = [
     'Recursos Naturais',
     'Indústria e Comércio',
@@ -41,7 +40,6 @@ const CompanyDataForm = () => {
   ];
 
   useEffect(() => {
-    // Carregar os dados iniciais
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
     const tipoEntidadeRef = ref(db, 'tipos_entidades');
@@ -55,14 +53,12 @@ const CompanyDataForm = () => {
   const handleProvinceChange = (e) => {
     const selectedProvince = e.target.value;
   
-    // Atualiza a província selecionada e reseta o distrito
     setCompanyData((prevData) => ({
       ...prevData,
       provincia: selectedProvince,
-      distrito: '', // Limpa o distrito
+      distrito: '',
     }));
   
-    // Encontra os distritos com base na província selecionada
     const foundProvince = provincias.find((prov) => prov.provincia === selectedProvince);
     setDistritos(foundProvince ? foundProvince.distritos : []);
   };
@@ -70,19 +66,16 @@ const CompanyDataForm = () => {
   const handleEntidadeChange = (e) => {
     const selectedTipoEntidade = e.target.value;
   
-    // Atualiza o tipo de entidade e reseta o subtipo de entidade
     setCompanyData((prevData) => ({
       ...prevData,
       tipoEntidade: selectedTipoEntidade,
-      subtipoEntidade: '', // Limpa o subtipo de entidade
+      subtipoEntidade: '', 
     }));
   
-    // Encontra os subtipos com base no tipo selecionado
     const foundEntidade = tiposEntidades.find((ent) => ent.tipo === selectedTipoEntidade);
     setSubtiposEntidade(foundEntidade ? foundEntidade.subtipos : []);
   };
   
-  // Manipular mudanças nos campos gerais
   const handleChange = (e) => {
     const { name, value, type, files, multiple, options } = e.target;
     const newValue =
@@ -97,21 +90,19 @@ const CompanyDataForm = () => {
     setCompanyData((prevData) => ({ ...prevData, [name]: newValue }));
   };
 
-  // Manipular mudança no setor
   const handleSectorChange = (e) => {
     const selectedSector = e.target.value;
     setCompanyData((prevData) => ({
       ...prevData,
       sector: selectedSector,
       subsectores: [],
-      capacidadeProducao: '', // Limpa o campo ao mudar setor
+      capacidadeProducao: '', 
     }));
 
     const foundSector = sectores.find((s) => s.setor === selectedSector);
     setSubsectores(foundSector ? foundSector.subsectores : []);
   };
 
-  // Enviar formulário
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -121,7 +112,6 @@ const CompanyDataForm = () => {
       if (user) {
         let logoUrl = '';
 
-        // Upload da imagem para o Firebase Storage
         if (companyData.logo) {
           const storage = getStorage();
           const fileRef = storageRef(storage, `logos/${user.uid}`);
@@ -132,6 +122,7 @@ const CompanyDataForm = () => {
         const dataToSave = {
           ...companyData,
           id: user.uid,
+          email: user.email,
           logoUrl,
           subscriptions: {
             status: 'active',
@@ -139,7 +130,6 @@ const CompanyDataForm = () => {
           createdAt: new Date().toISOString(),
         };
 
-        // Salvar no Realtime Database
         await set(ref(db, `company/${user.uid}`), dataToSave);
         await push(ref(db, `subscriptions/${user.uid}`), { status: 'active' });
 
@@ -155,9 +145,7 @@ const CompanyDataForm = () => {
     }
   };
 
-  const inputStyles =
-    'mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500';
-
+  const inputStyles ='mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500';
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-50">

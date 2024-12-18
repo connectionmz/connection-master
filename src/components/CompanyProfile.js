@@ -49,7 +49,6 @@ const CompanyProfile = ({ user }) => {
                             username: companyData.id || 'A carregar',
                             endereco: companyData.endereco || 'A carregar'
                         });
-
                         setModules(companyData.activeModules || {});
                         setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
                         
@@ -60,7 +59,6 @@ const CompanyProfile = ({ user }) => {
                             timestamp: new Date().toISOString()
                         });
                     }
-
                     if (socialSnapshot.exists()) {
                         setSocial(socialSnapshot.val());
                     }
@@ -144,6 +142,9 @@ const CompanyProfile = ({ user }) => {
                         <ul className="text-gray-600 space-y-2">
                             <li><strong>Endereço:</strong> {mCompany?.endereco || 'Não informado'}</li>
                             <li><strong>Província:</strong> {mCompany?.provincia || 'Não informado'}</li>
+                            <li><strong>Capacidade de Producao:</strong> {mCompany?.capacidadeDeProducao || 'Não informado'}</li>
+                            <li><strong>Email:</strong> {mCompany?.email || 'Não informado'}</li>
+                            <li><strong>Contacto:</strong> {mCompany?.contacto || 'Não informado'}</li>
                             <li><strong>Sector:</strong> {mCompany?.sector || 'Não informado'}</li>
                             <li><strong>Tipo de Entidade:</strong> {mCompany?.tipoEntidade || 'Não informado'}</li>
                         </ul>
@@ -170,7 +171,6 @@ const CompanyProfile = ({ user }) => {
                 </div>  
                 <div className="flex justify-center mt-6 space-x-4">
                 <div className="flex space-x-4 mt-4">
-    {/* Botão para Navegar para a Loja */}
     <button
         onClick={() => navigate(`/stores/${userId}`)}
         className="flex flex-col items-center text-gray-600 hover:text-green-500"
@@ -180,7 +180,6 @@ const CompanyProfile = ({ user }) => {
         <span className="text-xs mt-1">Loja</span>
     </button>
 
-    {/* Botão para Navegar para RFQ */}
     <button
         onClick={() => navigate(`/rfq/${userId}`)}
         className="flex flex-col items-center text-gray-600 hover:text-green-500"
