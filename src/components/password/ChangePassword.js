@@ -1,66 +1,113 @@
-import React, { useState } from 'react';
-import { updatePassword } from 'firebase/auth';
-import { Snackbar, Alert } from '@mui/material';
-import { auth } from '../../fb';
+import { useState } from "react";
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { auth } from "../../fb";
 
 const ChangePassword = () => {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [formData, setFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState({ message: "", error: false });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    const { currentPassword, newPassword, confirmPassword } = formData;
+
+    if (newPassword !== confirmPassword) {
+      setFeedback({ message: "As senhas não coincidem.", error: true });
+      return;
+    }
+
+    setLoading(true);
     const user = auth.currentUser;
-    if (user) {
-      try {
-        await updatePassword(user, newPassword);
-        setMessage('Senha alterada com sucesso!');
-      } catch (error) {
-        setMessage('Erro ao alterar a senha: ' + error.message);
-      } finally {
-        setShowSnackbar(true);
-      }
-    } else {
-      setMessage('Usuário não autenticado.');
-      setShowSnackbar(true);
+
+    if (!user) {
+      setFeedback({ message: "Usuário não autenticado.", error: true });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Reautenticar o usuário
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Atualizar a senha
+      await updatePassword(user, newPassword);
+      setFeedback({ message: "Senha atualizada com sucesso!", error: false });
+    } catch (error) {
+      console.error("Erro ao atualizar senha:", error.message);
+      setFeedback({ message: "Erro ao atualizar a senha. Verifique as informações.", error: true });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-center mb-4">Alterar Senha</h2>
-        <form onSubmit={handleChangePassword}>
-          <div className="mb-4">
-            <label htmlFor="newPassword" className="block text-gray-700">Nova Senha</label>
-            <input
-              type="password"
-              id="newPassword"
-              className="w-full p-2 border rounded-lg"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition duration-300"
+    <div>
+      <h2 className="text-xl font-bold mb-4">Mudar Senha</h2>
+      <form onSubmit={handleChangePassword} className="space-y-4">
+        <div className="mb-4">
+          <label className="block font-medium mb-1">Senha Atual</label>
+          <input
+            type="password"
+            name="currentPassword"
+            value={formData.currentPassword}
+            onChange={handleInputChange}
+            className="border p-2 w-full rounded"
+            required
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block font-medium mb-1">Nova Senha</label>
+          <input
+            type="password"
+            name="newPassword"
+            value={formData.newPassword}
+            onChange={handleInputChange}
+            className="border p-2 w-full rounded"
+            required
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block font-medium mb-1">Confirmar Nova Senha</label>
+          <input
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleInputChange}
+            className="border p-2 w-full rounded"
+            required
+          />
+        </div>
+        {feedback.message && (
+          <div
+            className={`p-2 rounded ${
+              feedback.error ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+            }`}
           >
-            Alterar Senha
-          </button>
-        </form>
-      </div>
-      <Snackbar
-        open={showSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setShowSnackbar(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setShowSnackbar(false)} severity={message.includes('sucesso') ? 'success' : 'error'} sx={{ width: '100%' }}>
-          {message}
-        </Alert>
-      </Snackbar>
+            {feedback.message}
+          </div>
+        )}
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded w-full"
+          disabled={loading}
+        >
+          {loading ? "Atualizando..." : "Atualizar Senha"}
+        </button>
+      </form>
     </div>
   );
 };

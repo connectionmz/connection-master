@@ -3,7 +3,9 @@ import { ref, update } from 'firebase/database';
 import { db } from '../fb';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import { Tabs, Tab, Box } from '@mui/material';
 import { EditorText } from '../utils/formUtils';
+import ChangePassword from './password/ChangePassword';
 
 const InputField = ({ label, name, value, onChange, type = "text", disabled = false }) => (
   <div className="mb-4">
@@ -17,10 +19,9 @@ const InputField = ({ label, name, value, onChange, type = "text", disabled = fa
       disabled={disabled}
     />
   </div>
-)
+);
 
-const EditProfile = ({ user }) => {
-
+const EditProfileTabs = ({ user }) => {
   const initialData = {
     nome: user?.nome || '',
     bio: user?.bio || '',
@@ -28,15 +29,18 @@ const EditProfile = ({ user }) => {
     endereco: user?.endereco || '',
     provincia: user?.provincia || '',
     missaoVisaoValores: user?.missaoVisaoValores || '',
-    facebook: user?.social?.facebook || '',
-    whatsappUrl: user?.contacto ? `https://wa.me/${user.contacto}` : '',
-    instagram: user?.social?.instagram || '',
-    linkedin: user?.social?.linkedin || '',
-    website: user?.social?.website || '',
+    facebook: user.social?.facebook || '',
+    whatsappUrl: user.social?.contacto ? `https://wa.me/${user.contacto}` : '',
+    instagram: user.social?.instagram || '',
+    linkedin: user.social?.linkedin || '',
+    website: user.social?.website || '',
   };
 
   const [formData, setFormData] = useState(initialData);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [tabIndex, setTabIndex] = useState(0);
+
+  const handleTabChange = (event, newValue) => setTabIndex(newValue);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -51,21 +55,8 @@ const EditProfile = ({ user }) => {
     setFormData((prev) => ({ ...prev, missaoVisaoValores: content }));
   };
 
-  const validateForm = () => {
-    if (!formData.nome.trim()) return 'O campo "Nome" é obrigatório.';
-    if (!formData.contacto.trim()) return 'O campo "Contacto" é obrigatório.';
-    return null;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const errorMessage = validateForm();
-    if (errorMessage) {
-      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
-      return;
-    }
-
     const companyUpdate = {
       nome: formData.nome,
       bio: formData.bio,
@@ -90,34 +81,63 @@ const EditProfile = ({ user }) => {
     }
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-  };
+  const handleCloseSnackbar = () => setSnackbar((prev) => ({ ...prev, open: false }));
 
   return (
-    <div className="max-w-lg mx-auto p-4 bg-white shadow-md rounded">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <InputField label="Nome" name="nome" value={formData.nome} onChange={handleInputChange} />
-        <InputField label="Bio" name="bio" value={formData.bio} onChange={handleInputChange} />
-        <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
-        <InputField label="Endereço" name="endereco" value={formData.endereco} onChange={handleInputChange} />
-        <InputField label="Província" name="provincia" value={formData.provincia} onChange={handleInputChange} />
+    <div className="max-w-4xl mx-auto p-4 bg-white shadow-md rounded">
+      <Tabs value={tabIndex} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+        <Tab label="Editar Perfil" />
+        <Tab label="Mudar Senha" />
+        <Tab label="Dados Bancários" />
+        <Tab label="Dados Empresariais" />
+      </Tabs>
 
-        <div>
-          <label className="block font-medium mb-1">Missão, Visão e Valores</label>
-          <EditorText description={formData.missaoVisaoValores} setDescription={handleEditorChange} />
-        </div>
+      <Box mt={2}>
+        {tabIndex === 0 && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <InputField label="Nome" name="nome" value={formData.nome} onChange={handleInputChange} />
+            <InputField label="Bio" name="bio" value={formData.bio} onChange={handleInputChange} />
+            <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
+            <InputField label="Endereço" name="endereco" value={formData.endereco} onChange={handleInputChange} />
+            <InputField label="Província" name="provincia" value={formData.provincia} onChange={handleInputChange} />
 
-        <InputField label="Facebook URL" name="facebook" value={formData.facebook} onChange={handleInputChange} />
-        <InputField label="WhatsApp URL" name="whatsappUrl" value={formData.whatsappUrl} disabled />
-        <InputField label="Instagram URL" name="instagram" value={formData.instagram} onChange={handleInputChange} />
-        <InputField label="LinkedIn URL" name="linkedin" value={formData.linkedin} onChange={handleInputChange} />
-        <InputField label="Website" name="website" value={formData.website} onChange={handleInputChange} />
+            <div>
+              <label className="block font-medium mb-1">Missão, Visão e Valores</label>
+              <EditorText description={formData.missaoVisaoValores} setDescription={handleEditorChange} />
+            </div>
 
-        <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded w-full">
-          Salvar
-        </button>
-      </form>
+            <InputField label="Facebook URL" name="facebook" value={formData.facebook} onChange={handleInputChange} />
+            <InputField label="WhatsApp URL" name="whatsappUrl" value={formData.whatsappUrl} disabled />
+            <InputField label="Instagram URL" name="instagram" value={formData.instagram} onChange={handleInputChange} />
+            <InputField label="LinkedIn URL" name="linkedin" value={formData.linkedin} onChange={handleInputChange} />
+            <InputField label="Website" name="website" value={formData.website} onChange={handleInputChange} />
+
+            <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded w-full">
+              Salvar
+            </button>
+          </form>
+        )}
+
+        {tabIndex === 1 && (
+          <div>
+            <ChangePassword/>
+          </div>
+        )}
+
+        {tabIndex === 2 && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">Dados Bancários</h2>
+            {/* Adicione campos para dados bancários aqui */}
+          </div>
+        )}
+
+        {tabIndex === 3 && (
+          <div>
+            <h2 className="text-xl font-bold mb-4">Dados Empresariais</h2>
+            {/* Adicione campos para dados empresariais aqui */}
+          </div>
+        )}
+      </Box>
 
       <Snackbar
         open={snackbar.open}
@@ -133,4 +153,4 @@ const EditProfile = ({ user }) => {
   );
 };
 
-export default EditProfile;
+export default EditProfileTabs;
