@@ -8,7 +8,7 @@ import { db } from '../fb';
 const PublicarConcurso = ({ user }) => {
     const [formData, setFormData] = useState({
         titulo: '',
-        entidade: '',
+        entidade: user.nome,
         objeto: '',
         condicoes: '',
         documentacao: '',
@@ -153,16 +153,6 @@ const PublicarConcurso = ({ user }) => {
                         required
                         className="border p-2 w-full"
                     />
-                </div>
-                <div className="mb-4">
-                    <label htmlFor="entidade" className="block">Entidade Promotora</label>
-                    <input
-                        type="text"
-                        name="entidade"
-                        value={formData.entidade}
-                        onChange={handleChange}
-                        required
-                        className="border p-2 w-full"/>
                 </div>
                 <div className="mb-4">
                     <label htmlFor="prazo" className="block">Prazo de Apresentação de Propostas</label>

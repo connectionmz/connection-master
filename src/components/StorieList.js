@@ -26,7 +26,6 @@ const StorieList = ({ user }) => {
             }))
             .filter(company => company.provincia === user);
 
-          // Seleção aleatória de até 5 empresas
           const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
           setStories(randomCompanies);
         }
@@ -78,7 +77,7 @@ const StorieList = ({ user }) => {
             className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full border-2 border-blue-500"
           />
           <span className="text-xs sm:text-sm lg:text-base text-gray-800 text-center truncate max-w-[120px] uppercase">
-            {store.nome}
+            {store.sigla || store.nome}
           </span>
         </div>
       ))}
