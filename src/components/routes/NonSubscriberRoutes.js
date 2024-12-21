@@ -23,6 +23,7 @@ const NonSubscriberRoutes = ({ userDb }) => {
         setUser(null);
       }
       setLoading(false);
+      console.log(user)
     });
 
     return () => unsubscribe();

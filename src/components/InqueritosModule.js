@@ -30,14 +30,17 @@ const InqueritosModule = ({ user }) => {
     setLoading(true);
     onValue(inqueritosRef, (snapshot) => {
       const data = snapshot.val();
+      console.log(data)
       const listaInqueritos = data
-        ? Object.entries(data).map(([id, details]) => ({ id, ...details }))
+        ? Object.entries(data)
+            .map(([id, details]) => ({ id, ...details }))
+            .filter((inquerito) => inquerito.company == user.id) 
         : [];
       setInqueritos(listaInqueritos);
       setLoading(false);
     });
-  }, []);
-
+  }, [user.id]);
+  
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este inquérito?')) {
       remove(ref(db, `surveys/${id}`)).then(() => {

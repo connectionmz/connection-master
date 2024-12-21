@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../fb';
 import { ref, get } from 'firebase/database';
 import '../styles/main.css';
+import { useNavigate } from 'react-router-dom';
 
 const MarqueeParceiros = () => {
   const [parceiros, setParceiros] = useState([]);
   const [selectedParceiro, setSelectedParceiro] = useState(null);
+  const navigate = useNavigate();
 
-  // Função para buscar parceiros do Firebase
   const fetchParceiros = async () => {
     try {
       const snapshot = await get(ref(db, 'parceiros'));
@@ -30,17 +31,18 @@ const MarqueeParceiros = () => {
   const handleCloseModal = () => {
     setSelectedParceiro(null);
   };
-
+  const handleCompanyClick = (companyId) => {
+    navigate(`/vperfil/${companyId}`);
+  };
   return (
     <div>
-      {/* Marquee dos parceiros */}
       <div className="overflow-hidden  p-4 mb-6">
         <div className="whitespace-nowrap animate-marquee">
           {parceiros.map((parceiro, index) => (
-            <span
+            <a
               key={index}
               className="mx-8 cursor-pointer flex items-center space-x-2"
-              onClick={() => handleOpenModal(parceiro)}
+              onClick={() => handleCompanyClick(parceiro.companyId)}
             >
               {parceiro.logoUrl && (
                 <img
@@ -50,12 +52,11 @@ const MarqueeParceiros = () => {
                 />
               )}
               <strong>{parceiro.nome || 'Nome desconhecido'}</strong>
-            </span>
+            </a>
           ))}
         </div>
       </div>
 
-      {/* Modal com detalhes do parceiro */}
       {selectedParceiro && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 md:w-1/2 max-h-screen overflow-y-auto">
@@ -79,14 +80,12 @@ const MarqueeParceiros = () => {
               <img
                 src={selectedParceiro.logoUrl}
                 alt={`Logo de ${selectedParceiro.nome}`}
-                className="w-full h-auto rounded-lg mt-4"
-              />
+                className="w-full h-auto rounded-lg mt-4"/>
             )}
 
             <button
               onClick={handleCloseModal}
-              className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
+              className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
               Fechar
             </button>
           </div>
