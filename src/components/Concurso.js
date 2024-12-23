@@ -5,11 +5,12 @@ import { auth, db } from '../fb';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const Concursos = () => {
-    const [concursos, setconcursos] = useState([]);
+    const [concursos, setConcursos] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [loggedInUser, setLoggedInUser] = useState(null); 
     const navigate = useNavigate();
 
+    // Verifica autenticação do usuário
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             setLoggedInUser(user || null);
@@ -17,6 +18,7 @@ const Concursos = () => {
         return () => unsubscribeAuth();
     }, []);
 
+    // Busca concursos do Firebase
     useEffect(() => {
         const concursosRef = ref(db, 'concursos');
         onValue(concursosRef, (snapshot) => {
@@ -25,23 +27,28 @@ const Concursos = () => {
                 id,
                 ...data,
             }));
-            setconcursos(concursosList);
+            setConcursos(concursosList);
         });
     }, []);
 
-    const handlePublishconcurso = () => navigate('/publicar-concurso');
+    // Navega para página de publicação
+    const handlePublishConcurso = () => navigate('/publicar-concurso');
 
-    const deleteconcurso = (concursoId) => {
+    // Exclui um concurso
+    const deleteConcurso = (concursoId) => {
         remove(ref(db, `concursos/${concursoId}`))
-            .then(() => console.log(`Cotação ${concursoId} excluída.`))
-            .catch((error) => console.error('Erro ao excluir a cotação: ', error));
+            .then(() => console.log(`Concurso ${concursoId} excluído.`))
+            .catch((error) => console.error('Erro ao excluir o concurso: ', error));
     };
 
-    const handleconcursoClick = (id, companyId) => navigate(`/concursos/${id}/${companyId}`);
+    // Navega para detalhes do concurso
+    const handleConcursoClick = (id, companyId) => navigate(`/concursos/${id}/${companyId}`);
 
+    // Verifica se o concurso está expirado
     const isExpired = (datalimite) => new Date() > new Date(datalimite);
 
-    const filteredconcursos = concursos.filter(concurso => {
+    // Filtra concursos por aba ativa
+    const filteredConcursos = concursos.filter((concurso) => {
         if (activeTab === 'recentes') return new Date().toDateString() === new Date(concurso.timestamp).toDateString();
         if (activeTab === 'expirados') return isExpired(concurso.datalimite);
         if (activeTab === 'Fechada') return concurso.status === 'Fechada';
@@ -55,12 +62,12 @@ const Concursos = () => {
                 <h1 className="text-xl font-semibold">Concursos</h1>
                 <button 
                     className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                    onClick={handlePublishconcurso}>
+                    onClick={handlePublishConcurso}>
                     Publicar Concurso 
                 </button>
             </div>
             <div className="flex border-b mb-4 overflow-x-auto">
-                {['recentes', 'expirados', 'Fechada', 'meus'].map(tab => (
+                {['recentes', 'expirados', 'Fechada', 'meus'].map((tab) => (
                     <button
                         key={tab}
                         className={`py-2 px-4 ${activeTab === tab ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
@@ -71,16 +78,16 @@ const Concursos = () => {
                 ))}
             </div>
             <div>
-                {filteredconcursos.length ? (
+                {filteredConcursos.length ? (
                     <div className="space-y-4">
-                        {filteredconcursos.map(concurso => (
+                        {filteredConcursos.map((concurso) => (
                             <div 
                                 key={concurso.id} 
                                 className={`p-4 border rounded-lg bg-white shadow-md cursor-pointer ${isExpired(concurso.datalimite) ? 'bg-gray-200' : ''}`}
-                                onClick={() => handleconcursoClick(concurso.id, concurso.company?.id)}>
+                                onClick={() => handleConcursoClick(concurso.id, concurso.company?.id)}>
                                 <h3 className="text-md font-bold mb-2">{concurso?.titulo}</h3>
-                                <p >Prazo de Propostas: {concurso.prazo}</p>
-                                <p >Valor Estimado: {concurso.valorEstimado}</p>
+                                <p>Prazo de Propostas: {new Date(concurso.prazo).toLocaleDateString()}</p>
+                                <p>Valor Estimado: {concurso.valorEstimado}</p>
                                 <div className="flex items-center mb-4">
                                     <img src={concurso.company?.logoUrl || 'https://via.placeholder.com/64'} alt={concurso.company?.nome || 'Empresa Desconhecida'} className="w-16 h-16 object-cover rounded-full mr-4" />
                                     <div>
@@ -88,11 +95,13 @@ const Concursos = () => {
                                     </div>
                                 </div>
                                 {loggedInUser?.uid === concurso?.company?.id && (
-                                   <>
-                                   <span> sector:{concurso.sector}</span>
-                                    <button onClick={() => deleteconcurso(concurso?.id)} className="text-red-500 hover:underline ml-4">
-                                        Excluir
-                                    </button>
+                                    <>
+                                        <span>Setor: {concurso.sector}</span>
+                                        <button 
+                                            onClick={() => deleteConcurso(concurso?.id)} 
+                                            className="text-red-500 hover:underline ml-4">
+                                            Excluir
+                                        </button>
                                     </>
                                 )}
                             </div>
@@ -103,6 +112,7 @@ const Concursos = () => {
                 )}
             </div>
         </div>
-    )
-}
-export default Concursos
+    );
+};
+
+export default Concursos;

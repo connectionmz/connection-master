@@ -49,6 +49,7 @@ import ChangePassword from '../password/ChangePassword';
 import VerifyCompany from '../VerifyCompany';
 import PagamentoModulo from '../PagamentoModulo';
 import Noticiados from '../Noticiados';
+import SmsForm from '../Teste';
 
 const UserRoutes = ({ user }) => (
   <Routes>
@@ -65,7 +66,7 @@ const UserRoutes = ({ user }) => (
   <Route path="/verify" element={<VerifyCompany user={user} />} />
 
   {/* Cotação */}
-  <Route path="/cotacao" element={<Cotacoes />} />
+  <Route path="/cotacao" element={<Cotacoes user={user}/>} />
   <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhes />} />
   <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
   <Route path="/publicar-cotacao" element={<PublicarCotacao user={user} />} />
@@ -119,8 +120,9 @@ const UserRoutes = ({ user }) => (
   <Route path="/inbox" element={<Inbox />} />
   <Route path="/analytics" element={<Analytics />} />
   <Route path="/noticiados" element={<Noticiados />} />
+  <Route path="/teste" element={<SmsForm />} />
   
-
+  
   <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 )

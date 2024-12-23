@@ -12,10 +12,10 @@ const Anunciar = ({ user }) => {
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState('meusAnuncios');
+  const [activeTab, setActiveTab] = useState('Meus');
   const [anuncios, setAnuncios] = useState([]);
   const [selectedAnuncio, setSelectedAnuncio] = useState(null);
-  const [days, setDays] = useState(1); 
+  const [days, setDays] = useState(); 
   const [totalCost, setTotalCost] = useState(30);
 
   const MAX_DAYS = 30; 
@@ -82,7 +82,7 @@ const Anunciar = ({ user }) => {
       imageUrl: url,
       link,
       uploadedAt: new Date().toISOString(),
-      companyId: user.id,
+      companyId: user,
       days,
       totalCost,
     });

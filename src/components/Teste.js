@@ -1,59 +1,43 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React from 'react';
 
-const Rfq = () => {
-  const { userId } = useParams();
-  const [descricao, setDescricao] = useState('');
-  const [quantidade, setQuantidade] = useState('');
-  const [prazo, setPrazo] = useState('');
+const SmsForm = () => {
+  const contacts = ['840237100', '876773180'];
+  const message = 'Pedido de cotação';
 
-  const handleRequestQuote = () => {
-    // Aqui você pode adicionar a lógica para enviar os dados para o Firebase
-    console.log("Cotação solicitada para:", userId, descricao, quantidade, prazo);
+  const sendSMS = async (phoneNumber) => {
+    const payload = { phoneNumber, message };
+
+    try {
+      const response = await fetch('http://localhost:5000/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log(`Mensagem enviada com sucesso para ${phoneNumber}`);
+      } else {
+        console.error(`Erro ao enviar mensagem para ${phoneNumber}:`, data.error);
+      }
+    } catch (error) {
+      console.error(`Erro ao conectar ao servidor para o número ${phoneNumber}:`, error);
+    }
+  };
+
+  const handleSendSMS = async () => {
+    for (const contact of contacts) {
+      await sendSMS(contact);
+    }
+    alert('Mensagens enviadas com sucesso!');
   };
 
   return (
-    <div className="p-4 max-w-lg mx-auto bg-white shadow-md rounded">
-      <h2 className="text-2xl font-bold mb-4">Solicitar Cotação</h2>
-      
-      <div className="mb-4">
-        <label className="block text-gray-700">Descrição:</label>
-        <textarea 
-          value={descricao} 
-          onChange={(e) => setDescricao(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-          placeholder="Descreva o produto ou serviço"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-gray-700">Quantidade:</label>
-        <input 
-          type="number" 
-          value={quantidade} 
-          onChange={(e) => setQuantidade(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-          placeholder="Insira a quantidade"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-gray-700">Prazo:</label>
-        <input 
-          type="date" 
-          value={prazo} 
-          onChange={(e) => setPrazo(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-        />
-      </div>
-      <button 
-        onClick={handleRequestQuote}
-        className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
-      >
-        Enviar Pedido de Cotação
-      </button>
+    <div>
+      <h1>Envio Automático de SMS</h1>
+      <button onClick={handleSendSMS}>Enviar SMS para todos os contactos</button>
     </div>
   );
 };
 
-export default Rfq;
+export default SmsForm;

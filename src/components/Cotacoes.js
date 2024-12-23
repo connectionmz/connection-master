@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../fb'; 
 import { onAuthStateChanged } from 'firebase/auth';
 
-const Cotacoes = () => {
+const Cotacoes = ({user}) => {
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [loggedInUser, setLoggedInUser] = useState(null); 
@@ -28,20 +28,27 @@ const Cotacoes = () => {
 
     useEffect(() => {
         const cotacoesRef = ref(db, 'cotacoes');
-
+    
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val() || {};
-            const cotacoesList = Object.entries(cotacoesData).map(([id, data]) => ({
-                id,
-                ...data
-            }));
+            const cotacoesList = Object.entries(cotacoesData)
+                .map(([id, data]) => ({
+                    id,
+                    ...data
+                }))
+                .filter(cotacao => 
+                    cotacao.sector === user.sector && 
+                    cotacao.company?.provincia === user.provincia
+                ); 
+    
             setCotacoes(cotacoesList);
         });
-
+    
         return () => {
             unsubscribeCotacoes();
         };
-    }, [db]);
+    }, [db, user]);
+    
 
     const handlePublishQuotation = () => {
         navigate('/publicar-cotacao');
@@ -93,11 +100,9 @@ const Cotacoes = () => {
         <div 
             key={cotacao.id} 
             className={`p-6 border rounded-xl bg-white shadow-lg transform hover:scale-105 transition-transform duration-200 cursor-pointer ${
-                expired ? 'bg-gray-100 opacity-70' : ''
-            }`}
+                expired ? 'bg-gray-100 opacity-70' : ''}`}
             onClick={() => handleCotacaoClick(cotacao.id, cotacao.company.id)}
-            title={expired ? 'Cotação expirada' : ''}
-        >
+            title={expired ? 'Cotação expirada' : ''}>
             <div className="flex items-center mb-4">
                 <img 
                     src={cotacao.company?.logoUrl || 'https://via.placeholder.com/64'} 
@@ -109,13 +114,16 @@ const Cotacoes = () => {
                         {cotacao.company?.nome || 'Empresa Desconhecida'}
                     </h2>
                     <p className="text-sm text-gray-500">
-                        {expired ? 'Expirada' : 'Ativa'}
+                    {expired ? 'Expirada' : 'Ativa'}
                     </p>
                 </div>
             </div>
             <h3 className="text-lg font-bold text-blue-600 truncate mb-3">
                 {cotacao?.title}
             </h3>
+            <h5 className="text-lg font-bold ttruncate mb-3">
+                Sector: {cotacao?.sector}
+            </h5>
             <p className="text-sm text-gray-500 mb-2">
                 Publicada em: <span className="font-medium">{new Date(cotacao?.timestamp).toLocaleDateString()}</span>
             </p>
@@ -150,8 +158,7 @@ const Cotacoes = () => {
                             e.stopPropagation(); 
                             deleteCotacao(cotacao?.id);
                         }}
-                        className="text-sm text-red-500 hover:text-red-600 font-semibold"
-                    >
+                        className="text-sm text-red-500 hover:text-red-600 font-semibold">
                         Excluir Cotação
                     </button>
                 </div>
@@ -193,7 +200,6 @@ const Cotacoes = () => {
                 </button>
             </div>
 
-            {/* Tabs */}
             <div className="flex border-b mb-4 overflow-x-auto scrollbar-hide">
                 <button
                     className={`py-2 px-4 ${activeTab === 'recentes' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
@@ -220,8 +226,6 @@ const Cotacoes = () => {
                     Minhas 
                 </button>
             </div>
-
-            {/* Cotacoes List */}
             <div>
                 {filteredCotacoes().length > 0 ? (
                     <div className="space-y-4">
@@ -234,8 +238,6 @@ const Cotacoes = () => {
                     <p className="text-gray-600">Nenhuma cotação disponível.</p>
                 )}
             </div>
-
-            {/* Snackbar */}
             {snackbarOpen && (
                 <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white p-4 rounded-lg shadow-md">
                     {snackbarMessage}

@@ -17,11 +17,14 @@ const Inbox = () => {
       onValue(inboxRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-          const messagesArray = Object.keys(data).map(key => ({
-            id: key,
-            ...data[key],
-          }));
-          setMessages(messagesArray);
+          const messagesArray = Object.keys(data)
+            .map(key => ({
+              id: key,
+              ...data[key],
+            }))
+            .sort((a, b) => b.timestamp - a.timestamp); // Ordenar por timestamp decrescente
+            setMessages(messagesArray);
+          console.log(messagesArray)
         }
       });
     }
@@ -58,10 +61,11 @@ const Inbox = () => {
           <p>{new Date(selectedMessage.timestamp).toLocaleString()}</p>
           <p className="text-gray-600 text-lg mb-6" dangerouslySetInnerHTML={{ __html: selectedMessage.proposal }}></p>
           <p>
-          <Link to={selectedMessage.content.url}  rel="noopener noreferrer">
-            Ir ao conteúdo
-          </Link>
-</p>          <button onClick={() => setSelectedMessage(null)} className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg">Voltar</button>
+            <Link to={selectedMessage.content.url} rel="noopener noreferrer">
+              Ir ao conteúdo
+            </Link>
+          </p>
+          <button onClick={() => setSelectedMessage(null)} className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg">Voltar</button>
         </div>
       ) : (
         <>
@@ -98,11 +102,11 @@ const Inbox = () => {
                         <p className="text-sm text-gray-500">{new Date(message.timestamp).toLocaleString()}</p>
                       </div>
                       <div className="space-x-2">
-                        <span className=" text-green hover:bg-blue-600" onClick={() => markAsRead(message.id)}>
-                          <DoneAll/>
+                        <span className="text-green hover:bg-blue-600" onClick={() => markAsRead(message.id)}>
+                          <DoneAll />
                         </span>
                         <span className="text-red hover:bg-red-600" onClick={() => deleteMessage(message.id)}>
-                         <Clear/>
+                          <Clear />
                         </span>
                       </div>
                     </div>

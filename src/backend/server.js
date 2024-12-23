@@ -1,60 +1,59 @@
 const express = require('express');
-const twilio = require('twilio');
 const bodyParser = require('body-parser');
+const request = require('request');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); 
+const PORT = 5000;
+
+// Middleware
+app.use(cors());
 app.use(bodyParser.json());
 
-const accountSid = 'AC53b8d7f44f6c38a449c20aa0199da682'; 
-const authToken = '1b4da83f52349275638851d48ad47bb5'; 
+// Defina o token de autorização MozeSMS
+const MOZE_SMS_TOKEN = 'Bearer 2275:otCWXf-5G7Ys6-DdA6Kc-WLXsW6';
 
-const client = twilio(accountSid, authToken);
+// Endpoint para envio de SMS
+app.post('/send-sms', (req, res) => {
+  const { phoneNumber, message } = req.body;
 
-app.post('/send-sms', async (req, res) => {
-  const { message } = req.body;
-
-  if (!message) {
-    return res.status(400).send('Required parameter "message" is missing.');
+  if (!phoneNumber || !message) {
+    return res.status(400).json({ error: 'Número de telefone e mensagem são obrigatórios.' });
   }
 
-  const phoneNumber = '+258840237100'; 
+  const options = {
+    method: 'POST',
+    url: 'https://api.mozesms.com/message/v2',
+    headers: {
+      Authorization: MOZE_SMS_TOKEN,
+    },
+    form: {
+      from: 'AGVIAGEM',
+      to: phoneNumber,
+      message: message,
+    },
+  };
 
-  const phoneRegex = /^\+\d{1,15}$/;
+  // Enviando a requisição
+  request(options, (error, response, body) => {
+    if (error) {
+      console.error('Erro ao enviar SMS:', error);
+      return res.status(500).json({ error: 'Erro ao enviar SMS.' });
+    }
 
-  if (!phoneRegex.test(phoneNumber)) {
-    return res.status(400).send(`Invalid phone number format: ${phoneNumber}`);
-  }
-
-  try {
-    const result = await client.messages.create({
-      body: message,
-      from: '+16812466142',
-      to: phoneNumber, 
-    });
-
-    res.status(200).send(`Message sent: ${result.sid}`);
-  } catch (error) {
-    console.error('Error sending SMS:', error);
-    res.status(500).send(`Failed to send SMS: ${error.message}`);
-  }
+    // Enviar a resposta da API para o frontend
+    if (response.statusCode === 200) {
+      res.json({ message: 'Mensagem enviada com sucesso!', data: body });
+    } else {
+      res.status(response.statusCode).json({
+        error: `Falha ao enviar SMS. Código de status: ${response.statusCode}`,
+        data: body,
+      });
+    }
+  });
 });
 
-app.post('/send-message', (req, res) => {
-  const { message, to } = req.body;
-
-  client.messages
-  .create({
-      body:message,
-      from: 'whatsapp:+14155238886',
-      to: 'whatsapp:+258876773180'
-  })
-  .then(message => res.status(200).json({ success: true, message }))
-  .catch(error => res.status(500).json({ success: false, error }));
-});
-
-const PORT = process.env.PORT || 3001;
+// Iniciar o servidor
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

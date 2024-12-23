@@ -30,7 +30,6 @@ const InqueritosModule = ({ user }) => {
     setLoading(true);
     onValue(inqueritosRef, (snapshot) => {
       const data = snapshot.val();
-      console.log(data)
       const listaInqueritos = data
         ? Object.entries(data)
             .map(([id, details]) => ({ id, ...details }))

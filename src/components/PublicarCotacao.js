@@ -9,6 +9,8 @@ import { EditorText, SectorDeActividades } from '../utils/formUtils';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import { saveContentToInboxBasedSector } from './SaveToInbox';
+import sendSMS from '../utils/sendMessage';
+
 
 const PublicarCotacao = ({ user }) => {
     const [title, setTitle] = useState('');
@@ -50,7 +52,6 @@ const PublicarCotacao = ({ user }) => {
         setSector(e.target.value);
     };
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -58,15 +59,12 @@ const PublicarCotacao = ({ user }) => {
     
         if (user) {
             try {
-                // Referência ao banco de dados para cotação
                 const cotacaoRef = ref(db, 'cotacoes');
-                const newCotacaoRef = push(cotacaoRef); // Cria uma nova cotação com um ID único
-                const cotacaoId = newCotacaoRef.key; // Obtém o ID gerado da cotação
+                const newCotacaoRef = push(cotacaoRef);
+                const cotacaoId = newCotacaoRef.key;
     
-                // Gerando o link da cotação
                 const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
     
-                // Salvando a cotação no Firebase usando o ID gerado
                 await set(ref(db, `cotacoes/${cotacaoId}`), {
                     title,
                     description,
@@ -77,43 +75,54 @@ const PublicarCotacao = ({ user }) => {
                     timestamp: new Date().toISOString(),
                     datalimite: new Date(deadline).toISOString(),
                     status: 'open',
-                    link: linkDoPedido
+                    link: linkDoPedido,
                 });
     
                 setSnackbarMessage('Cotação publicada com sucesso!');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
-
-                window.location='/cotacao'
     
                 const empresasRef = ref(db, 'company');
                 const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));
-    
                 const snapshot = await get(setorQuery);
+    
                 if (snapshot.exists()) {
                     const empresas = snapshot.val();
     
                     for (const key in empresas) {
                         const empresa = empresas[key];
     
-                        if (!empresa.nuit) {
-                            console.warn(`Empresa ${key} não possui um ID (nuit). Ignorando...`);
+                        if (!empresa.contacto) {
+                            console.warn(`Empresa ${key} não possui contato. Ignorando...`);
                             continue;
                         }
     
                         const message = `
-                            📝 Nova Cotação para sua Empresa 📊\n
-                            📝 ${user.nome} 📊\n
-                            Título: ${title}\n
-                            Descrição: ${description}\n
-                            Data Limite: ${deadline}\n
-                            Setor de Atividade: ${sector}\n
-                            Se desejar mais informações ou para realizar uma cotação, por favor, entre em contato conosco.\n
-                            Acesse: ${linkDoPedido}\n
-                            Atenciosamente,\n
-                            📞 ${user.nome || 'Nome da Empresa'} | ${user.contacto || 'Sem Contato'}
-                        `;
+                        📝 Nova Cotação para sua Empresa 📊
+                        Título: ${title}
+                        Descrição: ${description}
+                        Data Limite: ${deadline}
+                        Setor de Atividade: ${sector}
+                        Acesse: ${linkDoPedido}
+                    `.trim();
+                    
+                    const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
+                    
+                    const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
     
+                        const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+
+                        for (const numero of contatos) {
+                          if (numero) {
+                            try {
+                              await sendSMS([numero], finalMessage); 
+                            } catch (error) {
+                              console.error(`Erro ao enviar SMS para ${numero}:`, error.message);
+                            }
+                          } else {
+                            console.warn('Número inválido ignorado');
+                          }
+                        }
                         await saveContentToInboxBasedSector(
                             message,
                             empresa.userId,
@@ -140,28 +149,6 @@ const PublicarCotacao = ({ user }) => {
     };
     
 
-    
-    
-    
-
-    const sendMessage = async (message, to) => {
-        try {
-            const response = await axios.post('http://localhost:3001/send-sms', {
-                message,
-                to
-            });
-            if (response.data.success) {
-                setSnackbarMessage('Mensagem enviada com sucesso pelo WhatsApp!');
-                setSnackbarSeverity('success');
-                setOpenSnackbar(true);
-            }
-        } catch (error) {
-            setSnackbarMessage('Erro ao enviar mensagem pelo WhatsApp.');
-            setSnackbarSeverity('error');
-            setOpenSnackbar(true);
-            console.error('Erro ao enviar mensagem pelo WhatsApp:', error);
-        }
-    };
 
     const handleSnackbarClose = () => {
         setOpenSnackbar(false);
@@ -186,8 +173,7 @@ const PublicarCotacao = ({ user }) => {
                     
                     <EditorText
                         description={description}
-                        setDescription={setDescription}
-                    />
+                        setDescription={setDescription}/>
                 </div>
                 <div className="mb-4">
                     
@@ -196,8 +182,7 @@ const PublicarCotacao = ({ user }) => {
                         value={deadline}
                         onChange={(e) => setDeadline(e.target.value)}
                         className="w-full px-3 py-2 border rounded"
-                        required
-                    />
+                        required/>
                 </div>
                 <div className="mb-4">
                     
