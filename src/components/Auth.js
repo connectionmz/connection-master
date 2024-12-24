@@ -6,6 +6,7 @@ import { ref, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import logo from '../img/bg.png';
 import { Snackbar, Alert, IconButton, InputAdornment } from '@mui/material'; 
+import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 
 const Auth = ({ data }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +62,9 @@ const Auth = ({ data }) => {
         navigate('/setup');
       }
     } catch (error) {
-      setErrorMessage('Erro ao fazer login com email e senha: ' + error.message);
+      console.log(error.code)
+      const userFriendlyMessage = getFirebaseErrorMessage(error.code);
+      setErrorMessage(userFriendlyMessage);
       setShowSnackbar(true); 
     } finally {
       setIsLoading(false);

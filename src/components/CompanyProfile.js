@@ -165,57 +165,82 @@ const CompanyProfile = ({ user }) => {
                 </div>
             </div>
             <div className="mt-16 text-center">
-                <h1 className="text-2xl font-bold">{userData?.displayName}</h1>
-                <div className="max-w-2xl mx-auto mt-4">
-                    <p className="text-gray-600">{userData?.bio}</p>
-                </div>  
-                <div className="flex justify-center mt-6 space-x-4">
-                <div className="flex space-x-4 mt-4">
-    <button
-        onClick={() => navigate(`/stores/${userId}`)}
-        className="flex flex-col items-center text-gray-600 hover:text-green-500"
-        title="Ir para a Loja"
-    >
-        <Store className="text-green-500" />
-        <span className="text-xs mt-1">Loja</span>
-    </button>
+    {/* Nome e Biografia */}
+    <h1 className="text-2xl font-bold">{userData?.displayName}</h1>
+    <div className="max-w-2xl mx-auto mt-4">
+        <p className="text-gray-600">{userData?.bio}</p>
+    </div>
 
-    <button
-        onClick={() => navigate(`/rfq/${userId}`)}
-        className="flex flex-col items-center text-gray-600 hover:text-green-500"
-        title="Solicitação de Cotação"
-    >
-        <RequestQuote className="text-green-500" />
-        <span className="text-xs mt-1">Cotações</span>
-    </button>
+    {/* Botões e Contatos lado a lado */}
+    <div className="flex justify-center mt-8 space-x-12">
+        {/* Botões de navegação */}
+        <div className="flex space-x-8">
+            <button
+                onClick={() => userId && navigate(`/stores/${userId}`)}
+                className="flex flex-col items-center text-gray-600 hover:text-green-500"
+                title="Ir para a Loja"
+            >
+                <Store className="text-green-500" />
+                <span className="text-xs mt-1">Loja</span>
+            </button>
+            <button
+                onClick={() => userId && navigate(`/rfq/${userId}`)}
+                className="flex flex-col items-center text-gray-600 hover:text-green-500"
+                title="Solicitação de Cotação"
+            >
+                <RequestQuote className="text-green-500" />
+                <span className="text-xs mt-1">Cotações</span>
+            </button>
+        </div>
+
+        {/* Contato e Redes Sociais */}
+        <p className="flex space-x-6">
+            {userData.contacto && (
+                <a
+                    href={`tel:${userData.contacto}`}
+                    className="flex flex-col items-center text-gray-600 hover:text-green-500"
+                >
+                    <Phone className="text-green-500" />
+                    <span className="text-xs mt-1">Ligar</span>
+                </a>
+            )}
+            {social.twitter && (
+                <a
+                    href={social.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center text-gray-600 hover:text-blue-500"
+                >
+                    <Twitter className="text-blue-500" />
+                    <span className="text-xs mt-1">Twitter</span>
+                </a>
+            )}
+            {social.linkedin && (
+                <a
+                    href={social.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center text-gray-600 hover:text-blue-700"
+                >
+                    <LinkedIn className="text-blue-700" />
+                    <span className="text-xs mt-1">LinkedIn</span>
+                </a>
+            )}
+            {social.instagram && (
+                <a
+                    href={social.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center text-gray-600 hover:text-pink-500"
+                >
+                    <Instagram className="text-pink-500" />
+                    <span className="text-xs mt-1">Instagram</span>
+                </a>
+            )}
+        </p>
+    </div>
 </div>
 
-    <p>
-    {userData.contacto && (
-                        <a href={`tel:${userData.contacto}`} className="text-gray-600">
-                            <Phone className="text-green-500" />
-                            <span className="text-xs mt-1">Ligar</span>
-
-                        </a>
-                    )}
-                    {social.twitter && (
-                        <a href={social.twitter} target="_blank" rel="noopener noreferrer">
-                            <Twitter className="text-blue-500" />
-                        </a>
-                    )}
-                    {social.linkedin && (
-                        <a href={social.linkedin} target="_blank" rel="noopener noreferrer">
-                            <LinkedIn className="text-blue-700" />
-                        </a>
-                    )}
-                    {social.instagram && (
-                        <a href={social.instagram} target="_blank" rel="noopener noreferrer">
-                            <Instagram className="text-pink-500" />
-                        </a>
-                    )}
-    </p>
-                </div>
-            </div>
             <div className="flex justify-center mt-8 space-x-6 border-b-2 border-gray-200 pb-4">
     <button 
         onClick={() => setActiveTab('inicio')} 

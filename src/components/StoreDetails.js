@@ -2,18 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ref, get } from 'firebase/database';
 import { db } from '../fb';
-import {
-    AppBar, Toolbar, IconButton, InputBase, Typography, Card, CardContent, CardMedia, Grid, Box, CircularProgress,
-    Badge, Button, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText
-} from '@mui/material';
-import { Search, ShoppingCart, Share, Store } from '@mui/icons-material';
 
 const StoreDetails = () => {
     const { storeId } = useParams();
     const [store, setStore] = useState(null);
     const [loading, setLoading] = useState(true);
     const [cart, setCart] = useState([]);
-    const [cartOpen, setCartOpen] = useState(false); // Controle do diálogo do carrinho
+    const [cartOpen, setCartOpen] = useState(false);
 
     useEffect(() => {
         const fetchStoreDetails = async () => {
@@ -57,8 +52,8 @@ const StoreDetails = () => {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-64">
-                <CircularProgress />
+            <div className="flex justify-center items-center h-screen">
+                <div className="loader"></div>
             </div>
         );
     }
@@ -68,104 +63,102 @@ const StoreDetails = () => {
     }
 
     return (
-        <div>
-            {/* AppBar */}
-            <AppBar position="static" sx={{ backgroundColor: '#ffffff', boxShadow: 'none', borderBottom: '1px solid #e0e0e0' }}>
-                <Toolbar>
-                    <Typography variant="h6" sx={{ color: '#000', fontWeight: 'bold', flexGrow: 1 }}>
-                        <Store sx={{ verticalAlign: 'middle', marginRight: '8px' }} />
+        <div className="min-h-screen bg-gray-100">
+            {/* Header */}
+            <header className="bg-white shadow-md sticky top-0 z-50">
+                <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                    <h1 className="text-xl font-bold flex items-center gap-2">
+                        <span className="material-icons text-gray-600">store</span>
                         {store.name}
-                    </Typography>
-                    <IconButton onClick={handleShare}>
-                        <Share sx={{ color: '#000' }} />
-                    </IconButton>
-                    <IconButton onClick={() => setCartOpen(true)}> {/* Abre o diálogo do carrinho */}
-                        <Badge badgeContent={cart.length} color="error">
-                            <ShoppingCart sx={{ color: '#000' }} />
-                        </Badge>
-                    </IconButton>
-                </Toolbar>
-            </AppBar>
+                    </h1>
+                    <div className="flex items-center gap-4">
+                        <button className="text-gray-600 hover:text-gray-800" onClick={handleShare}>
+                            <span className="material-icons">share</span>
+                        </button>
+                        <button
+                            className="relative text-gray-600 hover:text-gray-800"
+                            onClick={() => setCartOpen(true)}
+                        >
+                            <span className="material-icons">shopping_cart</span>
+                            {cart.length > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                                    {cart.length}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </header>
 
             {/* Produtos */}
-            <Box sx={{ padding: '16px' }}>
-                <Grid container spacing={2}>
+            <main className="container mx-auto px-6 py-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {store.products &&
                         Object.entries(store.products).map(([productId, product]) => (
-                            <Grid
-                                item
-                                xs={12} // Tamanho completo em dispositivos muito pequenos
-                                sm={6} // 2 colunas por linha em dispositivos médios e maiores
+                            <div
                                 key={productId}
+                                className="bg-white shadow-md rounded-md overflow-hidden transform hover:scale-105 transition-transform"
                             >
-                                <Card
-                                    sx={{
-                                        transition: 'transform 0.2s',
-                                        '&:hover': { transform: 'scale(1.05)' },
-                                    }}
-                                >
-                                    <CardMedia
-                                        component="img"
-                                        src={product.imageUrl}
-                                        alt={product.name}
-                                        sx={{ height: 150 }}
-                                    />
-                                    <CardContent>
-                                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                            {product.name}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {product.discount ? `Desconto: ${product.discount}` : ''}
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ color: '#000' }}>
-                                            {product.price} MT
-                                        </Typography>
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            fullWidth
-                                            sx={{ marginTop: 1 }}
-                                            onClick={() => addToCart(product)}
-                                        >
-                                            Adicionar ao Carrinho
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
+                                <img
+                                    src={product.imageUrl}
+                                    alt={product.name}
+                                    className="w-full h-40 object-cover"
+                                />
+                                <div className="p-4">
+                                    <h2 className="text-lg font-semibold mb-2">{product.name}</h2>
+                                    <p className="text-sm text-gray-600 mb-2">
+                                        {product.discount ? `Desconto: ${product.discount}` : ''}
+                                    </p>
+                                    <p className="text-base font-bold text-gray-800 mb-4">
+                                        {product.price} MT
+                                    </p>
+                                    <button
+                                        onClick={() => addToCart(product)}
+                                        className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
+                                    >
+                                        Adicionar ao Carrinho
+                                    </button>
+                                </div>
+                            </div>
                         ))}
-                </Grid>
-            </Box>
+                </div>
+            </main>
 
-            {/* Diálogo do Carrinho */}
-            <Dialog open={cartOpen} onClose={() => setCartOpen(false)} fullWidth maxWidth="sm">
-                <DialogTitle>Carrinho de Compras</DialogTitle>
-                <DialogContent>
-                    {cart.length === 0 ? (
-                        <Typography>Seu carrinho está vazio.</Typography>
-                    ) : (
-                        <List>
-                            {cart.map((item, index) => (
-                                <ListItem key={index} sx={{ borderBottom: '1px solid #e0e0e0' }}>
-                                    <ListItemText
-                                        primary={item.name}
-                                        secondary={`Preço: ${item.price} MT`}
-                                    />
-                                </ListItem>
-                            ))}
-                        </List>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setCartOpen(false)} color="secondary">
-                        Fechar
-                    </Button>
-                    {cart.length > 0 && (
-                        <Button onClick={generateInvoice} color="primary" variant="contained">
-                            Baixar Fatura
-                        </Button>
-                    )}
-                </DialogActions>
-            </Dialog>
+            {/* Carrinho de Compras */}
+            {cartOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white w-96 rounded-lg shadow-lg">
+                        <div className="border-b p-4 flex justify-between items-center">
+                            <h3 className="text-lg font-semibold">Carrinho de Compras</h3>
+                            <button onClick={() => setCartOpen(false)}>
+                                <span className="material-icons">close</span>
+                            </button>
+                        </div>
+                        <div className="p-4">
+                            {cart.length === 0 ? (
+                                <p>Seu carrinho está vazio.</p>
+                            ) : (
+                                <ul className="divide-y">
+                                    {cart.map((item, index) => (
+                                        <li key={index} className="py-2 flex justify-between items-center">
+                                            <span>{item.name}</span>
+                                            <span>{item.price} MT</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                        <div className="border-t p-4">
+                            <button
+                                onClick={generateInvoice}
+                                className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition"
+                            >
+                                Baixar Fatura
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -5,6 +5,7 @@ import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPass
 import { ref, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import logo from '../img/bg.png';
+import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 
 const AuthCreate = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -50,7 +51,7 @@ const AuthCreate = () => {
       await saveUserData(result.user);
       navigate('/');
     } catch (error) {
-      setErrorMessage('Erro ao fazer login com Google: ' + error.message);
+
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +96,8 @@ const AuthCreate = () => {
       await saveUserData(result.user);
       navigate('/');
     } catch (error) {
-      setErrorMessage('Erro ao fazer login com email e senha: ' + error.message);
+      const userFriendlyMessage = getFirebaseErrorMessage(error.code);
+      setErrorMessage(userFriendlyMessage);
     } finally {
       setIsLoading(false);
     }

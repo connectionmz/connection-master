@@ -22,7 +22,7 @@ const Inbox = () => {
               id: key,
               ...data[key],
             }))
-            .sort((a, b) => b.timestamp - a.timestamp); // Ordenar por timestamp decrescente
+            .sort((a, b) => b.timestamp - a.timestamp); 
             setMessages(messagesArray);
           console.log(messagesArray)
         }
