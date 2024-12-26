@@ -50,6 +50,7 @@ import VerifyCompany from '../VerifyCompany';
 import PagamentoModulo from '../PagamentoModulo';
 import Noticiados from '../Noticiados';
 import SmsForm from '../Teste';
+import ProductDetails from '../ProductDetails';
 
 const UserRoutes = ({ user }) => (
   <Routes>
@@ -82,10 +83,11 @@ const UserRoutes = ({ user }) => (
 
   {/* Mercado e Produtos */}
   <Route path="/market" element={<Market user={user} />} />
-  <Route path="/stores" element={<Stores />} />
+  <Route path="/stores" element={<Stores user={user}/>} />
   <Route path="/stores/:storeId" element={<StoreDetails />} />
   <Route path="/addProduct/:storeId" element={<ProductForm user={user} />} />
   <Route path="/servicos/:categoriaId" element={<ListaDeServicos />} />
+  <Route path="/product/:productId/store/:store" element={<ProductDetails />} />
 
   {/* Campanha e Posts */}
   <Route path="/campaign" element={<Campaign />} />
@@ -114,7 +116,7 @@ const UserRoutes = ({ user }) => (
   <Route path="/explore" element={<Explore user={user.provincia} />} />
   <Route path="/sms" element={<Sms />} />
   <Route path="/feed" element={<Feed />} />
-  <Route path="/apx" element={<Apx />} />
+  <Route path="/apx" element={<Apx  user={user} />} />
   <Route path="/rfq" element={<Teste />} />
   <Route path="/terms" element={<Terms />} />
   <Route path="/inbox" element={<Inbox />} />

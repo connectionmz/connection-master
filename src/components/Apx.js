@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from 'react'
-import { FaUserFriends, FaClock, FaBookmark, FaVideo, FaStore } from 'react-icons/fa'
-import { AiFillSetting } from 'react-icons/ai'
-import { BsSearch } from 'react-icons/bs'
-import { ref, get, update } from "firebase/database"
-import { useNavigate, Link } from 'react-router-dom'
-import { auth, db } from '../fb'
-import { onAuthStateChanged, signOut } from "firebase/auth"
-import ModuleGrid from './ModuleGrid'
-import PostInput from './PostInput'
-import { CameraAlt, ExitToApp } from '@mui/icons-material'
+import React, { useState, useEffect } from 'react';
+import { ref, get, update } from "firebase/database";
+import { useNavigate, Link } from 'react-router-dom';
+import { auth, db } from '../fb';
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import ModuleGrid from './ModuleGrid';
+import { CameraAlt, ExitToApp } from '@mui/icons-material';
 
-
-const Apx = () => {
-  const [userData, setUserData] = useState({}); 
+const Apx = ({ user }) => {
+  const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [provincia, setProvince] = useState(user.provincia || '');
+  const [editProvince, setEditProvince] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +27,7 @@ const Apx = () => {
               activeModules: companyData.activeModules || []
             });
           } else {
-            navigate('/setup'); 
+            navigate('/setup');
           }
         } catch (error) {
           console.error('Error fetching data: ', error);
@@ -45,12 +43,22 @@ const Apx = () => {
     return () => unsubscribe();
   }, [navigate]);
 
- 
-
   const handleLogout = () => {
     signOut(auth).then(() => navigate('/auth')).catch((error) => console.error("Logout Error: ", error));
   };
 
+
+  const saveProvince = async (newProvince) => {
+    try {
+      const companyRef = ref(db, `company/${user.id}`);
+      await update(companyRef, { provincia: newProvince });
+      console.log("Província salva com sucesso!"); // Debug
+      setEditProvince(false);
+    } catch (error) {
+      console.error("Erro ao salvar província: ", error);
+    }
+  };
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -61,30 +69,80 @@ const Apx = () => {
 
   return (
     <div className="p-4 text-black">
-      <div 
+      {/* Botão de publicação */}
+      <div
         className="w-full px-6 py-4 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition duration-300 ease-in-out shadow-lg cursor-pointer flex items-center justify-center"
-        onClick={() => window.location.href = '/post'} >
+        onClick={() => window.location.href = '/post'}>
         <CameraAlt className="w-6 h-6 mr-2" />
         Fazer Publicação
       </div>
-      
+
+      {/* Informações do perfil */}
       <Link to='/profile' className="flex items-center gap-2 my-4">
         <img
           src={userData.logoUrl}
           alt="User"
-          className="rounded-full w-10 h-10 border border-gray-300"/>
+          className="rounded-full w-10 h-10 border border-gray-300" />
         <div>
           <p className="font-bold">{userData.nome}</p>
           <p className="text-sm text-gray-600"><small>{userData.sector}</small></p>
         </div>
       </Link>
-      
+
+      {/* Seção de edição da província */}
+      <div className="mt-4">
+  {!editProvince ? (
+    <div className="flex items-center gap-2">
+      <p className="font-semibold">Província: {provincia}</p>
+      <button
+        onClick={() => setEditProvince(true)}
+        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition">
+        Editar
+      </button>
+    </div>
+  ) : (
+    <div className="flex items-center gap-2">
+      <select
+        value={provincia}
+        onChange={(e) => setProvince(e.target.value)}
+        className="border border-gray-300 p-1 rounded">
+        <option value="Maputo">Maputo</option>
+        <option value="Gaza">Gaza</option>
+        <option value="Inhambane">Inhambane</option>
+        <option value="Sofala">Sofala</option>
+        <option value="Manica">Manica</option>
+        <option value="Tete">Tete</option>
+        <option value="Zambézia">Zambézia</option>
+        <option value="Nampula">Nampula</option>
+        <option value="Cabo Delgado">Cabo Delgado</option>
+        <option value="Niassa">Niassa</option>
+      </select>
+      <button
+  onClick={() => {
+    saveProvince(provincia);
+  }}
+  className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition">
+  Salvar
+</button>
+      <button
+        onClick={() => {
+          setProvince(user?.provincia || '');
+          setEditProvince(false);
+        }}
+        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition">
+        Cancelar
+      </button>
+          
+    </div>
+  )}
+</div>
+
+
+      {/* Módulos ativos */}
       <ModuleGrid activeModules={userData.activeModules || []} />
 
-
-
-      <div 
-        className="w-full logout-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+      {/* Botão de logout */}
+      <div className="w-full logout-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
         onClick={handleLogout}>
         Desconectar
         <ExitToApp />

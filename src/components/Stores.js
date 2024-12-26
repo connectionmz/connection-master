@@ -11,7 +11,7 @@ const shuffleArray = (array) => {
         .map(({ item }) => item);
 };
 
-const Stores = () => {
+const Stores = ({user}) => {
     const [storesList, setStoresList] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredStores, setFilteredStores] = useState([]);
@@ -26,7 +26,7 @@ const Stores = () => {
                     id,
                     ...store,
                 }));
-                const shuffledStores = shuffleArray(storesArray); // Embaralha ao carregar
+                const shuffledStores = shuffleArray(storesArray); 
                 setStoresList(shuffledStores);
                 setFilteredStores(shuffledStores);
             }
@@ -40,16 +40,15 @@ const Stores = () => {
             const filtered = storesList.filter((store) =>
                 store.name.toLowerCase().includes(searchQuery.toLowerCase())
             );
-            setFilteredStores(shuffleArray(filtered)); // Embaralha os resultados filtrados
+            setFilteredStores(shuffleArray(filtered)); 
         } else {
-            setFilteredStores(shuffleArray(storesList)); // Embaralha a lista completa
+            setFilteredStores(shuffleArray(storesList)); 
         }
     }, [searchQuery, storesList]);
 
     return (
         <div className="container mx-auto p-6">
             <h1 className="text-2xl font-bold mb-6 text-center">Lojas Disponíveis</h1>
-            {/* Campo de Pesquisa */}
             <div className="mb-6 flex justify-center">
                 <input
                     type="text"

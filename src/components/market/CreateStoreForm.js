@@ -3,40 +3,31 @@ import axios from 'axios';
 import { ref, set } from 'firebase/database';
 import { db } from '../../fb';
 
-const CreateStoreForm = ({ storeId, planPrice = 800 }) => {
-    const [store, setStore] = useState({ name: '', description: '' });
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('mpesa');
+const CreateStoreForm = ({ storeId, planPrice = 800 , user }) => {
+    console.log(user)
+    const [store, setStore] = useState({ name: '', description: '', company: user || '', logoUrl: '' });
     const [isLoading, setIsLoading] = useState(false);
+    const [logo, setLogo] = useState(null); 
 
     const handleInputChange = (e) => {
         setStore({ ...store, [e.target.name]: e.target.value });
     };
 
+    const handleLogoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setLogo(file);
+            setStore({ ...store, logoUrl: URL.createObjectURL(file) });
+        }
+    };
+
     const handlePayment = async () => {
         setIsLoading(true);
 
-        const paymentData = {
-            carteira: '1729146943643x948653281532969000',
-            numero: phoneNumber,
-            'quem comprou': 'Cliente',
-            valor: planPrice.toString(),
-        };
-
-        const endpoint =
-            paymentMethod === 'mpesa'
-                ? 'https://mozpayment.co.mz/api/1.1/wf/pagamentorotativompesa'
-                : 'https://mozpayment.co.mz/api/1.1/wf/pagamentorotativoemola';
-
+        // Simulando a criação da loja sem o pagamento
         try {
-            const response = await axios.post(endpoint, paymentData);
-
-            if (response.data.status === 'success') {
-                alert(`Pagamento de ${planPrice} Mt via ${paymentMethod.toUpperCase()} confirmado com sucesso!`);
-                return true;
-            } else {
-                throw new Error(response.data.message || 'Erro desconhecido.');
-            }
+            // Aqui pode-se adicionar a lógica de pagamento se necessário
+            return true;
         } catch (error) {
             alert('A transação falhou. Por favor, tente novamente.');
             console.error('Erro no pagamento:', error.message);
@@ -47,13 +38,31 @@ const CreateStoreForm = ({ storeId, planPrice = 800 }) => {
     };
 
     const createStore = async () => {
+        setIsLoading(true);
+
+        // Verifique se o 'user' está definido antes de criar a loja
+        if (!user) {
+            alert('Usuário não definido. Não é possível criar a loja.');
+            setIsLoading(false);
+            return;
+        }
+
         const paymentSuccessful = await handlePayment();
 
         if (paymentSuccessful) {
-            const storeRef = ref(db, `stores/${storeId}`);
-            await set(storeRef, store);
-            alert('Loja criada com sucesso!');
-            window.location.reload();
+            try {
+                const storeRef = ref(db, `stores/${storeId}`);
+                await set(storeRef, store);
+                alert('Loja criada com sucesso!');
+                window.location.reload();
+            } catch (error) {
+                alert('Erro ao criar a loja.');
+                console.error('Erro:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            setIsLoading(false);
         }
     };
 
@@ -62,12 +71,13 @@ const CreateStoreForm = ({ storeId, planPrice = 800 }) => {
             {/* Informação sobre a taxa */}
             <div className="p-4 bg-yellow-100 border border-yellow-300 rounded-md mb-4">
                 <p className="text-yellow-800 text-sm">
-                    <strong>Nota:</strong> A subscrição de uma loja online requer o pagamento único de <strong>{planPrice} MT</strong>. 
-                    Pode efetuar o pagamento via <strong>M-Pesa</strong> ou <strong>e-Mola</strong>.
+                    <strong>Nota:</strong> A subscrição de uma loja online requer o pagamento único de <strong>{planPrice} MT</strong>.
                 </p>
             </div>
 
             <h2 className="text-xl font-semibold mb-4">Criar Loja</h2>
+
+            {/* Campo de nome da loja */}
             <input
                 type="text"
                 name="name"
@@ -76,6 +86,8 @@ const CreateStoreForm = ({ storeId, planPrice = 800 }) => {
                 className="w-full p-2 border rounded-md mb-4"
                 placeholder="Nome da Loja"
             />
+
+            {/* Campo de descrição da loja */}
             <textarea
                 name="description"
                 value={store.description}
@@ -83,27 +95,22 @@ const CreateStoreForm = ({ storeId, planPrice = 800 }) => {
                 className="w-full p-2 border rounded-md mb-4"
                 placeholder="Descrição da Loja"
             />
+
+            {/* Campo para o logotipo */}
             <input
-                type="text"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                type="file"
+                onChange={handleLogoChange}
                 className="w-full p-2 border rounded-md mb-4"
-                placeholder="Número de telefone"
             />
-            <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full p-2 border rounded-md mb-4"
-            >
-                <option value="mpesa">M-Pesa</option>
-                <option value="emola">e-Mola</option>
-            </select>
+            {logo && <img src={URL.createObjectURL(logo)} alt="Logo" className="w-20 h-20 object-cover mb-4" />}
+
+            {/* Botão de criação da loja */}
             <button
                 className={`bg-blue-500 text-white py-2 px-4 rounded-md ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={createStore}
                 disabled={isLoading}
             >
-                {isLoading ? 'Processando...' : 'Criar Loja'}
+                {isLoading ? 'Criando Loja...' : 'Criar Loja'}
             </button>
         </div>
     );

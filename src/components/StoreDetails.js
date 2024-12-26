@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ref, get } from 'firebase/database';
 import { db } from '../fb';
+import ProductGrid from './ProductGrid';
 
 const StoreDetails = () => {
     const { storeId } = useParams();
@@ -9,6 +10,9 @@ const StoreDetails = () => {
     const [loading, setLoading] = useState(true);
     const [cart, setCart] = useState([]);
     const [cartOpen, setCartOpen] = useState(false);
+
+
+    console.log(storeId)
 
     useEffect(() => {
         const fetchStoreDetails = async () => {
@@ -90,75 +94,9 @@ const StoreDetails = () => {
                 </div>
             </header>
 
-            {/* Produtos */}
             <main className="container mx-auto px-6 py-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {store.products &&
-                        Object.entries(store.products).map(([productId, product]) => (
-                            <div
-                                key={productId}
-                                className="bg-white shadow-md rounded-md overflow-hidden transform hover:scale-105 transition-transform"
-                            >
-                                <img
-                                    src={product.imageUrl}
-                                    alt={product.name}
-                                    className="w-full h-40 object-cover"
-                                />
-                                <div className="p-4">
-                                    <h2 className="text-lg font-semibold mb-2">{product.name}</h2>
-                                    <p className="text-sm text-gray-600 mb-2">
-                                        {product.discount ? `Desconto: ${product.discount}` : ''}
-                                    </p>
-                                    <p className="text-base font-bold text-gray-800 mb-4">
-                                        {product.price} MT
-                                    </p>
-                                    <button
-                                        onClick={() => addToCart(product)}
-                                        className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
-                                    >
-                                        Adicionar ao Carrinho
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                </div>
+            <ProductGrid products={store.products} storeId={storeId}/>
             </main>
-
-            {/* Carrinho de Compras */}
-            {cartOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white w-96 rounded-lg shadow-lg">
-                        <div className="border-b p-4 flex justify-between items-center">
-                            <h3 className="text-lg font-semibold">Carrinho de Compras</h3>
-                            <button onClick={() => setCartOpen(false)}>
-                                <span className="material-icons">close</span>
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {cart.length === 0 ? (
-                                <p>Seu carrinho está vazio.</p>
-                            ) : (
-                                <ul className="divide-y">
-                                    {cart.map((item, index) => (
-                                        <li key={index} className="py-2 flex justify-between items-center">
-                                            <span>{item.name}</span>
-                                            <span>{item.price} MT</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                        <div className="border-t p-4">
-                            <button
-                                onClick={generateInvoice}
-                                className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition"
-                            >
-                                Baixar Fatura
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

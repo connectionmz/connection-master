@@ -19,6 +19,7 @@ const ProductForm = ({ user }) => {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(false);  // Novo estado para controlar o carregamento
 
   // Adiciona um novo produto ao array de produtos
   const handleAddProduct = () => {
@@ -86,6 +87,8 @@ const ProductForm = ({ user }) => {
   const handleSubmit = async () => {
     if (!validateProducts()) return;
 
+    setLoading(true);  // Inicia o estado de carregamento
+
     try {
       const uploadedProducts = await Promise.all(
         products.map((product) => handleUploadImages(product))
@@ -110,6 +113,8 @@ const ProductForm = ({ user }) => {
     } catch (error) {
       setErrorMessage('Erro ao adicionar produtos, tente novamente.');
       setSnackbarOpen(true);
+    } finally {
+      setLoading(false);  // Finaliza o estado de carregamento
     }
   };
 
@@ -179,13 +184,14 @@ const ProductForm = ({ user }) => {
         <button
           onClick={handleAddProduct}
           className="bg-blue-500 text-white py-2 px-4 rounded"
+          disabled={loading}  // Desabilita o botão se estiver carregando
         >
           <Add />
         </button>
         <button
           onClick={handleSubmit}
-          disabled={products.length === 0}
-          className={`py-2 px-4 rounded ${products.length === 0 ? 'bg-gray-400' : 'bg-green-500 text-white'}`}
+          disabled={products.length === 0 || loading}  // Desabilita o botão se estiver carregando ou não houver produtos
+          className={`py-2 px-4 rounded ${products.length === 0 || loading ? 'bg-gray-400' : 'bg-green-500 text-white'}`}
         >
           <DoneAll />
         </button>

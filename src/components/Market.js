@@ -5,7 +5,10 @@ import ManageStore from './market/ManageStore';
 import CreateStoreForm from './market/CreateStoreForm';
 import { db, auth } from '../fb';
 
-const Market = () => {
+const Market = ({user}) => {
+
+
+    console.log(user)
     const [storeExists, setStoreExists] = useState(null);
     const [loading, setLoading] = useState(true);
     const [storeId, setStoreId] = useState(null);
@@ -73,7 +76,7 @@ const Market = () => {
             {storeExists ? (
                 <ManageStore storeId={storeId} />
             ) : (
-                <CreateStoreForm storeId={storeId} />
+                <CreateStoreForm storeId={storeId} user={user}/>
             )}
         </div>
     );
