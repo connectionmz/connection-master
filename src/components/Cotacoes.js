@@ -3,14 +3,19 @@ import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../fb'; 
 import { onAuthStateChanged } from 'firebase/auth';
+import PaySMSCheckout from './PaySMSCheckout';
 
-const Cotacoes = ({user}) => {
+
+const Cotacoes = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [loggedInUser, setLoggedInUser] = useState(null); 
     const [snackbarMessage, setSnackbarMessage] = useState(''); 
     const [snackbarOpen, setSnackbarOpen] = useState(false); 
+    const [isPaying, setIsPaying] = useState(false); 
     const navigate = useNavigate();
+
+    const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -27,6 +32,8 @@ const Cotacoes = ({user}) => {
     }, []);
 
     useEffect(() => {
+        if (!hasModuleSMS) return;
+
         const cotacoesRef = ref(db, 'cotacoes');
     
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
@@ -47,10 +54,13 @@ const Cotacoes = ({user}) => {
         return () => {
             unsubscribeCotacoes();
         };
-    }, [db, user]);
+    }, [db, user, hasModuleSMS]);
     
-
     const handlePublishQuotation = () => {
+        if (!hasModuleSMS) {
+            alert('Você precisa ativar o módulo SMS para emitir cotações.');
+            return;
+        }
         navigate('/publicar-cotacao');
     };
 
@@ -165,7 +175,6 @@ const Cotacoes = ({user}) => {
             )}
         </div>
     );
-    
 
     const filteredCotacoes = () => {
         switch (activeTab) {
@@ -188,60 +197,139 @@ const Cotacoes = ({user}) => {
         }
     };
 
+    const handlePaymentSuccess = (paymentDetails) => {
+        const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS`);
+        update(userRef, { status: 'active', activatedAt: new Date().toISOString(), paymentDetails })
+            .then(() => {
+                alert('Módulo SMS ativado com sucesso!');
+                if (onModuleActivation) onModuleActivation(); 
+
+                window.location.reload();
+  
+            })
+            .catch((error) => {
+                console.error('Erro ao ativar o módulo SMS: ', error);
+            });
+    };
+
     return (
         <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-xl font-semibold">Cotações</h1>
-                <button 
-                    className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                    onClick={handlePublishQuotation}
-                >
-                    Emitir
-                </button>
-            </div>
-
-            <div className="flex border-b mb-4 overflow-x-auto scrollbar-hide">
-                <button
-                    className={`py-2 px-4 ${activeTab === 'recentes' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-                    onClick={() => setActiveTab('recentes')}
-                >
-                    Recentes
-                </button>
-                <button
-                    className={`py-2 px-4 ${activeTab === 'expiradas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-                    onClick={() => setActiveTab('expiradas')}
-                >
-                    Expiradas
-                </button>
-                <button
-                    className={`py-2 px-4 ${activeTab === 'Fechada' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-                    onClick={() => setActiveTab('Fechada')}
-                >
-                    Fechada
-                </button>
-                <button
-                    className={`py-2 px-4 ${activeTab === 'minhas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-                    onClick={() => setActiveTab('minhas')}
-                >
-                    Minhas 
-                </button>
-            </div>
-            <div>
-                {filteredCotacoes().length > 0 ? (
-                    <div className="space-y-4">
-                        {filteredCotacoes().map(cotacao => {
-                            const expired = isExpired(cotacao.datalimite);
-                            return renderCotacao(cotacao, expired);
-                        })}
-                    </div>
-                ) : (
-                    <p className="text-gray-600">Nenhuma cotação disponível.</p>
-                )}
-            </div>
-            {snackbarOpen && (
-                <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white p-4 rounded-lg shadow-md">
-                    {snackbarMessage}
+            {!hasModuleSMS && !isPaying && (
+                <div className="mb-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
+                    <p>
+                        O módulo <strong>SMS</strong> está inativo. Para usar este serviço, ative o módulo SMS.
+                    </p>
+                    <button 
+                        className="mt-2 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                        onClick={() => setIsPaying(true)}>
+                        Ativar Módulo SMS
+                    </button>
                 </div>
+            )}
+
+            {isPaying && (
+                <PaySMSCheckout 
+                    user={user} 
+                    onPaymentSuccess={handlePaymentSuccess} 
+                />
+            )}
+
+            {!isPaying && (
+                <>
+                    <div className="flex justify-between items-center mb-4">
+                        <h1 className="text-xl font-semibold">Cotações</h1>
+                        <button 
+                            className={`py-2 px-4 rounded ${
+                                hasModuleSMS ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                            }`}
+                            onClick={handlePublishQuotation}
+                            disabled={!hasModuleSMS}
+                        >
+                            Emitir
+                        </button>
+                    </div>
+
+                    <div className="flex border-b mb-4 overflow-x-auto scrollbar-hide">
+                        <button
+                            className={`py-2 px-4 ${activeTab === 'recentes' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                            onClick={() => setActiveTab('recentes')}
+                        >
+                            Recentes
+                        </button>
+                        <button
+                            className={`py-2 px-4 ${activeTab === 'expiradas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                            onClick={() => setActiveTab('expiradas')}
+                        >
+                            Expiradas
+                        </button>
+                        <button
+                            className={`py-2 px-4 ${activeTab === 'Fechada' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                            onClick={() => setActiveTab('Fechada')}
+                        >
+                            Fechada
+                        </button>
+                        <button
+                            className={`py-2 px-4 ${activeTab === 'minhas' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
+                            onClick={() => setActiveTab('minhas')}
+                        >
+                            Minhas 
+                        </button>
+                    </div>
+                    <div>
+                    {filteredCotacoes().length > 0 ? (
+    <div className="space-y-6">
+        {filteredCotacoes().map(cotacao => {
+            const expired = isExpired(cotacao.datalimite);
+            return (
+                <div 
+                    key={cotacao.id} 
+                    className={`p-6 border rounded-lg shadow-lg bg-white cursor-pointer transform transition-all duration-300 ease-in-out hover:scale-105 ${
+                        expired ? 'bg-gray-100 text-gray-500' : 'bg-white hover:shadow-xl'}`}
+                    onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
+                >
+                    <h3 className="text-xl font-semibold mb-3 text-gray-800">{cotacao?.titulo}</h3>
+                    <p className="text-sm text-gray-600 mb-4">Prazo de Propostas: {new Date(cotacao.datalimite).toLocaleDateString()}</p>
+                    <div className="flex items-center mb-5">
+                        <img 
+                            src={cotacao.company?.logoUrl || 'https://via.placeholder.com/64'} 
+                            alt={cotacao.company?.nome || 'Empresa Desconhecida'} 
+                            className="w-16 h-16 object-cover rounded-full mr-5" 
+                        />
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-800">{cotacao.company?.nome || 'Empresa Desconhecida'}</h2>
+                        </div>
+                    </div>
+
+                    {/* Exibir setor e botão de exclusão apenas para o usuário logado */}
+                    {loggedInUser?.uid === cotacao?.company?.id && (
+                        <div className="mt-4 flex items-center space-x-4">
+                            <span className="text-sm text-gray-700">Setor: {cotacao.sector}</span>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Impede o clique no card
+                                    deleteCotacao(cotacao?.id);
+                                }} 
+                                className="text-red-600 hover:text-red-700 hover:underline text-sm font-medium"
+                            >
+                                Excluir
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        })}
+    </div>
+) : (
+    <p className="text-center text-gray-600 text-lg">Nenhuma cotação disponível.</p>
+)}
+
+                    </div>
+                    {snackbarOpen && (
+                        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white p-4 rounded-lg shadow-md">
+                            {snackbarMessage}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

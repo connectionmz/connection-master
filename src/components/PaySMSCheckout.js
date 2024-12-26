@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const PayModuleCheckout = ({ user, planPrice, onPaymentSuccess }) => {
+const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('mpesa'); // Método de pagamento padrão
   const [phoneNumber, setPhoneNumber] = useState(''); // Estado para o número de celular
+  const [smsCount, setSmsCount] = useState(25); // Estado para a quantidade de SMS (mínimo = 25)
+
+  // Calcula o preço com base na quantidade de SMS
+  const calculatePrice = (smsCount) => {
+    return Math.ceil(smsCount / 25) * 150; // 150 MZN a cada 25 SMS
+  };
 
   const handlePayment = async () => {
     if (!phoneNumber) {
@@ -12,13 +18,15 @@ const PayModuleCheckout = ({ user, planPrice, onPaymentSuccess }) => {
       return;
     }
 
+    const planPrice = calculatePrice(smsCount); // Calcula o preço com base no número de SMS
+
     setIsLoading(true);
 
     const paymentData = {
       carteira: '1729146943643x948653281532969000',
       numero: phoneNumber,
       'quem comprou': user.displayName || 'Cliente Anônimo',
-      valor: planPrice.toString(),
+      valor: '1',
     };
 
     const endpoint =
@@ -35,6 +43,7 @@ const PayModuleCheckout = ({ user, planPrice, onPaymentSuccess }) => {
           amount: planPrice,
           method: paymentMethod.toUpperCase(),
           transactionId: response.data.transactionId || null,
+          smsCount,
         };
 
         onPaymentSuccess(paymentDetails);
@@ -51,8 +60,7 @@ const PayModuleCheckout = ({ user, planPrice, onPaymentSuccess }) => {
 
   return (
     <div className="checkout-modal bg-white shadow-md rounded-md p-6">
-      <h2 className="text-xl font-bold mb-4">Confirmar Pagamento</h2>
-     
+      <h2 className="text-xl font-bold mb-4">Confirmar Pagamento de SMS</h2>
 
       {/* Input para o número de celular */}
       <div className="mt-4">
@@ -78,6 +86,25 @@ const PayModuleCheckout = ({ user, planPrice, onPaymentSuccess }) => {
         </select>
       </div>
 
+      {/* Seleção da quantidade de SMS */}
+      <div className="mt-4">
+        <label className="block mb-2 font-semibold">Quantidade de SMS:</label>
+        <input
+          type="number"
+          value={smsCount}
+          onChange={(e) => setSmsCount(Math.max(25, parseInt(e.target.value) || 25))} // Mínimo de 25 SMS
+          className="w-full border p-2 rounded"
+          step={25}
+          min={25}
+        />
+        <p className="text-gray-500 mt-2">Pacotes de 25 SMS (150 Mt por pacote)</p>
+      </div>
+
+      {/* Exibição do preço total */}
+      <div className="mt-4">
+        <p className="text-lg font-bold">Preço Total: {calculatePrice(smsCount)} Mt</p>
+      </div>
+
       {/* Botão de pagamento */}
       <button
         onClick={handlePayment}
@@ -89,4 +116,4 @@ const PayModuleCheckout = ({ user, planPrice, onPaymentSuccess }) => {
   );
 };
 
-export default PayModuleCheckout;
+export default PaySMSCheckout;

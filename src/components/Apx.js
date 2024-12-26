@@ -52,7 +52,7 @@ const Apx = ({ user }) => {
     try {
       const companyRef = ref(db, `company/${user.id}`);
       await update(companyRef, { provincia: newProvince });
-      console.log("Província salva com sucesso!"); // Debug
+      console.log("Província salva com sucesso!"); 
       setEditProvince(false);
     } catch (error) {
       console.error("Erro ao salvar província: ", error);
@@ -69,7 +69,6 @@ const Apx = ({ user }) => {
 
   return (
     <div className="p-4 text-black">
-      {/* Botão de publicação */}
       <div
         className="w-full px-6 py-4 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition duration-300 ease-in-out shadow-lg cursor-pointer flex items-center justify-center"
         onClick={() => window.location.href = '/post'}>
@@ -77,7 +76,6 @@ const Apx = ({ user }) => {
         Fazer Publicação
       </div>
 
-      {/* Informações do perfil */}
       <Link to='/profile' className="flex items-center gap-2 my-4">
         <img
           src={userData.logoUrl}
@@ -89,7 +87,6 @@ const Apx = ({ user }) => {
         </div>
       </Link>
 
-      {/* Seção de edição da província */}
       <div className="mt-4">
   {!editProvince ? (
     <div className="flex items-center gap-2">
@@ -138,10 +135,8 @@ const Apx = ({ user }) => {
 </div>
 
 
-      {/* Módulos ativos */}
       <ModuleGrid activeModules={userData.activeModules || []} />
 
-      {/* Botão de logout */}
       <div className="w-full logout-btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
         onClick={handleLogout}>
         Desconectar

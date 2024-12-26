@@ -77,7 +77,7 @@ const UserRoutes = ({ user }) => (
   <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesProposta />} />
 
   {/* Concursos */}
-  <Route path="/concurso" element={<Concurso />} />
+  <Route path="/concurso" element={<Concurso user={user}/>} />
   <Route path="/publicar-concurso" element={<PublicarConcurso user={user} />} />
   <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhes />} />
 
@@ -114,7 +114,7 @@ const UserRoutes = ({ user }) => (
   {/* Outros */}
   <Route path="/search" element={<ConnectionsSearch />} />
   <Route path="/explore" element={<Explore user={user.provincia} />} />
-  <Route path="/sms" element={<Sms />} />
+  <Route path="/sms" element={<Sms user={user}/>} />
   <Route path="/feed" element={<Feed />} />
   <Route path="/apx" element={<Apx  user={user} />} />
   <Route path="/rfq" element={<Teste />} />
@@ -123,7 +123,6 @@ const UserRoutes = ({ user }) => (
   <Route path="/analytics" element={<Analytics />} />
   <Route path="/noticiados" element={<Noticiados />} />
   <Route path="/teste" element={<SmsForm />} />
-  
   
   <Route path="*" element={<Navigate to="/" />} />
   </Routes>
