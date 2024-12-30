@@ -15,6 +15,7 @@ import UserRoutes from './components/routes/UserRoutes';
 import NonSubscriberRoutes from './components/routes/NonSubscriberRoutes';
 import { saveContentToInbox } from './components/SaveToInbox';
 import { SaveLogError } from './utils/SaveLogError';
+import DesktopRoutes from './components/routes/DesktopRoutes';
 
 const App = () => {
   const [userData, setUserData] = useState(null); 
@@ -22,7 +23,7 @@ const App = () => {
   const [subscriptionActive, setSubscriptionActive] = useState(false); 
   const [isVerified, setIsVerified] = useState(false)
   const [allCompanyData, setAllCompanyData] = useState(null); 
-  
+  const [redirected, setRedirected] = useState(false);
   // Função para detectar se o usuário está em mobile ou desktop
   const isMobile = window.innerWidth <= 768; // Ajuste esse valor conforme necessário
 
@@ -75,11 +76,13 @@ const App = () => {
             });
             return;
           }
-          saveContentToInbox(contentMessage, user, messageTitle)
+          {/*
+            saveContentToInbox(contentMessage, user, messageTitle)
             .then(() => console.log(''))
             .catch((error) =>
               SaveLogError('app', 'Erro ao salvar notificação no inbox: '+ error)
             );
+            */}
         });
       });
     });
@@ -137,14 +140,13 @@ const App = () => {
       }
     });
 
-    // Redireciona para outro domínio caso o usuário esteja em desktop
-    if (!isMobile) {
-        window.location="https://outro-dominio.com/dashboard"
-    }
+
 
     return () => unsubscribe();
   }, );
 
+
+  
   if (loading) {
     return (
       <div className="loader-container">
@@ -156,22 +158,27 @@ const App = () => {
 
   return (
     <ThemeProvider>
-      <UserProvider>
-        <Router>
-          <div className="App">
-            <Header />
-            <div className='content'>
-              {subscriptionActive ? (
-                <UserRoutes user={userData} />
-              ) : (
-                <NonSubscriberRoutes userDb={userData} />
-              )}
-            </div>
-            <Footer user={userData} />
-          </div>
-        </Router>
-      </UserProvider>
-    </ThemeProvider>
+  <UserProvider>
+    <Router>
+      <div className="App">
+        {isMobile && <Header />}
+        <div className="content">
+          {isMobile ? (
+            subscriptionActive ? (
+              <UserRoutes user={userData} />
+            ) : (
+              <NonSubscriberRoutes userDb={userData} />
+            )
+          ) : (
+            <DesktopRoutes user={userData} />
+          )}
+        </div>
+        {isMobile && <Footer user={userData} />}
+      </div>
+    </Router>
+  </UserProvider>
+</ThemeProvider>
+
   );
 };
 

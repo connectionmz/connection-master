@@ -48,6 +48,7 @@ import VerifyCompany from '../VerifyCompany';
 import PagamentoModulo from '../PagamentoModulo';
 import Noticiados from '../Noticiados';
 import ProductDetails from '../ProductDetails';
+import DashboardComponent from '../Dashboard';
 
 const UserRoutes = ({ user }) => (
   <Routes>
@@ -119,7 +120,6 @@ const UserRoutes = ({ user }) => (
   <Route path="/inbox" element={<Inbox />} />
   <Route path="/analytics" element={<Analytics />} />
   <Route path="/noticiados" element={<Noticiados />} />
-  
   <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 )
