@@ -13,12 +13,12 @@ app.use(express.json()); // Permite lidar com JSON no corpo da requisição
 app.post('/send-sms', async (req, res) => {
   const apiUrl = "http://api.mozesms.com/bulk_json/v2/";
 
-  // Verificar se o corpo da requisição contém mensagens
-  const { messages } = req.body;
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ error: "É necessário fornecer uma lista de mensagens." });
-  }
+  // Mensagens que você deseja enviar
+  const messages = [
+    { number: "840237100", text: "Mensagem 1 para este número." },
+    { number: "876773180", text: "Mensagem 2 para outro número." },
+    { number: "871597730", text: "Mensagem 3 para mais um número." },
+  ];
 
   // Montando o payload com o sender e as mensagens
   const payload = {
@@ -39,10 +39,7 @@ app.post('/send-sms', async (req, res) => {
     res.status(200).json(response.data);
   } catch (error) {
     console.error("Erro ao enviar mensagens:", error.response?.data || error.message);
-    res.status(500).json({
-      error: "Falha ao enviar as mensagens",
-      details: error.response?.data || error.message, // Inclui mais detalhes sobre o erro
-    });
+    res.status(500).json({ error: "Falha ao enviar as mensagens" });
   }
 });
 

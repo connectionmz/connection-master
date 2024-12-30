@@ -9,7 +9,7 @@ import { EditorText, SectorDeActividades } from '../utils/formUtils';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import { saveContentToInboxBasedSector } from './SaveToInbox';
-import sendSMS from '../utils/sendMessage';
+import sendMessage from './sms/sendMessage';
 
 
 const PublicarCotacao = ({ user }) => {
@@ -56,15 +56,15 @@ const PublicarCotacao = ({ user }) => {
         e.preventDefault();
         setLoading(true);
         setSnackbarMessage('');
-    
+      
         if (user) {
             try {
                 const cotacaoRef = ref(db, 'cotacoes');
                 const newCotacaoRef = push(cotacaoRef);
                 const cotacaoId = newCotacaoRef.key;
-    
+      
                 const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
-    
+      
                 await set(ref(db, `cotacoes/${cotacaoId}`), {
                     title,
                     description,
@@ -77,28 +77,28 @@ const PublicarCotacao = ({ user }) => {
                     status: 'open',
                     link: linkDoPedido,
                 });
-    
+      
                 setSnackbarMessage('Cotação publicada com sucesso!');
                 setSnackbarSeverity('success');
                 setOpenSnackbar(true);
-    
+      
                 const empresasRef = ref(db, 'company');
                 const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));
                 const snapshot = await get(setorQuery);
-    
+      
                 if (snapshot.exists()) {
                     const empresas = snapshot.val();
-    
+      
                     for (const key in empresas) {
                         const empresa = empresas[key];
-    
+      
                         if (!empresa.contacto) {
                             console.warn(`Empresa ${key} não possui contato. Ignorando...`);
                             continue;
                         }
-    
+      
                         const message = `
-                        📝 Nova Cotação para sua Empresa 📊
+                        📝 Nova Cotação para sua Empresa
                         Título: ${title}
                         Descrição: ${description}
                         Data Limite: ${deadline}
@@ -107,28 +107,15 @@ const PublicarCotacao = ({ user }) => {
                     `.trim();
                     
                     const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
-                    
                     const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
     
                         const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+      
 
-                        for (const numero of contatos) {
-                          if (numero) {
-                            try {
-                              await sendSMS([numero], finalMessage); 
-                            } catch (error) {
-                              console.error(`Erro ao enviar SMS para ${numero}:`, error.message);
-                            }
-                          } else {
-                            console.warn('Número inválido ignorado');
-                          }
-                        }
-                        await saveContentToInboxBasedSector(
-                            message,
-                            empresa.userId,
-                            'Novo pedido de cotação',
-                            sector
-                        );
+
+                        // Enviar a mensagem para cada número de contato
+                        
+                        await sendMessage(contatos, finalMessage);
                     }
                 } else {
                     console.log('Nenhuma empresa encontrada para este setor.');

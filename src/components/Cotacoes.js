@@ -300,13 +300,12 @@ const Cotacoes = ({ user, onModuleActivation }) => {
                         </div>
                     </div>
 
-                    {/* Exibir setor e botão de exclusão apenas para o usuário logado */}
                     {loggedInUser?.uid === cotacao?.company?.id && (
                         <div className="mt-4 flex items-center space-x-4">
                             <span className="text-sm text-gray-700">Setor: {cotacao.sector}</span>
                             <button 
                                 onClick={(e) => {
-                                    e.stopPropagation(); // Impede o clique no card
+                                    e.stopPropagation(); 
                                     deleteCotacao(cotacao?.id);
                                 }} 
                                 className="text-red-600 hover:text-red-700 hover:underline text-sm font-medium"

@@ -24,7 +24,6 @@ const Inbox = () => {
             }))
             .sort((a, b) => b.timestamp - a.timestamp); 
             setMessages(messagesArray);
-          console.log(messagesArray)
         }
       });
     }

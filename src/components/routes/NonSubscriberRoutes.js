@@ -34,6 +34,8 @@ const NonSubscriberRoutes = ({ userDb }) => {
 
   const isVerified = userDb;
 
+  console.log(user)
+
   return (
     <Routes>
       {user ? (

@@ -16,7 +16,6 @@ import Explore from '../Explore';
 import Profile from '../Profile';
 import Apx from '../Apx';
 import Faturacao from '../Faturacao';
-import Sms from '../Sms';
 import Feed from '../Feed';
 import Stores from '../Stores';
 import StoreDetails from '../StoreDetails';
@@ -33,7 +32,6 @@ import Analytics from '../Analytics';
 import Fatura from '../pdf/Fatura';
 import ProductForm from '../market/ProductForm';
 import PublicarConcurso from '../PublicarConcurso';
-import CompanyDataForm from '../CompanyDataForm';
 import Teste from '../Teste';
 import Anunciar from '../Anunciar';
 import Propostas from '../Propostas';
@@ -49,7 +47,6 @@ import ChangePassword from '../password/ChangePassword';
 import VerifyCompany from '../VerifyCompany';
 import PagamentoModulo from '../PagamentoModulo';
 import Noticiados from '../Noticiados';
-import SmsForm from '../Teste';
 import ProductDetails from '../ProductDetails';
 
 const UserRoutes = ({ user }) => (
@@ -114,7 +111,7 @@ const UserRoutes = ({ user }) => (
   {/* Outros */}
   <Route path="/search" element={<ConnectionsSearch />} />
   <Route path="/explore" element={<Explore user={user.provincia} />} />
-  <Route path="/sms" element={<Sms user={user}/>} />
+ {/*  <Route path="/sms" element={<Sms user={user}/>} /> */}
   <Route path="/feed" element={<Feed />} />
   <Route path="/apx" element={<Apx  user={user} />} />
   <Route path="/rfq" element={<Teste />} />
@@ -122,7 +119,6 @@ const UserRoutes = ({ user }) => (
   <Route path="/inbox" element={<Inbox />} />
   <Route path="/analytics" element={<Analytics />} />
   <Route path="/noticiados" element={<Noticiados />} />
-  <Route path="/teste" element={<SmsForm />} />
   
   <Route path="*" element={<Navigate to="/" />} />
   </Routes>

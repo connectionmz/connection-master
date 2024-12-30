@@ -22,6 +22,9 @@ const App = () => {
   const [subscriptionActive, setSubscriptionActive] = useState(false); 
   const [isVerified, setIsVerified] = useState(false)
   const [allCompanyData, setAllCompanyData] = useState(null); 
+  
+  // Função para detectar se o usuário está em mobile ou desktop
+  const isMobile = window.innerWidth <= 768; // Ajuste esse valor conforme necessário
 
   const fetchNewContentAndNotify = (user) => {
     const sections = ['concursos', 'cotacoes', 'publicAnnouncements', 'surveys'];
@@ -81,7 +84,6 @@ const App = () => {
       });
     });
   };
-  
 
   const fetchUserDataAndSubscription = async (user) => {
     try {
@@ -105,7 +107,6 @@ const App = () => {
         setSubscriptionActive(companyData.subscriptions.status);
 
         await set(ref(db, `company/${user.uid}/lastLogin`), new Date().toISOString());
-
 
         fetchNewContentAndNotify(user.uid);
       } else {
@@ -136,9 +137,13 @@ const App = () => {
       }
     });
 
-    return () => unsubscribe();
-  }, []);
+    // Redireciona para outro domínio caso o usuário esteja em desktop
+    if (!isMobile) {
+        window.location="https://outro-dominio.com/dashboard"
+    }
 
+    return () => unsubscribe();
+  }, );
 
   if (loading) {
     return (
@@ -148,7 +153,6 @@ const App = () => {
       </div>
     );
   }
-
 
   return (
     <ThemeProvider>
