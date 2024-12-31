@@ -1,146 +1,164 @@
-import React from 'react';
-import { Box, Grid, Card, CardContent, Typography, CircularProgress, Divider, Avatar } from '@mui/material';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-import PendingActionsIcon from '@mui/icons-material/PendingActions';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import React from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Box,
+  Avatar,
+  IconButton,
+  InputBase,
+  Container,
+  Grid,
+  Paper,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+} from "@mui/material";
+import {
+  Search,
+  Notifications,
+  Message,
+  AccountCircle,
+  Home,
+  BusinessCenter,
+  People,
+  Article,
+} from "@mui/icons-material";
+import { logo } from "../utils/utils";
+import { Link } from "react-router-dom";
+import MarqueeParceiros from "./MarqueeParceiros";
+import MarqueeAnuncios from "./MarqueeAnuncios";
+import StorieList from "./StorieList";
 
-const DashboardComponent = () => {
-  const stats = [
-    { label: 'Enablement Tasks', value: '1', icon: <AssignmentTurnedInIcon color="primary" /> },
-    { label: 'Orders', value: '932', icon: <ShoppingCartIcon color="secondary" /> },
-    { label: 'New Orders', value: '51', icon: <TrendingUpIcon color="success" /> },
-    { label: 'Changed Orders', value: '0', icon: <PendingActionsIcon color="warning" /> },
-    { label: 'Orders to Invoice', value: '5', icon: <ReceiptLongIcon color="error" /> },
-  ];
-
-  const widgets = [
-    {
-      title: 'Purchase Orders',
-      value: '$579K USD',
-      subtitle: 'Last 3 months',
-      chartPlaceholder: true,
-    },
-    {
-      title: 'Invoice Aging',
-      value: '$0 USD',
-      subtitle: 'Last 3 months',
-      chartPlaceholder: true,
-    },
-    {
-      title: 'My Leads',
-      content: [...Array(3)].map((_, i) => ({
-        title: `RFI - RFP #${i + 1}`,
-        dueDate: `Due: Apr 0${i + 5}, 2021`,
-      })),
-    },
-    {
-      title: 'Company Profile',
-      value: '95% Completed',
-      progress: 95,
-    },
-  ];
-
+const Dashboard = ({ user }) => {
   return (
-    <Box sx={{ padding: 3, backgroundColor: '#eef2f7', minHeight: '100vh' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" color="primary">
-          Dashboard Overview
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Last 31 days
-        </Typography>
-      </Box>
-
-      {/* Stats */}
-      <Grid container spacing={3}>
-        {stats.map((item, index) => (
-          <Grid item xs={6} sm={4} md={2.4} key={index}>
-            <Card
+    <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
+      {/* Navbar */}
+      <AppBar position="sticky" sx={{ backgroundColor: "#F1F1F1" }}>
+        <Toolbar sx={{ justifyContent: "space-between" }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+              <Link to="/" className="flex items-center space-x-2">
+                <img src={logo} alt="Logo" style={{ width: "20%" }} />
+              </Link>
+            </Typography>
+            <Box
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: 2,
-                backgroundColor: '#ffffff',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                borderRadius: 2,
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "white",
+                borderRadius: 1,
+                padding: "0 10px",
+                width: 300,
               }}
             >
-              <Avatar sx={{ backgroundColor: '#f0f0f0', mr: 2 }}>{item.icon}</Avatar>
-              <Box>
-                <Typography variant="h6" fontWeight="bold" color="primary">
-                  {item.value}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {item.label}
-                </Typography>
+              <Search sx={{ color: "gray" }} />
+              <InputBase placeholder="Pesquisar" sx={{ ml: 1 }} />
+            </Box>
+          </Box>
+          <Box display="flex" alignItems="center" gap={3}>
+            <IconButton sx={{ color: "black" }}>
+              <Home />
+            </IconButton>
+            <IconButton sx={{ color: "black" }}>
+              <People />
+            </IconButton>
+            <IconButton sx={{ color: "black" }}>
+              <BusinessCenter />
+            </IconButton>
+            <IconButton sx={{ color: "black" }}>
+              <Article />
+            </IconButton>
+            <IconButton sx={{ color: "black" }}>
+              <Notifications />
+            </IconButton>
+            <IconButton sx={{ color: "black" }}>
+              <Message />
+            </IconButton>
+            <IconButton sx={{ color: "black" }}>
+              <AccountCircle />
+            </IconButton>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <MarqueeParceiros />
+        <StorieList user={user.provincia}/> 
+        <MarqueeAnuncios />
+
+        <Grid container spacing={2}>
+          <Grid item xs={3}>
+            <Paper sx={{ padding: 2, height: "100%" }}>
+              <Typography variant="body2" align="center" color="textSecondary">
+                Espaço reservado para anúncios do Google Ads
+              </Typography>
+            </Paper>
+          </Grid>
+          <Grid item xs={6}>
+            <Paper sx={{ padding: 2, marginBottom: 2 }}>
+              <Typography variant="h6">Comece uma publicação</Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  mt: 2,
+                }}
+              >
+                <Avatar>A</Avatar>
+                <InputBase
+                  placeholder="No que você está pensando?"
+                  fullWidth
+                  sx={{
+                    backgroundColor: "#f3f2ef",
+                    padding: 1,
+                    borderRadius: 1,
+                  }}
+                />
               </Box>
-            </Card>
+            </Paper>
+
+            {["Celebrating a Milestone", "Achieved a Goal", "Started a New Job"].map(
+              (post, index) => (
+                <Paper key={index} sx={{ padding: 2, marginBottom: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                    {post}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis
+                    vehicula fermentum justo.
+                  </Typography>
+                </Paper>
+              )
+            )}
           </Grid>
-        ))}
-      </Grid>
-
-      <Divider sx={{ my: 4 }} />
-
-      {/* Widgets */}
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }} color="primary">
-        My Widgets
-      </Typography>
-      <Grid container spacing={3}>
-        {widgets.map((widget, index) => (
-          <Grid item xs={12} md={4} key={index}>
-            <Card sx={{ backgroundColor: '#ffffff', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', borderRadius: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight="bold" color="text.primary" gutterBottom>
-                  {widget.title}
-                </Typography>
-                {widget.chartPlaceholder ? (
-                  <>
-                    <Typography variant="h4" color="primary" fontWeight="bold">
-                      {widget.value}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {widget.subtitle}
-                    </Typography>
-                    <Box
-                      sx={{
-                        mt: 2,
-                        height: 100,
-                        backgroundColor: '#e8eaf6',
-                        borderRadius: 1,
-                      }}
-                    />
-                  </>
-                ) : widget.progress ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {widget.value}
-                    </Typography>
-                    <CircularProgress variant="determinate" value={widget.progress} />
-                  </Box>
-                ) : (
-                  <Box>
-                    {widget.content.map((lead, i) => (
-                      <Box key={i} sx={{ mb: 2 }}>
-                        <Typography variant="body2" fontWeight="bold" color="text.primary">
-                          {lead.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {lead.dueDate}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
+          <Grid item xs={3}>
+            <Paper sx={{ padding: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                Empresas
+              </Typography>
+              <List>
+                {["Connection Mozambique", "MotorTech,LDA", "NovaEmpresa"].map(
+                  (company, index) => (
+                    <ListItem key={index} disablePadding>
+                      <ListItemText primary={company} />
+                    </ListItem>
+                  )
                 )}
-              </CardContent>
-            </Card>
+              </List>
+              <Divider sx={{ my: 2 }} />
+              <Button fullWidth variant="text" sx={{ color: "#0a66c2" }}>
+                Ver todas
+              </Button>
+            </Paper>
           </Grid>
-        ))}
-      </Grid>
+        </Grid>
+      </Container>
     </Box>
   );
 };
 
-export default DashboardComponent;
+export default Dashboard;

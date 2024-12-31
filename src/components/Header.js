@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../fb';
-import logo from '../img/bg2.png';
 import { Paper, Badge, IconButton, Avatar } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import MailIcon from '@mui/icons-material/Mail';
@@ -14,6 +13,7 @@ import LoginIcon from '@mui/icons-material/Login';
 import StoreIcon from '@mui/icons-material/Store';
 import { ref, onValue } from 'firebase/database'; 
 import { Explore } from '@mui/icons-material';
+import { logo } from '../utils/utils';
 
 const Header = () => {
     const [user] = useAuthState(auth); 
