@@ -31,6 +31,7 @@ import { Link } from "react-router-dom";
 import MarqueeParceiros from "./MarqueeParceiros";
 import MarqueeAnuncios from "./MarqueeAnuncios";
 import StorieList from "./StorieList";
+import Banner from "./Banner";
 
 const Dashboard = ({ user }) => {
   return (
@@ -84,7 +85,7 @@ const Dashboard = ({ user }) => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 8 }}>
         <MarqueeParceiros />
         <StorieList user={user.provincia}/> 
         <MarqueeAnuncios />
@@ -92,9 +93,7 @@ const Dashboard = ({ user }) => {
         <Grid container spacing={2}>
           <Grid item xs={3}>
             <Paper sx={{ padding: 2, height: "100%" }}>
-              <Typography variant="body2" align="center" color="textSecondary">
-                Espaço reservado para anúncios do Google Ads
-              </Typography>
+            <Banner /> 
             </Paper>
           </Grid>
           <Grid item xs={6}>
