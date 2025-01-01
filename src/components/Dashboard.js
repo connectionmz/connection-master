@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -15,6 +15,7 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  ListItemIcon,
 } from "@mui/material";
 import {
   Search,
@@ -29,69 +30,31 @@ import {
 import { logo } from "../utils/utils";
 import { Link } from "react-router-dom";
 import MarqueeParceiros from "./MarqueeParceiros";
-import MarqueeAnuncios from "./MarqueeAnuncios";
+import MarqueeAnuncios, { fetchAnuncios } from "./MarqueeAnuncios";
 import StorieList from "./StorieList";
 import Banner from "./Banner";
 
+
+
 const Dashboard = ({ user }) => {
+  const [anuncios, setAnuncios] = useState([]);
+
+  useEffect(() => {
+    const loadAnuncios = async () => {
+      try {
+        const data = await fetchAnuncios();
+        setAnuncios(data);
+      } catch (error) {
+        console.error('Erro ao carregar os anúncios:', error);
+      }
+    };
+
+    loadAnuncios();
+  }, []);
+
+
   return (
     <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
-      <AppBar position="sticky" sx={{ backgroundColor: "#F1F1F1" }}>
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-              <Link to="/" className="flex items-center space-x-2">
-                <img src={logo} alt="Logo" style={{ width: "20%" }} />
-              </Link>
-            </Typography>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                backgroundColor: "white",
-                borderRadius: 1,
-                padding: "0 10px",
-                width: 300,
-              }}>
-              <Search sx={{ color: "gray" }} />
-              <InputBase placeholder="Pesquisar" sx={{ ml: 1 }} />
-            </Box>
-          </Box>
-          <Box display="flex" alignItems="center" gap={3}>
-
-  {/* Empresas */}
-  <Link to="/explore">
-    <IconButton sx={{ color: "black" }}>
-      <BusinessCenter />
-    </IconButton>
-  </Link>
-
-  {/* Artigos */}
-  <Link to="/d">
-    <IconButton sx={{ color: "black" }}>
-      <Article />
-    </IconButton>
-  </Link>
-
-  {/* Mensagens */}
-  <Link to="/cotacao">
-    <IconButton sx={{ color: "black" }}>
-      <Message />
-    </IconButton>
-  </Link>
-
-  {/* Conta do Usuário */}
-  <Link to="/perfil">
-    <IconButton sx={{ color: "black" }}>
-      <AccountCircle />
-    </IconButton>
-  </Link>
-
-
-</Box>
-
-        </Toolbar>
-      </AppBar>
       <Container maxWidth="lg" sx={{ mt: 8 }}>
         <MarqueeParceiros />
         <StorieList user={user.provincia}/> 
@@ -142,16 +105,18 @@ const Dashboard = ({ user }) => {
           <Grid item xs={3}>
             <Paper sx={{ padding: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Empresas
+                Informacoes Uteis
               </Typography>
               <List>
-                {["Connection Mozambique", "MotorTech,LDA", "NovaEmpresa"].map(
-                  (company, index) => (
-                    <ListItem key={index} disablePadding>
-                      <ListItemText primary={company} />
-                    </ListItem>
-                  )
-                )}
+              {anuncios.map((anuncio, index) => (
+                  <ListItem key={index} disablePadding>
+                    <ListItemIcon>
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={<strong>{anuncio.title || 'Indisponivel'}</strong>} 
+                      secondary={anuncio.company || 'Empresa Desconhecida'} />
+                  </ListItem>
+                ))}
               </List>
               <Divider sx={{ my: 2 }} />
               <Button fullWidth variant="text" sx={{ color: "#0a66c2" }}>

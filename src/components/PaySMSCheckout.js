@@ -3,13 +3,12 @@ import axios from 'axios';
 
 const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('mpesa'); // Método de pagamento padrão
-  const [phoneNumber, setPhoneNumber] = useState(''); // Estado para o número de celular
-  const [smsCount, setSmsCount] = useState(25); // Estado para a quantidade de SMS (mínimo = 25)
+  const [paymentMethod, setPaymentMethod] = useState('mpesa'); 
+  const [phoneNumber, setPhoneNumber] = useState(''); 
+  const [smsCount, setSmsCount] = useState(25);
 
-  // Calcula o preço com base na quantidade de SMS
   const calculatePrice = (smsCount) => {
-    return Math.ceil(smsCount / 25) * 150; // 150 MZN a cada 25 SMS
+    return Math.ceil(smsCount / 25) * 150; 
   };
 
   const handlePayment = async () => {
@@ -18,7 +17,7 @@ const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
       return;
     }
 
-    const planPrice = calculatePrice(smsCount); // Calcula o preço com base no número de SMS
+    const planPrice = calculatePrice(smsCount); 
 
     setIsLoading(true);
 

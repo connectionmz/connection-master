@@ -4,24 +4,38 @@ import { ref, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom'; // Navegação com React Router
 import '../styles/main.css';
 
+export const fetchAnuncios = async () => {
+  try {
+    const snapshot = await get(ref(db, 'publicAnnouncements'));
+    if (snapshot.exists()) {
+      return Object.values(snapshot.val());
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Erro ao buscar anúncios:', error);
+    throw error; // Repassa o erro para ser tratado pelo componente que chamou
+  }
+};
+
+
 const MarqueeAnuncios = () => {
   const [anuncios, setAnuncios] = useState([]);
   const [selectedAnuncio, setSelectedAnuncio] = useState(null);
   const navigate = useNavigate();
 
-  const fetchAnuncios = async () => {
-    try {
-      const snapshot = await get(ref(db, 'publicAnnouncements'));
-      if (snapshot.exists()) {
-        setAnuncios(Object.values(snapshot.val()));
-      }
-    } catch (error) {
-      console.error('Erro ao buscar anúncios:', error);
-    }
-  };
 
   useEffect(() => {
-    fetchAnuncios();
+    const loadAnuncios = async () => {
+      try {
+        const data = await fetchAnuncios();
+        setAnuncios(data);
+      } catch (error) {
+        console.error('Erro ao carregar os anúncios:', error);
+      }
+    };
+
+    loadAnuncios();
   }, []);
 
   const handleOpenModal = (anuncio) => {

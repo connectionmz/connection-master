@@ -157,7 +157,6 @@ const App = () => {
   }
 
   return (
-    <ThemeProvider>
   <UserProvider>
     <Router>
       <div className="App">
@@ -177,7 +176,6 @@ const App = () => {
       </div>
     </Router>
   </UserProvider>
-</ThemeProvider>
 
   );
 };

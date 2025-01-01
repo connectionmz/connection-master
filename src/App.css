@@ -86,7 +86,7 @@
 }
 .content {
   width: 100%; /* Define a largura como 100% da largura do contêiner pai */
-  margin-bottom: 20%;
+  margin-bottom: 0;
 }
 .marquee-container {
   width: 100%;
