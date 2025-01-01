@@ -36,7 +36,6 @@ import Banner from "./Banner";
 const Dashboard = ({ user }) => {
   return (
     <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
-      {/* Navbar */}
       <AppBar position="sticky" sx={{ backgroundColor: "#F1F1F1" }}>
         <Toolbar sx={{ justifyContent: "space-between" }}>
           <Box display="flex" alignItems="center" gap={2}>
@@ -53,43 +52,50 @@ const Dashboard = ({ user }) => {
                 borderRadius: 1,
                 padding: "0 10px",
                 width: 300,
-              }}
-            >
+              }}>
               <Search sx={{ color: "gray" }} />
               <InputBase placeholder="Pesquisar" sx={{ ml: 1 }} />
             </Box>
           </Box>
           <Box display="flex" alignItems="center" gap={3}>
-            <IconButton sx={{ color: "black" }}>
-              <Home />
-            </IconButton>
-            <IconButton sx={{ color: "black" }}>
-              <People />
-            </IconButton>
-            <IconButton sx={{ color: "black" }}>
-              <BusinessCenter />
-            </IconButton>
-            <IconButton sx={{ color: "black" }}>
-              <Article />
-            </IconButton>
-            <IconButton sx={{ color: "black" }}>
-              <Notifications />
-            </IconButton>
-            <IconButton sx={{ color: "black" }}>
-              <Message />
-            </IconButton>
-            <IconButton sx={{ color: "black" }}>
-              <AccountCircle />
-            </IconButton>
-          </Box>
+
+  {/* Empresas */}
+  <Link to="/explore">
+    <IconButton sx={{ color: "black" }}>
+      <BusinessCenter />
+    </IconButton>
+  </Link>
+
+  {/* Artigos */}
+  <Link to="/concurso">
+    <IconButton sx={{ color: "black" }}>
+      <Article />
+    </IconButton>
+  </Link>
+
+  {/* Mensagens */}
+  <Link to="/cotacao">
+    <IconButton sx={{ color: "black" }}>
+      <Message />
+    </IconButton>
+  </Link>
+
+  {/* Conta do Usuário */}
+  <Link to="/perfil">
+    <IconButton sx={{ color: "black" }}>
+      <AccountCircle />
+    </IconButton>
+  </Link>
+
+
+</Box>
+
         </Toolbar>
       </AppBar>
-
       <Container maxWidth="lg" sx={{ mt: 8 }}>
         <MarqueeParceiros />
         <StorieList user={user.provincia}/> 
         <MarqueeAnuncios />
-
         <Grid container spacing={2}>
           <Grid item xs={3}>
             <Paper sx={{ padding: 2, height: "100%" }}>
@@ -105,8 +111,7 @@ const Dashboard = ({ user }) => {
                   alignItems: "center",
                   gap: 2,
                   mt: 2,
-                }}
-              >
+                }}>
                 <Avatar>A</Avatar>
                 <InputBase
                   placeholder="No que você está pensando?"
