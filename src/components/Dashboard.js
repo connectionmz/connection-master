@@ -67,7 +67,7 @@ const Dashboard = ({ user }) => {
   </Link>
 
   {/* Artigos */}
-  <Link to="/concurso">
+  <Link to="/d">
     <IconButton sx={{ color: "black" }}>
       <Article />
     </IconButton>
