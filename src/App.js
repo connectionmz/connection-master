@@ -109,7 +109,7 @@ const App = () => {
 
         setSubscriptionActive(companyData.subscriptions.status);
 
-        await set(ref(db, `company/${user.uid}/lastLogin`), new Date().toISOString());
+        //await set(ref(db, `company/${user.uid}/lastLogin`), new Date().toISOString());
 
         fetchNewContentAndNotify(user.uid);
       } else {

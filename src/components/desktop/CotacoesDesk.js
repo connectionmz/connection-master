@@ -79,9 +79,6 @@ useEffect(() => {
   };
 }, [db, user, hasModuleSMS]);
 
-  const handleAddCotacao = () => {
-    console.log('Adicionar nova cotação');
-  };
 
   const handleViewDetails = (cotacao) => {
     setSelectedCotacao(cotacao);
@@ -175,8 +172,7 @@ const handlePartilhar = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={handleAddCotacao}
-          >
+            onClick={() =>   navigate(`/cotacao`)}>
             Nova Cotação
           </Button>
         </Box>

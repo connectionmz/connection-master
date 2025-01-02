@@ -4,6 +4,7 @@ import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
 import { createTheme, ThemeProvider } from '@mui/material';
+import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 
 
 const theme = createTheme({
@@ -30,6 +31,7 @@ const DesktopRoutes = ({ user }) => {
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
+        <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
         </Routes>
         </ThemeProvider>
     </div>

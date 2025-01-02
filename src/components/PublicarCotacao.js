@@ -172,7 +172,6 @@ const PublicarCotacao = ({ user }) => {
                         required/>
                 </div>
                 <div className="mb-4">
-                    
                     <SectorDeActividades 
                         companyData={{ sector }} 
                         handleChange={handleSectorChange} 
@@ -226,8 +225,7 @@ const PublicarCotacao = ({ user }) => {
                 <button 
                     type="button" 
                     onClick={handleAddItem}
-                    className="bg-gray-200 text-gray-700 py-2 px-4 rounded mb-4"
-                >
+                    className="bg-gray-200 text-gray-700 py-2 px-4 rounded mb-4">
                     Adicionar Item
                 </button>
                 <button 
