@@ -71,7 +71,6 @@ useEffect(() => {
     setCotacoes(cotacoesList);
     setFilteredCotacoes(cotacoesList);
     setLoading(false);
-    console.log(cotacoesList)
   });
 
   return () => {

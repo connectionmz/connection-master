@@ -5,6 +5,7 @@ import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
 import { createTheme, ThemeProvider } from '@mui/material';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
+import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 
 
 const theme = createTheme({
@@ -32,6 +33,8 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
         <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
+        <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
+        
         </Routes>
         </ThemeProvider>
     </div>

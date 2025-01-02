@@ -10,7 +10,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import StoreDetails from '../StoreDetails';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
-import CreateUsers from '../CreateUsers';
 
 const NonSubscriberRoutes = ({ userDb }) => {
   const [user, setUser] = useState(null); 
@@ -33,22 +32,26 @@ const NonSubscriberRoutes = ({ userDb }) => {
     return <div>Carregando...</div>;
   }
 
-  const userExistsInDb = user && userDb?.[user.id];
+  const isVerified = userDb;
+
+  console.log(user)
 
   return (
     <Routes>
       {user ? (
-        userExistsInDb ? (
-          <>
-            <Route path="/" element={<Payment user={user} />} />
-            <Route path="/pricing" element={<Payment user={userDb} />} />
-            <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
-          </>
-        ) : (
-          <Route path="*" element={<Navigate to="/setup" replace />} />
-        )
+        <>
+          {!userDb ? (
+            <Route path="/" element={<CompanyDataForm />} />
+          ) : (
+            <>
+              <Route path="/" element={<Payment user={user} />} />
+              <Route path="/pricing" element={<Payment user={userDb} />} />
+              <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
+            </>
+          )}
+        </>
       ) : (
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        <Route path="/" element={<Auth user={user} />} />
       )}
       <Route path="/auth" element={<Auth user={user} />} />
       <Route path="/create" element={<AuthCreate user={user} />} />
@@ -56,8 +59,6 @@ const NonSubscriberRoutes = ({ userDb }) => {
       <Route path="/stores/:storeId" element={<StoreDetails />} />
       <Route path="/forget-password" element={<ForgetPassword />} />
       <Route path="/change-password" element={<ChangePassword user={user} />} />
-      <Route path="/createUsers" element={<CreateUsers />} />
-
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

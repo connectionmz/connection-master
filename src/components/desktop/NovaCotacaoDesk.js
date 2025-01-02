@@ -132,7 +132,7 @@ const NovaCotacao = ({ user }) => {
                   console.log(`Atualizando saldo para Empresa ID: ${key}, Novo Saldo: ${updatedSmsCount}`);
 
 
-                  window.location="/cotacoes"
+                  //window.location="/cotacoes"
                   await set(ref(db, `company/${key}/activeModules/moduloSMS/paymentDetails/smsCount`), updatedSmsCount);
               } catch (error) {
                   console.error(`Erro ao processar empresa ID: ${key}`, error);
