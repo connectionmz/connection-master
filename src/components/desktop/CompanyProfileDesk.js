@@ -121,7 +121,7 @@ const CompanyProfileDesk = ({ user }) => {
 
     return (
         <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
-      <Container maxWidth="lg" >
+      <Container maxWidth="lg" sx={{ mt: 8 }}>
             <Card>
                 <CardMedia
                     component="img"

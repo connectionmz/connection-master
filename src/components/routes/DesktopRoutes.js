@@ -6,11 +6,13 @@ import HeaderDesk from '../desktop/HeaderDesk';
 import { createTheme, ThemeProvider } from '@mui/material';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
+import ExploreDesk from '../desktop/ExploreDesk';
+import ApxDesk from '../desktop/ApxDesk';
 
 
 const theme = createTheme({
   palette: {
-    mode: 'light', // ou 'dark'
+    mode: 'light',
     primary: {
       main: '#1976d2',
     },
@@ -23,8 +25,6 @@ const theme = createTheme({
 
 const DesktopRoutes = ({ user }) => {
 
-  
-
   return (
     <div>
        <ThemeProvider theme={theme}>
@@ -34,7 +34,8 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
         <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
         <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
-        
+        <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
+        <Route path="/apx" element={<ApxDesk user={user.provincia} />} />
         </Routes>
         </ThemeProvider>
     </div>
