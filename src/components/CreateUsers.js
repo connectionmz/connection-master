@@ -5,11 +5,10 @@ import { auth, db } from '../fb';
 
 const CreateUsers = () => {
     const [loading, setLoading] = useState(true);
-    const [companies, setCompanies] = useState([]);
 
     const fetchCompanies = async () => {
         try {
-            const companiesRef = ref(db, 'company');
+            const companiesRef = ref(db, 'users'); // Caminho para empresas no banco
             const snapshot = await get(companiesRef);
 
             if (snapshot.exists()) {
@@ -18,22 +17,18 @@ const CreateUsers = () => {
                     id: key,
                     ...data[key],
                 }));
-                setCompanies(companyList);
 
                 // Criar usuários para cada empresa
                 for (const company of companyList) {
                     if (company.email) {
-                        const randomPassword = Math.floor(100000 + Math.random() * 900000).toString(); // Gera senha numérica de 6 dígitos
                         try {
                             const userCredential = await createUserWithEmailAndPassword(
                                 auth,
                                 company.email,
-                                company.password
+                                '123456' // Define a senha como 123456
                             );
 
                             console.log(`Usuário criado para ${company.email}:`, userCredential.user);
-
-                     
                         } catch (error) {
                             console.error(`Erro ao criar usuário para ${company.email}:`, error.message);
                         }

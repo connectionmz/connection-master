@@ -120,6 +120,7 @@ const UserRoutes = ({ user }) => (
   <Route path="/inbox" element={<Inbox />} />
   <Route path="/analytics" element={<Analytics />} />
   <Route path="/noticiados" element={<Noticiados />} />
+  <Route path="/createUsers" element={<CreateUsers />} />
   <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 )

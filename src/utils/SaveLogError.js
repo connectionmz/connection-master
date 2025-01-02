@@ -15,11 +15,12 @@ export const SaveLogError = (component, error) => {
     timestamp: new Date().toISOString(), 
   };
 
-  return set(newLogRef, logEntry)
+  {/*
+    return set(newLogRef, logEntry)
     .then(() => {
       console.log("Log de erro salvo com sucesso!");
     })
     .catch((err) => {
       console.error("Erro ao salvar o log no banco de dados: ", err);
-    });
+    });*/}
 };

@@ -108,7 +108,7 @@ const handlePaymentSuccess = (paymentDetails) => {
           alert('Módulo SMS ativado com sucesso!');
           if (onModuleActivation) onModuleActivation(); 
 
-          window.location.reload();
+          //window.location.reload();
 
       })
       .catch((error) => {
@@ -155,9 +155,9 @@ const handlePartilhar = () => {
           Ativação do Módulo SMS
         </Typography>
         <PaySMSCheckout
-  user={user}
-  onPaymentSuccess={() => handlePaymentSuccess()} // Chama a função corretamente
-/>
+            user={user}
+            onPaymentSuccess={() => handlePaymentSuccess()} // Chama a função corretamente
+          />
 
       </Box>
     </Modal>

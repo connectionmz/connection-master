@@ -6,6 +6,7 @@ const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
   const [paymentMethod, setPaymentMethod] = useState('mpesa'); 
   const [phoneNumber, setPhoneNumber] = useState(''); 
   const [smsCount, setSmsCount] = useState(25);
+  const [error, setError] = useState(null); // Estado para armazenar mensagens de erro
 
   const calculatePrice = (smsCount) => {
     return Math.ceil(smsCount / 25) * 150; 
@@ -13,13 +14,13 @@ const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
 
   const handlePayment = async () => {
     if (!phoneNumber) {
-      alert('Por favor, insira o número de celular.');
+      setError('Por favor, insira o número de celular.');
       return;
     }
 
     const planPrice = calculatePrice(smsCount); 
-
     setIsLoading(true);
+    setError(null); // Limpa o erro antes de iniciar o pagamento
 
     const paymentData = {
       carteira: '1729146943643x948653281532969000',
@@ -47,11 +48,11 @@ const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
 
         onPaymentSuccess(paymentDetails);
       } else {
-        throw new Error(response.data.message || 'Erro desconhecido.');
+        setError(response.data.message || 'Erro desconhecido durante o pagamento.');
       }
     } catch (error) {
-      alert('A transação falhou. Por favor, tente novamente.');
-      console.error('Erro no pagamento:', error.message);
+      setError('A transação falhou. Por favor, tente novamente.');
+      //console.error('Erro no pagamento:', error.message);
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +61,12 @@ const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
   return (
     <div className="checkout-modal bg-white shadow-md rounded-md p-6">
       <h2 className="text-xl font-bold mb-4">Confirmar Pagamento de SMS</h2>
+
+      {error && (
+        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+          <p>{error}</p>
+        </div>
+      )}
 
       {/* Input para o número de celular */}
       <div className="mt-4">
