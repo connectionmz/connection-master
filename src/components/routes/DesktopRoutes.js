@@ -8,6 +8,8 @@ import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
 import ApxDesk from '../desktop/ApxDesk';
+import PagamentoModulo from '../PagamentoModulo';
+import Profile from '../Profile';
 
 
 const theme = createTheme({
@@ -25,6 +27,8 @@ const theme = createTheme({
 
 const DesktopRoutes = ({ user }) => {
 
+  console.log(user)
+
   return (
     <div>
        <ThemeProvider theme={theme}>
@@ -36,6 +40,9 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
         <Route path="/apx" element={<ApxDesk user={user.provincia} />} />
+        <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
+        <Route path="/profile" element={<Profile />} />
+
         </Routes>
         </ThemeProvider>
     </div>

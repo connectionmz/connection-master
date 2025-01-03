@@ -11,7 +11,6 @@ import Alert from '@mui/material/Alert';
 import { saveContentToInboxBasedSector } from './SaveToInbox';
 import sendMessage from './sms/sendMessage';
 
-
 const PublicarCotacao = ({ user }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -98,7 +97,7 @@ const PublicarCotacao = ({ user }) => {
                         }
       
                         const message = `
-                        📝 Nova Cotação para sua Empresa
+                        Nova Cotação para sua Empresa
                         Título: ${title}
                         Descrição: ${description}
                         Data Limite: ${deadline}
@@ -110,11 +109,7 @@ const PublicarCotacao = ({ user }) => {
                     const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
     
                         const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-      
-
-
-                        // Enviar a mensagem para cada número de contato
-                        
+                              
                         await sendMessage(contatos, finalMessage);
                     }
                 } else {
@@ -135,8 +130,6 @@ const PublicarCotacao = ({ user }) => {
         }
     };
     
-
-
     const handleSnackbarClose = () => {
         setOpenSnackbar(false);
     };
@@ -146,15 +139,13 @@ const PublicarCotacao = ({ user }) => {
             <h1 className="text-2xl font-semibold mb-4">Pedido de Cotação</h1>
             <form onSubmit={handleSubmit}>
                 <div className="mb-4">
-                    
                     <input 
                         type="text" 
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         className="w-full px-3 py-2 border rounded"
                         placeholder="Digite o título do pedido"
-                        required
-                    />
+                        required/>
                 </div>
                 <div className="mb-4">
                     
@@ -247,7 +238,7 @@ const PublicarCotacao = ({ user }) => {
                 </Alert>
             </Snackbar>
         </div>
-    );
-};
+    )
+}
 
 export default PublicarCotacao;

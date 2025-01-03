@@ -7,6 +7,7 @@ import {
     BusinessCenter,
     People,
     Article,
+    House,
   } from "@mui/icons-material";
   import { Link } from "react-router-dom";
 import { logo } from "../../utils/utils";
@@ -39,28 +40,33 @@ const HeaderDesk = ()=>{
           <Box display="flex" alignItems="center" gap={3}>
 
   {/* Empresas */}
-  <Link to="/explore">
+  <Link to="/concursos">
     <IconButton sx={{ color: "black" }}>
       <BusinessCenter />
     </IconButton>
   </Link>
 
   {/* Artigos */}
-  <Link to="/d">
+  <Link to="/cotacoes">
     <IconButton sx={{ color: "black" }}>
       <Article />
     </IconButton>
   </Link>
-
+ {/* Empresas */}
+ <Link to="/inbox">
+    <IconButton sx={{ color: "black" }}>
+      <House />
+    </IconButton>
+  </Link>
   {/* Mensagens */}
-  <Link to="/cotacoes">
+  <Link to="/inbox">
     <IconButton sx={{ color: "black" }}>
       <Message />
     </IconButton>
   </Link>
 
   {/* Conta do Usuário */}
-  <Link to="/perfil">
+  <Link to="/apx">
     <IconButton sx={{ color: "black" }}>
       <AccountCircle />
     </IconButton>

@@ -86,19 +86,18 @@ const ApxDesk = ({ user }) => {
 
   return (
     <Box p={4}>
-      <Card sx={{ mb: 4, p: 2, display: 'flex', alignItems: 'center' }}>
-        <Avatar
-          src={userData.logoUrl}
-          alt="User"
-          sx={{ width: 56, height: 56, mr: 2 }}
-        />
-        <Box>
-          <Typography variant="h6">{userData.nome}</Typography>
-          <Typography variant="body2" color="textSecondary">
-            {userData.sector}
-          </Typography>
-        </Box>
+      <Link to={'/profile'}>
+        <Card sx={{ mb: 4, p: 2, display: 'flex', alignItems: 'center' }}>
+          <Avatar
+            src={userData.logoUrl}
+            alt="User"
+            sx={{ width: 56, height: 56, mr: 2 }}/>
+          <Box>
+            <Typography variant="h6">{userData.nome}</Typography>
+            <Typography variant="body2" color="textSecondary">{userData.sector}</Typography>
+          </Box>
       </Card>
+    </Link>
 
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6}>

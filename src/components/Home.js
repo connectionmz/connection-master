@@ -7,7 +7,7 @@ import NotificationMessage from './NotificationMessage';
 import ServicosExternos from './ServicosExternos';
 
 import { db } from '../fb';
-import { ref, get } from 'firebase/database';
+import { ref, get, limitToFirst, query } from 'firebase/database';
 import MarqueeAnuncios from './MarqueeAnuncios';
 import MarqueeParceiros from './MarqueeParceiros';
 
@@ -16,9 +16,18 @@ const Home = ({ user }) => {
 
   const fetchAnuncios = async () => {
     try {
-      const snapshot = await get(ref(db, 'publicAnnouncements'));
+      // Limita a busca aos 10 primeiros anúncios
+      const anunciosQuery = query(ref(db, 'publicAnnouncements'), limitToFirst(10));
+      const snapshot = await get(anunciosQuery);
+  
       if (snapshot.exists()) {
-        setAnuncios(Object.values(snapshot.val()));
+        const data = snapshot.val();
+  
+        // Converte para array apenas se necessário
+        const anunciosArray = Object.values(data);
+        setAnuncios(anunciosArray);
+      } else {
+        setAnuncios([]); // Sem anúncios
       }
     } catch (error) {
       console.error('Erro ao buscar anúncios:', error);
@@ -31,13 +40,12 @@ const Home = ({ user }) => {
   return (
     <>
       <div className="content-container">
-      <MarqueeParceiros/>
-
+        <MarqueeParceiros/>
         <StorieList user={user.provincia}/> 
         <NotificationMessage /> 
         <Banner /> 
         <ServicosExternos /> 
-       <MarqueeAnuncios/>
+        <MarqueeAnuncios/>
       </div>
     </>
   );
