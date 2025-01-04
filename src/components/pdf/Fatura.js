@@ -32,7 +32,6 @@ const Fatura = ({ user }) => {
     }
   }, [user, numeroProforma]);
 
-  // Gerar o código de barras quando a fatura é carregada
   useEffect(() => {
     if (numeroProforma && barcodeRef.current) {
       JsBarcode(barcodeRef.current, numeroProforma, {
@@ -61,86 +60,124 @@ const Fatura = ({ user }) => {
     });
   };
 
-  const Cliente = fatura?.cliente || '';
-  const subtotal = fatura?.itens ? fatura.itens.reduce((acc, item) => acc + item.quantidade * item.preco, 0) : 0;
+  const subtotal = fatura?.itens
+    ? fatura.itens.reduce((acc, item) => acc + item.quantidade * item.preco, 0)
+    : 0;
   const iva = subtotal * 0.16;
   const total = subtotal + iva;
 
   return (
-    <div className="p-5 md:p-10 bg-white rounded-lg shadow-lg">
-      <div ref={faturaRef} className="fatura">
-        <div style={{ padding: '20px', fontFamily: 'Arial', fontSize: '10px' }}>
-          <img
-            src={user.logoUrl || '/imagens/default-logo.png'}
-            alt="Logotipo"
-            style={{ maxWidth: '80px', height: 'auto' }}
-          />
-          <h1 style={{ textAlign: 'left' }}>Proforma #{numeroProforma}</h1>
-          <div>
-            <strong>Data de Emissão: {fatura.dataEmissao}</strong><br />
-            <strong>Data de Vencimento: {fatura.dataVencimento}</strong><br />
+    <div className="p-5 bg-gray-100 flex justify-center items-center min-h-screen">
+      <div
+        ref={faturaRef}
+        className="bg-white shadow-lg rounded-lg p-8 w-full max-w-3xl"
+        style={{ width: '210mm', minHeight: '297mm' }}
+      >
+        <div className="text-sm">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <img
+                src={user.logoUrl || '/imagens/default-logo.png'}
+                alt="Logotipo"
+                className="w-20"
+              />
+            </div>
+            <div className="text-right">
+              <h1 className="text-lg font-bold">Proforma #{numeroProforma}</h1>
+              <p className="text-gray-500">Data de Emissão: {fatura.dataEmissao}</p>
+              <p className="text-gray-500">Data de Vencimento: {fatura.dataVencimento}</p>
+            </div>
           </div>
-          <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between' }}>
-            {fatura.cliente ? (
-              <>
-                <div>
-                  <p><strong>Faturado a</strong><br />{fatura.cliente.nome}<br />{fatura.cliente.enderecoFaturado}<br />{fatura.cliente.nuit}</p>
-                </div>
-                <div>
-                  <p><strong>Enviar para</strong><br />{fatura.cliente.nome}<br />{fatura.cliente.enderecoEnvio}<br />{fatura.cliente.codigoPostalEnvio}</p>
-                </div>
-              </>
-            ) : (
-              <p>Cliente desconhecido</p>
-            )}
+
+          <div className="grid grid-cols-2 gap-4 text-sm mb-8">
+            <div>
+              <p className="font-bold">Faturado a</p>
+              {fatura.cliente ? (
+                <>
+                  <p>{fatura.cliente.nome}</p>
+                  <p>{fatura.cliente.enderecoFaturado}</p>
+                  <p>{fatura.cliente.nuit}</p>
+                </>
+              ) : (
+                <p>Cliente desconhecido</p>
+              )}
+            </div>
+            <div>
+              <p className="font-bold">Enviar para</p>
+              {fatura.cliente ? (
+                <>
+                  <p>{fatura.cliente.nome}</p>
+                  <p>{fatura.cliente.enderecoEnvio}</p>
+                  <p>{fatura.cliente.codigoPostalEnvio}</p>
+                </>
+              ) : (
+                <p>Cliente desconhecido</p>
+              )}
+            </div>
           </div>
-          <div style={{ marginTop: '20px', textAlign: 'right' }}>
-            <svg ref={barcodeRef}></svg>
+
+          <div className="text-right mb-8">
+            <svg ref={barcodeRef} className="w-48"></svg>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-            <thead style={{ backgroundColor: '#F1F1F1' }}>
+
+          <table className="w-full border border-gray-300 text-sm mb-6">
+            <thead className="bg-gray-100">
               <tr>
-                <th style={{ padding: '8px' }}>QTD</th>
-                <th style={{ padding: '8px' }}>DESC</th>
-                <th style={{ padding: '8px' }}>PREÇO UNIT</th>
-                <th style={{ padding: '8px' }}>TOTAL</th>
+                <th className="border px-4 py-2 text-left">QTD</th>
+                <th className="border px-4 py-2 text-left">DESC</th>
+                <th className="border px-4 py-2 text-right">PREÇO UNIT</th>
+                <th className="border px-4 py-2 text-right">TOTAL</th>
               </tr>
             </thead>
             <tbody>
               {fatura.itens ? (
-                fatura.itens.map((servico, index) => (
-                  <tr key={index} className="border-b border-gray-200">
-                    <td className="py-2 px-4">{servico.quantidade}</td>
-                    <td className="py-2 px-4">{servico.descricao}</td>
-                    <td className="py-2 px-4">{servico.preco.toFixed(2)}</td>
-                    <td className="py-2 px-4">{(servico.quantidade * servico.preco).toFixed(2)}</td>
+                fatura.itens.map((item, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="border px-4 py-2">{item.quantidade}</td>
+                    <td className="border px-4 py-2">{item.descricao}</td>
+                    <td className="border px-4 py-2 text-right">{item.preco.toFixed(2)}</td>
+                    <td className="border px-4 py-2 text-right">
+                      {(item.quantidade * item.preco).toFixed(2)}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                  <td colSpan="4" className="text-center py-4">
                     Nenhum item encontrado.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-          <div style={{ marginTop: '10px', textAlign: 'right' }}>
+
+          <div className="text-right text-sm">
             <p>SUBTOTAL: {subtotal.toFixed(2)} MZN</p>
             <p>IVA 16%: {iva.toFixed(2)} MZN</p>
-            <h3>TOTAL: {total.toFixed(2)} MZN</h3>
+            <h3 className="text-lg font-bold">TOTAL: {total.toFixed(2)} MZN</h3>
           </div>
-          <div style={{ marginTop: '20px', fontSize: '8pt' }}>
-            <p><strong>Termos e Condições:</strong> O pagamento é devido no prazo de 15 dias</p>
+
+          <div className="mt-8 text-xs">
+            <p className="font-bold">Termos e Condições:</p>
+            <p>O pagamento é devido no prazo de 15 dias.</p>
             <p>Banco Finantia, S.A.<br />IBAN: PT32 3456 7891<br />SWIFT/BIC: ABCDPTM1XXX</p>
           </div>
-          <div style={{ marginTop: '40px', textAlign: 'right' }}>
+
+          <div className="mt-12 text-right">
             <p>Assinatura:</p>
-            <img src="/imagens/signature.png" alt="Assinatura" style={{ width: '150px' }} />
+            <img
+              src="/imagens/signature.png"
+              alt="Assinatura"
+              className="w-32 mt-2"
+            />
           </div>
         </div>
       </div>
-      <button onClick={gerarPDF} className="bg-blue-600 text-white p-2 rounded mt-4">
+
+      <button
+        onClick={gerarPDF}
+        className="bg-blue-600 text-white p-2 rounded mt-4 shadow"
+      >
         BAIXAR PDF
       </button>
     </div>

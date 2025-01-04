@@ -18,7 +18,7 @@ const HeaderDesk = () => {
     { to: "/empresas", icon: <People />, label: "Empresas" }, // Ícone de "Pessoas" representa empresas ou organizações.
     { to: "/cotacoes", icon: <Article />, label: "Cotações" }, // Ícone de "Artigo" representa a listagem de cotações.
     { to: "/inbox", icon: <Message />, label: "Mensagens" }, // Ícone de "Mensagens" para a caixa de entrada.
-    { to: "/perfil", icon: <AccountCircle />, label: "Perfil do Usuário" }, // Ícone de "Perfil" para a conta do usuário.
+    { to: "/app", icon: <AccountCircle />, label: "Perfil do Usuário" }, // Ícone de "Perfil" para a conta do usuário.
   ];
   
 

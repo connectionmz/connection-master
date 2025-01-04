@@ -10,6 +10,11 @@ import ExploreDesk from '../desktop/ExploreDesk';
 import ApxDesk from '../desktop/ApxDesk';
 import PagamentoModulo from '../PagamentoModulo';
 import Profile from '../Profile';
+import FaturacaoDesk from '../desktop/FaturacaoDesk';
+import CriarProformaDesk from '../desktop/CriarProformaDesk';
+import FaturaDesk from '../desktop/FaturaDesk';
+import Market from '../Market';
+import MarketDesk from '../desktop/MarketDesk';
 
 
 const theme = createTheme({
@@ -39,9 +44,20 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
         <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
-        <Route path="/apx" element={<ApxDesk user={user.provincia} />} />
+        <Route path="/app" element={<ApxDesk user={user.provincia} />} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
         <Route path="/profile" element={<Profile />} />
+
+          {/* Faturação e Proforma */}
+          <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
+          <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
+          <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
+          <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
+
+
+            {/* Mercado e Produtos */}
+          <Route path="/market" element={<MarketDesk user={user} />} />
+
 
         </Routes>
         </ThemeProvider>
