@@ -18,6 +18,14 @@ import MarketDesk from '../desktop/MarketDesk';
 import ProductFormDesk from '../market/ProductFormDesk';
 import AnunciarDesk from '../desktop/AnunciarDesk';
 import PostInputDesk from '../desktop/PostInputDesk';
+import Sms from '../sms/Sms';
+import SmsDesk from '../sms/SmsDesk';
+import CallCenterModule from '../CallCenterModule';
+import LogisticaModule from '../LogisticaModule';
+import InqueritosModule from '../InqueritosModule';
+import CallCenterModuleDesk from '../desktop/CallCenterModuleDesk';
+import InqueritosModuleDesk from '../desktop/InqueritosModuleDesk';
+import LogisticaModuleDesk from '../desktop/LogisticaModuleDesk';
 
 
 const theme = createTheme({
@@ -64,6 +72,12 @@ const DesktopRoutes = ({ user }) => {
                   {/* Campanha e Posts */}
         <Route path="/post" element={<PostInputDesk user={user?.id} />} />
         <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
+        <Route path="/sms" element={<SmsDesk user={user}/>} /> 
+
+          {/* Módulos */}
+        <Route path="/callcenter" element={<CallCenterModuleDesk />} />
+        <Route path="/logistica" element={<LogisticaModuleDesk />} />
+        <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
 
         </Routes>
         </ThemeProvider>

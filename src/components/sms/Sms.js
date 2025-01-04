@@ -11,7 +11,7 @@ const Sms = ({ user }) => {
     onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       console.log(data)
-      setSmsBalance(data.smsCount || 0)
+      setSmsBalance(data?.smsCount || 0)
      
     });
   }, [user.id]);

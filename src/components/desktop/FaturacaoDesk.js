@@ -14,6 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import { db } from '../../fb';
+import BackButton from '../BackButton';
 
 const FaturacaoDesk = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +55,7 @@ const FaturacaoDesk = ({ user }) => {
   return (
     <div className="p-4">
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+      <BackButton sx={{ mb: 2 }} />
         <Typography variant="h6" gutterBottom>
           Gerenciamento de Proformas
         </Typography>
