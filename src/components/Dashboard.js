@@ -5,7 +5,6 @@ import {
   Typography,
   Box,
   Avatar,
-  IconButton,
   InputBase,
   Container,
   Grid,
@@ -15,112 +14,112 @@ import {
   ListItem,
   ListItemText,
   Divider,
-  ListItemIcon,
 } from "@mui/material";
-import {
-  Search,
-  Notifications,
-  Message,
-  AccountCircle,
-  Home,
-  BusinessCenter,
-  People,
-  Article,
-} from "@mui/icons-material";
-import { logo } from "../utils/utils";
-import { Link } from "react-router-dom";
 import MarqueeParceiros from "./MarqueeParceiros";
 import MarqueeAnuncios, { fetchAnuncios } from "./MarqueeAnuncios";
 import StorieList from "./StorieList";
 import Banner from "./Banner";
-
-
+import { limitToFirst, onValue, orderByKey, query, ref } from "firebase/database";
+import { Link } from "react-router-dom";
+import { db } from "../fb";
 
 const Dashboard = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
+  const [categorias, setCategorias] = useState([]);
 
   useEffect(() => {
+    // Carregar anúncios
     const loadAnuncios = async () => {
       try {
         const data = await fetchAnuncios();
         setAnuncios(data);
       } catch (error) {
-        console.error('Erro ao carregar os anúncios:', error);
+        console.error("Erro ao carregar os anúncios:", error);
       }
     };
-
+  
+    // Carregar categorias externas com limite
+    const categoriasRef = query(ref(db, "categoriasExternas"), orderByKey(), limitToFirst(10));
+    const unsubscribe = onValue(
+      categoriasRef,
+      (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const categoriasList = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+          setCategorias(categoriasList);
+        }
+      },
+      { onlyOnce: false } // Mantém a leitura em tempo real
+    );
+  
+    // Executa o carregamento inicial
     loadAnuncios();
+  
+    // Limpa a subscrição ao desmontar o componente
+    return () => unsubscribe();
   }, []);
-
-
   return (
     <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
       <Container maxWidth="lg" sx={{ mt: 8 }}>
+        {/* Parcerias e Stories */}
         <MarqueeParceiros />
-        <StorieList user={user.provincia}/> 
+        <StorieList user={user.provincia} />
         <MarqueeAnuncios />
-        <Grid container spacing={2}>
-          <Grid item xs={3}>
-            <Paper sx={{ padding: 2, height: "100%" }}>
-            <Banner /> 
-            </Paper>
-          </Grid>
-          <Grid item xs={6}>
-            <Paper sx={{ padding: 2, marginBottom: 2 }}>
-              <Typography variant="h6">Comece uma publicação</Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                  mt: 2,
-                }}>
-                <Avatar>A</Avatar>
-                <InputBase
-                  placeholder="No que você está pensando?"
-                  fullWidth
-                  sx={{
-                    backgroundColor: "#f3f2ef",
-                    padding: 1,
-                    borderRadius: 1,
-                  }}
-                />
-              </Box>
-            </Paper>
 
-            {["Celebrating a Milestone", "Achieved a Goal", "Started a New Job"].map(
-              (post, index) => (
-                <Paper key={index} sx={{ padding: 2, marginBottom: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                    {post}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis
-                    vehicula fermentum justo.
-                  </Typography>
-                </Paper>
-              )
-            )}
-          </Grid>
+        {/* Layout Centralizado */}
+        <Grid container spacing={3}>
+          {/* Informações Úteis - Esquerda */}
           <Grid item xs={3}>
             <Paper sx={{ padding: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Informacoes Uteis
+                Informações Úteis
               </Typography>
               <List>
-              {anuncios.map((anuncio, index) => (
+                {anuncios.slice(0, 5).map((anuncio, index) => (
                   <ListItem key={index} disablePadding>
-                    <ListItemIcon>
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={<strong>{anuncio.title || 'Indisponivel'}</strong>} 
-                      secondary={anuncio.company || 'Empresa Desconhecida'} />
+                    <ListItemText
+                      primary={<strong>{anuncio.title || "Indisponível"}</strong>}
+                      secondary={anuncio.company || "Empresa Desconhecida"}
+                    />
                   </ListItem>
                 ))}
               </List>
               <Divider sx={{ my: 2 }} />
               <Button fullWidth variant="text" sx={{ color: "#0a66c2" }}>
                 Ver todas
+              </Button>
+            </Paper>
+          </Grid>
+
+          {/* Banner - Centro */}
+          <Grid item xs={6}>
+            <Paper sx={{ padding: 2 }}>
+              <Banner />
+            </Paper>
+          </Grid>
+
+          {/* Publicações e Anúncios - Direita */}
+          <Grid item xs={3}>
+            <Paper sx={{ padding: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                Publicações Recentes
+              </Typography>
+              <List>
+              {categorias.map((categoria) => (
+          <Link
+            key={categoria.id}
+            to={`/servicos/${categoria.name}`} >
+              <ListItemText secondary={categoria.name || "Indisponível"}/>
+          </Link>
+        ))}
+                
+              </List>
+              <Divider sx={{ my: 2 }} />
+              <Button fullWidth variant="outlined" color="primary">
+                Ver Mais
               </Button>
             </Paper>
           </Grid>

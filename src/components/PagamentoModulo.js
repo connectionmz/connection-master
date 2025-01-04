@@ -6,13 +6,12 @@ import PayModuleCheckout from './checkout/PayModuleCheckout';
 import { UpdatePayment } from './UpdatePayment';
 
 const PagamentoModulo = ({ user }) => {
-  const { moduleKey } = useParams(); // Obtém o parâmetro 'moduleKey' da URL
-  const [modules, setModules] = useState([]); // Estado para armazenar os módulos
-  const [currentModule, setCurrentModule] = useState(null); // Estado para o módulo atual
+  const { moduleKey } = useParams(); 
+  const [modules, setModules] = useState([]); 
+  const [currentModule, setCurrentModule] = useState(null); 
   const navigate = useNavigate();
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  // Busca os módulos na base de dados
   useEffect(() => {
     const modulesRef = ref(db, `modules/modulos`);
 
@@ -26,7 +25,6 @@ const PagamentoModulo = ({ user }) => {
     return () => unsubscribe();
   }, []);
 
-  // Filtra o módulo atual com base na chave (moduleKey)
   useEffect(() => {
     if (modules.length > 0) {
       const foundModule = modules.find((mod) => mod.key === moduleKey);
@@ -34,7 +32,6 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [modules, moduleKey]);
 
-  // Caso o módulo não seja encontrado
   if (!currentModule) {
     return (
       <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
@@ -43,24 +40,20 @@ const PagamentoModulo = ({ user }) => {
     );
   }
 
-  // Tratamento do sucesso do pagamento
   const handlePaymentSuccess = (paymentDetails) => {
     console.log('Detalhes do pagamento:', paymentDetails);
     setPaymentSuccess(true);
 
-    // Atualiza o pagamento no banco de dados
     UpdatePayment(user, currentModule.key, {
       amount: paymentDetails.amount,
       method: paymentDetails.method,
     });
 
-    // Redireciona para a página inicial
     navigate('/apx');
   };
 
-  // Limpeza do preço: remove textos extras e converte para número
   const cleanPrice = (price) => {
-    return parseInt(price.replace(/[^\d]/g, '')); // Remove tudo que não for dígito
+    return parseInt(price.replace(/[^\d]/g, '')); 
   };
 
   return (
@@ -73,16 +66,14 @@ const PagamentoModulo = ({ user }) => {
           Preço: {currentModule.price}
         </p>
 
-        {/* Componente de pagamento */}
         {!paymentSuccess && (
           <PayModuleCheckout
             user={user}
-            planPrice={cleanPrice(currentModule.price)} // Limpa e envia o preço correto
+            planPrice={cleanPrice(currentModule.price)} 
             onPaymentSuccess={handlePaymentSuccess}
           />
         )}
 
-        {/* Confirmação de pagamento */}
         {paymentSuccess && (
           <div className="text-green-500 font-semibold mt-4">
             Pagamento concluído com sucesso!
