@@ -15,6 +15,9 @@ import CriarProformaDesk from '../desktop/CriarProformaDesk';
 import FaturaDesk from '../desktop/FaturaDesk';
 import Market from '../Market';
 import MarketDesk from '../desktop/MarketDesk';
+import ProductFormDesk from '../market/ProductFormDesk';
+import AnunciarDesk from '../desktop/AnunciarDesk';
+import PostInputDesk from '../desktop/PostInputDesk';
 
 
 const theme = createTheme({
@@ -31,8 +34,6 @@ const theme = createTheme({
 
 
 const DesktopRoutes = ({ user }) => {
-
-  console.log(user)
 
   return (
     <div>
@@ -57,7 +58,12 @@ const DesktopRoutes = ({ user }) => {
 
             {/* Mercado e Produtos */}
           <Route path="/market" element={<MarketDesk user={user} />} />
+          <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
 
+
+                  {/* Campanha e Posts */}
+        <Route path="/post" element={<PostInputDesk user={user?.id} />} />
+        <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
 
         </Routes>
         </ThemeProvider>
