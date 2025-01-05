@@ -15,7 +15,7 @@ import { AppBar, Box, IconButton, InputBase, Toolbar, Typography } from "@mui/ma
 const HeaderDesk = () => {
   const navItems = [
     { to: "/concursos", icon: <BusinessCenter />, label: "Concursos" }, // Ícone de "Negócios" representa concursos empresariais.
-    { to: "/empresas", icon: <People />, label: "Empresas" }, // Ícone de "Pessoas" representa empresas ou organizações.
+    { to: "/explore", icon: <People />, label: "Empresas" }, // Ícone de "Pessoas" representa empresas ou organizações.
     { to: "/cotacoes", icon: <Article />, label: "Cotações" }, // Ícone de "Artigo" representa a listagem de cotações.
     { to: "/inbox", icon: <Message />, label: "Mensagens" }, // Ícone de "Mensagens" para a caixa de entrada.
     { to: "/app", icon: <AccountCircle />, label: "Perfil do Usuário" }, // Ícone de "Perfil" para a conta do usuário.
