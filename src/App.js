@@ -4,6 +4,7 @@ import './App.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ClipLoader from 'react-spinners/ClipLoader';
+import { LinearProgress, Box, Typography } from '@mui/material';
 import { auth, db } from './fb';
 import { ref, get } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -17,9 +18,9 @@ const App = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
-  const isMobile = window.innerWidth <= 768; 
-  // Função para buscar dados do usuário
-  const fetchUserData = async (user) => {
+  const isMobile = window.innerWidth <= 768;
+
+  const fetchUserDataOnce = async (user) => {
     try {
       const userRef = ref(db, `company/${user.uid}`);
       const snapshot = await get(userRef);
@@ -34,21 +35,22 @@ const App = () => {
         });
         setSubscriptionActive(data.subscriptions?.status || false);
       } else {
-        setSubscriptionActive(false); // Caso não haja dados, assume que a subscrição é falsa
+        setSubscriptionActive(false);
       }
     } catch (error) {
-      //SaveLogError('app', error);
+      SaveLogError('app', error);
       setSubscriptionActive(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // Monitorando mudanças no estado de autenticação
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        fetchUserData(user);
+        if (!userData) {
+          fetchUserDataOnce(user); 
+        }
       } else {
         setUserData(null);
         setSubscriptionActive(false);
@@ -56,16 +58,21 @@ const App = () => {
       }
     });
 
-    return () => unsubscribe(); // Limpeza do listener
-  }, []);
+    return () => unsubscribe(); 
+  }, [userData]);
 
-  // Exibição de loading enquanto os dados são carregados
+
   if (loading) {
     return (
-      <div className="loader-container">
-        <ClipLoader color="#4A90E2" loading={loading} size={100} />
-        <p className="loading-text">Carregando, por favor aguarde...</p>
-      </div>
+      <Box className="loader-container" textAlign="center" padding={2}>
+        <ClipLoader color="#4A90E2" loading={loading} size={80} />
+        <Typography className="loading-text" marginY={2}>
+          Carregando, por favor aguarde...
+        </Typography>
+        <Box width="80%" mx="auto">
+          <LinearProgress />
+        </Box>
+      </Box>
     );
   }
 
@@ -73,23 +80,23 @@ const App = () => {
     <UserProvider>
       <Router>
         <div className="App">
-          {isMobile && <Header />} {/* Exibe o Header apenas em Mobile */}
+          {isMobile && <Header />}
           <div className="content">
             {isMobile ? (
               subscriptionActive ? (
-                <UserRoutes user={userData} /> // Redireciona para UserRoutes em Mobile se subscrito
+                <UserRoutes user={userData} />
               ) : (
-                <NonSubscriberRoutes userDb={userData} /> // Redireciona para NonSubscriberRoutes em Mobile se não subscrito
+                <NonSubscriberRoutes userDb={userData} />
               )
             ) : (
               subscriptionActive ? (
-                <DesktopRoutes user={userData} /> // Redireciona para DesktopRoutes se subscrito
+                <DesktopRoutes user={userData} />
               ) : (
-                <NonSubscriberRoutes userDb={userData} /> // Redireciona para NonSubscriberRoutes em Desktop se não subscrito
+                <NonSubscriberRoutes userDb={userData} />
               )
             )}
           </div>
-          {isMobile && <Footer user={userData} />} {/* Exibe o Footer apenas em Mobile */}
+          {isMobile && <Footer user={userData} />}
         </div>
       </Router>
     </UserProvider>

@@ -28,7 +28,6 @@ const Dashboard = ({ user }) => {
   const [categorias, setCategorias] = useState([]);
 
   useEffect(() => {
-    // Carregar anúncios
     const loadAnuncios = async () => {
       try {
         const data = await fetchAnuncios();
@@ -38,7 +37,6 @@ const Dashboard = ({ user }) => {
       }
     };
   
-    // Carregar categorias externas com limite
     const categoriasRef = query(ref(db, "categoriasExternas"), orderByKey(), limitToFirst(10));
     const unsubscribe = onValue(
       categoriasRef,
@@ -52,19 +50,16 @@ const Dashboard = ({ user }) => {
           setCategorias(categoriasList);
         }
       },
-      { onlyOnce: false } // Mantém a leitura em tempo real
+      { onlyOnce: false } 
     );
   
-    // Executa o carregamento inicial
     loadAnuncios();
   
-    // Limpa a subscrição ao desmontar o componente
     return () => unsubscribe();
   }, []);
   return (
     <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
       <Container maxWidth="lg" sx={{ mt: 8 }}>
-        {/* Parcerias e Stories */}
         <MarqueeParceiros />
         <StorieList user={user.provincia} />
         <MarqueeAnuncios />
@@ -73,26 +68,30 @@ const Dashboard = ({ user }) => {
         <Grid container spacing={3}>
           {/* Informações Úteis - Esquerda */}
           <Grid item xs={3}>
-            <Paper sx={{ padding: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Informações Úteis
-              </Typography>
-              <List>
-                {anuncios.slice(0, 5).map((anuncio, index) => (
-                  <ListItem key={index} disablePadding>
-                    <ListItemText
-                      primary={<strong>{anuncio.title || "Indisponível"}</strong>}
-                      secondary={anuncio.company || "Empresa Desconhecida"}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-              <Divider sx={{ my: 2 }} />
-              <Button fullWidth variant="text" sx={{ color: "#0a66c2" }}>
-                Ver todas
-              </Button>
-            </Paper>
-          </Grid>
+  <Paper sx={{ padding: 2 }}>
+    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+      Empresas Destacadas
+    </Typography>
+    <List>
+      {anuncios
+        .filter((anuncio) => anuncio.isFeatured) // Filtra anúncios com a propriedade isFeatured
+        .slice(0, 5)
+        .map((anuncio, index) => (
+          <ListItem key={index} disablePadding>
+            <ListItemText
+              primary={<strong>{anuncio.title || "Indisponível"}</strong>}
+              secondary={anuncio.company || "Empresa Desconhecida"}
+            />
+          </ListItem>
+        ))}
+    </List>
+    <Divider sx={{ my: 2 }} />
+    <Button fullWidth variant="text" sx={{ color: "#0a66c2" }}>
+      Ver todas
+    </Button>
+  </Paper>
+</Grid>
+
 
           {/* Banner - Centro */}
           <Grid item xs={6}>
@@ -105,7 +104,7 @@ const Dashboard = ({ user }) => {
           <Grid item xs={3}>
             <Paper sx={{ padding: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Publicações Recentes
+                Servicos 
               </Typography>
               <List>
               {categorias.map((categoria) => (

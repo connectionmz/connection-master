@@ -26,6 +26,12 @@ import InqueritosModule from '../InqueritosModule';
 import CallCenterModuleDesk from '../desktop/CallCenterModuleDesk';
 import InqueritosModuleDesk from '../desktop/InqueritosModuleDesk';
 import LogisticaModuleDesk from '../desktop/LogisticaModuleDesk';
+import ListaDeServicosDesk from '../desktop/ListaDeServicosDesk';
+import InboxDesk from '../desktop/InboxDesk';
+import StoresDesk from '../desktop/StoresDesk';
+import StoreDetailDesk from '../desktop/StoreDetailsDesk';
+import ConnectionsSearchDesk from '../desktop/ConnectionsSearchDesk';
+import FooterDesk from '../desktop/FooterDesk';
 
 
 const theme = createTheme({
@@ -56,20 +62,23 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/app" element={<ApxDesk user={user.provincia} />} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
+        <Route path="/inbox" element={<InboxDesk />} />
+        <Route path="/search" element={<ConnectionsSearchDesk />} />
 
-          {/* Faturação e Proforma */}
-          <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
-          <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
-          <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
-          <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
+        {/* Faturação e Proforma */}
+        <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
+        <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
+        <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
+        <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
 
+        {/* Mercado e Produtos */}
+        <Route path="/market" element={<MarketDesk user={user} />} />
+        <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
+        <Route path="/stores" element={<StoresDesk user={user}/>} />
+        <Route path="/stores/:storeId" element={<StoreDetailDesk />} />
 
-            {/* Mercado e Produtos */}
-          <Route path="/market" element={<MarketDesk user={user} />} />
-          <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
-
-
-                  {/* Campanha e Posts */}
+        {/* Campanha e Posts */}
         <Route path="/post" element={<PostInputDesk user={user?.id} />} />
         <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
         <Route path="/sms" element={<SmsDesk user={user}/>} /> 
@@ -80,6 +89,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
 
         </Routes>
+        <FooterDesk/>
         </ThemeProvider>
     </div>
   );

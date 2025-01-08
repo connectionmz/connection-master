@@ -3,7 +3,7 @@ const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
-const port = 5000; // Porta onde o backend será executado
+const port = 4000; // Porta onde o backend será executado
 
 // Configuração do middleware
 app.use(cors()); // Permite todas as origens (apenas para desenvolvimento)
@@ -13,17 +13,35 @@ app.use(express.json()); // Permite lidar com JSON no corpo da requisição
 app.post('/send-sms', async (req, res) => {
   const apiUrl = "http://api.mozesms.com/bulk_json/v2/";
 
-  // Mensagens que você deseja enviar
-  const messages = [
-    { number: "840237100", text: "Mensagem 1 para este número." },
-    { number: "876773180", text: "Mensagem 2 para outro número." },
-    { number: "871597730", text: "Mensagem 3 para mais um número." },
+  // Lista de contatos e mensagens
+  const contactsAndMessages = [
+    { number: "840237100", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "876773180", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "871597730", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "873886036", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "840237102", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "870535040", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "846368132", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "947368133", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "861016155", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "870476788", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "871446173", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "876773180", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "852064674", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "872576657", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "860269917", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "873159313", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "873989367", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" },
+    { number: "846048994", message: "Sua conta foi aprovada, entre no link e comece a usar: https://raspaganha.vercel.app/" }
   ];
 
   // Montando o payload com o sender e as mensagens
   const payload = {
-    sender: "AGVIAGEM", // Substitua pelo ID do remetente configurado na API
-    messages: messages,
+    sender: "AUTHMSG", // Substitua pelo ID do remetente configurado na API
+    messages: contactsAndMessages.map(contact => ({
+      number: contact.number,
+      text: contact.message
+    })),
   };
 
   try {
