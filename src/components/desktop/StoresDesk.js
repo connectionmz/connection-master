@@ -11,6 +11,8 @@ import {
   Button,
   CircularProgress,
   Box,
+  CardActionArea,
+  CardMedia,
 } from '@mui/material';
 import BackButton from '../BackButton';
 
@@ -40,7 +42,7 @@ const StoresDesk = ({ user }) => {
             id,
             ...store,
           }));
-          const shuffledStores = shuffleArray(storesArray); 
+          const shuffledStores = shuffleArray(storesArray);
           setStoresList(shuffledStores);
           setFilteredStores(shuffledStores);
         } else {
@@ -62,16 +64,20 @@ const StoresDesk = ({ user }) => {
       const filtered = storesList.filter((store) =>
         store.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredStores(shuffleArray(filtered)); 
+      setFilteredStores(shuffleArray(filtered));
     } else {
-      setFilteredStores(shuffleArray(storesList)); 
+      setFilteredStores(shuffleArray(storesList));
     }
   }, [searchQuery, storesList]);
 
   return (
     <Box sx={{ p: 4 }}>
-      <Typography variant="h4" gutterBottom align="center">
-
+      <Typography
+        variant="h4"
+        gutterBottom
+        align="center"
+        sx={{ fontWeight: 'bold', mb: 4 }}
+      >
         Lojas Disponíveis
       </Typography>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
@@ -97,37 +103,30 @@ const StoresDesk = ({ user }) => {
               <Grid item xs={12} sm={6} md={4} key={store.id}>
                 <Card
                   sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    boxShadow: 3,
-                    transition: 'transform 0.3s',
+                    boxShadow: 4,
+                    transition: 'transform 0.3s, box-shadow 0.3s',
                     '&:hover': {
                       transform: 'scale(1.05)',
+                      boxShadow: 6,
                     },
                   }}
                 >
-                  <Link to={`/stores/${store.id}`} style={{ textDecoration: 'none' }}>
-                    {/* Imagem do Logo */}
+                  <CardActionArea component={Link} to={`/stores/${store.id}`}>
                     {store.photoUrl && (
-                      <img
-                        src={store.photoUrl}
+                      <CardMedia
+                        component="img"
+                        height="200"
+                        image={store.photoUrl}
                         alt={`${store.name} logo`}
-                        style={{
-                          width: '100%',
-                          height: '200px',
-                          objectFit: 'cover',
-                          borderTopLeftRadius: '8px',
-                          borderTopRightRadius: '8px',
-                        }}
                       />
                     )}
-                    <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      {/* Nome da Loja */}
-                      <Typography variant="h6" sx={{ fontWeight: 'bold', textAlign: 'center' }}>
+                    <CardContent>
+                      <Typography
+                        variant="h6"
+                        sx={{ fontWeight: 'bold', textAlign: 'center', mb: 1 }}
+                      >
                         {store.name}
                       </Typography>
-                      {/* Descrição da Loja */}
                       <Typography
                         variant="body2"
                         color="text.secondary"
@@ -143,26 +142,16 @@ const StoresDesk = ({ user }) => {
                       >
                         {store.description || 'Sem descrição disponível'}
                       </Typography>
-                      {/* Botão de Ação */}
-                      <Box sx={{ mt: 2 }}>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          sx={{
-                            width: '100%',
-                            textTransform: 'none',
-                          }}
-                        >
-                          Visitar Loja
-                        </Button>
-                      </Box>
                     </CardContent>
-                  </Link>
+                  </CardActionArea>
                 </Card>
               </Grid>
             ))
           ) : (
-            <Typography variant="body2" sx={{ color: 'gray', textAlign: 'center', width: '100%' }}>
+            <Typography
+              variant="body2"
+              sx={{ color: 'gray', textAlign: 'center', width: '100%' }}
+            >
               Nenhuma loja encontrada.
             </Typography>
           )}
