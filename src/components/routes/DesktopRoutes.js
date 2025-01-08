@@ -38,6 +38,7 @@ import ProposalDesk from '../desktop/ProposalDesk';
 import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
 import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
 import PortalDesk from '../desktop/PortalDesk';
+import ProductDetailsDesk from '../market/ProductDetailsDesk';
 
 
 const theme = createTheme({
@@ -91,6 +92,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
         <Route path="/stores" element={<StoresDesk user={user}/>} />
         <Route path="/stores/:storeId" element={<StoreDetailDesk />} />
+        <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
 
         {/* Campanha e Posts */}
         <Route path="/post" element={<PostInputDesk user={user?.id} />} />

@@ -3,7 +3,6 @@ import StorieList from './StorieList';
 import Banner from './Banner';
 import Header from './Header';
 import CampaignList from './CampaignList';
-import NotificationMessage from './NotificationMessage';
 import ServicosExternos from './ServicosExternos';
 
 import { db } from '../fb';
@@ -18,7 +17,6 @@ const Home = ({ user }) => {
       <div className="content-container">
         <MarqueeParceiros/>
         <StorieList user={user.provincia}/> 
-        <NotificationMessage /> 
         <Banner /> 
         <ServicosExternos /> 
         <MarqueeAnuncios user={user.provincia}/>

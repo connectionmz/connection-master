@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'; // Navegação com React Router
 import '../styles/main.css';
 import { Avatar } from '@mui/material';
 
-export const fetchAnuncios = async ({userProvince}) => {
+export const fetchAnuncios = async () => {
   try {
     const snapshot = await get(ref(db, 'publicAnnouncements'));
     if (snapshot.exists()) {
