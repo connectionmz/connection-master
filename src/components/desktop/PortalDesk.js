@@ -75,16 +75,19 @@ const PortalDesk = ({user}) => {
     }
   };
 
-  // Função para carregar os anúncios
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
       const snapshot = await get(ref(db, 'publicAnnouncements'));
       if (snapshot.exists()) {
         const data = snapshot.val();
-        setAnnouncements(
-          Object.entries(data).map(([id, value]) => ({ id, ...value }))
-        );
+  
+        // Filtra os anúncios para incluir apenas os que pertencem à empresa do usuário
+        const filteredData = Object.entries(data)
+          .filter(([id, anuncio]) => anuncio.company.id === user.id) // Substitua 'companyId' pelo campo correto que referencia a empresa
+          .map(([id, value]) => ({ id, ...value }));
+  
+        setAnnouncements(filteredData);
       }
     } catch (error) {
       console.error('Erro ao carregar anúncios:', error);
@@ -92,6 +95,7 @@ const PortalDesk = ({user}) => {
       setLoading(false);
     }
   };
+  
 
   // Função para abrir o modal de confirmação
   const confirmAction = (action, announcement) => {
@@ -121,7 +125,7 @@ const PortalDesk = ({user}) => {
         title: selectedAnnouncement.title,
         content: selectedAnnouncement.content,
         fileUrl: selectedAnnouncement.fileUrl,
-        company: selectedAnnouncement.company,
+        company: selectedAnnouncement.company.id,
       });
       setActiveTab('edit');
       setOpenModal(false);
@@ -255,7 +259,7 @@ const PortalDesk = ({user}) => {
                             {announcement.content}
                           </Typography>
                           <Typography variant="body2" color="textSecondary">
-                            Empresa: {announcement.company}
+                            Empresa: {announcement.company.nome}
                           </Typography>
                           {announcement.fileUrl && (
                             <Typography variant="body2" color="textSecondary">
