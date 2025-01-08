@@ -5,17 +5,21 @@ import { useNavigate } from 'react-router-dom'; // Navegação com React Router
 import '../styles/main.css';
 import { Avatar } from '@mui/material';
 
-export const fetchAnuncios = async () => {
+export const fetchAnuncios = async ({userProvince}) => {
   try {
     const snapshot = await get(ref(db, 'publicAnnouncements'));
     if (snapshot.exists()) {
+      
       return Object.values(snapshot.val());
+      
     } else {
       return [];
     }
   } catch (error) {
     console.error('Erro ao buscar anúncios:', error);
     throw error; // Repassa o erro para ser tratado pelo componente que chamou
+
+    //POXA TO CANSADO SENTADO DESDE 21H DE ONTEM, ESPERO QUE GANHE MUITA GRANA COM ISSO
   }
 };
 

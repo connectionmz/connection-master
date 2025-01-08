@@ -16,8 +16,6 @@ import { AppBar, Box, IconButton, InputBase, Toolbar, Typography, useMediaQuery,
 const HeaderDesk = ({ user }) => {
   const publicPanel = user.publicPainel; // Verifica se o usuário tem acesso ao painel público
 
-  console.log(user)
-
   const [searchQuery, setSearchQuery] = useState(""); // Estado para a pesquisa
   const navigate = useNavigate(); // Hook de navegação
 
