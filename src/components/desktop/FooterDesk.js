@@ -4,7 +4,7 @@ import { Facebook, Twitter, Instagram, LinkedIn as LinkedInIcon } from "@mui/ico
 
 const FooterDesk = () => {
   return (
-    <Box sx={{ backgroundColor: "#f8f9fa", paddingTop: 4, paddingBottom: 2 }}>
+    <Box sx={{ paddingTop: 4, paddingBottom: 2 }}>
       <Container maxWidth="lg">
         <Grid container spacing={4} justifyContent="space-between">
           {/* Coluna de Links */}

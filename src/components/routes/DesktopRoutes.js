@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
@@ -32,6 +32,11 @@ import StoresDesk from '../desktop/StoresDesk';
 import StoreDetailDesk from '../desktop/StoreDetailsDesk';
 import ConnectionsSearchDesk from '../desktop/ConnectionsSearchDesk';
 import FooterDesk from '../desktop/FooterDesk';
+import PropostasDesk from '../desktop/PropostasDesk';
+import EnviarPropostaDesk from '../desktop/EnviarPropostaDesk';
+import ProposalDesk from '../desktop/ProposalDesk';
+import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
+import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
 
 
 const theme = createTheme({
@@ -66,6 +71,14 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/inbox" element={<InboxDesk />} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
 
+
+        <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />
+        <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
+        <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
+        <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk />} />
+        <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk />} />
+
+
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
         <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
@@ -87,6 +100,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/callcenter" element={<CallCenterModuleDesk />} />
         <Route path="/logistica" element={<LogisticaModuleDesk />} />
         <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
+        <Route path="*" element={<Navigate to="/" />} />
 
         </Routes>
         <FooterDesk/>

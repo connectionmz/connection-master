@@ -13,6 +13,7 @@ import { SaveLogError } from './utils/SaveLogError';
 import UserRoutes from './components/routes/UserRoutes';
 import NonSubscriberRoutes from './components/routes/NonSubscriberRoutes';
 import DesktopRoutes from './components/routes/DesktopRoutes';
+import NonSubscriberRoutesDesktop from './components/routes/NonSubscriberRoutesDesktop';
 
 const App = () => {
   const [userData, setUserData] = useState(null);
@@ -77,29 +78,27 @@ const App = () => {
   }
 
   return (
-    <UserProvider>
       <Router>
-        <div className="App">
-          {isMobile && <Header />}
-          <div className="content">
-            {isMobile ? (
-              subscriptionActive ? (
-                <UserRoutes user={userData} />
-              ) : (
-                <NonSubscriberRoutes userDb={userData} />
-              )
+      <div className="App">
+        {isMobile && <Header />}
+        <div className="content">
+          {isMobile ? (
+            subscriptionActive ? (
+              <UserRoutes user={userData} />
             ) : (
-              subscriptionActive ? (
-                <DesktopRoutes user={userData} />
-              ) : (
-                <NonSubscriberRoutes userDb={userData} />
-              )
-            )}
-          </div>
-          {isMobile && <Footer user={userData} />}
+              <NonSubscriberRoutes />
+            )
+          ) : (
+            subscriptionActive ? (
+              <DesktopRoutes user={userData} />
+            ) : (
+              <NonSubscriberRoutesDesktop />
+            )
+          )}
         </div>
-      </Router>
-    </UserProvider>
+        {isMobile && <Footer user={userData} />}
+      </div>
+    </Router>
   );
 };
 
