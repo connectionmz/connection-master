@@ -11,9 +11,13 @@ import {
 } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import { logo } from "../../utils/utils";
-import { AppBar, Box, IconButton, InputBase, Toolbar, Typography, useMediaQuery } from "@mui/material";
+import { AppBar, Box, IconButton, InputBase, Toolbar, Typography, useMediaQuery, Button } from "@mui/material";
 
-const HeaderDesk = () => {
+const HeaderDesk = ({ user }) => {
+  const publicPanel = user.publicPainel; // Verifica se o usuário tem acesso ao painel público
+
+  console.log(user)
+
   const [searchQuery, setSearchQuery] = useState(""); // Estado para a pesquisa
   const navigate = useNavigate(); // Hook de navegação
 
@@ -103,6 +107,22 @@ const HeaderDesk = () => {
               </IconButton>
             </Link>
           ))}
+          
+          {/* Condicional para exibir o botão de acesso ao painel público */}
+          {publicPanel && (
+            <Button
+              onClick={() => navigate("/painel")}
+              sx={{
+                backgroundColor: "#1976d2",
+                color: "#fff",
+                '&:hover': { backgroundColor: "#1565c0" },
+                padding: "6px 12px",
+                fontWeight: "bold",
+              }}
+            >
+              Ir para Painel Público
+            </Button>
+          )}
         </Box>
       </Toolbar>
     </AppBar>

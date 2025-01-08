@@ -3,6 +3,7 @@ import { db } from '../fb';
 import { ref, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom'; // Navegação com React Router
 import '../styles/main.css';
+import { Avatar } from '@mui/material';
 
 export const fetchAnuncios = async () => {
   try {
@@ -59,16 +60,17 @@ const MarqueeAnuncios = () => {
             <span
               key={index}
               className="mx-8 cursor-pointer flex items-center space-x-2"
-              onClick={() => handleOpenModal(anuncio)}
-            >
-              <strong>{anuncio.company || 'Empresa Desconhecida'}:</strong>
-              <span>{anuncio.title}</span>
+              onClick={() => handleOpenModal(anuncio)}>
+            <Avatar
+              src={anuncio.company.logo}
+              alt={anuncio.company.nome || 'Logo da Empresa'}
+              sx={{ width: 40, height: 40, marginRight: 2 }} // Tamanho e margem
+            />
+              <strong>{anuncio.company.nome || 'Empresa Desconhecida'}:</strong>              <span>{anuncio.title}</span>
             </span>
           ))}
         </div>
       </div>
-
-      {/* Botão "Ver Mais" fixo */}
       <div className="ml-4 flex-shrink-0">
         <button
           onClick={handleVerMais}
@@ -77,15 +79,12 @@ const MarqueeAnuncios = () => {
           Ver Mais
         </button>
       </div>
-
-      {/* Modal */}
       {selectedAnuncio && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 md:w-1/2 max-h-screen overflow-y-auto">
             <h2 className="text-xl font-bold mb-2">
-              {selectedAnuncio.title} - {selectedAnuncio.company || 'Empresa Desconhecida'}
+              {selectedAnuncio.title} - {selectedAnuncio.company.nome || 'Empresa Desconhecida'}
             </h2>
-
             {selectedAnuncio.contentType === 'image' && (
               <img
                 src={selectedAnuncio.contentUrl}
@@ -93,7 +92,6 @@ const MarqueeAnuncios = () => {
                 className="w-full h-auto rounded-lg mt-4"
               />
             )}
-
             {selectedAnuncio.fileUrl && (
               <a
                 href={selectedAnuncio.fileUrl}

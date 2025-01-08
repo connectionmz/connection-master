@@ -37,6 +37,7 @@ import EnviarPropostaDesk from '../desktop/EnviarPropostaDesk';
 import ProposalDesk from '../desktop/ProposalDesk';
 import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
 import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
+import PortalDesk from '../desktop/PortalDesk';
 
 
 const theme = createTheme({
@@ -57,7 +58,7 @@ const DesktopRoutes = ({ user }) => {
   return (
     <div>
        <ThemeProvider theme={theme}>
-      <HeaderDesk />
+      <HeaderDesk user={user}/>
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
@@ -100,6 +101,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/callcenter" element={<CallCenterModuleDesk />} />
         <Route path="/logistica" element={<LogisticaModuleDesk />} />
         <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
+        <Route path="/painel" element={<PortalDesk user={user}/>} />
         <Route path="*" element={<Navigate to="/" />} />
 
         </Routes>
