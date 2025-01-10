@@ -15,6 +15,7 @@ import {
 import { Add, Delete } from '@mui/icons-material';
 import { EditorText, SectorDeActividades } from '../../utils/formUtils';
 import sendMessage from '../sms/sendMessage';
+import BackButton from '../BackButton';
 
 const NovaCotacao = ({ user }) => {
   const [title, setTitle] = useState('');
@@ -57,8 +58,16 @@ const NovaCotacao = ({ user }) => {
             title,
             description,
             id: cotacaoId,
+            userId:user.id,
             items,
-            company: user,
+            company: {
+              nome:user.nome,
+              id:user.id,
+              logoUrl:user.logoUrl,
+              sigla:user.sigla,
+              provincia: user.provincia,
+              distrito:user.distrito
+            },
             sector,
             timestamp: new Date().toISOString(),
             datalimite: new Date(deadline).toISOString(),
@@ -70,7 +79,6 @@ const NovaCotacao = ({ user }) => {
         setSnackbarSeverity('success');
         setOpenSnackbar(true);
 
-        // Consultar empresas do setor e aplicar critérios
         const empresasRef = ref(db, 'company');
         const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));
         const snapshot = await get(setorQuery);
@@ -80,7 +88,6 @@ const NovaCotacao = ({ user }) => {
             for (const key in empresas) {
               const empresa = empresas[key];
           
-              // Validar campos básicos
               if (!empresa || !empresa.activeModules || !empresa.activeModules.moduloSMS) {
                   console.warn(`Dados incompletos para empresa ID: ${key}. Ignorando...`);
                   continue;
@@ -171,7 +178,10 @@ const NovaCotacao = ({ user }) => {
 
   return (
     <Box sx={{ p: 3 }}>
+            <BackButton sx={{ mb: 2 }} />
+
       <Typography variant="h4" gutterBottom>
+        
         Nova Cotação
       </Typography>
       <form onSubmit={handleSubmit}>

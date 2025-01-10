@@ -57,13 +57,23 @@ const theme = createTheme({
 const DesktopRoutes = ({ user }) => {
 
   return (
-    <div>
-       <ThemeProvider theme={theme}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}
+    >
+      <ThemeProvider theme={theme}>
       <HeaderDesk user={user}/>
+      <div
+    style={{
+      flex: 1, 
+    }}
+  >    
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
-        <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
-        <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
+      
         <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
         <Route path="/app" element={<ApxDesk user={user.provincia} />} />
@@ -73,7 +83,8 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/inbox" element={<InboxDesk />} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
 
-
+        <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
+        <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
         <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />
         <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
         <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
@@ -107,6 +118,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="*" element={<Navigate to="/" />} />
 
         </Routes>
+        </div>
         <FooterDesk/>
         </ThemeProvider>
     </div>

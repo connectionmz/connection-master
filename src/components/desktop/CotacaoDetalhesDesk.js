@@ -3,6 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../fb';
 import { ref, onValue, increment, update } from 'firebase/database';
 import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload } from '@mui/icons-material';
+import {
+  Card,
+  CardContent,
+  CardActions,
+  Typography,
+  Button,
+  Grid,
+  Avatar,
+  Box,
+} from '@mui/material';
 
 const CotacaoDetalhesDesk = () => {
   const { id, companyId } = useParams();
@@ -14,19 +24,14 @@ const CotacaoDetalhesDesk = () => {
   useEffect(() => {
     const cotacaoRef = ref(db, `cotacoes/${id}`);
 
-    // Increment views count
-    update(cotacaoRef, {
-      views: increment(1),
-    });
+    update(cotacaoRef, { views: increment(1) });
 
-    // Fetch the cotacao details
     onValue(cotacaoRef, (snapshot) => {
       const data = snapshot.val();
       setCotacao(data);
 
-      if (data.proposals) {
-        const propostasArray = Object.values(data.proposals);
-        setPropostas(propostasArray);
+      if (data?.proposals) {
+        setPropostas(Object.values(data.proposals));
       }
 
       if (auth.currentUser && data?.company?.id === auth.currentUser.uid) {
@@ -35,22 +40,15 @@ const CotacaoDetalhesDesk = () => {
     });
   }, [id]);
 
-  const handleEnviarProposta = () => {
-    navigate(`/enviar-proposta/${id}/${companyId}`);
-  };
-
-  const handleBaixarPedido = () => {
-    navigate(`/cotacaoPDF/${id}`);
-  };
-
+  const handleEnviarProposta = () => navigate(`/enviar-proposta/${id}/${companyId}`);
+  const handleBaixarPedido = () => navigate(`/cotacaoPDF/${id}`);
   const handlePartilhar = () => {
     const url = window.location.href;
-    navigator.clipboard
-      .writeText(url)
-      .then(() => alert('Link copiado! Pronto para partilhar.'))
-      .catch((err) => alert('Erro ao copiar o link', err));
+    navigator.clipboard.writeText(url).then(
+      () => alert('Link copiado! Pronto para partilhar.'),
+      (err) => alert('Erro ao copiar o link', err)
+    );
   };
-
   const handleVerPropostas = () => {
     if (propostas.length > 0) {
       navigate(`/propostas/${id}/propostas`);
@@ -60,121 +58,85 @@ const CotacaoDetalhesDesk = () => {
   };
 
   if (!cotacao) {
-    return <div className="text-center text-gray-500">Carregando...</div>;
+    return <Typography align="center" color="textSecondary">Carregando...</Typography>;
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-8 bg-gray-100 shadow-lg rounded-lg">
-      {/* Informações da Empresa */}
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-10 bg-white p-6 rounded-lg shadow">
-        <img
-          src={cotacao.company.logoUrl || 'default-logo.png'}
-          alt={cotacao.company.nome}
-          className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover"
-        />
-        <div className="text-center sm:text-left">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-gray-800">{cotacao.company.nome}</h2>
-          <p className="text-sm text-gray-500">
-            Estado: <span className="font-medium text-gray-800">{cotacao.status}</span>
-          </p>
-          <div className="flex flex-wrap justify-center sm:justify-start gap-4 mt-4 text-gray-600">
-            <div className="flex items-center gap-2">
-              <RemoveRedEye className="text-blue-500" />
-              <p>{cotacao.views || 0} visualizações</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <AdsClick className="text-green-500" />
-              <p>{cotacao.clicks || 0} cliques</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Inbox className="text-yellow-500" />
-              <p>{cotacao.proposals ? propostas.length : 0} propostas</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Ações */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mb-8 bg-white p-4 rounded-lg shadow">
-        <p className="text-gray-600 text-center sm:text-left">
-          Data Limite:{' '}
-          <span className="font-semibold text-gray-800">
-            {new Date(cotacao.datalimite).toLocaleDateString('pt-PT', {
-              day: '2-digit',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </span>
-        </p>
-        <div className="flex flex-wrap gap-4 justify-center sm:justify-end">
-          {isCompanyOwner ? (
-            <button
-              onClick={handleVerPropostas}
-              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition"
-            >
-              Ver Propostas
-            </button>
-          ) : (
-            <button
-              onClick={handleEnviarProposta}
-              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition"
-            >
-              Enviar Proposta
-            </button>
-          )}
-          <button
-            onClick={handleBaixarPedido}
-            className="px-6 py-2 flex items-center gap-2 bg-green-600 text-white font-medium rounded-lg shadow hover:bg-green-700 transition"
-          >
-            <FileDownload />
+    <Box maxWidth="lg" mx="auto" p={3}>
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item>
+              <Avatar
+                src={cotacao.company.logoUrl || 'default-logo.png'}
+                alt={cotacao.company.nome}
+                sx={{ width: 64, height: 64 }}
+              />
+            </Grid>
+            <Grid item xs>
+              <Typography variant="h5" gutterBottom>{cotacao.company.nome}</Typography>
+              <Typography variant="body2" color="textSecondary">
+                Estado: <strong>{cotacao.status}</strong>
+              </Typography>
+              <Box mt={1}>
+                <Grid container spacing={2}>
+                  <Grid item><RemoveRedEye color="primary" /> {cotacao.views || 0} visualizações</Grid>
+                  <Grid item><AdsClick color="success" /> {cotacao.clicks || 0} cliques</Grid>
+                  <Grid item><Inbox color="warning" /> {propostas.length} propostas</Grid>
+                </Grid>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+        <CardActions>
+          <Button variant="contained" color="primary" onClick={handleBaixarPedido} startIcon={<FileDownload />}>
             Baixar Pedido
-          </button>
-          <button
-            onClick={handlePartilhar}
-            className="px-6 py-2 flex items-center gap-2 bg-gray-600 text-white font-medium rounded-lg shadow hover:bg-gray-700 transition"
-          >
-            <Share />
+          </Button>
+          <Button variant="contained" onClick={handlePartilhar} startIcon={<Share />}>
             Partilhar
-          </button>
-        </div>
-      </div>
+          </Button>
+          {isCompanyOwner ? (
+            <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
+              Ver Propostas
+            </Button>
+          ) : (
+            <Button variant="contained" color="primary" onClick={handleEnviarProposta}>
+              Enviar Proposta
+            </Button>
+          )}
+        </CardActions>
+      </Card>
 
-      {/* Descrição */}
-      <div className="bg-white p-6 rounded-lg shadow mb-8">
-        <h3 className="text-2xl font-semibold text-gray-800 mb-4">{cotacao.title}</h3>
-        <p
-          className="text-gray-700 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: cotacao.description }}
-        />
-      </div>
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Descrição</Typography>
+          <Typography dangerouslySetInnerHTML={{ __html: cotacao.description }} />
+        </CardContent>
+      </Card>
 
-      {/* Itens Solicitados */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h4 className="text-xl font-semibold text-gray-800 mb-4">Itens Solicitados</h4>
-        {cotacao.items && cotacao.items.length > 0 ? (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cotacao.items.map((item, index) => (
-              <li
-                key={index}
-                className="flex flex-col items-center gap-4 bg-gray-50 p-4 rounded-lg shadow hover:bg-gray-100 transition"
-              >
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-full h-32 object-cover rounded-lg"
-                />
-                <div className="text-center">
-                  <h5 className="text-lg font-medium text-gray-800">{item.name}</h5>
-                  <p className="text-sm text-gray-600">{item.description}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-600 text-center">Nenhum item disponível.</p>
-        )}
-      </div>
-    </div>
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Itens Solicitados</Typography>
+          {cotacao.items && cotacao.items.length > 0 ? (
+            <Grid container spacing={2}>
+              {cotacao.items.map((item, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Card>
+                    <CardContent>
+                      <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                      <Typography variant="body1">{item.name}</Typography>
+                      <Typography variant="body2" color="textSecondary">{item.description}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography color="textSecondary">Nenhum item disponível.</Typography>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 
