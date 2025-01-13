@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ref, get } from 'firebase/database';
-import { db } from '../../fb';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { ref, get } from "firebase/database";
+import { db } from "../../fb";
 import {
   Grid,
   Card,
   CardContent,
   Typography,
   TextField,
-  Button,
   CircularProgress,
   Box,
   CardActionArea,
   CardMedia,
-} from '@mui/material';
-import BackButton from '../BackButton';
+  Avatar,
+} from "@mui/material";
 
 // Função para embaralhar arrays
 const shuffleArray = (array) => {
@@ -24,17 +23,16 @@ const shuffleArray = (array) => {
     .map(({ item }) => item);
 };
 
-const StoresDesk = ({ user }) => {
+const StoresDesk = () => {
   const [storesList, setStoresList] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filteredStores, setFilteredStores] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Função para buscar lojas de forma pontual
     const fetchStores = async () => {
       try {
-        const storesRef = ref(db, 'stores');
+        const storesRef = ref(db, "stores");
         const snapshot = await get(storesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
@@ -50,7 +48,7 @@ const StoresDesk = ({ user }) => {
           setFilteredStores([]);
         }
       } catch (error) {
-        console.error('Erro ao buscar lojas:', error);
+        console.error("Erro ao buscar lojas:", error);
       } finally {
         setLoading(false);
       }
@@ -76,11 +74,13 @@ const StoresDesk = ({ user }) => {
         variant="h4"
         gutterBottom
         align="center"
-        sx={{ fontWeight: 'bold', mb: 4 }}
+        sx={{ fontWeight: "bold", mb: 4 }}
       >
-        Lojas Disponíveis
+        Lojas e Produtos
       </Typography>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
+
+      {/* Barra de Pesquisa */}
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
         <TextField
           label="Pesquisar loja por nome..."
           variant="outlined"
@@ -91,71 +91,178 @@ const StoresDesk = ({ user }) => {
         />
       </Box>
 
-      {/* Carregando ou lista de lojas */}
+      {/* Stories de Empresas */}
+      <Box
+        sx={{
+          display: "flex",
+          overflowX: "auto",
+          mb: 4,
+          gap: 2,
+          padding: 1,
+        }}
+      >
+        {storesList.map((store) => (
+          <Box
+            key={store.id}
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+            component={Link}
+            to={`/stores/${store.id}`}
+          >
+            <Avatar
+              src={store.photoUrl || "https://via.placeholder.com/80"}
+              sx={{
+                width: 80,
+                height: 80,
+                border: "2px solid #ff5722",
+                marginBottom: 1,
+              }}
+            />
+            <Typography
+              variant="body2"
+              sx={{ textAlign: "center", maxWidth: "80px" }}
+            >
+              {store.name}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
+      {/* Carregando ou lista de lojas e produtos */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
           <CircularProgress />
         </Box>
       ) : (
-        <Grid container spacing={4}>
-          {filteredStores.length > 0 ? (
-            filteredStores.map((store) => (
-              <Grid item xs={12} sm={6} md={4} key={store.id}>
-                <Card
-                  sx={{
-                    boxShadow: 4,
-                    transition: 'transform 0.3s, box-shadow 0.3s',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                      boxShadow: 6,
-                    },
-                  }}
-                >
-                  <CardActionArea component={Link} to={`/stores/${store.id}`}>
-                    {store.photoUrl && (
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={store.photoUrl}
-                        alt={`${store.name} logo`}
-                      />
-                    )}
-                    <CardContent>
-                      <Typography
-                        variant="h6"
-                        sx={{ fontWeight: 'bold', textAlign: 'center', mb: 1 }}
-                      >
-                        {store.name}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          textAlign: 'center',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitBoxOrient: 'vertical',
-                          WebkitLineClamp: 2,
-                          height: '50px',
-                        }}
-                      >
-                        {store.description || 'Sem descrição disponível'}
-                      </Typography>
-                    </CardContent>
-                  </CardActionArea>
-                </Card>
-              </Grid>
-            ))
-          ) : (
-            <Typography
-              variant="body2"
-              sx={{ color: 'gray', textAlign: 'center', width: '100%' }}
+<Grid container spacing={4}>
+  {filteredStores.length > 0 ? (
+    // Combine produtos de todas as lojas em uma única lista e embaralhe
+    shuffleArray(
+      filteredStores.flatMap((store) =>
+        store.products
+          ? Object.entries(store.products).map(([productId, product]) => ({
+              ...product,
+              storeName: store.name, // Adiciona o nome da empresa
+              id: productId,
+            }))
+          : []
+      )
+    ).map((product) => (
+      <Grid item xs={12} sm={6} md={4} key={product.id}>
+        <Card
+          sx={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            boxShadow: 4,
+            transition: "transform 0.3s, box-shadow 0.3s",
+            "&:hover": {
+              transform: "scale(1.05)",
+              boxShadow: 6,
+            },
+          }}
+        >
+          <CardActionArea
+            sx={{ display: "flex", flexDirection: "column", flexGrow: 1 }}
+          >
+            {/* Imagem com tamanho uniforme */}
+            <Box
+              sx={{
+                width: "100%",
+                height: 180, // Altura fixa
+                overflow: "hidden",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "#f5f5f5",
+              }}
             >
-              Nenhuma loja encontrada.
-            </Typography>
-          )}
-        </Grid>
+              <CardMedia
+                component="img"
+                image={product.imageUrl}
+                alt={product.name}
+                sx={{
+                  width: "auto",
+                  height: "100%", // Adapta proporcionalmente à altura definida
+                  objectFit: "contain",
+                }}
+              />
+            </Box>
+
+            {/* Conteúdo do Card */}
+            <CardContent
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                flexGrow: 1,
+                justifyContent: "space-between",
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  mb: 1,
+                }}
+              >
+                {product.name}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  mb: 2,
+                  textAlign: "center",
+                }}
+              >
+                {product.description}
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "#ff5722",
+                  textAlign: "center",
+                  fontWeight: "bold",
+                }}
+              >
+                {`R$ ${product.price}`}
+              </Typography>
+              {/* Nome da empresa */}
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "gray",
+                  textAlign: "center",
+                  mt: 1,
+                }}
+              >
+                {product.storeName}
+              </Typography>
+            </CardContent>
+          </CardActionArea>
+        </Card>
+      </Grid>
+    ))
+  ) : (
+    <Typography
+      variant="body2"
+      sx={{ color: "gray", textAlign: "center", width: "100%" }}
+    >
+      Nenhum produto encontrado.
+    </Typography>
+  )}
+</Grid>
+
       )}
     </Box>
   );

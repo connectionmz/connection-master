@@ -11,6 +11,7 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import { EditorText, SectorDeActividades } from '../../utils/formUtils';
@@ -89,69 +90,45 @@ const NovaCotacao = ({ user }) => {
               const empresa = empresas[key];
           
               if (!empresa || !empresa.activeModules || !empresa.activeModules.moduloSMS) {
-                  console.warn(`Dados incompletos para empresa ID: ${key}. Ignorando...`);
                   continue;
               }
           
-              // Verificar status do módulo SMS
               const moduleSMS = empresa.activeModules.moduloSMS.status === "active";
               const smsCount = empresa.activeModules.moduloSMS.paymentDetails?.smsCount;
-          
-              // Adicionar logs para depuração
-              console.log(`Empresa ID: ${key}`);
-              console.log(`Módulo SMS Ativo: ${moduleSMS}`);
-              console.log(`Saldo de SMS: ${smsCount}`);
-          
-              // Verificar critérios
-              if (
-                  empresa.provincia !== user.provincia || // Diferente província
-                  !moduleSMS ||                          // Módulo SMS inativo
-                  (smsCount === undefined || smsCount <= 0) // Sem saldo de SMS
-              ) {
-                  console.warn(`Empresa ${key} não atende aos critérios. Ignorando...`);
+
+              if (empresa.provincia !== user.provincia || !moduleSMS || (smsCount === undefined || smsCount <= 0)) {
                   continue;
               }
           
               if (!empresa.contacto) {
-                  console.warn(`Empresa ${key} não possui contato. Ignorando...`);
                   continue;
               }
-          
-              // Criar mensagem
+
               const message = `
                   Nova Cotação para sua Empresa
                   Título: ${title}
                   Descrição: ${description}
-                  Data Limite: ${deadline}
-                  Setor de Atividade: ${sector}
                   Acesse: ${linkDoPedido}
               `.trim();
-          
+
               const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "").replace(/\n/g, " ").replace(/\t/g, " ");
               const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
           
               try {
-                  // Enviar mensagem
                   await sendMessage(contatos, cleanMessage);
-          
-                  // Atualizar saldo de SMS
-                  const updatedSmsCount = smsCount - 1; // Dedução do custo do SMS
-                  console.log(`Atualizando saldo para Empresa ID: ${key}, Novo Saldo: ${updatedSmsCount}`);
-
-
-                  //window.location="/cotacoes"
+                  const updatedSmsCount = smsCount - 1;
                   await set(ref(db, `company/${key}/activeModules/moduloSMS/paymentDetails/smsCount`), updatedSmsCount);
+                  window.location="/cotacoes";
+
               } catch (error) {
-                  console.error(`Erro ao processar empresa ID: ${key}`, error);
+                  console.error('Erro ao enviar SMS:', error.message);
               }
           }
-          
           
         } else {
             console.log('Nenhuma empresa encontrada para este setor.');
         }
 
-        // Reset form
         setTitle('');
         setDescription('');
         setItems([]);
@@ -167,7 +144,6 @@ const NovaCotacao = ({ user }) => {
     }
 };
 
-
   const handleSectorChange = (e) => {
     setSector(e.target.value);
   };
@@ -178,10 +154,8 @@ const NovaCotacao = ({ user }) => {
 
   return (
     <Box sx={{ p: 3 }}>
-            <BackButton sx={{ mb: 2 }} />
-
+      <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom>
-        
         Nova Cotação
       </Typography>
       <form onSubmit={handleSubmit}>
@@ -195,9 +169,10 @@ const NovaCotacao = ({ user }) => {
           />
         </Box>
         <Box sx={{ mb: 2 }}>
-        <EditorText
-                        description={description}
-                        setDescription={setDescription}/>
+          <EditorText
+            description={description}
+            setDescription={setDescription}
+          />
         </Box>
         <Box sx={{ mb: 2 }}>
           <SectorDeActividades 
@@ -229,9 +204,7 @@ const NovaCotacao = ({ user }) => {
                 <TextField
                   label="Nome do Item"
                   value={item.name}
-                  onChange={(e) =>
-                    handleItemChange(index, 'name', e.target.value)
-                  }
+                  onChange={(e) => handleItemChange(index, 'name', e.target.value)}
                   fullWidth
                   required
                 />
@@ -240,19 +213,14 @@ const NovaCotacao = ({ user }) => {
                 <TextField
                   label="Descrição do Item"
                   value={item.description}
-                  onChange={(e) =>
-                    handleItemChange(index, 'description', e.target.value)
-                  }
+                  onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                   fullWidth
                   multiline
                   rows={2}
                 />
               </Grid>
               <Grid item xs={12} sm={2}>
-                <IconButton
-                  color="error"
-                  onClick={() => handleRemoveItem(index)}
-                >
+                <IconButton color="error" onClick={() => handleRemoveItem(index)}>
                   <Delete />
                 </IconButton>
               </Grid>
@@ -273,7 +241,9 @@ const NovaCotacao = ({ user }) => {
             variant="contained"
             color="primary"
             disabled={loading}
+            sx={{ position: 'relative' }}
           >
+            {loading && <CircularProgress size={24} sx={{ position: 'absolute', left: '50%', top: '50%', marginTop: '-12px', marginLeft: '-12px' }} />}
             {loading ? 'Enviando...' : 'Criar Cotação'}
           </Button>
         </Box>
@@ -287,7 +257,7 @@ const NovaCotacao = ({ user }) => {
         <Alert
           onClose={handleSnackbarClose}
           severity={snackbarSeverity}
-          sx={{ width: '100%' }}
+          sx={{ width: '100%', backgroundColor: snackbarSeverity === 'error' ? '#f44336' : '#4caf50', color: '#fff' }}
         >
           {snackbarMessage}
         </Alert>

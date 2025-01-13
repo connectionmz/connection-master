@@ -39,6 +39,8 @@ import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
 import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
 import PortalDesk from '../desktop/PortalDesk';
 import ProductDetailsDesk from '../market/ProductDetailsDesk';
+import SendMail from '../sms/SendMail';
+import Sobre from '../Sobre';
 
 
 const theme = createTheme({
@@ -82,6 +84,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
         <Route path="/inbox" element={<InboxDesk />} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
+        <Route path="/sobre" element={<Sobre />} />
 
         <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
         <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
@@ -115,6 +118,8 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/logistica" element={<LogisticaModuleDesk />} />
         <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
         <Route path="/painel" element={<PortalDesk user={user}/>} />
+        <Route path="/sendmail" element={<SendMail user={user}/>} />
+        
         <Route path="*" element={<Navigate to="/" />} />
 
         </Routes>
