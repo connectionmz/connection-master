@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { createTheme, ThemeProvider } from '@mui/material';
+import { createTheme, Fab, Menu, MenuItem, ThemeProvider } from '@mui/material';
+import LanguageIcon from '@mui/icons-material/Language';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
@@ -41,6 +42,7 @@ import PortalDesk from '../desktop/PortalDesk';
 import ProductDetailsDesk from '../market/ProductDetailsDesk';
 import SendMail from '../sms/SendMail';
 import Sobre from '../Sobre';
+import i18n from '../../i18n';
 
 
 const theme = createTheme({
@@ -57,7 +59,25 @@ const theme = createTheme({
 
 
 const DesktopRoutes = ({ user }) => {
+  const [language, setLanguage] = useState('pt'); // Default language
+  const [anchorEl, setAnchorEl] = useState(null);
 
+  const handleLanguageChange = (lang) => {
+    setLanguage(lang); // Atualiza o estado local do idioma
+    i18n.changeLanguage(lang); // Altera o idioma no i18next
+    setAnchorEl(null); // Fecha o menu
+    localStorage.setItem('selectedLanguage', lang); // Salva o idioma localmente
+    console.log(`Language switched to: ${lang}`);
+  };
+  
+
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
   return (
     <div
       style={{
@@ -125,6 +145,30 @@ const DesktopRoutes = ({ user }) => {
         </Routes>
         </div>
         <FooterDesk/>
+        {/* Floating Language Switch Button */}
+        <Fab
+          color="primary"
+          aria-label="change language"
+          style={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+          }}
+          onClick={handleMenuOpen}
+        >
+          <LanguageIcon />
+        </Fab>
+
+        {/* Language Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
+          <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
+          <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>
+        </Menu>
         </ThemeProvider>
     </div>
   );

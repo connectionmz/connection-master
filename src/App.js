@@ -14,13 +14,14 @@ import UserRoutes from './components/routes/UserRoutes';
 import NonSubscriberRoutes from './components/routes/NonSubscriberRoutes';
 import DesktopRoutes from './components/routes/DesktopRoutes';
 import NonSubscriberRoutesDesktop from './components/routes/NonSubscriberRoutesDesktop';
+import { useTranslation } from 'react-i18next';
 
 const App = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const isMobile = window.innerWidth <= 768;
-
+  const { i18n } = useTranslation();
   const fetchUserDataOnce = async (user) => {
     try {
       const userRef = ref(db, `company/${user.uid}`);
@@ -45,6 +46,12 @@ const App = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Recupera o idioma salvo localmente, ou usa o padrão 'en'
+    const savedLanguage = localStorage.getItem('selectedLanguage') || 'en';
+    i18n.changeLanguage(savedLanguage); // Altera para o idioma salvo
+  }, [i18n]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
