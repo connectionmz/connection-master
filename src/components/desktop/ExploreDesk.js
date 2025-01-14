@@ -180,12 +180,28 @@ const ExploreDesk = () => {
         {filteredCompanies.map((company) => (
           <Grid item xs={12} sm={6} md={4} key={company.id}>
             <Card onClick={() => handleCompanyClick(company.id)} sx={{ cursor: 'pointer' }}>
-              <CardMedia
-                component="img"
-                height="140"
-                image={company.logoUrl || defaultLogoUrl}
-                alt={`${company.nome} logo`}
-              />
+            <Box
+                sx={{
+                  width: '100%', // Largura do contêiner
+                  height: '140px', // Altura fixa
+                  display: 'flex', // Ativa flexbox
+                  justifyContent: 'center', // Centraliza horizontalmente
+                  alignItems: 'center', // Centraliza verticalmente
+                  backgroundColor: '#f5f5f5', // Fundo cinza claro
+                  overflow: 'hidden', // Oculta qualquer conteúdo fora do limite
+                }}
+              >
+                <CardMedia
+                  component="img"
+                  image={company.logoUrl || defaultLogoUrl}
+                  alt={`${company.nome} logo`}
+                  sx={{
+                    width: 'auto', // Ajusta a largura proporcionalmente
+                    height: '100%', // Preenche a altura do contêiner
+                    objectFit: 'contain', // Garante que a imagem caiba no espaço sem distorção
+                  }}
+                />
+              </Box>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   {company.nome}

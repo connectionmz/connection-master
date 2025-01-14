@@ -11,27 +11,25 @@ import {
 } from '@mui/material';
 
 const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
-  const [store, setStore] = useState({ name: '', description: '', company: user || '', logoUrl: '' });
+  const [store, setStore] = useState({ 
+    name: '', 
+    company: {
+      nome: user.nome,
+      provincia: user.provincia,
+      distrito: user.distrito,
+      logo:user.logoUrl
+    } || '',
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const [logo, setLogo] = useState(null);
 
   const handleInputChange = (e) => {
     setStore({ ...store, [e.target.name]: e.target.value });
-  };
-
-  const handleLogoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setLogo(file);
-      setStore({ ...store, logoUrl: URL.createObjectURL(file) });
-    }
   };
 
   const handlePayment = async () => {
     setIsLoading(true);
 
     try {
-      // Simula a lógica de pagamento
       return true;
     } catch (error) {
       alert('A transação falhou. Por favor, tente novamente.');
@@ -100,42 +98,6 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         onChange={handleInputChange}
         sx={{ marginBottom: 2 }}
       />
-
-      <TextField
-        fullWidth
-        name="description"
-        label="Descrição da Loja"
-        variant="outlined"
-        multiline
-        rows={4}
-        value={store.description}
-        onChange={handleInputChange}
-        sx={{ marginBottom: 2 }}
-      />
-
-      <Button
-        variant="contained"
-        component="label"
-        fullWidth
-        sx={{ marginBottom: 2 }}
-      >
-        Upload Logo
-        <input
-          type="file"
-          hidden
-          onChange={handleLogoChange}
-        />
-      </Button>
-
-      {logo && (
-        <Box sx={{ marginBottom: 2, textAlign: 'center' }}>
-          <img
-            src={URL.createObjectURL(logo)}
-            alt="Logo Preview"
-            style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'cover' }}
-          />
-        </Box>
-      )}
 
       <Button
         variant="contained"
