@@ -42,7 +42,6 @@ import PortalDesk from '../desktop/PortalDesk';
 import ProductDetailsDesk from '../market/ProductDetailsDesk';
 import SendMail from '../sms/SendMail';
 import Sobre from '../Sobre';
-import i18n from '../../i18n';
 
 
 const theme = createTheme({
@@ -64,8 +63,7 @@ const DesktopRoutes = ({ user }) => {
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang); // Atualiza o estado local do idioma
-    i18n.changeLanguage(lang); // Altera o idioma no i18next
-    setAnchorEl(null); // Fecha o menu
+
     localStorage.setItem('selectedLanguage', lang); // Salva o idioma localmente
     console.log(`Language switched to: ${lang}`);
   };
