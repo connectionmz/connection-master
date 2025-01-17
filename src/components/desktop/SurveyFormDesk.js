@@ -36,7 +36,12 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
     // Salva as respostas no Firebase, associadas ao ID do usuário e do inquérito
     set(surveyRef, {
-      userId: user.id,  // Armazenando o ID do usuário
+     company: {
+        nome: user.nome,
+        logo:user.logoUrl,
+        provincia:user.provincia, 
+        id:user.id
+      },  // Armazenando o ID do usuário
       surveyId: surveyId,  // Usando a estrutura correta do inquérito
       responses: responses,
       submittedAt: Date.now(),
