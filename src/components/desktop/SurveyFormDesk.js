@@ -6,8 +6,6 @@ import { useNavigate } from 'react-router-dom';
 
 const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
-  console.log(surveyId);
-
   const [responses, setResponses] = useState({});
   const [hasResponded, setHasResponded] = useState(false); // Estado para verificar se o usuário já respondeu
   const navigate = useNavigate();

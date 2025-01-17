@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ref, set, get, push } from 'firebase/database';
-import { Snackbar, TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { Snackbar, TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle, Select, MenuItem } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import { db } from '../../fb';
-
 
 const CriarProformaDesk = ({ user }) => {
     const [cliente, setCliente] = useState('');
@@ -18,7 +17,9 @@ const CriarProformaDesk = ({ user }) => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const [clientes, setClientes] = useState([]);
-    const [isAddingCliente, setIsAddingCliente] = useState(false); // Estado para mostrar o formulário de novo cliente
+    const [produtos, setProdutos] = useState([]);  // Produtos da loja
+    const [selectedProduto, setSelectedProduto] = useState(null);  // Produto selecionado
+    const [isAddingCliente, setIsAddingCliente] = useState(false); 
     const [openModal, setOpenModal] = useState(false);
     const [novoCliente, setNovoCliente] = useState({
         nome: '',
@@ -29,80 +30,62 @@ const CriarProformaDesk = ({ user }) => {
         empresa: '',
         notas: '',
     });
-    
+
     useEffect(() => {
-        // Aqui você pode carregar os clientes da base de dados
         fetchClientes();
-        console.log(user)
+        fetchProdutos();  // Busca produtos ao carregar o componente
     }, []);
 
-    // Função para carregar os clientes
     const fetchClientes = async () => {
         const clientesRef = ref(db, `clientes/${user.id}`);
         const snapshot = await get(clientesRef);
         const data = snapshot.val();
         if (data) {
-            setClientes(Object.values(data)); // Carregar clientes existentes
+            setClientes(Object.values(data));
         }
     };
 
-
-    const handleOpenModal = () => {
-        setNovoCliente({ nome: '', email: '', telefone: '', endereco: '' });
-        setOpenModal(true);
+    const fetchProdutos = async () => {
+        const produtosRef = ref(db, `stores/${user.id}/products`);
+        const snapshot = await get(produtosRef);
+        const data = snapshot.val();
+        if (data) {
+            setProdutos(Object.values(data));  // Armazena produtos na lista
+        }
     };
 
-    const handleCloseModal = () => {
-        setOpenModal(false);
-    };
-
-   
-    const handleAddNewCliente = async () => {
-        const { nome, email, telefone, endereco } = novoCliente;
-
-        if (!nome.trim() || !email.trim() || !telefone.trim() || !endereco.trim()) {
-            setSnackbarMessage('Todos os campos são obrigatórios.');
+    const handleAddItemFromStore = () => {
+        if (!selectedProduto) {
+            setSnackbarMessage('Selecione um produto para adicionar.');
             setSnackbarSeverity('error');
             setOpenSnackbar(true);
             return;
         }
 
-        try {
-            const clienteRef = push(ref(db, `clientes/${user.id}`));
-            await set(clienteRef, { nome, email, telefone, endereco });
-            setClientes([...clientes, { id: clienteRef.key, ...novoCliente }]);
-            setSnackbarMessage('Cliente adicionado com sucesso!');
-            setSnackbarSeverity('success');
-            handleCloseModal();
-        } catch (error) {
-            console.error('Erro ao adicionar cliente:', error);
-            setSnackbarMessage('Erro ao adicionar cliente.');
-            setSnackbarSeverity('error');
-        } finally {
-            setOpenSnackbar(true);
-        }
+        const item = {
+            descricao: selectedProduto.nome,
+            quantidade: 1,
+            preco: selectedProduto.preco,
+        };
+        setItens([...itens, item]);  // Adiciona o produto como item
+        setSelectedProduto(null);  // Limpa a seleção do produto
     };
 
-
-    // Adicionar um novo item à lista
     const handleAddItem = () => {
         setItens([...itens, { descricao: '', quantidade: 1, preco: 0 }]);
     };
 
-    // Remover um item da lista
     const handleRemoveItem = (index) => {
         const newItens = itens.filter((_, i) => i !== index);
         setItens(newItens);
     };
 
-    // Atualizar o valor de um item
     const handleItemChange = (index, field, value) => {
         const newItens = [...itens];
         newItens[index][field] = value;
         setItens(newItens);
     };
 
-    // Calcular o total
     const total = itens.reduce((sum, item) => sum + item.quantidade * item.preco, 0);
 
     const validateForm = () => {
@@ -143,23 +126,19 @@ const CriarProformaDesk = ({ user }) => {
 
         setLoading(true);
         try {
-            // Gerar o número da proforma
             const today = new Date();
             const day = String(today.getDate()).padStart(2, '0');
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const year = String(today.getFullYear()).slice(-2);
             
-            // Obter referência para as proformas do usuário
             const proformaRef = ref(db, `invoices/${user.id}`);
             const snapshot = await get(proformaRef);
             const proformas = snapshot.val();
             const proformaCount = proformas ? Object.keys(proformas).length : 0;
 
-            // Incrementar o número da proforma
             const sequentialNumber = String(proformaCount + 1).padStart(2, '0');
             const numeroProforma = `PF${day}${month}${year}${sequentialNumber}`;
 
-            // Salvar a proforma usando o número da proforma como chave
             const newProformaRef = ref(db, `invoices/${user.id}/${numeroProforma}`);
             await set(newProformaRef, {
                 numeroProforma,
@@ -188,13 +167,21 @@ const CriarProformaDesk = ({ user }) => {
         setOpenSnackbar(false);
     };
 
+    const handleOpenModal = () => {
+    setOpenModal(true);  // Abre o modal
+};
+
+const handleCloseModal = () => {
+    setOpenModal(false);  // Fecha o modal
+};
+
 
     return (
         <div className="p-6 max-w-3xl mx-auto">
             <h1 className="text-3xl font-semibold mb-6">Criar Nova Proforma</h1>
 
             <form onSubmit={handleSalvar} className="space-y-6">
-            <div>
+                <div>
                     <label className="block text-gray-700">Cliente (Opcional)</label>
                     <div className="flex items-center space-x-2">
                         <select
@@ -210,10 +197,12 @@ const CriarProformaDesk = ({ user }) => {
                             ))}
                         </select>
                         <Button onClick={handleOpenModal} variant="contained" color="primary">
-                             Cliente +
-                        </Button>
+    Cliente +
+</Button>
+
                     </div>
                 </div>
+
                 <div className="flex space-x-4">
                     <div className="flex-1">
                         <label className="block text-gray-700">Data de Emissão</label>
@@ -236,6 +225,25 @@ const CriarProformaDesk = ({ user }) => {
                         />
                         {errors.dataVencimento && <p className="text-red-500">{errors.dataVencimento}</p>}
                     </div>
+                </div>
+
+                <div>
+                    <h3 className="text-lg font-semibold mb-4">Adicionar Item da Loja</h3>
+                    <Select
+                        value={selectedProduto}
+                        onChange={(e) => setSelectedProduto(e.target.value)}
+                        fullWidth
+                    >
+                        <MenuItem value="">Selecione um produto</MenuItem>
+                        {produtos.map((produto) => (
+                            <MenuItem key={produto.id} value={produto}>
+                                {produto.nome} - {produto.preco} MZN
+                            </MenuItem>
+                        ))}
+                    </Select>
+                    <Button onClick={handleAddItemFromStore} className="mt-2" variant="contained" color="secondary">
+                        Adicionar Produto
+                    </Button>
                 </div>
 
                 <div>
@@ -298,89 +306,98 @@ const CriarProformaDesk = ({ user }) => {
                         onClick={handleAddItem}
                         className="mt-4 p-2 bg-blue-600 text-white rounded"
                     >
-                        Adicionar Item
+                        Adicionar Item Manualmente
                     </button>
                 </div>
 
                 <div>
-                    <h3 className="text-lg font-semibold">Total: {total.toFixed(2)}</h3>
+                    <h3 className="text-lg font-semibold mb-4">Total: {total} MZN</h3>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        className="w-full"
+                        disabled={loading}
+                    >
+                        {loading ? 'Criando...' : 'Criar Proforma'}
+                    </Button>
                 </div>
-
-                <button
-                    type="submit"
-                    className="w-full bg-green-600 text-white p-2 rounded"
-                    disabled={loading}
-                >
-                    {loading ? 'Salvando...' : 'Salvar Proforma'}
-                </button>
             </form>
+
             <Dialog open={openModal} onClose={handleCloseModal}>
-    <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+    <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
     <DialogContent>
         <TextField
-            margin="dense"
             label="Nome"
-            fullWidth
             value={novoCliente.nome}
             onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+            fullWidth
+            margin="normal"
         />
         <TextField
-            margin="dense"
-            label="E-mail"
-            fullWidth
+            label="Email"
             value={novoCliente.email}
             onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+            fullWidth
+            margin="normal"
         />
         <TextField
-            margin="dense"
             label="Telefone"
-            fullWidth
             value={novoCliente.telefone}
             onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+            fullWidth
+            margin="normal"
         />
         <TextField
-            margin="dense"
             label="Endereço"
-            fullWidth
             value={novoCliente.endereco}
             onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+            fullWidth
+            margin="normal"
         />
         <TextField
-            margin="dense"
-            label="NUIT"
-            fullWidth
+            label="Nuit"
             value={novoCliente.nuit}
             onChange={(e) => setNovoCliente({ ...novoCliente, nuit: e.target.value })}
+            fullWidth
+            margin="normal"
         />
         <TextField
-            margin="dense"
             label="Empresa"
-            fullWidth
             value={novoCliente.empresa}
             onChange={(e) => setNovoCliente({ ...novoCliente, empresa: e.target.value })}
+            fullWidth
+            margin="normal"
         />
         <TextField
-            margin="dense"
             label="Notas"
-            multiline
-            rows={3}
-            fullWidth
             value={novoCliente.notas}
             onChange={(e) => setNovoCliente({ ...novoCliente, notas: e.target.value })}
+            fullWidth
+            margin="normal"
         />
     </DialogContent>
     <DialogActions>
-        <Button onClick={handleCloseModal} color="secondary">
-            Cancelar
+        <Button onClick={handleCloseModal} color="primary">
+            Fechar
         </Button>
-        <Button onClick={handleAddNewCliente} color="primary">
-            Adicionar
+        <Button
+            onClick={async () => {
+                const clienteRef = ref(db, `clientes/${user.id}`);
+                const clienteId = push(clienteRef).key;
+                await set(ref(db, `clientes/${user.id}/${clienteId}`), novoCliente);
+                setClientes([...clientes, novoCliente]);
+                setOpenModal(false);
+            }}
+            color="primary"
+        >
+            Salvar
         </Button>
     </DialogActions>
 </Dialog>
 
-            <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-                <MuiAlert elevation={6} variant="filled" onClose={handleCloseSnackbar} severity={snackbarSeverity}>
+            <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={handleCloseSnackbar}>
+                <MuiAlert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
                     {snackbarMessage}
                 </MuiAlert>
             </Snackbar>
