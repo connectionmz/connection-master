@@ -2,7 +2,19 @@ import React, { useState } from 'react';
 import { ref, push } from 'firebase/database';
 import { db } from '../../fb';
 import { Provincias, SectorDeActividades } from '../../utils/formUtils';
-import { TextField, Button, Grid, MenuItem, Select, InputLabel, FormControl, Typography } from '@mui/material';
+import {
+  TextField,
+  Button,
+  Grid,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  Typography,
+  CircularProgress,
+  Snackbar,
+  Alert,
+} from '@mui/material';
 
 const CriarInqueritoDesk = ({ user }) => {
   const [titulo, setTitulo] = useState('');
@@ -11,6 +23,8 @@ const CriarInqueritoDesk = ({ user }) => {
   const [tipoInquerito, setTipoInquerito] = useState('');
   const [perguntas, setPerguntas] = useState([]);
   const [provincias, setProvincias] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: '' });
 
   const tiposInqueritos = [
     'Satisfação do Cliente',
@@ -44,40 +58,48 @@ const CriarInqueritoDesk = ({ user }) => {
     setPerguntas(novasPerguntas);
   };
 
-  const handleProvinciaChange = (e) => {
-    setProvincias(e.target.value);
+  const handleCloseSnackbar = () => {
+    setSnackbar({ open: false, message: '', severity: '' });
   };
 
-  const handleSectorChange = (e) => {
-    setSector(e.target.value);
-  };
-
-  const salvarInquerito = () => {
+  const salvarInquerito = async () => {
     if (!titulo || !descricao || !setor || !tipoInquerito || perguntas.length === 0) {
-      alert('Por favor, preencha todos os campos.');
+      setSnackbar({ open: true, message: 'Por favor, preencha todos os campos.', severity: 'warning' });
       return;
     }
 
-    const inqueritoRef = ref(db, 'surveys');
-    const novoInquerito = {
-      title: titulo,
-      description: descricao,
-      provincia: provincias,
-      company: user.id,
-      setor,
-      tipoInquerito,
-      questions: perguntas,
-      createdAt: Date.now(),
-    };
+    setLoading(true);
+    try {
+      const inqueritoRef = ref(db, 'surveys');
+      const novoInquerito = {
+        title: titulo,
+        description: descricao,
+        provincia: provincias,
+        company: {
+          nome: user.nome,
+          logo:user.logoUrl,
+          provincia:user.provincia, 
+          id:user.id
+        },
+        setor,
+        tipoInquerito,
+        questions: perguntas,
+        createdAt: Date.now(),
+      };
 
-    push(inqueritoRef, novoInquerito);
+      await push(inqueritoRef, novoInquerito);
 
-    setTitulo('');
-    setDescricao('');
-    setSector('');
-    setTipoInquerito('');
-    setPerguntas([]);
-    alert('Inquérito criado com sucesso!');
+      setTitulo('');
+      setDescricao('');
+      setSector('');
+      setTipoInquerito('');
+      setPerguntas([]);
+      setSnackbar({ open: true, message: 'Inquérito criado com sucesso!', severity: 'success' });
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Erro ao criar inquérito: ' + error.message, severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -106,12 +128,12 @@ const CriarInqueritoDesk = ({ user }) => {
 
       <SectorDeActividades
         companyData={setor}
-        handleChange={handleSectorChange}
+        handleChange={(e) => setSector(e.target.value)}
         inputStyles="border p-2 w-full mb-4"
       />
       <Provincias
         companyData={provincias}
-        handleChange={handleProvinciaChange}
+        handleChange={(e) => setProvincias(e.target.value)}
         inputStyles="border p-2 w-full mb-4"
       />
 
@@ -122,7 +144,6 @@ const CriarInqueritoDesk = ({ user }) => {
           onChange={(e) => setTipoInquerito(e.target.value)}
           label="Tipo de Inquérito"
         >
-          <MenuItem value="">Selecione o Tipo de Inquérito</MenuItem>
           {tiposInqueritos.map((opcao, index) => (
             <MenuItem key={index} value={opcao}>
               {opcao}
@@ -198,9 +219,20 @@ const CriarInqueritoDesk = ({ user }) => {
         color="success"
         fullWidth
         className="mt-4"
+        disabled={loading}
       >
-        Salvar Inquérito
+        {loading ? <CircularProgress size={24} color="inherit" /> : 'Salvar Inquérito'}
       </Button>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

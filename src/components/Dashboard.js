@@ -4,14 +4,11 @@ import {
   Toolbar,
   Typography,
   Box,
-  Avatar,
-  InputBase,
   Container,
   Grid,
   Paper,
   Button,
   List,
-  ListItem,
   ListItemText,
   Divider,
 } from "@mui/material";
@@ -23,9 +20,36 @@ import { limitToFirst, onValue, orderByKey, query, ref } from "firebase/database
 import { Link } from "react-router-dom";
 import { db } from "../fb";
 
+// Componente reutilizável para exibir listas (Categorias, Inquéritos)
+const InfoBlock = ({ title, items, linkBase }) => (
+  <Paper sx={{ padding: 2, marginBottom: 2 }}>
+    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+      {title}
+    </Typography>
+    <List>
+      {items.length === 0 ? (
+        <Typography variant="body2" color="textSecondary">
+          Nenhum item disponível no momento.
+        </Typography>
+      ) : (
+        items.map((item) => (
+          <Link key={item.id} to={`${linkBase}/${item.id}`}>
+            <ListItemText secondary={item.name || item.title} />
+          </Link>
+        ))
+      )}
+    </List>
+    <Divider sx={{ my: 2 }} />
+    <Button fullWidth variant="outlined" color="primary">
+      Ver Mais
+    </Button>
+  </Paper>
+);
+
 const Dashboard = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
   const [categorias, setCategorias] = useState([]);
+  const [inqueritos, setInqueritos] = useState([]);
 
   useEffect(() => {
     // Função para carregar anúncios
@@ -38,11 +62,9 @@ const Dashboard = ({ user }) => {
       }
     };
 
-    // Referência para categorias
-    const categoriasRef = query(ref(db, "categoriasExternas"), orderByKey(), limitToFirst(10));
-    
     // Listener para categorias
-    const unsubscribe = onValue(categoriasRef, (snapshot) => {
+    const categoriasRef = query(ref(db, "categoriasExternas"), orderByKey(), limitToFirst(10));
+    const unsubscribeCategorias = onValue(categoriasRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const categoriasList = Object.keys(data).map((key) => ({
@@ -51,14 +73,30 @@ const Dashboard = ({ user }) => {
         }));
         setCategorias(categoriasList);
       }
-    }, { onlyOnce: false });
+    });
+
+    // Listener para inquéritos
+    const inqueritosRef = query(ref(db, "surveys"), orderByKey(), limitToFirst(10));
+    const unsubscribeInqueritos = onValue(inqueritosRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const inqueritosList = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setInqueritos(inqueritosList);
+      }
+    });
 
     // Carrega anúncios
     loadAnuncios();
 
-    // Limpeza do listener de categorias
-    return () => unsubscribe();
-  }, []); // Dependência do userProvince para recarregar os anúncios
+    // Limpeza dos listeners ao desmontar
+    return () => {
+      unsubscribeCategorias();
+      unsubscribeInqueritos();
+    };
+  }, []);
 
   return (
     <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
@@ -70,7 +108,7 @@ const Dashboard = ({ user }) => {
         {/* Layout Centralizado */}
         <Grid container spacing={3}>
           {/* Informações Úteis - Esquerda */}
-          <Grid item xs={3}>
+          <Grid item xs={12} sm={4} md={3}>
             <Paper sx={{ padding: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                 Empresas Destacadas
@@ -80,12 +118,11 @@ const Dashboard = ({ user }) => {
                   .filter((anuncio) => anuncio.isFeatured) // Filtra anúncios destacados
                   .slice(0, 5)
                   .map((anuncio, index) => (
-                    <ListItem key={index} disablePadding>
-                      <ListItemText
-                        primary={<strong>{anuncio.title || "Indisponível"}</strong>}
-                        secondary={anuncio.company ? anuncio.company.nome : "Empresa Desconhecida"} // Verifica se há o campo company
-                      />
-                    </ListItem>
+                    <ListItemText
+                      key={index}
+                      primary={<strong>{anuncio.title || "Indisponível"}</strong>}
+                      secondary={anuncio.company ? anuncio.company.nome : "Empresa Desconhecida"} // Verifica se há o campo company
+                    />
                   ))}
               </List>
               <Divider sx={{ my: 2 }} />
@@ -96,30 +133,16 @@ const Dashboard = ({ user }) => {
           </Grid>
 
           {/* Banner - Centro */}
-          <Grid item xs={6}>
+          <Grid item xs={12} sm={8} md={6}>
             <Paper sx={{ padding: 2 }}>
               <Banner />
             </Paper>
           </Grid>
 
           {/* Publicações e Anúncios - Direita */}
-          <Grid item xs={3}>
-            <Paper sx={{ padding: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Servicos
-              </Typography>
-              <List>
-                {categorias.map((categoria) => (
-                  <Link key={categoria.id} to={`/servicos/${categoria.name}`}>
-                    <ListItemText secondary={categoria.name || "Indisponível"} />
-                  </Link>
-                ))}
-              </List>
-              <Divider sx={{ my: 2 }} />
-              <Button fullWidth variant="outlined" color="primary">
-                Ver Mais
-              </Button>
-            </Paper>
+          <Grid item xs={12} sm={4} md={3}>
+            <InfoBlock title="Categorias" items={categorias} linkBase="/servicos" />
+            <InfoBlock title="Inquéritos" items={inqueritos} linkBase="/inquerito" />
           </Grid>
         </Grid>
       </Container>

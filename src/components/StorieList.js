@@ -64,7 +64,7 @@ const StorieList = ({ user }) => {
   }
 
   return (
-    <div className="flex space-x-4 p-4 bg-white rounded-lg overflow-x-auto">
+    <div className="flex space-x-4 p-4 rounded-lg overflow-x-auto">
       {stories.map(store => (
         <div
           key={store.id}
@@ -74,8 +74,9 @@ const StorieList = ({ user }) => {
           <img
             src={store.logoUrl || defaultLogoUrl}
             alt={`Logotipo de ${store.nome}`}
-            className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full border-2 border-blue-500"
+            className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full border-2 border-blue-500 object-cover"
           />
+ 
           <span className="text-xs sm:text-sm lg:text-base text-gray-800 text-center truncate max-w-[120px] uppercase">
             {store.sigla || store.nome}
           </span>

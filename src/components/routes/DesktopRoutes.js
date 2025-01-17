@@ -42,6 +42,7 @@ import PortalDesk from '../desktop/PortalDesk';
 import ProductDetailsDesk from '../market/ProductDetailsDesk';
 import SendMail from '../sms/SendMail';
 import Sobre from '../Sobre';
+import SurveyPageDesk from '../desktop/SurveyPageDesk';
 
 
 const theme = createTheme({
@@ -135,8 +136,12 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/callcenter" element={<CallCenterModuleDesk />} />
         <Route path="/logistica" element={<LogisticaModuleDesk />} />
         <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
+        <Route path="/inquerito/:surveyId" element={<SurveyPageDesk user={user}/>} />
         <Route path="/painel" element={<PortalDesk user={user}/>} />
         <Route path="/sendmail" element={<SendMail user={user}/>} />
+        
+
+
         
         <Route path="*" element={<Navigate to="/" />} />
 

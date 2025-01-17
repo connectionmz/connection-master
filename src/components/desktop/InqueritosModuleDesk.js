@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ref, onValue, remove, update } from 'firebase/database';
 import { db } from '../../fb';
-import CriarInquerito from './CriarInqueritoDesk';
-import { Box, Typography, TextField, Button, MenuItem, Select, FormControl, InputLabel, List, ListItem, ListItemText, CircularProgress } from '@mui/material';
 import CriarInqueritoDesk from './CriarInqueritoDesk';
+import VisualizarRespostasDesk from './VisualizarRespostasDesk';
+import { Box, Typography, TextField, Button, MenuItem, Select, FormControl, InputLabel, List, ListItem, ListItemText, CircularProgress } from '@mui/material';
 
 const InqueritosModuleDesk = ({ user }) => {
   const [inqueritos, setInqueritos] = useState([]);
@@ -13,8 +13,9 @@ const InqueritosModuleDesk = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedSurveyId, setSelectedSurveyId] = useState(null);
   const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredInqueritos = inqueritos.filter((inq) => {
     const matchesSearch = inq.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -35,7 +36,7 @@ const InqueritosModuleDesk = ({ user }) => {
       const listaInqueritos = data
         ? Object.entries(data)
             .map(([id, details]) => ({ id, ...details }))
-            .filter((inquerito) => inquerito.company == user.id) 
+            .filter((inquerito) => inquerito.company === user.id)
         : [];
       setInqueritos(listaInqueritos);
       setLoading(false);
@@ -69,15 +70,13 @@ const InqueritosModuleDesk = ({ user }) => {
     });
   };
 
-  const handleLoadMore = () => {
-    if (currentPage * itemsPerPage < filteredInqueritos.length) {
-      setCurrentPage(currentPage + 1);
-    }
+  const visualizarRespostas = (surveyId) => {
+    setSelectedSurveyId(surveyId);
+    setAbaAtiva('respostas');
   };
 
   return (
     <Box sx={{ padding: 4, maxWidth: 'lg', margin: '0 auto' }}>
-
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
         Painel de Inquéritos
       </Typography>
@@ -156,19 +155,16 @@ const InqueritosModuleDesk = ({ user }) => {
                     >
                       Excluir
                     </Button>
+                    <Button
+                      onClick={() => visualizarRespostas(inq.id)}
+                      color="secondary"
+                      variant="text"
+                    >
+                      Visualizar Respostas
+                    </Button>
                   </Box>
                 </ListItem>
               ))}
-              {currentPage * itemsPerPage < filteredInqueritos.length && (
-                <Button
-                  onClick={handleLoadMore}
-                  variant="contained"
-                  color="primary"
-                  sx={{ marginTop: 2 }}
-                >
-                  Carregar Mais
-                </Button>
-              )}
             </List>
           )}
         </Box>
@@ -228,6 +224,13 @@ const InqueritosModuleDesk = ({ user }) => {
             </Box>
           </Box>
         </Box>
+      )}
+
+      {abaAtiva === 'respostas' && selectedSurveyId && (
+        <VisualizarRespostasDesk
+          surveyId={selectedSurveyId}
+          onBack={() => setAbaAtiva('inqueritos')}
+        />
       )}
     </Box>
   );

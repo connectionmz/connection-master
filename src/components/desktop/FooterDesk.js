@@ -21,9 +21,8 @@ const FooterDesk = () => {
             </Link>
             |
             <Link href="/verificacao" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
-              Verificacao
+            Verificação
             </Link>
-            |
             <Box>
               <IconButton href="https://www.facebook.com/profile.php?id=61557475474340" target="_blank" sx={{ color: "#3b5998", marginRight: 2 }}>
                 <Facebook />
