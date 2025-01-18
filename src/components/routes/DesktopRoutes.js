@@ -43,6 +43,7 @@ import ProductDetailsDesk from '../market/ProductDetailsDesk';
 import SendMail from '../sms/SendMail';
 import Sobre from '../Sobre';
 import SurveyPageDesk from '../desktop/SurveyPageDesk';
+import DestacarModule from '../desktop/DestacarModule';
 
 
 const theme = createTheme({
@@ -113,7 +114,6 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk />} />
         <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk />} />
 
-
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
         <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
@@ -139,6 +139,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/inquerito/:surveyId" element={<SurveyPageDesk user={user}/>} />
         <Route path="/painel" element={<PortalDesk user={user}/>} />
         <Route path="/sendmail" element={<SendMail user={user}/>} />
+        <Route path="/destacar" element={<DestacarModule user={user}/>} />
         
 
 

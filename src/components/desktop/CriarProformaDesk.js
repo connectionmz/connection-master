@@ -17,8 +17,8 @@ const CriarProformaDesk = ({ user }) => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const [clientes, setClientes] = useState([]);
-    const [produtos, setProdutos] = useState([]);  // Produtos da loja
-    const [selectedProduto, setSelectedProduto] = useState(null);  // Produto selecionado
+    const [produtos, setProdutos] = useState([]);  
+    const [selectedProduto, setSelectedProduto] = useState(null);  
     const [isAddingCliente, setIsAddingCliente] = useState(false); 
     const [openModal, setOpenModal] = useState(false);
     const [novoCliente, setNovoCliente] = useState({
@@ -33,7 +33,7 @@ const CriarProformaDesk = ({ user }) => {
 
     useEffect(() => {
         fetchClientes();
-        fetchProdutos();  // Busca produtos ao carregar o componente
+        fetchProdutos();  
     }, []);
 
     const fetchClientes = async () => {
@@ -50,7 +50,7 @@ const CriarProformaDesk = ({ user }) => {
         const snapshot = await get(produtosRef);
         const data = snapshot.val();
         if (data) {
-            setProdutos(Object.values(data));  // Armazena produtos na lista
+            setProdutos(Object.values(data)); 
         }
     };
 
@@ -63,12 +63,12 @@ const CriarProformaDesk = ({ user }) => {
         }
 
         const item = {
-            descricao: selectedProduto.nome,
+            descricao: selectedProduto.name,
             quantidade: 1,
-            preco: selectedProduto.preco,
+            preco: selectedProduto.price,
         };
-        setItens([...itens, item]);  // Adiciona o produto como item
-        setSelectedProduto(null);  // Limpa a seleção do produto
+        setItens([...itens, item]);  
+        setSelectedProduto(null);  
     };
 
     const handleAddItem = () => {
@@ -168,11 +168,11 @@ const CriarProformaDesk = ({ user }) => {
     };
 
     const handleOpenModal = () => {
-    setOpenModal(true);  // Abre o modal
+    setOpenModal(true);  
 };
 
 const handleCloseModal = () => {
-    setOpenModal(false);  // Fecha o modal
+    setOpenModal(false); 
 };
 
 
@@ -197,9 +197,8 @@ const handleCloseModal = () => {
                             ))}
                         </select>
                         <Button onClick={handleOpenModal} variant="contained" color="primary">
-    Cliente +
-</Button>
-
+                            Cliente +
+                        </Button>
                     </div>
                 </div>
 
@@ -237,7 +236,7 @@ const handleCloseModal = () => {
                         <MenuItem value="">Selecione um produto</MenuItem>
                         {produtos.map((produto) => (
                             <MenuItem key={produto.id} value={produto}>
-                                {produto.nome} - {produto.preco} MZN
+                                {produto.name} - {produto.price} MZN
                             </MenuItem>
                         ))}
                     </Select>
@@ -393,9 +392,8 @@ const handleCloseModal = () => {
         >
             Salvar
         </Button>
-    </DialogActions>
-</Dialog>
-
+        </DialogActions>
+    </Dialog>
             <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={handleCloseSnackbar}>
                 <MuiAlert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
                     {snackbarMessage}
