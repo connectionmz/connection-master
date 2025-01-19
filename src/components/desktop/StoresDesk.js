@@ -15,7 +15,6 @@ import {
   Avatar,
 } from "@mui/material";
 
-// Função para embaralhar arrays
 const shuffleArray = (array) => {
   return array
     .map((item) => ({ item, sort: Math.random() }))
@@ -139,117 +138,123 @@ const StoresDesk = () => {
         </Box>
       ) : (
         <Grid container spacing={4}>
-          {filteredStores.length > 0 ? (
-            // Combine produtos de todas as lojas em uma única lista e embaralhe
-            shuffleArray(
-              filteredStores.flatMap((store) =>
-                store.products
-                  ? Object.entries(store.products).map(([productId, product]) => ({
-                      ...product,
-                      storeName: store.name, // Adiciona o nome da loja
-                      storeId: store.id, // Adiciona o ID da loja
-                      id: productId,
-                    }))
-                  : []
-              )
-            ).map((product) => (
-              <Grid item xs={12} sm={6} md={4} key={product.id}>
-                <Card
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    boxShadow: 4,
-                    transition: "transform 0.3s, box-shadow 0.3s",
-                    "&:hover": {
-                      transform: "scale(1.05)",
-                      boxShadow: 6,
-                    },
-                  }}
-                >
-                  <CardActionArea
-                    sx={{ display: "flex", flexDirection: "column", flexGrow: 1 }}
-                  >
-                    <Link to={`/product/${product.id}/store/${product.storeId}`}>
-                      {/* Imagem com tamanho uniforme */}
-                      <Box
-                        sx={{
-                          width: "100%",
-                          height: 180, // Altura fixa
-                          overflow: "hidden",
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          backgroundColor: "#f5f5f5",
-                        }}
-                      >
-                        <CardMedia
-                          component="img"
-                          image={product.imageUrl || "https://via.placeholder.com/180"}
-                          alt={product.name}
-                          sx={{
-                            width: "auto",
-                            height: "100%", // Adapta proporcionalmente à altura definida
-                            objectFit: "contain",
-                          }}
-                        />
-                      </Box>
-
-                      {/* Conteúdo do Card */}
-                      <CardContent
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          flexGrow: 1,
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            fontWeight: "bold",
-                            textAlign: "center",
-                            mb: 1,
-                          }}
-                        >
-                          {product.name}
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            color: "#ff5722",
-                            textAlign: "center",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {`${product.price} Mt`}
-                        </Typography>
-                        {/* Nome da loja */}
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: "gray",
-                            textAlign: "center",
-                            mt: 1,
-                          }}
-                        >
-                          {product.storeName}
-                        </Typography>
-                      </CardContent>
-                    </Link>
-                  </CardActionArea>
-                </Card>
-              </Grid>
-            ))
-          ) : (
-            <Typography
-              variant="body2"
-              sx={{ color: "gray", textAlign: "center", width: "100%" }}
+  {filteredStores.length > 0 ? (
+    // Combine produtos de todas as lojas em uma única lista e embaralhe
+    shuffleArray(
+      filteredStores.flatMap((store) =>
+        store.products
+          ? Object.entries(store.products).map(([productId, product]) => ({
+              ...product,
+              storeName: store.name, // Adiciona o nome da loja
+              storeId: store.id, // Adiciona o ID da loja
+              id: productId,
+            }))
+          : []
+      )
+    ).map((product) => (
+      <Grid item xs={12} sm={6} md={4} key={product.id}>
+        <Card
+          sx={{
+            height: 280, // Altura total reduzida
+            boxShadow: 4,
+            transition: "transform 0.2s, box-shadow 0.2s",
+            "&:hover": {
+              transform: "scale(1.03)", // Menor escala de aumento
+              boxShadow: 6,
+            },
+          }}
+        >
+          <CardActionArea
+            sx={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+            }}
+            component={Link}
+            to={`/product/${product.id}/store/${product.storeId}`}
+          >
+            {/* Imagem com altura fixa */}
+            <Box
+              sx={{
+                width: "100%",
+                height: 150, // Altura menor
+                overflow: "hidden",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "#f5f5f5",
+              }}
             >
-              Nenhum produto encontrado.
-            </Typography>
-          )}
-        </Grid>
+              <CardMedia
+                component="img"
+                image={product.imageUrl || "https://via.placeholder.com/150"}
+                alt={product.name}
+                sx={{
+                  width: "auto",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            </Box>
+
+            {/* Conteúdo do Card */}
+            <CardContent
+              sx={{
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                padding: 1, // Margem reduzida
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: "bold",
+                  fontSize: "1rem", // Reduz tamanho da fonte
+                  textAlign: "center",
+                  mb: 0.5,
+                }}
+              >
+                {product.name}
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "#ff5722",
+                  textAlign: "center",
+                  fontWeight: "bold",
+                  fontSize: "0.875rem", // Reduz tamanho da fonte
+                }}
+              >
+                {`${product.price} Mt`}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "gray",
+                  textAlign: "center",
+                  mt: 0.5,
+                  fontSize: "0.75rem", // Reduz tamanho da fonte
+                }}
+              >
+                {product.storeName}
+              </Typography>
+            </CardContent>
+          </CardActionArea>
+        </Card>
+      </Grid>
+    ))
+  ) : (
+    <Typography
+      variant="body2"
+      sx={{ color: "gray", textAlign: "center", width: "100%" }}
+    >
+      Nenhum produto encontrado.
+    </Typography>
+  )}
+</Grid>
+
       )}
     </Box>
   );

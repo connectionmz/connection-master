@@ -44,6 +44,8 @@ import SendMail from '../sms/SendMail';
 import Sobre from '../Sobre';
 import SurveyPageDesk from '../desktop/SurveyPageDesk';
 import DestacarModule from '../desktop/DestacarModule';
+import EmailVerification from '../EmailVerification';
+import CompanyVerificationNotice from '../CompanyVerificationNotice';
 
 
 const theme = createTheme({
@@ -78,6 +80,17 @@ const DesktopRoutes = ({ user }) => {
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
+
+  if (user?.subscriptions?.isverity) {
+    // Use Navigate para redirecionar ou encapsule o Route em Routes
+    return (
+      <Routes>
+        <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
+        <Route path="*" element={<Navigate to="/verify" />} />
+      </Routes>
+    );
+  }
+
   return (
     <div
       style={{
@@ -105,6 +118,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/inbox" element={<InboxDesk />} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
         <Route path="/sobre" element={<Sobre />} />
+        <Route path="/email-verification" element={<EmailVerification />} />
 
         <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
         <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
@@ -149,7 +163,6 @@ const DesktopRoutes = ({ user }) => {
         </Routes>
         </div>
         <FooterDesk/>
-        {/* Floating Language Switch Button */}
         <Fab
           color="primary"
           aria-label="change language"
@@ -162,13 +175,10 @@ const DesktopRoutes = ({ user }) => {
         >
           <LanguageIcon />
         </Fab>
-
-        {/* Language Menu */}
         <Menu
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-        >
+          onClose={handleMenuClose}>
           <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
           <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
           <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>

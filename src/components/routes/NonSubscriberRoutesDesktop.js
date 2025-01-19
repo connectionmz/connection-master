@@ -14,6 +14,7 @@ import AuthDesk from '../AuthDesk';
 import AuthCreateDesk from '../AuthCreateDesk';
 import ForgetPasswordDesk from '../password/ForgetPasswordDesk';
 import CompanyDataFormDesk from '../CompanyDataFormDesk';
+import EmailVerification from '../EmailVerification';
 
 const NonSubscriberRoutesDesktop  = ({ userDb }) => {
   const [user, setUser] = useState(null); 
@@ -38,7 +39,7 @@ const NonSubscriberRoutesDesktop  = ({ userDb }) => {
 
   const isVerified = userDb;
 
-  console.log(user)
+  console.log(userDb)
 
   return (
     <Routes>
@@ -55,6 +56,7 @@ const NonSubscriberRoutesDesktop  = ({ userDb }) => {
       ) : (
         <Route path="/" element={<AuthDesk user={user} />} />
       )}
+      <Route path="/email-verification" element={<EmailVerification user={user} />} />
       <Route path="/auth" element={<AuthDesk user={user} />} />
       <Route path="/create" element={<AuthCreateDesk user={user} />} />
       <Route path="/setup" element={<CompanyDataFormDesk />} />

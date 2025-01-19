@@ -9,8 +9,10 @@ const CompanyDataForm = () => {
 
   const [companyData, setCompanyData] = useState({
     nome: '',
-    sigla: '', // Novo campo para Sigla
+    sigla: '', 
     nuit: '',
+    nuel:'',
+    nrContriuinte:'',
     contacto: '',
     endereco: '',
     provincia: '',
@@ -191,7 +193,32 @@ const CompanyDataForm = () => {
                 className={inputStyles}
               />
             </div>
+
             <div className="form-group">
+              <label htmlFor="Nuel" className="block text-sm font-medium text-gray-600">Nuel</label>
+              <input 
+                type="text" 
+                id="Nuel" 
+                name="Nuel" 
+                value={companyData.nuel} 
+                onChange={handleChange} 
+                required 
+                className={inputStyles}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="nrContriuinte" className="block text-sm font-medium text-gray-600">Nr de Contriuinte</label>
+              <input 
+                type="text" 
+                id="nrContriuinte" 
+                name="nrContriuinte" 
+                value={companyData.nrContriuinte} 
+                onChange={handleChange} 
+                required 
+                className={inputStyles}
+              />
+            </div>
+              <div className="form-group">
               <label htmlFor="contacto" className="block text-sm font-medium text-gray-600">Contacto</label>
               <input 
                 type="text" 

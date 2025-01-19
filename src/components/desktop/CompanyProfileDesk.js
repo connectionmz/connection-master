@@ -1,23 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Avatar,
     Box,
+    Typography,
+    Avatar,
+    Grid,
+    Tabs,
+    Tab,
     Button,
     Card,
     CardContent,
     CardMedia,
+    Link,
     CircularProgress,
-    Grid,
-    Tab,
-    Tabs,
-    Typography,
-    IconButton,
-    Container,
 } from '@mui/material';
-import { Twitter, Instagram, LinkedIn, Phone, Store, RequestQuote } from '@mui/icons-material';
+import {
+    Store,
+    RequestQuote,
+    Phone,
+    Twitter,
+    Instagram,
+    LinkedIn,
+} from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push } from 'firebase/database';
-import { auth, db } from '../../fb';
+import { auth, db } from '../../fb'; 
 import PostGallery from '../PostGallery';
 
 const CompanyProfileDesk = ({ user }) => {
@@ -31,19 +37,18 @@ const CompanyProfileDesk = ({ user }) => {
     const [cotacoes, setCotacoes] = useState([]);
     const [modules, setModules] = useState({});
     const [smsLimit, setSmsLimit] = useState(0);
-    const userId = id;
     const [posts, setPosts] = useState([]);
     const [visits, setVisits] = useState([]);
 
     useEffect(() => {
-        if (userId) {
+        if (id) {
             const fetchData = async () => {
                 try {
-                    const companyRef = ref(db, `company/${userId}`);
-                    const socialRef = ref(db, `company/${userId}/social`);
-                    const postsRef = ref(db, `company/${userId}/publishedPhotos`);
+                    const companyRef = ref(db, `company/${id}`);
+                    const socialRef = ref(db, `company/${id}/social`);
+                    const postsRef = ref(db, `company/${id}/publishedPhotos`);
                     const cotacoesRef = ref(db, `cotacoes`);
-                    const visitasRef = ref(db, `company/${userId}/visitas`);
+                    const visitasRef = ref(db, `company/${id}/visitas`);
 
                     const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot, visitasSnapshot] = await Promise.all([
                         get(companyRef),
@@ -83,12 +88,10 @@ const CompanyProfileDesk = ({ user }) => {
                     }
                     if (cotacoesSnapshot.exists()) {
                         const cotacoesData = cotacoesSnapshot.val();
-                        const userCotacoes = Object.keys(cotacoesData).filter(
-                            (key) =>
-                                cotacoesData[key].company &&
-                                cotacoesData[key].company.id === userId
+                        const userCotacoes = Object.keys(cotacoesData).filter(key =>
+                            cotacoesData[key].company && cotacoesData[key].company.id === id
                         );
-                        setCotacoes(userCotacoes.map((key) => cotacoesData[key]));
+                        setCotacoes(userCotacoes.map(key => cotacoesData[key]));
                     }
                     if (visitasSnapshot.exists()) {
                         setVisits(Object.values(visitasSnapshot.val()));
@@ -105,80 +108,107 @@ const CompanyProfileDesk = ({ user }) => {
         } else {
             navigate('/auth');
         }
-    }, [userId, navigate, user]);
+    }, [id, navigate, user]);
 
-    const handleTabChange = (event, newValue) => {
-        setActiveTab(newValue);
+    const renderContent = () => {
+        switch (activeTab) {
+            case 0:
+                return (
+                    <Box>
+                        {userData?.missaoVisaoValores ? (
+                            <Typography variant="body1" dangerouslySetInnerHTML={{ __html: userData.missaoVisaoValores }} />
+                        ) : (
+                            <Typography variant="body2">Não informada</Typography>
+                        )}
+                    </Box>
+                );
+            case 1:
+                return (
+                    <PostGallery posts={posts} />
+                );
+            case 2:
+                return (
+                    <Grid container spacing={2}>
+                        {cotacoes.length > 0 ? (
+                            cotacoes.map((cotacao) => (
+                                <Grid item xs={12} sm={6} md={4} key={cotacao.id}>
+                                    <Card>
+                                        <CardContent>
+                                            <Typography variant="h6">{cotacao.title}</Typography>
+                                            <Typography variant="body2">{cotacao.description}</Typography>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ))
+                        ) : (
+                            <Typography variant="body2" color="textSecondary">Nenhuma cotação publicada.</Typography>
+                        )}
+                    </Grid>
+                );
+            case 3:
+                return (
+                    <Box>
+                        <Typography variant="h6">Sobre</Typography>
+                        <Typography variant="body2">Endereço: {mCompany?.endereco || 'Não informado'}</Typography>
+                        <Typography variant="body2">Província: {mCompany?.provincia || 'Não informado'}</Typography>
+                        <Typography variant="body2">Capacidade de Produção: {mCompany?.capacidadeDeProducao || 'Não informado'}</Typography>
+                        <Typography variant="body2">Email: {mCompany?.email || 'Não informado'}</Typography>
+                        <Typography variant="body2">Contacto: {mCompany?.contacto || 'Não informado'}</Typography>
+                    </Box>
+                );
+            default:
+                return null;
+        }
     };
 
     if (loading) {
-        return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-                <CircularProgress />
-            </Box>
-        );
+        return <CircularProgress />;
     }
 
     return (
-        <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
-      <Container maxWidth="lg" sx={{ mt: 8 }}>
-            <Card>
-                <CardMedia
-                    component="img"
-                    height="200"
-                    image={userData?.coverPhotoURL}
-                    alt="Cover"
-                />
-                <Box display="flex" justifyContent="center" mt={-8}>
-                    <Avatar
-                        src={userData?.photoURL}
-                        alt="Profile"
-                        sx={{ width: 128, height: 128, border: '4px solid white' }}
-                    />
-                </Box>
-                <CardContent>
-                    <Typography variant="h5" align="center">
-                        {userData?.displayName}
-                    </Typography>
-                    <Typography variant="body1" align="center" color="textSecondary">
-                        {userData?.bio || 'Biografia não informada'}
-                    </Typography>
-                </CardContent>
-            </Card>
+<Box >
+  <CardMedia
+    component="img"
+    height="200"
+    image={userData?.coverPhotoURL || 'https://via.placeholder.com/600x400.png'}
+    alt="Cover"
+    sx={{
+      width: '100%', 
+      objectFit: 'cover', 
+      maxHeight: '400px', 
+    }}
+  />
 
-            <Tabs value={activeTab} onChange={handleTabChange} centered>
-                <Tab label="Início" />
-                <Tab label="Sobre" />
-                <Tab label="Publicações" />
-                <Tab label="Cotações" />
-            </Tabs>
+  <Box display="flex" alignItems="center" p={2}>
+    <Avatar
+      src={userData?.photoURL}
+      alt="Profile"
+      sx={{
+        width: 100,
+        height: 100,
+        border: '3px solid white',
+        marginRight: 2,
+        objectFit: 'cover', 
+      }}
+    />
+    <Box>
+      <Typography variant="h5">{userData?.displayName}</Typography>
+      <Typography variant="body2">{userData?.bio}</Typography>
+    </Box>
+  </Box>
 
-            <Box p={3}>
-                {activeTab === 0 && (
-                    <Typography variant="body1">Conteúdo de Início</Typography>
-                )}
-                {activeTab === 1 && (
-                    <Typography variant="body1">Informações Sobre a Empresa</Typography>
-                )}
-                {activeTab === 2 && <PostGallery posts={posts} />}
-                {activeTab === 3 && (
-                    <Grid container spacing={2}>
-                        {cotacoes.map((cotacao) => (
-                            <Grid item xs={12} md={6} key={cotacao.id}>
-                                <Card>
-                                    <CardContent>
-                                        <Typography variant="h6">
-                                            {cotacao.title}
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        ))}
-                    </Grid>
-                )}
-            </Box>
-            </Container>
-        </Box>
+  <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} centered>
+    <Tab label="Início" />
+    <Tab label="Publicações" />
+    <Tab label="Cotações" />
+    <Tab label="Sobre" />
+  </Tabs>
+
+  <Box p={3}>
+    {renderContent()}
+  </Box>
+</Box>
+
     );
 };
 

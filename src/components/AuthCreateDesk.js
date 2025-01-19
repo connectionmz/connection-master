@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Google, Facebook, Apple, Email } from '@mui/icons-material';
 import { auth, googleProvider, facebookProvider, appleProvider, db } from '../fb';
-import { signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import logo from '../img/bg.png';
-import marketing from '../img/marketing.jpg'
+import marketing from '../img/marketing.jpg';
 
 import { Snackbar, Alert, TextField, Button, Checkbox, FormControlLabel, Grid, Box } from '@mui/material';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
@@ -15,6 +15,7 @@ const AuthCreateDesk = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState(''); // Mensagem de sucesso
   const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
@@ -29,48 +30,10 @@ const AuthCreateDesk = () => {
       country: 'Unknown',
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
+      emailVerified: user.emailVerified, // Armazena o estado da verificação
     };
 
     await set(userRef, userData);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await saveUserData(result.user);
-      navigate('/');
-    } catch (error) {
-      setErrorMessage('Erro ao fazer login com Google: ' + error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFacebookSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const result = await signInWithPopup(auth, facebookProvider);
-      await saveUserData(result.user);
-      navigate('/');
-    } catch (error) {
-      setErrorMessage('Erro ao fazer login com Facebook: ' + error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const result = await signInWithPopup(auth, appleProvider);
-      await saveUserData(result.user);
-      navigate('/');
-    } catch (error) {
-      setErrorMessage('Erro ao fazer login com Apple: ' + error.message);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleEmailSignIn = async (e) => {
@@ -83,8 +46,15 @@ const AuthCreateDesk = () => {
     setErrorMessage('');
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(result.user); // Envia o email de verificação
       await saveUserData(result.user);
-      navigate('/');
+
+      setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
+      setEmail('');
+      setPassword('');
+      setTermsAccepted(false);
+      window.location='/email-verification'; // Após enviar o email de verificação
+
     } catch (error) {
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);
       setErrorMessage(userFriendlyMessage);
@@ -104,9 +74,17 @@ const AuthCreateDesk = () => {
           </div>
 
           {errorMessage && (
-            <Snackbar open={true} autoHideDuration={6000}>
+            <Snackbar open={true} autoHideDuration={6000} onClose={() => setErrorMessage('')}>
               <Alert severity="error" sx={{ width: '100%' }}>
                 {errorMessage}
+              </Alert>
+            </Snackbar>
+          )}
+
+          {successMessage && (
+            <Snackbar open={true} autoHideDuration={6000} onClose={() => setSuccessMessage('')}>
+              <Alert severity="success" sx={{ width: '100%' }}>
+                {successMessage}
               </Alert>
             </Snackbar>
           )}

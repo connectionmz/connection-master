@@ -27,11 +27,15 @@ const ExploreDesk = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
+  const [selectedSubsector, setSelectedSubsector] = useState(''); // Novo filtro
   const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState(''); // Novo filtro
   const [selectedTipoEntidade, setSelectedTipoEntidade] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [provincias, setProvincias] = useState([]);
   const [sectores, setSectores] = useState([]);
+  const [subsectores, setSubsectores] = useState([]); // Novo estado
+  const [distritos, setDistritos] = useState([]); // Novo estado
   const [tiposEntidades, setTiposEntidades] = useState([]);
 
   const navigate = useNavigate();
@@ -65,6 +69,14 @@ const ExploreDesk = () => {
       setSectores(snapshot.val() || []);
     });
 
+    onValue(ref(db, 'subsectores'), (snapshot) => {
+      setSubsectores(snapshot.val() || []);
+    });
+
+    onValue(ref(db, 'distritos'), (snapshot) => {
+      setDistritos(snapshot.val() || []);
+    });
+
     onValue(ref(db, 'tipos_entidades'), (snapshot) => {
       setTiposEntidades(snapshot.val() || []);
     });
@@ -76,9 +88,11 @@ const ExploreDesk = () => {
     .filter((company) => {
       const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesSector = selectedSector ? company.sector === selectedSector : true;
+      const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
       const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
+      const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
       const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
-      return matchesSearch && matchesSector && matchesProvince && matchesTipoEntidade;
+      return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }));
 
@@ -123,6 +137,7 @@ const ExploreDesk = () => {
         </Button>
       </Box>
 
+      {/* Modal de Filtros */}
       <Dialog open={isModalOpen} onClose={closeModal} maxWidth="sm" fullWidth>
         <DialogTitle>Filtros</DialogTitle>
         <DialogContent>
@@ -142,6 +157,19 @@ const ExploreDesk = () => {
             </TextField>
             <TextField
               select
+              label="Subsector"
+              value={selectedSubsector}
+              onChange={(e) => setSelectedSubsector(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {subsectores.map((sub) => (
+                <MenuItem key={sub.subsetor} value={sub.subsetor}>
+                  {sub.subsetor}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
               label="Província"
               value={selectedProvince}
               onChange={(e) => setSelectedProvince(e.target.value)}
@@ -150,6 +178,19 @@ const ExploreDesk = () => {
               {provincias.map((prov) => (
                 <MenuItem key={prov.provincia} value={prov.provincia}>
                   {prov.provincia}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Distrito"
+              value={selectedDistrict}
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {distritos.map((d) => (
+                <MenuItem key={d.distrito} value={d.distrito}>
+                  {d.distrito}
                 </MenuItem>
               ))}
             </TextField>
@@ -176,19 +217,20 @@ const ExploreDesk = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Lista de Empresas */}
       <Grid container spacing={4}>
         {filteredCompanies.map((company) => (
           <Grid item xs={12} sm={6} md={4} key={company.id}>
             <Card onClick={() => handleCompanyClick(company.id)} sx={{ cursor: 'pointer' }}>
-            <Box
+              <Box
                 sx={{
-                  width: '100%', // Largura do contêiner
-                  height: '140px', // Altura fixa
-                  display: 'flex', // Ativa flexbox
-                  justifyContent: 'center', // Centraliza horizontalmente
-                  alignItems: 'center', // Centraliza verticalmente
-                  backgroundColor: '#f5f5f5', // Fundo cinza claro
-                  overflow: 'hidden', // Oculta qualquer conteúdo fora do limite
+                  width: '100%',
+                  height: '140px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#f5f5f5',
+                  overflow: 'hidden',
                 }}
               >
                 <CardMedia
@@ -196,9 +238,9 @@ const ExploreDesk = () => {
                   image={company.logoUrl || defaultLogoUrl}
                   alt={`${company.nome} logo`}
                   sx={{
-                    width: 'auto', // Ajusta a largura proporcionalmente
-                    height: '100%', // Preenche a altura do contêiner
-                    objectFit: 'contain', // Garante que a imagem caiba no espaço sem distorção
+                    width: 'auto',
+                    height: '100%',
+                    objectFit: 'contain',
                   }}
                 />
               </Box>

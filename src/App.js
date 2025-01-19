@@ -34,6 +34,7 @@ const App = () => {
           endereco: data.endereco || 'Endereço não informado',
         });
         setSubscriptionActive(data.subscriptions?.status || false);
+        
       } else {
         setSubscriptionActive(false);
       }

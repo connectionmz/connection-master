@@ -100,7 +100,7 @@ const Dashboard = ({ user }) => {
 
   return (
     <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
-      <Container maxWidth="lg" sx={{ mt: 8 }}>
+      <Container >
         <MarqueeParceiros />
         <StorieList user={user.provincia} />
         <MarqueeAnuncios />

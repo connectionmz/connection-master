@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom'; 
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom'; 
 import Home from '../Home';
 import Auth from '../Auth';
 import AuthCreate from '../AuthCreate';
@@ -44,84 +44,94 @@ import ConnectionsSearch from '../ConnectionsSearch';
 import CreateUsers from '../CreateUsers';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
-import VerifyCompany from '../VerifyCompany';
 import PagamentoModulo from '../PagamentoModulo';
 import Noticiados from '../Noticiados';
 import ProductDetails from '../ProductDetails';
-import DashboardComponent from '../Dashboard';
+import CompanyVerificationNotice from '../CompanyVerificationNotice';
 
-const UserRoutes = ({ user }) => (
-  <Routes>
-  <Route path="/createUsers" element={<CreateUsers/>} />
-  {/* Home */}
-  <Route path="/" element={<Home user={user} />} />
-  <Route path="/setup" element={<Home user={user} />} />
-  
-  {/* Autenticação */}
-  <Route path="/auth" element={<Auth user={user} />} />
-  <Route path="/create" element={<AuthCreate user={user} />} />
-  <Route path="/forget-password" element={<ForgetPassword />} />
-  <Route path="/change-password" element={<ChangePassword user={user} />} />
-  <Route path="/verify" element={<VerifyCompany user={user} />} />
+const UserRoutes = ({ user }) => {
+  if (user?.subscriptions?.isverity) {
+    console.log(user?.subscriptions?.isverity);
+    // Use Navigate para redirecionar ou encapsule o Route em Routes
+    return (
+      <Routes>
+        <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
+        <Route path="*" element={<Navigate to="/verify" />} />
+      </Routes>
+    );
+  }
 
-  {/* Cotação */}
-  <Route path="/cotacao" element={<Cotacoes user={user}/>} />
-  <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhes />} />
-  <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
-  <Route path="/publicar-cotacao" element={<PublicarCotacao user={user} />} />
-  <Route path="/proposta/:id/:cotId" element={<Proposal />} />
-  <Route path="/enviar-proposta/:id/:companyId" element={<EnviarProposta user={user} />} />
-  <Route path="/propostas/:id/propostas" element={<Propostas />} />
-  <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesProposta />} />
+  return (
+    <Routes>
+      <Route path="/createUsers" element={<CreateUsers />} />
+      {/* Home */}
+      <Route path="/" element={<Home />} />
+      <Route path="/setup" element={<Home user={user} />} />
 
-  {/* Concursos */}
-  <Route path="/concurso" element={<Concurso user={user}/>} />
-  <Route path="/publicar-concurso" element={<PublicarConcurso user={user} />} />
-  <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhes />} />
+      {/* Autenticação */}
+      <Route path="/auth" element={<Auth user={user} />} />
+      <Route path="/create" element={<AuthCreate user={user} />} />
+      <Route path="/forget-password" element={<ForgetPassword />} />
+      <Route path="/change-password" element={<ChangePassword user={user} />} />
 
-  {/* Mercado e Produtos */}
-  <Route path="/market" element={<Market user={user} />} />
-  <Route path="/stores" element={<Stores user={user}/>} />
-  <Route path="/stores/:storeId" element={<StoreDetails />} />
-  <Route path="/addProduct/:storeId" element={<ProductForm user={user} />} />
-  <Route path="/servicos/:categoriaId" element={<ListaDeServicos />} />
-  <Route path="/product/:productId/store/:store" element={<ProductDetails />} />
+      {/* Cotação */}
+      <Route path="/cotacao" element={<Cotacoes user={user} />} />
+      <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhes />} />
+      <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
+      <Route path="/publicar-cotacao" element={<PublicarCotacao user={user} />} />
+      <Route path="/proposta/:id/:cotId" element={<Proposal />} />
+      <Route path="/enviar-proposta/:id/:companyId" element={<EnviarProposta user={user} />} />
+      <Route path="/propostas/:id/propostas" element={<Propostas />} />
+      <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesProposta />} />
 
-  {/* Campanha e Posts */}
-  <Route path="/campaign" element={<Campaign />} />
-  <Route path="/post" element={<PostInput user={user?.id} />} />
-  <Route path="/anunciar" element={<Anunciar user={user} />} />
+      {/* Concursos */}
+      <Route path="/concurso" element={<Concurso user={user} />} />
+      <Route path="/publicar-concurso" element={<PublicarConcurso user={user} />} />
+      <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhes />} />
 
-  {/* Perfil */}
-  <Route path="/profile" element={<Profile />} />
-  <Route path="/editar-perfil" element={<EditProfile user={user} />} />
-  <Route path="/vperfil/:id" element={<CompanyProfile user={user} />} />
+      {/* Mercado e Produtos */}
+      <Route path="/market" element={<Market user={user} />} />
+      <Route path="/stores" element={<Stores user={user} />} />
+      <Route path="/stores/:storeId" element={<StoreDetails />} />
+      <Route path="/addProduct/:storeId" element={<ProductForm user={user} />} />
+      <Route path="/servicos/:categoriaId" element={<ListaDeServicos />} />
+      <Route path="/product/:productId/store/:store" element={<ProductDetails />} />
 
-  {/* Faturação e Proforma */}
-  <Route path="/faturacao" element={<Faturacao user={user} />} />
-  <Route path="/proforma" element={<CriarProforma user={user} />} />
-  <Route path="/proforma/:numeroProforma" element={<Fatura user={user} />} />
-  <Route path="/faturas/:id" element={<Fatura user={user} />} />
+      {/* Campanha e Posts */}
+      <Route path="/campaign" element={<Campaign />} />
+      <Route path="/post" element={<PostInput user={user?.id} />} />
+      <Route path="/anunciar" element={<Anunciar user={user} />} />
 
-  {/* Módulos */}
-  <Route path="/callcenter" element={<CallCenterModule />} />
-  <Route path="/logistica" element={<LogisticaModule />} />
-  <Route path="/inqueritos" element={<InqueritosModule user={user}/>} />
-  <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
+      {/* Perfil */}
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/editar-perfil" element={<EditProfile user={user} />} />
+      <Route path="/vperfil/:id" element={<CompanyProfile user={user} />} />
 
-  {/* Outros */}
-  <Route path="/search" element={<ConnectionsSearch />} />
-  <Route path="/explore" element={<Explore user={user.provincia} />} />
- {/*  <Route path="/sms" element={<Sms user={user}/>} /> */}
-  <Route path="/feed" element={<Feed />} />
-  <Route path="/apx" element={<Apx  user={user} />} />
-  <Route path="/rfq" element={<Teste />} />
-  <Route path="/terms" element={<Terms />} />
-  <Route path="/inbox" element={<Inbox />} />
-  <Route path="/analytics" element={<Analytics />} />
-  <Route path="/noticiados" element={<Noticiados />} />
-  <Route path="/createUsers" element={<CreateUsers />} />
-  <Route path="*" element={<Navigate to="/" />} />
-  </Routes>
-)
-export default UserRoutes
+      {/* Faturação e Proforma */}
+      <Route path="/faturacao" element={<Faturacao user={user} />} />
+      <Route path="/proforma" element={<CriarProforma user={user} />} />
+      <Route path="/proforma/:numeroProforma" element={<Fatura user={user} />} />
+      <Route path="/faturas/:id" element={<Fatura user={user} />} />
+
+      {/* Módulos */}
+      <Route path="/callcenter" element={<CallCenterModule />} />
+      <Route path="/logistica" element={<LogisticaModule />} />
+      <Route path="/inqueritos" element={<InqueritosModule user={user} />} />
+      <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
+
+      {/* Outros */}
+      <Route path="/search" element={<ConnectionsSearch />} />
+      <Route path="/explore" element={<Explore user={user?.provincia} />} />
+      <Route path="/feed" element={<Feed />} />
+      <Route path="/apx" element={<Apx user={user} />} />
+      <Route path="/rfq" element={<Teste />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/inbox" element={<Inbox />} />
+      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/noticiados" element={<Noticiados />} />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+};
+
+export default UserRoutes;
