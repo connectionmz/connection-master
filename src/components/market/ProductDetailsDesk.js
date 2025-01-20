@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";  // Importar useNavigate
 import { ref, get } from "firebase/database";
 import { db } from "../../fb";
 import {
@@ -18,6 +18,7 @@ import BackButton from "../BackButton";
 
 const ProductDetailsDesk = () => {
   const { productId, store } = useParams();
+  const navigate = useNavigate();  // Usar useNavigate para navegação
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -53,17 +54,20 @@ const ProductDetailsDesk = () => {
   };
 
   const handlePayment = () => {
-    if (product) {
-      const total = product.price * quantity;
-      const iva = (total * IVA_PERCENTAGE) / 100;
-      const totalWithIva = total + iva;
-      alert(
-        `Pagamento iniciado para ${quantity} x ${product.name}. Valor: ${totalWithIva.toFixed(
-          2
-        )} MT (incluindo ${iva.toFixed(2)} MT de IVA).`
-      );
-    }
+    const total = product.price * quantity;
+    const iva = (total * IVA_PERCENTAGE) / 100;
+    const totalWithIva = total + iva;
+  
+    navigate('/checkout', {
+      state: {
+        product: {
+          name: product.name,
+          priceWithIVA: totalWithIva, // Preço com IVA
+        },
+      },
+    });
   };
+  
 
   if (loading) {
     return (
@@ -94,7 +98,8 @@ const ProductDetailsDesk = () => {
             component="img"
             height="400"
             image={product.imageUrl}
-            alt={product.name}/>
+            alt={product.name}
+          />
         </Card>
         <CardContent sx={{ flex: 1 }}>
           <Typography variant="h4" gutterBottom>
@@ -117,7 +122,8 @@ const ProductDetailsDesk = () => {
               }}
               inputProps={{ min: 1 }}
               size="small"
-              sx={{ width: "80px" }}/>
+              sx={{ width: "80px" }}
+            />
           </Box>
           <Typography>Subtotal: {total.toFixed(2)} MT</Typography>
           <Typography>IVA ({IVA_PERCENTAGE}%): {iva.toFixed(2)} MT</Typography>

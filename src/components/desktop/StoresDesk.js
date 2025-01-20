@@ -147,6 +147,7 @@ const StoresDesk = () => {
               ...product,
               storeName: store.name, // Adiciona o nome da loja
               storeId: store.id, // Adiciona o ID da loja
+              logo:store.logo,
               id: productId,
             }))
           : []
@@ -196,51 +197,64 @@ const StoresDesk = () => {
                 }}
               />
             </Box>
-
-            {/* Conteúdo do Card */}
             <CardContent
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                padding: 1, // Margem reduzida
-              }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: "bold",
-                  fontSize: "1rem", // Reduz tamanho da fonte
-                  textAlign: "center",
-                  mb: 0.5,
-                }}
-              >
-                {product.name}
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{
-                  color: "#ff5722",
-                  textAlign: "center",
-                  fontWeight: "bold",
-                  fontSize: "0.875rem", // Reduz tamanho da fonte
-                }}
-              >
-                {`${product.price} Mt`}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "gray",
-                  textAlign: "center",
-                  mt: 0.5,
-                  fontSize: "0.75rem", // Reduz tamanho da fonte
-                }}
-              >
-                {product.storeName}
-              </Typography>
-            </CardContent>
+  sx={{
+    flexGrow: 1,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    padding: 1, // Margem reduzida
+  }}
+>
+  <Typography
+    variant="h6"
+    sx={{
+      fontWeight: "bold",
+      fontSize: "1rem", // Reduz tamanho da fonte
+      textAlign: "center",
+      mb: 0.5,
+    }}
+  >
+    {product.name}
+  </Typography>
+  <Typography
+    variant="body1"
+    sx={{
+      color: "#ff5722",
+      textAlign: "center",
+      fontWeight: "bold",
+      fontSize: "0.875rem", // Reduz tamanho da fonte
+    }}
+  >
+    {`${product.price} Mt`}
+  </Typography>
+  <Typography
+    variant="body2"
+    sx={{
+      color: "gray",
+      textAlign: "center",
+      mt: 0.5,
+      fontSize: "0.75rem", // Reduz tamanho da fonte
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    {/* Exibe o logotipo da loja e o nome */}
+    <img
+      src={product.logo || "https://via.placeholder.com/20"} // Adiciona fallback para URL padrão
+      alt={product.storeName}
+      style={{
+        width: "20px", // Tamanho do logotipo
+        height: "20px",
+        marginRight: "8px", // Espaço entre o logotipo e o nome da loja
+        borderRadius: "50%", // Torna o logotipo arredondado, se necessário
+      }}
+    />
+    {product.storeName}
+  </Typography>
+</CardContent>
+
           </CardActionArea>
         </Card>
       </Grid>

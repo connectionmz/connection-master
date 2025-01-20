@@ -46,6 +46,7 @@ import SurveyPageDesk from '../desktop/SurveyPageDesk';
 import DestacarModule from '../desktop/DestacarModule';
 import EmailVerification from '../EmailVerification';
 import CompanyVerificationNotice from '../CompanyVerificationNotice';
+import CreditCardCheckoutDesk from '../checkout/CreditCardCheckoutDesk';
 
 
 const theme = createTheme({
@@ -62,17 +63,16 @@ const theme = createTheme({
 
 
 const DesktopRoutes = ({ user }) => {
-  const [language, setLanguage] = useState('pt'); // Default language
+  const [language, setLanguage] = useState('pt'); 
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleLanguageChange = (lang) => {
-    setLanguage(lang); // Atualiza o estado local do idioma
+    setLanguage(lang); 
 
-    localStorage.setItem('selectedLanguage', lang); // Salva o idioma localmente
+    localStorage.setItem('selectedLanguage', lang); 
     console.log(`Language switched to: ${lang}`);
   };
   
-
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -81,8 +81,7 @@ const DesktopRoutes = ({ user }) => {
     setAnchorEl(null);
   };
 
-  if (user?.subscriptions?.isverity) {
-    // Use Navigate para redirecionar ou encapsule o Route em Routes
+  if (user?.subscriptions?.isverity==='false') {
     return (
       <Routes>
         <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
@@ -140,6 +139,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/stores" element={<StoresDesk user={user}/>} />
         <Route path="/stores/:storeId" element={<StoreDetailDesk />} />
         <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
+        <Route path="/checkout" element={<CreditCardCheckoutDesk user={user}/>} />
 
         {/* Campanha e Posts */}
         <Route path="/post" element={<PostInputDesk user={user?.id} />} />
