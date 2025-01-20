@@ -27,17 +27,16 @@ const ExploreDesk = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
-  const [selectedSubsector, setSelectedSubsector] = useState(''); // Novo filtro
+  const [selectedSubsector, setSelectedSubsector] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState(''); // Novo filtro
+  const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedTipoEntidade, setSelectedTipoEntidade] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [provincias, setProvincias] = useState([]);
   const [sectores, setSectores] = useState([]);
-  const [subsectores, setSubsectores] = useState([]); // Novo estado
-  const [distritos, setDistritos] = useState([]); // Novo estado
+  const [subsectores, setSubsectores] = useState([]);
+  const [distritos, setDistritos] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
-
   const navigate = useNavigate();
   const defaultLogoUrl = 'https://via.placeholder.com/150';
 
@@ -69,20 +68,28 @@ const ExploreDesk = () => {
       setSectores(snapshot.val() || []);
     });
 
-    onValue(ref(db, 'subsectores'), (snapshot) => {
-      setSubsectores(snapshot.val() || []);
-    });
-
-    onValue(ref(db, 'distritos'), (snapshot) => {
-      setDistritos(snapshot.val() || []);
-    });
-
-    onValue(ref(db, 'tipos_entidades'), (snapshot) => {
+    onValue(ref(db, 'tipos_de_entidade'), (snapshot) => {
       setTiposEntidades(snapshot.val() || []);
     });
 
     fetchCompanies();
   }, []);
+
+  const handleSectorChange = (e) => {
+    const selectedSector = e.target.value;
+    setSelectedSector(selectedSector);
+    const foundSector = sectores.find((s) => s.setor === selectedSector);
+    setSubsectores(foundSector ? foundSector.subsectores : []);
+    setSelectedSubsector('');
+  };
+
+  const handleProvinceChange = (e) => {
+    const selectedProvince = e.target.value;
+    setSelectedProvince(selectedProvince);
+    const foundProvince = provincias.find((p) => p.provincia === selectedProvince);
+    setDistritos(foundProvince ? foundProvince.distritos : []);
+    setSelectedDistrict('');
+  };
 
   const filteredCompanies = companies
     .filter((company) => {
@@ -146,7 +153,7 @@ const ExploreDesk = () => {
               select
               label="Setor"
               value={selectedSector}
-              onChange={(e) => setSelectedSector(e.target.value)}
+              onChange={handleSectorChange}
             >
               <MenuItem value="">Todos</MenuItem>
               {sectores.map((s) => (
@@ -172,7 +179,7 @@ const ExploreDesk = () => {
               select
               label="Província"
               value={selectedProvince}
-              onChange={(e) => setSelectedProvince(e.target.value)}
+              onChange={handleProvinceChange}
             >
               <MenuItem value="">Todas</MenuItem>
               {provincias.map((prov) => (
@@ -188,9 +195,9 @@ const ExploreDesk = () => {
               onChange={(e) => setSelectedDistrict(e.target.value)}
             >
               <MenuItem value="">Todos</MenuItem>
-              {distritos.map((d) => (
-                <MenuItem key={d.distrito} value={d.distrito}>
-                  {d.distrito}
+              {distritos.map((dist, index) => (
+                <MenuItem key={index} value={dist}>
+                  {dist}
                 </MenuItem>
               ))}
             </TextField>
