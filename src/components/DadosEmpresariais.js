@@ -4,8 +4,8 @@ import { getAuth } from "firebase/auth";
 
 const DadosEmpresariais = ({ user }) => {
   const [formData, setFormData] = useState({
-    nuit: "",
-    nuel: "",
+    nuit: user.nuit,
+    nuel: user.nuel,
   });
 
   const [feedback, setFeedback] = useState({ message: "", error: false });

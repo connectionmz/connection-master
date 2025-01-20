@@ -169,9 +169,9 @@ const ExploreDesk = () => {
               onChange={(e) => setSelectedSubsector(e.target.value)}
             >
               <MenuItem value="">Todos</MenuItem>
-              {subsectores.map((sub) => (
-                <MenuItem key={sub.subsetor} value={sub.subsetor}>
-                  {sub.subsetor}
+              {subsectores.map((sub, index) => (
+                <MenuItem key={index} value={sub}>
+                  {sub}
                 </MenuItem>
               ))}
             </TextField>

@@ -39,7 +39,7 @@ const NonSubscriberRoutesDesktop  = ({ userDb }) => {
 
   const isVerified = userDb;
 
-  console.log(userDb)
+  console.log(user)
 
   return (
     <Routes>

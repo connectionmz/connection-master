@@ -381,8 +381,21 @@ const CompanyDataFormDesk = () => {
     }
   };
 
+  const handleLoginRedirect = () => {
+    navigate('/auth'); // Altere a rota caso o login esteja em uma rota diferente
+  };
+
+
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
+        <Button
+        variant="contained"
+        color="primary"
+        size="large"
+        onClick={handleLoginRedirect}
+      >
+       Retornar para Inicio Sessão
+      </Button>
       <Stepper activeStep={activeStep}>
         {steps.map((label, index) => (
           <Step key={index}>

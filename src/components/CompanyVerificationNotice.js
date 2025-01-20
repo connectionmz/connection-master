@@ -9,13 +9,8 @@ const CompanyVerificationNotice = () => {
   const auth = getAuth();
 
   const handleLogin = async () => {
-    const provider = new GoogleAuthProvider(); // Você pode usar outros provedores, se necessário
-    try {
-      await signInWithPopup(auth, provider);
-      navigate('/auth'); // Redireciona para a rota /auth após o login
-    } catch (error) {
-      console.error('Erro ao iniciar sessão:', error.message);
-    }
+    navigate('/auth'); // Redireciona para a rota /auth após o login
+
   };
 
   return (

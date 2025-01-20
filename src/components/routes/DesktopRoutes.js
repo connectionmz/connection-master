@@ -47,6 +47,9 @@ import DestacarModule from '../desktop/DestacarModule';
 import EmailVerification from '../EmailVerification';
 import CompanyVerificationNotice from '../CompanyVerificationNotice';
 import CreditCardCheckoutDesk from '../checkout/CreditCardCheckoutDesk';
+import AuthDesk from '../AuthDesk';
+import ProfileDesk from '../desktop/ProfileDesk';
+import EditProfileDesk from '../desktop/EditProfileDesk';
 
 
 const theme = createTheme({
@@ -81,10 +84,14 @@ const DesktopRoutes = ({ user }) => {
     setAnchorEl(null);
   };
 
+
   if (user?.subscriptions?.isverity==='false') {
+    console.log(user?.subscriptions?.isverity);
+    // Use Navigate para redirecionar ou encapsule o Route em Routes
     return (
       <Routes>
         <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
+        <Route path="/auth" element={<AuthDesk user={user} />} />
         <Route path="*" element={<Navigate to="/verify" />} />
       </Routes>
     );
@@ -112,13 +119,13 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
         <Route path="/app" element={<ApxDesk user={user.provincia} />} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<ProfileDesk />} />
         <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
         <Route path="/inbox" element={<InboxDesk />} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
         <Route path="/sobre" element={<Sobre />} />
         <Route path="/email-verification" element={<EmailVerification />} />
-
+        <Route path="/editar-perfil" element={<EditProfileDesk user={user} />} />
         <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
         <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
         <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />

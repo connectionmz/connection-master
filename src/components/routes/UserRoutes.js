@@ -56,6 +56,7 @@ const UserRoutes = ({ user }) => {
     return (
       <Routes>
         <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
+        <Route path="/auth" element={<Auth user={user} />} />
         <Route path="*" element={<Navigate to="/verify" />} />
       </Routes>
     );
