@@ -172,8 +172,7 @@ const CompanyProfile = ({ user }) => {
     };
 
     return (
-        <Box bgcolor="background.default" minHeight="100vh">
-            {/* Capa e Foto de Perfil */}
+        <Box width='100%' minHeight="100vh">
             <Box position="relative">
                 <Box
                     height={200}

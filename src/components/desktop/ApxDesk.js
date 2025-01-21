@@ -85,7 +85,7 @@ const ApxDesk = ({ user }) => {
   }
 
   return (
-    <Box p={4}>
+    <Box width='100%' minHeight="100vh">
       <Link to={'/profile'}>
         <Card sx={{ mb: 4, p: 2, display: 'flex', alignItems: 'center' }}>
           <Avatar

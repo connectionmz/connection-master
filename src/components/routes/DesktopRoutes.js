@@ -99,19 +99,21 @@ const DesktopRoutes = ({ user }) => {
 
   return (
     <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-      }}
-    >
-      <ThemeProvider theme={theme}>
-      <HeaderDesk user={user}/>
-      <div
     style={{
-      flex: 1, 
+      minHeight: '100vh',
     }}
-  >    
+  >
+    <ThemeProvider theme={theme}>
+      <HeaderDesk user={user} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center', // Centraliza o conteúdo no eixo vertical
+          justifyContent: 'center', // Centraliza no eixo horizontal
+          maxWidth: '80%', // Largura máxima do conteúdo
+          margin: '0 auto', // Centraliza o contêiner horizontalmente
+        }}>
+ 
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
       
@@ -169,29 +171,30 @@ const DesktopRoutes = ({ user }) => {
 
         </Routes>
         </div>
-        <FooterDesk/>
-        <Fab
-          color="primary"
-          aria-label="change language"
-          style={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-          }}
-          onClick={handleMenuOpen}
-        >
-          <LanguageIcon />
-        </Fab>
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}>
-          <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
-          <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
-          <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>
-        </Menu>
-        </ThemeProvider>
-    </div>
+      <FooterDesk />
+      <Fab
+        color="primary"
+        aria-label="change language"
+        style={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+        }}
+        onClick={handleMenuOpen}
+      >
+        <LanguageIcon />
+      </Fab>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
+        <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
+        <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>
+      </Menu>
+    </ThemeProvider>
+  </div>
   );
 };
 

@@ -20,7 +20,6 @@ import { limitToFirst, onValue, orderByKey, query, ref } from "firebase/database
 import { Link } from "react-router-dom";
 import { db } from "../fb";
 
-// Componente reutilizável para exibir listas (Categorias, Inquéritos)
 const InfoBlock = ({ title, items, linkBase }) => (
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
     <Typography variant="h6" sx={{ fontWeight: "bold" }}>
@@ -33,7 +32,7 @@ const InfoBlock = ({ title, items, linkBase }) => (
         </Typography>
       ) : (
         items.map((item) => (
-          <Link key={item.id} to={`${linkBase}/${item.id}`}>
+          <Link key={item.id} to={`${linkBase}/${item.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
             <ListItemText secondary={item.name || item.title} />
           </Link>
         ))
@@ -52,7 +51,6 @@ const Dashboard = ({ user }) => {
   const [inqueritos, setInqueritos] = useState([]);
 
   useEffect(() => {
-    // Função para carregar anúncios
     const loadAnuncios = async () => {
       try {
         const data = await fetchAnuncios();
@@ -62,7 +60,6 @@ const Dashboard = ({ user }) => {
       }
     };
 
-    // Listener para categorias
     const categoriasRef = query(ref(db, "categoriasExternas"), orderByKey(), limitToFirst(10));
     const unsubscribeCategorias = onValue(categoriasRef, (snapshot) => {
       const data = snapshot.val();
@@ -75,7 +72,6 @@ const Dashboard = ({ user }) => {
       }
     });
 
-    // Listener para inquéritos
     const inqueritosRef = query(ref(db, "surveys"), orderByKey(), limitToFirst(10));
     const unsubscribeInqueritos = onValue(inqueritosRef, (snapshot) => {
       const data = snapshot.val();
@@ -88,10 +84,8 @@ const Dashboard = ({ user }) => {
       }
     });
 
-    // Carrega anúncios
     loadAnuncios();
 
-    // Limpeza dos listeners ao desmontar
     return () => {
       unsubscribeCategorias();
       unsubscribeInqueritos();
@@ -99,29 +93,27 @@ const Dashboard = ({ user }) => {
   }, []);
 
   return (
-    <Box sx={{ backgroundColor: "#f3f2ef", minHeight: "100vh" }}>
-      <Container >
-        <MarqueeParceiros />
-        <StorieList user={user.provincia} />
-        <MarqueeAnuncios />
+    <Box >
+   
+      <Container sx={{ marginTop: 10 }}>
+      <StorieList user={user.provincia} />
 
-        {/* Layout Centralizado */}
-        <Grid container spacing={3}>
-          {/* Informações Úteis - Esquerda */}
-          <Grid item xs={12} sm={4} md={3}>
+        <Grid container spacing={2}>
+          {/* Sidebar Esquerda */}
+          <Grid item xs={12} sm={3}>
             <Paper sx={{ padding: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                 Empresas Destacadas
               </Typography>
               <List>
                 {anuncios
-                  .filter((anuncio) => anuncio.isFeatured) // Filtra anúncios destacados
+                  .filter((anuncio) => anuncio.isFeatured)
                   .slice(0, 5)
                   .map((anuncio, index) => (
                     <ListItemText
                       key={index}
                       primary={<strong>{anuncio.title || "Indisponível"}</strong>}
-                      secondary={anuncio.company ? anuncio.company.nome : "Empresa Desconhecida"} // Verifica se há o campo company
+                      secondary={anuncio.company ? anuncio.company.nome : "Empresa Desconhecida"}
                     />
                   ))}
               </List>
@@ -132,15 +124,15 @@ const Dashboard = ({ user }) => {
             </Paper>
           </Grid>
 
-          {/* Banner - Centro */}
-          <Grid item xs={12} sm={8} md={6}>
-            <Paper sx={{ padding: 2 }}>
-              <Banner />
-            </Paper>
+          {/* Feed Central */}
+          <Grid item xs={12} sm={6}>
+          <MarqueeAnuncios />
+            <Banner />
+           
           </Grid>
 
-          {/* Publicações e Anúncios - Direita */}
-          <Grid item xs={12} sm={4} md={3}>
+          {/* Sidebar Direita */}
+          <Grid item xs={12} sm={3}>
             <InfoBlock title="Categorias" items={categorias} linkBase="/servicos" />
             <InfoBlock title="Inquéritos" items={inqueritos} linkBase="/inquerito" />
           </Grid>

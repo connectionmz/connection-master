@@ -4,11 +4,21 @@ import { db } from '../fb';
 import { onValue, ref } from 'firebase/database';
 import PayModuleCheckout from './checkout/PayModuleCheckout';
 import { UpdatePayment } from './UpdatePayment';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
+  CircularProgress,
+  Alert,
+} from '@mui/material';
 
 const PagamentoModulo = ({ user }) => {
-  const { moduleKey } = useParams(); 
-  const [modules, setModules] = useState([]); 
-  const [currentModule, setCurrentModule] = useState(null); 
+  const { moduleKey } = useParams();
+  const [modules, setModules] = useState([]);
+  const [currentModule, setCurrentModule] = useState(null);
   const navigate = useNavigate();
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
@@ -34,9 +44,11 @@ const PagamentoModulo = ({ user }) => {
 
   if (!currentModule) {
     return (
-      <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
-        <h1 className="text-2xl text-red-500">Módulo não encontrado</h1>
-      </div>
+      <Box sx={{ p: 6, backgroundColor: '#f5f5f5', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Typography variant="h4" color="error">
+          Módulo não encontrado
+        </Typography>
+      </Box>
     );
   }
 
@@ -53,34 +65,43 @@ const PagamentoModulo = ({ user }) => {
   };
 
   const cleanPrice = (price) => {
-    return parseInt(price.replace(/[^\d]/g, '')); 
+    return parseInt(price.replace(/[^\d]/g, ''));
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen flex flex-col items-center">
-      <h1 className="text-3xl font-bold text-gray-800 mb-4">Pagamento do Módulo</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-2">{currentModule.name}</h2>
-        <p className="text-gray-600 mb-4">{currentModule.description}</p>
-        <p className="text-lg font-bold text-gray-800 mb-6">
-          Preço: {currentModule.price}
-        </p>
+    <Box sx={{ p: 6, backgroundColor: '#f5f5f5', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Typography variant="h3" fontWeight="bold" gutterBottom>
+        Pagamento do Módulo
+      </Typography>
+      <Card sx={{ width: '100%', maxWidth: 400, boxShadow: 3 }}>
+        <CardContent>
+          <Typography variant="h5" fontWeight="bold" gutterBottom>
+            {currentModule.name}
+          </Typography>
+          <Typography variant="body1" color="textSecondary" paragraph>
+            {currentModule.description}
+          </Typography>
+          <Typography variant="h6" color="primary" fontWeight="bold">
+            Preço: {currentModule.price}
+          </Typography>
+        </CardContent>
+        <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
+          {!paymentSuccess && (
+            <PayModuleCheckout
+              user={user}
+              planPrice={cleanPrice(currentModule.price)}
+              onPaymentSuccess={handlePaymentSuccess}
+            />
+          )}
 
-        {!paymentSuccess && (
-          <PayModuleCheckout
-            user={user}
-            planPrice={cleanPrice(currentModule.price)} 
-            onPaymentSuccess={handlePaymentSuccess}
-          />
-        )}
-
-        {paymentSuccess && (
-          <div className="text-green-500 font-semibold mt-4">
-            Pagamento concluído com sucesso!
-          </div>
-        )}
-      </div>
-    </div>
+          {paymentSuccess && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Pagamento concluído com sucesso!
+            </Alert>
+          )}
+        </CardActions>
+      </Card>
+    </Box>
   );
 };
 

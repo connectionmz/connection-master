@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Container, Typography, Button } from '@mui/material';
+import BackButton from '../BackButton';
 
 const CreditCardCheckoutDesk = () => {
   const location = useLocation();
@@ -107,9 +108,9 @@ const CreditCardCheckoutDesk = () => {
         <div id="paypal-button-container"></div>
 
         <Box sx={{ mt: 3 }}>
-          <Button variant="contained" color="primary" onClick={() => navigate('/home')}>
-            Voltar para a Página Inicial
-          </Button>
+        <BackButton sx={{ mb: 2 }} />
+
+         
         </Box>
       </Box>
     </Container>

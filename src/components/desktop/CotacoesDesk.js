@@ -1,9 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
-import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../../fb';
-import { onAuthStateChanged } from 'firebase/auth';
-import PaySMSCheckout from '../PaySMSCheckout';
 import {
     Button,
     Card,
@@ -17,12 +12,15 @@ import {
     Alert,
     Box,
 } from '@mui/material';
+import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
+import { useNavigate } from 'react-router-dom';
+import { auth, db } from '../../fb';
+import { onAuthStateChanged } from 'firebase/auth';
+import PaySMSCheckout from '../PaySMSCheckout';
 
 const CotacoesDesk = ({ user, onModuleActivation }) => {
-
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
-    const [loggedInUser, setLoggedInUser] = useState(null);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
@@ -30,34 +28,29 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
 
-
-
     useEffect(() => {
-      if (!hasModuleSMS) return;
-  
-      const cotacoesRef = ref(db, 'cotacoes');
-      const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
-          const cotacoesData = snapshot.val() || {};
-          const cotacoesList = Object.entries(cotacoesData).map(([id, data]) => ({
-              id,
-              ...data,
-          }));
-  
-          // Filtra as cotações por critérios adicionais
-          const filteredCotacoes = cotacoesList.filter(
-              (cotacao) =>
-                  cotacao.userId === user.id || // Inclui cotações criadas pelo usuário
-                  (cotacao.sector === user.sector &&
-                      cotacao.company?.provincia === user.provincia) // Ou cotações do mesmo setor/província
-          );
-  
-          setCotacoes(filteredCotacoes);
-      });
-  
-      return () => unsubscribeCotacoes();
-  }, [db, user, hasModuleSMS]);
-  
-  
+        if (!hasModuleSMS) return;
+
+        const cotacoesRef = ref(db, 'cotacoes');
+        const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
+            const cotacoesData = snapshot.val() || {};
+            const cotacoesList = Object.entries(cotacoesData).map(([id, data]) => ({
+                id,
+                ...data,
+            }));
+
+            const filteredCotacoes = cotacoesList.filter(
+                (cotacao) =>
+                    cotacao.userId === user.id || 
+                    (cotacao.sector === user.sector &&
+                        cotacao.company?.provincia === user.provincia)
+            );
+
+            setCotacoes(filteredCotacoes);
+        });
+
+        return () => unsubscribeCotacoes();
+    }, [db, user, hasModuleSMS]);
 
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
@@ -81,66 +74,30 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         }
     };
 
-    const handleCotacaoClick = (id, companyId) => {
-        navigate(`/cotacao/${id}/${companyId}`);
-    };
-
-    const isExpired = (datalimite) => {
-        const currentDate = new Date();
-        const deadline = new Date(datalimite);
-        return currentDate > deadline;
-    };
-
-    const isRecent = (timestamp) => {
-        const currentDate = new Date();
-        const cotacaoDate = new Date(timestamp);
-        return currentDate.toDateString() === cotacaoDate.toDateString();
-    };
-
-    const updateStatusToExpired = (cotacaoId) => {
-        const cotacaoRef = ref(db, `cotacoes/${cotacaoId}`);
-        update(cotacaoRef, { status: 'expired' }).catch((error) => {
-            console.error('Erro ao atualizar o status da cotação: ', error);
-        });
-    };
-
     const filteredCotacoes = () => {
-
-  
-      switch (activeTab) {
-          case 'recentes':
-              return cotacoes.filter((cotacao) => isRecent(cotacao.timestamp));
-          case 'expiradas':
-              return cotacoes.filter((cotacao) => {
-                  const expired = isExpired(cotacao.datalimite);
-                  if (expired && cotacao.status !== 'expired') {
-                      updateStatusToExpired(cotacao.id);
-                  }
-                  return expired;
-              });
-          case 'Fechada':
-              return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
-          case 'minhas':
-              return cotacoes.filter(
-                  (cotacao) => cotacao?.company?.id === user?.id
-              );
-          default:
-              return cotacoes;
-      }
-  };
-  
+        switch (activeTab) {
+            case 'recentes':
+                return cotacoes.filter(
+                    (cotacao) => new Date(cotacao.timestamp).toDateString() === new Date().toDateString()
+                );
+            case 'expiradas':
+                return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.datalimite));
+            case 'Fechada':
+                return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
+            case 'minhas':
+                return cotacoes.filter((cotacao) => cotacao?.company?.id === user?.id);
+            default:
+                return cotacoes;
+        }
+    };
 
     return (
-        <Box p={2}>
+        <Box sx={{ width:'100%',display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             {!hasModuleSMS && !isPaying && (
                 <Alert
                     severity="warning"
                     action={
-                        <Button
-                            color="inherit"
-                            size="small"
-                            onClick={() => setIsPaying(true)}
-                        >
+                        <Button color="inherit" size="small" onClick={() => setIsPaying(true)}>
                             Ativar Módulo SMS
                         </Button>
                     }
@@ -168,7 +125,15 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
             {!isPaying && (
                 <>
-                    <Box display="flex" justifyContent="space-between" mb={2}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: 2,
+                            backgroundColor: 'white',
+                        }}
+                    >
                         <Typography variant="h5">Cotações</Typography>
                         <Button
                             variant="contained"
@@ -185,6 +150,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         onChange={(_, newValue) => setActiveTab(newValue)}
                         indicatorColor="primary"
                         textColor="primary"
+                        sx={{ backgroundColor: 'white' }}
                     >
                         <Tab value="recentes" label="Recentes" />
                         <Tab value="expiradas" label="Expiradas" />
@@ -192,56 +158,28 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         <Tab value="minhas" label="Minhas" />
                     </Tabs>
 
-                    <Box mt={3}>
+                    <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
                         {filteredCotacoes().length > 0 ? (
                             filteredCotacoes().map((cotacao) => (
-                                <Card
-                                    key={cotacao.id}
-                                    sx={{
-                                        mb: 2,
-                                        backgroundColor: isExpired(cotacao.datalimite)
-                                            ? 'grey.100'
-                                            : 'white',
-                                    }}
-                                    onClick={() =>
-                                        handleCotacaoClick(cotacao.id, cotacao.company?.id)
-                                    }
-                                >
+                                <Card key={cotacao.id} sx={{ mb: 2, backgroundColor: 'white' }}>
                                     <CardContent>
                                         <Box display="flex" alignItems="center" mb={2}>
-                                            <Avatar
-                                                src={
-                                                    cotacao.company?.logoUrl ||
-                                                    'https://via.placeholder.com/64'
-                                                }
-                                                alt={cotacao.company?.nome || 'Empresa'}
-                                                sx={{ mr: 2 }}
-                                            />
-                                            <Typography variant="h6">
-                                                {cotacao.company?.nome || 'Empresa'}
-                                            </Typography>
+                                            <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
+                                            <Typography variant="h6">{cotacao.company?.nome || 'Empresa'}</Typography>
                                         </Box>
-                                        <Typography variant="body1" gutterBottom>
-                                            {cotacao.title}
-                                        </Typography>
-                                        <Typography variant="body2" color="textSecondary">
-                                            Prazo: {new Date(cotacao.datalimite).toLocaleDateString()}
-                                        </Typography>
+                                        <Typography>{cotacao.title}</Typography>
                                     </CardContent>
-                                    {loggedInUser?.uid === cotacao.company?.id && (
-                                        <CardActions>
-                                            <Button
-                                                size="small"
-                                                color="error"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deleteCotacao(cotacao.id);
-                                                }}
-                                            >
-                                                Excluir
-                                            </Button>
-                                        </CardActions>
-                                    )}
+                                    <CardActions>
+                                        <Button
+                                            color="error"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteCotacao(cotacao.id);
+                                            }}
+                                        >
+                                            Excluir
+                                        </Button>
+                                    </CardActions>
                                 </Card>
                             ))
                         ) : (

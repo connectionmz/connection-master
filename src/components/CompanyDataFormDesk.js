@@ -236,25 +236,22 @@ const CompanyDataFormDesk = () => {
     }
   }}
   onBlur={() => {
-    if (!/^\d{8}$/.test(companyData.nrContriuinte)) {
+    if (!/^\d{9}$/.test(companyData.nrContriuinte)) {
       setErrorMessage('Informe número de contribuinte correcto.');
     } else {
       setErrorMessage('');
     }
   }}
-  error={!!companyData.nrContriuinte && !/^\d{8}$/.test(companyData.nrContriuinte)}
+  error={!!companyData.nrContriuinte && !/^\d{9}$/.test(companyData.nrContriuinte)}
   helperText={
-    !!companyData.nrContriuinte && !/^\d{8}$/.test(companyData.nrContriuinte)
+    !!companyData.nrContriuinte && !/^\d{9}$/.test(companyData.nrContriuinte)
       ? 'Informe número de contribuinte correcto.'
       : ''
   }
   fullWidth
   required
-  margin="normal"
-/>
-
-
-          </Box>
+  margin="normal"/>
+  </Box>
         );
       case 1:
         return (
