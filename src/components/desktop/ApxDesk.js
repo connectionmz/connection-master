@@ -28,32 +28,8 @@ const ApxDesk = ({ user }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const companyRef = ref(db, `company/${user.uid}`);
-          const companySnapshot = await get(companyRef);
-          if (companySnapshot.exists()) {
-            const companyData = companySnapshot.val();
-            setUserData({
-              ...companyData,
-              activeModules: companyData.activeModules || [],
-            });
-          } else {
-            navigate('/setup');
-          }
-        } catch (error) {
-          console.error('Error fetching data: ', error);
-          navigate('/auth');
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        navigate('/auth');
-      }
-    });
-
-    return () => unsubscribe();
+    setUserData(user);
+    setLoading(false)
   }, [navigate]);
 
   const handleLogout = () => {
@@ -63,7 +39,7 @@ const ApxDesk = ({ user }) => {
   const saveProvince = async () => {
     try {
       const companyRef = ref(db, `company/${user.id}`);
-      await update(companyRef, { provincia: provinceTemp });
+      await update(companyRef, { provinciaTemp: provinceTemp });
       setProvince(provinceTemp);
       console.log("Província salva com sucesso!");
       setEditProvince(false);
@@ -118,7 +94,7 @@ const ApxDesk = ({ user }) => {
           {!editProvince ? (
             <Box display="flex" alignItems="center">
               <Typography variant="body1" sx={{ mr: 2 }}>
-                Província: {provincia}
+                Província: {user.provincia}
               </Typography>
               <IconButton
                 color="primary"

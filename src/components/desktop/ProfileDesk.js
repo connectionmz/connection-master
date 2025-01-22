@@ -267,31 +267,42 @@ const handleDeletePost = (postToDelete) => {
     };
     return (
       <Box width='100%' minHeight="100vh">
-        <Box position="relative">
-          <Box position="relative" height={200} bgcolor="grey.300">
-            <CardMedia
-              component="img"
-              image={coverPhoto || userData.coverPhotoURL}
-              alt="Cover"
-              sx={{ width: "100%", height: "50%", objectFit: "cover" }}
-            />
-            <Box position="absolute" top={8} right={8}>
-              <input
-                accept="image/*"
-                type="file"
-                id="coverPhotoInput"
-                style={{ display: "none" }}
-                onChange={handleCoverPhotoChange}
-              />
-              <IconButton
-                color="primary"
-                aria-label="edit cover photo"
-                onClick={() => document.getElementById("coverPhotoInput").click()}
-              >
-                <CameraAlt />
-              </IconButton>
-            </Box>
-          </Box>
+<Box position="relative">
+  <Box 
+    position="relative" 
+    height={{ xs: 150, sm: 200 }} // Altura menor em pixels para diferentes tamanhos de tela
+    bgcolor="grey.300"
+    overflow="hidden" // Garante que a imagem não ultrapasse o contêiner
+  >
+    <CardMedia
+      component="img"
+      image={coverPhoto || userData.coverPhotoURL}
+      alt="Cover"
+      sx={{ 
+        width: "100%", 
+        height: "100%", 
+        objectFit: "cover" // Garante que a imagem se ajuste ao contêiner sem distorcer
+      }}
+    />
+    <Box position="absolute" top={8} right={8}>
+      <input
+        accept="image/*"
+        type="file"
+        id="coverPhotoInput"
+        style={{ display: "none" }}
+        onChange={handleCoverPhotoChange}
+      />
+      <IconButton
+        color="primary"
+        aria-label="edit cover photo"
+        onClick={() => document.getElementById("coverPhotoInput").click()}
+      >
+        <CameraAlt />
+      </IconButton>
+    </Box>
+  </Box>
+</Box>
+
   
           <Box position="absolute" top={140} left={16}>
             <Avatar
