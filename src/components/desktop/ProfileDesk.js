@@ -267,10 +267,10 @@ const handleDeletePost = (postToDelete) => {
     };
     return (
       <Box width='100%' minHeight="100vh">
-<Box position="relative">
+        <Box position="relative">
   <Box 
     position="relative" 
-    height={{ xs: 150, sm: 200 }} // Altura menor em pixels para diferentes tamanhos de tela
+    height={{ xs: 150, sm: 400 }} // Altura menor em pixels para diferentes tamanhos de tela
     bgcolor="grey.300"
     overflow="hidden" // Garante que a imagem não ultrapasse o contêiner
   >
@@ -301,9 +301,7 @@ const handleDeletePost = (postToDelete) => {
       </IconButton>
     </Box>
   </Box>
-</Box>
 
-  
           <Box position="absolute" top={140} left={16}>
             <Avatar
               src={profilePhoto || userData.photoURL}
