@@ -8,26 +8,26 @@ import { db } from '../fb'; // Importa a instância do Firebase
  * @param {Object} paymentDetails - Detalhes do pagamento (quantia, método).
  */
 export const UpdatePayment = (user, moduleKey, paymentDetails) => {
-  console.log("Dados do utilizador:", user);
-  console.log("Dados do pagamento:", paymentDetails);
 
-  const { id: userId, displayName } = user; // Extrai informações do usuário
+  const smsCount = paymentDetails?.smsCount
+
+
+  const { id: userId, displayName } = user; 
   const currentDate = new Date();
-  const month = currentDate.getMonth() + 1; // Mês atual (base 1)
+  const month = currentDate.getMonth() + 1; 
   const year = currentDate.getFullYear(); // Ano atual
 
   // Referências no Firebase
   const activeModulesRef = ref(db, `company/${userId}/activeModules/${moduleKey}`);
   const subscriptionsRef = ref(db, `subscriptions/${userId}/${year}/${month}`);
 
-  // Dados para o módulo ativo
   const activeModuleData = {
     paidAt: currentDate.toISOString(),
     moduleKey: moduleKey,
     status: 'active',
+    ...(moduleKey === 'moduloSMS' && { smsCount }), // Inclui smsCount somente para módulo SMS
   };
 
-  // Dados do pagamento
   const paymentData = {
     moduleKey: moduleKey,
     amount: paymentDetails.amount,
@@ -51,6 +51,11 @@ export const UpdatePayment = (user, moduleKey, paymentDetails) => {
   }
 };
 
+/**
+ * Remove um módulo ativo para um usuário.
+ * @param {string} userId - ID do usuário.
+ * @param {string} moduleKey - Chave do módulo ativo a ser removido.
+ */
 export const DeleteActiveModule = (userId, moduleKey) => {
   // Verifica se os parâmetros obrigatórios foram passados
   if (!userId || !moduleKey) {

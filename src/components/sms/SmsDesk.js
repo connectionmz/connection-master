@@ -8,11 +8,11 @@ import BackButton from '../BackButton';
 const SmsDesk = ({ user }) => {
 
   console.log(user)
-  const [smsBalance, setSmsBalance] = useState(0);
+  const [smsBalance, setSmsBalance] = useState();
   const [smsHistory, setSmsHistory] = useState([]);
 
   useEffect(() => {
-    const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS/paymentDetails`);
+    const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS`);
     onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       console.log(data);

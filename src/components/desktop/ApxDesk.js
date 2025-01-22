@@ -13,7 +13,6 @@ import {
   MenuItem,
   CircularProgress,
   Card,
-  CardContent,
   IconButton,
   Grid,
 } from '@mui/material';
@@ -23,6 +22,7 @@ const ApxDesk = ({ user }) => {
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [provincia, setProvince] = useState(user.provincia || '');
+  const [provinceTemp, setProvinceTemp] = useState(user.provincia || '');
   const [editProvince, setEditProvince] = useState(false);
 
   const navigate = useNavigate();
@@ -60,10 +60,11 @@ const ApxDesk = ({ user }) => {
     signOut(auth).then(() => navigate('/auth')).catch((error) => console.error("Logout Error: ", error));
   };
 
-  const saveProvince = async (newProvince) => {
+  const saveProvince = async () => {
     try {
       const companyRef = ref(db, `company/${user.id}`);
-      await update(companyRef, { provincia: newProvince });
+      await update(companyRef, { provincia: provinceTemp });
+      setProvince(provinceTemp);
       console.log("Província salva com sucesso!");
       setEditProvince(false);
     } catch (error) {
@@ -91,13 +92,14 @@ const ApxDesk = ({ user }) => {
           <Avatar
             src={userData.logoUrl}
             alt="User"
-            sx={{ width: 56, height: 56, mr: 2 }}/>
+            sx={{ width: 56, height: 56, mr: 2 }}
+          />
           <Box>
             <Typography variant="h6">{userData.nome}</Typography>
             <Typography variant="body2" color="textSecondary">{userData.sector}</Typography>
           </Box>
-      </Card>
-    </Link>
+        </Card>
+      </Link>
 
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6}>
@@ -128,8 +130,8 @@ const ApxDesk = ({ user }) => {
           ) : (
             <Box display="flex" alignItems="center" gap={1}>
               <Select
-                value={provincia}
-                onChange={(e) => setProvince(e.target.value)}
+                value={provinceTemp}
+                onChange={(e) => setProvinceTemp(e.target.value)}
                 size="small"
                 fullWidth
               >
@@ -152,14 +154,14 @@ const ApxDesk = ({ user }) => {
               </Select>
               <IconButton
                 color="success"
-                onClick={() => saveProvince(provincia)}
+                onClick={saveProvince}
               >
                 <Save />
               </IconButton>
               <IconButton
                 color="error"
                 onClick={() => {
-                  setProvince(user?.provincia || '');
+                  setProvinceTemp(provincia);
                   setEditProvince(false);
                 }}
               >

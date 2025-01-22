@@ -54,17 +54,18 @@ const PagamentoModulo = ({ user }) => {
   }
 
   const handlePaymentSuccess = (paymentDetails) => {
-    console.log('Detalhes do pagamento:', paymentDetails);
     setPaymentSuccess(true);
+  
+    const smsCount = paymentDetails?.smsCount
 
     UpdatePayment(user, currentModule.key, {
       amount: paymentDetails.amount,
       method: paymentDetails.method,
+      smsCount:smsCount
     });
-
     navigate('/apx');
   };
-
+  
   const cleanPrice = (price) => {
     return parseInt(price.replace(/[^\d]/g, ''));
   };
@@ -83,32 +84,31 @@ const PagamentoModulo = ({ user }) => {
             {currentModule.description}
           </Typography>
           <Typography variant="h6" color="primary" fontWeight="bold">
-            Preço: {currentModule.price}
+          {currentModule?.price || ''}
           </Typography>
         </CardContent>
         <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
-  {!paymentSuccess && (
-    <>
-      {currentModule.key === 'moduloSMS' ? (
-        <PaySMSCheckout
-          user={user}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      ) : (
-        <PayModuleCheckout
-          user={user}
-          planPrice={cleanPrice(currentModule.price)}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
-    </>
-  )}
-
-  {paymentSuccess && (
-    <Alert severity="success" sx={{ mt: 2 }}>
-      Pagamento concluído com sucesso!
-    </Alert>
-  )}
+          {!paymentSuccess && (
+            <>
+              {currentModule.key === 'moduloSMS' ? (
+                <PaySMSCheckout
+                  user={user}
+                  onPaymentSuccess={handlePaymentSuccess}
+                />
+              ) : (
+                <PayModuleCheckout
+                  user={user}
+                  planPrice={cleanPrice(currentModule.price)}
+                  onPaymentSuccess={handlePaymentSuccess}
+                />
+              )}
+            </>
+          )}
+          {paymentSuccess && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Pagamento concluído com sucesso!
+            </Alert>
+          )}
 </CardActions>
 
       </Card>

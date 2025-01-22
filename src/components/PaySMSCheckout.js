@@ -20,12 +20,12 @@ const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
 
     const planPrice = calculatePrice(smsCount); 
     setIsLoading(true);
-    setError(null); // Limpa o erro antes de iniciar o pagamento
+    setError(null); 
 
     const paymentData = {
       carteira: '1729146943643x948653281532969000',
       numero: phoneNumber,
-      'quem comprou': user.displayName || 'Cliente Anônimo',
+      'quem comprou': user.nome || 'Cliente Anônimo',
       valor: '1',
     };
 
