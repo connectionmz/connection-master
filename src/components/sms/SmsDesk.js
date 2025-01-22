@@ -4,7 +4,10 @@ import { db } from '../../fb';
 import { Box, Typography, Paper, List, ListItem, ListItemText, Divider } from '@mui/material';
 import BackButton from '../BackButton';
 
+
 const SmsDesk = ({ user }) => {
+
+  console.log(user)
   const [smsBalance, setSmsBalance] = useState(0);
   const [smsHistory, setSmsHistory] = useState([]);
 

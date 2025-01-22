@@ -266,14 +266,14 @@ const handleDeletePost = (postToDelete) => {
       }
     };
     return (
-      <Box bgcolor="background.paper" minHeight="100vh">
+      <Box width='100%' minHeight="100vh">
         <Box position="relative">
           <Box position="relative" height={200} bgcolor="grey.300">
             <CardMedia
               component="img"
               image={coverPhoto || userData.coverPhotoURL}
               alt="Cover"
-              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+              sx={{ width: "100%", height: "50%", objectFit: "cover" }}
             />
             <Box position="absolute" top={8} right={8}>
               <input

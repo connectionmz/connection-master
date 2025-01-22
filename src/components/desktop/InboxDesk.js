@@ -50,7 +50,7 @@ const InboxDesk = () => {
   const readMessages = messages.filter(message => message.opened);
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box width='100%' minHeight="100vh">
       <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
         Caixa de entrada
       </Typography>

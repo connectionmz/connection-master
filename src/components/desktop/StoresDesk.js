@@ -238,19 +238,8 @@ const StoresDesk = () => {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-    }}
-  >
-    {/* Exibe o logotipo da loja e o nome */}
-    <img
-      src={product.logo || "https://via.placeholder.com/20"} // Adiciona fallback para URL padrão
-      alt={product.storeName}
-      style={{
-        width: "20px", // Tamanho do logotipo
-        height: "20px",
-        marginRight: "8px", // Espaço entre o logotipo e o nome da loja
-        borderRadius: "50%", // Torna o logotipo arredondado, se necessário
-      }}
-    />
+    }}>
+
     {product.storeName}
   </Typography>
 </CardContent>

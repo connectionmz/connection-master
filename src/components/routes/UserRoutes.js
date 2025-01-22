@@ -50,7 +50,7 @@ import ProductDetails from '../ProductDetails';
 import CompanyVerificationNotice from '../CompanyVerificationNotice';
 
 const UserRoutes = ({ user }) => {
-  if (user?.subscriptions?.isverity) {
+  if (user?.subscriptions?.isverity==='false') {
     console.log(user?.subscriptions?.isverity);
     // Use Navigate para redirecionar ou encapsule o Route em Routes
     return (
@@ -66,7 +66,7 @@ const UserRoutes = ({ user }) => {
     <Routes>
       <Route path="/createUsers" element={<CreateUsers />} />
       {/* Home */}
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Home user={user}/>} />
       <Route path="/setup" element={<Home user={user} />} />
 
       {/* Autenticação */}

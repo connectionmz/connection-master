@@ -14,6 +14,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
+import PaySMSCheckout from './PaySMSCheckout';
 
 const PagamentoModulo = ({ user }) => {
   const { moduleKey } = useParams();
@@ -86,20 +87,30 @@ const PagamentoModulo = ({ user }) => {
           </Typography>
         </CardContent>
         <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
-          {!paymentSuccess && (
-            <PayModuleCheckout
-              user={user}
-              planPrice={cleanPrice(currentModule.price)}
-              onPaymentSuccess={handlePaymentSuccess}
-            />
-          )}
+  {!paymentSuccess && (
+    <>
+      {currentModule.key === 'moduloSMS' ? (
+        <PaySMSCheckout
+          user={user}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      ) : (
+        <PayModuleCheckout
+          user={user}
+          planPrice={cleanPrice(currentModule.price)}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+    </>
+  )}
 
-          {paymentSuccess && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              Pagamento concluído com sucesso!
-            </Alert>
-          )}
-        </CardActions>
+  {paymentSuccess && (
+    <Alert severity="success" sx={{ mt: 2 }}>
+      Pagamento concluído com sucesso!
+    </Alert>
+  )}
+</CardActions>
+
       </Card>
     </Box>
   );
