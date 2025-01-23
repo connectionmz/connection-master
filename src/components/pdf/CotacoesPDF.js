@@ -1,131 +1,241 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { db } from '../../fb';
 import { useParams } from 'react-router-dom';
-import { onValue, ref } from 'firebase/database';
+import { get, ref } from 'firebase/database';
+import JsBarcode from 'jsbarcode';
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
+import { db } from '../../fb';
+import BackButton from '../BackButton';
 
-const CotacoesPDF = () => {
+const CotacoesPDF = ({ user }) => {
+  const faturaRef = useRef();
+  const barcodeRef = useRef();
+  const [error, setError] = useState(null);
   const { id } = useParams();
   const [cot, setCotacao] = useState(null);
 
+
   useEffect(() => {
-    const cotacaoRef = ref(db, `cotacoes/${id}`);
-
-    onValue(cotacaoRef, (snapshot) => {
-      const data = snapshot.val();
-      setCotacao(data);
-    });
-  }, [id]);
-
-  const generatePDF = () => {
-    const content = document.querySelector("#pdfContent");
-    if (content) {
-      const doc = new jsPDF('p', 'mm', 'a4');
-      html2canvas(content, { scale: 2 }).then((canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210;
-        const pageHeight = 297;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight;
-          doc.addPage();
-          doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+    const fetchProforma = async () => {
+      try {
+        const proformaSnap = await get(
+          ref(db, `cotacoes/${id}`)
+        );
+        if (proformaSnap.exists()) {
+          setCotacao(proformaSnap.val());
+        } else {
+          setError("Proforma não encontrada.");
         }
-        doc.save(cot.company.nome+'-cotacao.pdf');
+      } catch (err) {
+        setError("Erro ao carregar proforma.");
+      }
+    };
+
+    if (id) {
+      fetchProforma();
+    }
+  }, [user, id]);
+
+  useEffect(() => {
+    if (id && barcodeRef.current) {
+      JsBarcode(barcodeRef.current, id, {
+        format: "CODE128",
+        lineColor: "#000",
+        width: 1,
+        height: 20,
+        displayValue: true,
       });
     }
+  }, [id]);
+
+  const gerarPDF = () => {
+    if (!faturaRef.current) {
+      console.error("Elemento de referência da fatura não encontrado.");
+      return;
+    }
+
+    html2canvas(faturaRef.current, { 
+      scale: 2,
+      useCORS: true, }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+
+      const ratio = Math.min(pdfWidth / canvasWidth, pdfHeight / canvasHeight);
+      const imgWidth = canvasWidth * ratio;
+      const imgHeight = canvasHeight * ratio;
+
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save(`Proforma_${id}.pdf`);
+    });
   };
-  
-  if (!cot) {
-    return <p className="mt-10">Carregando cotação...</p>;
-  }
+
+
   return (
-    <div className="bg-gray-100 min-h-screen p-6">
-      <div id="pdfContent" className="bg-white shadow-lg rounded-lg max-w-4xl mx-auto p-8">
-        <header className="mb-6">
-          <h1 className="font-bold ">Pedido de Cotação</h1>
-          <p className="">
-            <strong>Data:</strong> {cot.timestamp || 'N/A'}
-          </p>
-        </header>
-        <section className="mb-6">
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p><strong>Título:</strong> {cot.title}</p>
-              <p><strong>Data limite:</strong> {cot.datalimite}</p>
-            </div>
-            <div>
-              <p><strong>Sector:</strong> {cot.sector || 'Não informado'}</p>
-            </div>
-          </div>
-        </section>
-        {cot.items && cot.items.length > 0 && (
-          <section className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-700">Itens da Cotação</h2>
-            <div className="overflow-x-auto mt-4">
-              <table className="table-auto w-full border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-200 text-gray-700">
-                    <th className="border px-4 py-2 text-left">Serviço/Produto</th>
-                    <th className="border px-4 py-2 text-left">Descrição</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cot.items.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="border px-4 py-2">{item.name}</td>
-                      <td className="border px-4 py-2">
-                        {item.description ? (
-                          <ul className="list-disc ml-4">
-                            {item.description.split('\n').map((desc, idx) => (
-                              <li key={idx}>{desc}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          'Sem descrição'
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center", // Para centralizar verticalmente
+        minHeight: "100vh",
+        p: 2,
+        bgcolor: "background.default",
+      }}
+>
+    <BackButton sx={{ mb: 2 }} />
 
-        <section className="mb-6">
-          <h2 className="text-xl font-semibold">Descrição da Proposta</h2>
-          <p
-            className="mt-4"
-            dangerouslySetInnerHTML={{ __html: cot.description }}
-          ></p>
-        </section>
+      {error && <Alert severity="error">{error}</Alert>}
+      {cot ? (
+        <Paper
+          ref={faturaRef}
+          elevation={3}
+          sx={{
+            width: "210mm", // Largura do A4
+            minHeight: "297mm", // Altura mínima do A4
+            p: 3,
+            display: "flex",
+            flexDirection: "column",
+            position: "relative", // Permite rodapé fixo
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+            <Box>
+              <img
+                src={cot.company?.logoUrl || "/imagens/default-logo.png"}
+                alt="Logotipo"
+                style={{ width: 100 }}
+              />
+              <Typography variant="h6" color="error" fontWeight="bold">
+                {cot.company?.nome}
+              </Typography>
+              <Typography variant="body2">
+                {cot.company?.endereco}, {cot.company?.distrito}
+              </Typography>
+            </Box>
+            <Box textAlign="right">
+              <Typography variant="h4" fontWeight="bold" color="text.primary">
+                PEDIDO DE COTACAO{" "}
+                <Typography color="error">
+                  {id}
+                </Typography>
+              </Typography>
+              <Typography variant="body2">
+                Data: {cot.timestamp}
+              </Typography>
+            </Box>
+          </Box>
 
-        <footer className="mt-8">
-          <h2 className="text-xl font-semibold">Contato</h2>
-          <p>{cot.company.contacto}</p>
-          <p>{cot?.company?.social.facebook || ''}</p>
-          <p>{cot?.company?.social.linkedin || ''}</p>
-          <p>{cot?.company?.social.instagram || ''}</p>
-          <p>{cot?.company?.social.website || ''}</p>
-          <p>{cot?.company?.social.whatsappUrl || ''}</p>
-        </footer>
-      </div>
-      <button
-        onClick={generatePDF}
-        className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg mt-6 mx-auto block shadow-lg">
-        Baixar PDF
-      </button>
-    </div>
+{/* Tabela */}
+{cot.items && cot.items.length > 0 && (
+  <section >
+    <Typography variant="h6" className="text-gray-700 font-semibold">
+      Itens da Cotação
+    </Typography>
+    <TableContainer component={Paper} className="mt-4">
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell><strong>Serviço/Produto</strong></TableCell>
+            <TableCell><strong>Descrição</strong></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {cot.items.map((item, index) => (
+            <TableRow key={index} hover>
+              <TableCell>{item.name}</TableCell>
+              <TableCell>
+                {item.description ? (
+                  <ul style={{ paddingLeft: "1rem", margin: 0 }}>
+                    {item.description.split('\n').map((desc, idx) => (
+                      <li key={idx} style={{ listStyleType: "disc" }}>
+                        {desc}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  'Sem descrição'
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  </section>
+)}
+
+          {/* Resumo */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mt: 3,
+              fontSize: "0.875rem",
+            }}
+          >
+            <Box>
+              <Typography>Subtotal:</Typography>
+              <Typography>IVA:</Typography>
+              <Typography fontWeight="bold">Total:</Typography>
+            </Box>
+            <Box textAlign="right">
+            
+            </Box>
+          </Box>
+
+          {/* Rodapé fixo */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              fontSize: "0.875rem",
+              color: "text.secondary",
+              p: 2,
+              textAlign: 'center', // Centraliza o conteúdo do rodapé
+            }}
+          >
+            <Typography>Obrigado pela sua preferência!</Typography>
+            <Typography>
+              Tel: {user?.contacto} | Email: {user?.email}
+            </Typography>
+          </Box>
+        </Paper>
+      ) : (
+        <CircularProgress />
+      )}
+
+      {cot && (
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mt: 3 }}
+          onClick={gerarPDF}
+        >
+          Baixar PDF
+        </Button>
+      )}
+    </Box>
   );
 };
+
 export default CotacoesPDF;

@@ -51,6 +51,7 @@ import AuthDesk from '../AuthDesk';
 import ProfileDesk from '../desktop/ProfileDesk';
 import EditProfileDesk from '../desktop/EditProfileDesk';
 import FeedDesk from '../desktop/FeedDesk';
+import CotacoesPDF from '../pdf/CotacoesPDF';
 
 
 const theme = createTheme({
@@ -137,6 +138,8 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
         <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk />} />
         <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk />} />
+        <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
+
 
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />

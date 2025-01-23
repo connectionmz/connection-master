@@ -11,7 +11,9 @@ import {
     Snackbar,
     Alert,
     Box,
+    CircularProgress,
 } from '@mui/material';
+import { Delete, AccessTime, CheckCircle, History } from '@mui/icons-material';
 import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../fb';
@@ -91,8 +93,12 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         }
     };
 
+    const handleCotacaoClick = (id, companyId) => {
+        navigate(`/cotacao/${id}/${companyId}`);
+    };
+
     return (
-        <Box sx={{ width:'100%',display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             {!hasModuleSMS && !isPaying && (
                 <Alert
                     severity="warning"
@@ -152,16 +158,20 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         textColor="primary"
                         sx={{ backgroundColor: 'white' }}
                     >
-                        <Tab value="recentes" label="Recentes" />
-                        <Tab value="expiradas" label="Expiradas" />
-                        <Tab value="Fechada" label="Fechada" />
-                        <Tab value="minhas" label="Minhas" />
+                         <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
+                        <Tab value="expiradas" label="Expiradas" icon={<History />} />
+                        <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
+                        <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} />} />
                     </Tabs>
 
                     <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
                         {filteredCotacoes().length > 0 ? (
                             filteredCotacoes().map((cotacao) => (
-                                <Card key={cotacao.id} sx={{ mb: 2, backgroundColor: 'white' }}>
+                                <Card
+                                    key={cotacao.id}
+                                    sx={{ mb: 2, backgroundColor: 'white', cursor: 'pointer' }}
+                                    onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
+                                >
                                     <CardContent>
                                         <Box display="flex" alignItems="center" mb={2}>
                                             <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
