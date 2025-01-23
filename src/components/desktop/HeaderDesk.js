@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import {
-  Search,
-  Message,
-  AccountCircle,
-  BusinessCenter,
-  Article,
-  People,
-  Store,
-} from "@mui/icons-material";
+import SearchIcon from "@mui/icons-material/Search";
+import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
+import BusinessIcon from "@mui/icons-material/Business";
+import GroupIcon from "@mui/icons-material/Group";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ChatIcon from "@mui/icons-material/Chat";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import DomainIcon from "@mui/icons-material/Domain";
+import GavelIcon from "@mui/icons-material/Gavel";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -28,15 +28,14 @@ const HeaderDesk = ({ user }) => {
   const isMobile = useMediaQuery("(max-width:600px)"); 
 
   const navItems = [
-    { to: "/search", icon: <Search fontSize="large" />, label: "Pesquisar" },
-    { to: "/stores", icon: <Store fontSize="large" />, label: "Lojas" },
-    { to: "/concursos", icon: <BusinessCenter fontSize="large" />, label: "Concursos" },
-    { to: "/explore", icon: <People fontSize="large" />, label: "Empresas" },
-    { to: "/cotacoes", icon: <Article fontSize="large" />, label: "Cotações" },
-    { to: "/inbox", icon: <Message fontSize="large" />, label: "Mensagens" },
-    { to: "/app", icon: <AccountCircle fontSize="large" />, label: "Perfil do Usuário" },
+    { to: "/search", icon: <SearchIcon fontSize="large" />, label: "Pesquisar" },
+    { to: "/stores", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
+    { to: "/concursos", icon: <GavelIcon fontSize="large" />, label: "Concursos" },
+    { to: "/explore", icon: <DomainIcon  fontSize="large" />, label: "Empresas" },
+    { to: "/cotacoes", icon: <DescriptionIcon fontSize="large" />, label: "Cotações" },
+    { to: "/inbox", icon: <ChatIcon fontSize="large" />, label: "Mensagens" },
+    { to: "/app", icon: <AccountCircleIcon fontSize="large" />, label: "Perfil do Usuário" },
   ];
-
 
 
   return (
