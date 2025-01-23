@@ -19,6 +19,7 @@ import {
   Alert,
 } from "@mui/material";
 import { db } from '../../fb';
+import BackButton from '../BackButton';
 
 const FaturaDesk = ({ user }) => {
   const faturaRef = useRef();
@@ -66,7 +67,9 @@ const FaturaDesk = ({ user }) => {
       return;
     }
 
-    html2canvas(faturaRef.current, { scale: 2, useCORS: true }).then((canvas) => {
+    html2canvas(faturaRef.current, { 
+      scale: 2,
+      useCORS: true, }).then((canvas) => {
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -101,7 +104,9 @@ const FaturaDesk = ({ user }) => {
         p: 2,
         bgcolor: "background.default",
       }}
-    >
+>
+    <BackButton sx={{ mb: 2 }} />
+
       {error && <Alert severity="error">{error}</Alert>}
       {fatura ? (
         <Paper

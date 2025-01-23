@@ -15,6 +15,8 @@ import {
   Menu,
   MenuItem,
   IconButton,
+  Box,
+  Tooltip,
 } from '@mui/material';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
@@ -54,10 +56,6 @@ const FaturacaoDesk = ({ user }) => {
     proforma.cliente.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleProformaClick = (proforma) => {
-    navigate(`/proforma/${proforma.numeroProforma}`);
-  };
-
   const handleMenuClick = (event, proforma) => {
     setAnchorEl(event.currentTarget);
     setSelectedProforma(proforma);
@@ -68,8 +66,11 @@ const FaturacaoDesk = ({ user }) => {
     setSelectedProforma(null);
   };
 
+  const handleProformaClick = (proforma) => {
+    navigate(`/proforma/${proforma.numeroProforma}`);
+  };
+
   const handleShare = () => {
-    // Implementar a lógica de compartilhamento (e.g., via email ou link)
     alert(`Compartilhar a proforma ${selectedProforma.numeroProforma}`);
     handleCloseMenu();
   };
@@ -94,13 +95,13 @@ const FaturacaoDesk = ({ user }) => {
   };
 
   return (
-    <div className="p-4">
+    <Box width="100%" minHeight="100vh" p={3}>
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
         <BackButton sx={{ mb: 2 }} />
         <Typography variant="h6" gutterBottom>
           Gerenciamento de Proformas
         </Typography>
-        <div className="flex items-center justify-between mb-4">
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <TextField
             label="Pesquisar proformas"
             variant="outlined"
@@ -116,7 +117,7 @@ const FaturacaoDesk = ({ user }) => {
           >
             Emitir Proforma
           </Button>
-        </div>
+        </Box>
       </Paper>
 
       {error && (
@@ -138,23 +139,20 @@ const FaturacaoDesk = ({ user }) => {
           <TableBody>
             {filteredProformas.length > 0 ? (
               filteredProformas.map((proforma, index) => (
-                <TableRow
-                  key={index}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => handleProformaClick(proforma)}
-                >
+                <TableRow key={index} hover>
                   <TableCell align="center">{proforma.numeroProforma}</TableCell>
                   <TableCell>{proforma.cliente || 'Indefinido'}</TableCell>
                   <TableCell align="center">{proforma.dataEmissao}</TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      aria-controls="simple-menu"
-                      aria-haspopup="true"
-                      onClick={(event) => handleMenuClick(event, proforma)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+                    <Tooltip title="Opções">
+                      <IconButton
+                        aria-controls="simple-menu"
+                        aria-haspopup="true"
+                        onClick={(event) => handleMenuClick(event, proforma)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
                     <Menu
                       anchorEl={anchorEl}
                       keepMounted
@@ -178,7 +176,7 @@ const FaturacaoDesk = ({ user }) => {
           </TableBody>
         </Table>
       </TableContainer>
-    </div>
+    </Box>
   );
 };
 

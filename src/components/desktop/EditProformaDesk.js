@@ -6,7 +6,7 @@ import MuiAlert from '@mui/material/Alert';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
 
-const CriarProformaDesk = ({ user }) => {
+const EditProformaDesk = ({ user }) => {
     const [cliente, setCliente] = useState('');
     const [dataEmissao, setDataEmissao] = useState('');
     const [dataVencimento, setDataVencimento] = useState('');
@@ -405,4 +405,4 @@ const handleCloseModal = () => {
     );
 };
 
-export default CriarProformaDesk;
+export default EditProformaDesk;
