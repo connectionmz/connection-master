@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ref, get, remove, update } from 'firebase/database';
 import { db } from '../../fb';
-import ProductForm from './ProductForm';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -18,6 +17,10 @@ import {
   TextField,
   Typography,
   CircularProgress,
+  TablePagination,
+  TableSortLabel,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { Search, Edit, Delete } from '@mui/icons-material';
 
@@ -28,6 +31,11 @@ const ManageStoreDesk = ({ storeId }) => {
   const [editProductId, setEditProductId] = useState(null);
   const [editProductData, setEditProductData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('name');
+  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -43,7 +51,7 @@ const ManageStoreDesk = ({ storeId }) => {
         }
       } catch (error) {
         console.error('Erro ao buscar produtos:', error);
-        alert('Ocorreu um erro ao buscar produtos. Tente novamente mais tarde.');
+        setFeedback({ open: true, message: 'Erro ao buscar produtos.', severity: 'error' });
       } finally {
         setLoading(false);
       }
@@ -55,6 +63,7 @@ const ManageStoreDesk = ({ storeId }) => {
   const handleProductAdd = (newProducts) => {
     setProducts((prevProducts) => [...prevProducts, ...newProducts]);
     resetFormState();
+    setFeedback({ open: true, message: 'Produto adicionado com sucesso!', severity: 'success' });
   };
 
   const handleRemoveProduct = async (productId) => {
@@ -64,17 +73,21 @@ const ManageStoreDesk = ({ storeId }) => {
         const productRef = ref(db, `stores/${storeId}/products/${productId}`);
         await remove(productRef);
         setProducts((prevProducts) => prevProducts.filter(([key]) => key !== productId));
+        setFeedback({ open: true, message: 'Produto removido com sucesso!', severity: 'success' });
       } catch (error) {
         console.error('Erro ao remover produto:', error);
-        alert('Erro ao remover o produto. Tente novamente.');
+        setFeedback({ open: true, message: 'Erro ao remover o produto.', severity: 'error' });
       }
     }
   };
 
   const handleEditProduct = (productId, productData) => {
-    setEditProductId(productId);
-    setEditProductData(productData);
-    setShowAddProductForm(true);
+    const confirmEdit = window.confirm('Tem certeza que deseja editar este produto?');
+    if (confirmEdit) {
+      setEditProductId(productId);
+      setEditProductData(productData);
+      setShowAddProductForm(true);
+    }
   };
 
   const handleProductUpdate = async (updatedProduct) => {
@@ -87,9 +100,10 @@ const ManageStoreDesk = ({ storeId }) => {
         )
       );
       resetFormState();
+      setFeedback({ open: true, message: 'Produto atualizado com sucesso!', severity: 'success' });
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
-      alert('Erro ao atualizar o produto. Tente novamente.');
+      setFeedback({ open: true, message: 'Erro ao atualizar o produto.', severity: 'error' });
     }
   };
 
@@ -105,8 +119,33 @@ const ManageStoreDesk = ({ storeId }) => {
     );
   }, [products, searchQuery]);
 
+  const handleRequestSort = (property) => {
+    const isAscending = orderBy === property && order === 'asc';
+    setOrder(isAscending ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const sortedProducts = useMemo(() => {
+    return filteredProducts.sort(([, a], [, b]) => {
+      if (order === 'asc') {
+        return a[orderBy]?.localeCompare(b[orderBy]);
+      } else {
+        return b[orderBy]?.localeCompare(a[orderBy]);
+      }
+    });
+  }, [filteredProducts, order, orderBy]);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   return (
-    <Box sx={{ p: 4, bgcolor: 'white', borderRadius: 2, boxShadow: 3 }}>
+    <Box sx={{ p: 4, bgcolor: 'white' }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
         Gerir Loja
       </Typography>
@@ -146,15 +185,33 @@ const ManageStoreDesk = ({ storeId }) => {
             <TableHead>
               <TableRow sx={{ bgcolor: 'grey.200' }}>
                 <TableCell>Imagem</TableCell>
-                <TableCell>Nome</TableCell>
-                <TableCell>Preço</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'name'}
+                    direction={order}
+                    onClick={() => handleRequestSort('name')}
+                  >
+                    Nome
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'price'}
+                    direction={order}
+                    onClick={() => handleRequestSort('price')}
+                  >
+                    Preço
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Categoria</TableCell>
                 <TableCell>Descrição</TableCell>
                 <TableCell>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredProducts.length > 0 ? (
-                filteredProducts.map(([key, product]) => (
+              {sortedProducts
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map(([key, product]) => (
                   <TableRow key={key}>
                     <TableCell>
                       {product?.imageUrl ? (
@@ -171,6 +228,7 @@ const ManageStoreDesk = ({ storeId }) => {
                     </TableCell>
                     <TableCell>{product?.name || 'Sem nome'}</TableCell>
                     <TableCell>{product?.price || 'Sem preço'} MZN</TableCell>
+                    <TableCell>{product?.category || 'Sem categoria'}</TableCell>
                     <TableCell>{product?.description || 'Sem descrição'}</TableCell>
                     <TableCell>
                       <IconButton
@@ -189,20 +247,34 @@ const ManageStoreDesk = ({ storeId }) => {
                       </IconButton>
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    Nenhum produto encontrado.
-                  </TableCell>
-                </TableRow>
-              )}
+                ))}
             </TableBody>
           </Table>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredProducts.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
         </TableContainer>
       )}
+
+      <Snackbar
+        open={feedback.open}
+        autoHideDuration={6000}
+        onClose={() => setFeedback({ ...feedback, open: false })}>
+        <Alert
+          onClose={() => setFeedback({ ...feedback, open: false })}
+          severity={feedback.severity}
+          sx={{ width: '100%' }}
+        >
+          {feedback.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
-
 export default ManageStoreDesk;

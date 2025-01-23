@@ -16,17 +16,20 @@ import DomainIcon from "@mui/icons-material/Domain";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ChatIcon from "@mui/icons-material/Chat";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import FeedIcon from '@mui/icons-material/Feed';
 import { logo } from "../../utils/utils";
 
 const HeaderDesk = ({ user }) => {
+  
   const navigate = useNavigate();
-  const location = useLocation(); // Rota atual
+  const location = useLocation(); 
   const publicPanel = user?.publicPainel;
   const isMobile = useMediaQuery("(max-width:600px)");
 
   const navItems = [
     { to: "/search", icon: <SearchIcon fontSize="large" />, label: "Pesquisar" },
     { to: "/stores", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
+    { to: "/feed", icon: <FeedIcon fontSize="large" />, label: "Feed" },
     { to: "/concursos", icon: <GavelIcon fontSize="large" />, label: "Concursos" },
     { to: "/explore", icon: <DomainIcon fontSize="large" />, label: "Empresas" },
     { to: "/cotacoes", icon: <DescriptionIcon fontSize="large" />, label: "Cotações" },
@@ -44,16 +47,15 @@ const HeaderDesk = ({ user }) => {
             </Link>
           </Typography>
         </Box>
-
         <Box display="flex" alignItems="center" gap={3}>
           {navItems.map((item, index) => {
-            const isActive = location.pathname === item.to; // Verifica se o item está ativo
+            const isActive = location.pathname === item.to; 
             return (
               <Link to={item.to} key={index} title={item.label}>
                 <IconButton
                   sx={{
-                    color: isActive ? "#1976d2" : "#444", // Destaque na cor ativa
-                    backgroundColor: isActive ? "#e3f2fd" : "transparent", // Fundo ativo
+                    color: isActive ? "#1976d2" : "#444", 
+                    backgroundColor: isActive ? "#e3f2fd" : "transparent",
                     "&:hover": {
                       color: "#1976d2",
                       transform: "scale(1.1)",
@@ -66,7 +68,6 @@ const HeaderDesk = ({ user }) => {
               </Link>
             );
           })}
-
           {publicPanel && (
             <Button
               onClick={() => navigate("/painel")}

@@ -30,7 +30,7 @@ import BackButton from '../BackButton';
 
 const ProductFormDesk = () => {
   const { storeId } = useParams();
-  const navigate = useNavigate(); // Hook para navegação
+  const navigate = useNavigate(); 
 
   const [products, setProducts] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -134,7 +134,7 @@ const ProductFormDesk = () => {
   };
 
   return (
-    <Box sx={{ p: 4, bgcolor: '#fff', borderRadius: 2, boxShadow: 3 }}>
+    <Box sx={{ width:'100%',p: 4}}>
       <BackButton sx={{ mb: 2 }} />
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
         Adicionar Produtos

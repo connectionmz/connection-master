@@ -50,6 +50,7 @@ import CreditCardCheckoutDesk from '../checkout/CreditCardCheckoutDesk';
 import AuthDesk from '../AuthDesk';
 import ProfileDesk from '../desktop/ProfileDesk';
 import EditProfileDesk from '../desktop/EditProfileDesk';
+import FeedDesk from '../desktop/FeedDesk';
 
 
 const theme = createTheme({
@@ -120,6 +121,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
         <Route path="/app" element={<ApxDesk user={user} />} />
+        <Route path="/feed" element={<FeedDesk user={user} />} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
         <Route path="/profile" element={<ProfileDesk />} />
         <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
@@ -140,6 +142,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
         <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
         <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
+        <Route path="/edit-proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
         <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
 
         {/* Mercado e Produtos */}
