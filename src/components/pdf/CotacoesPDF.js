@@ -118,11 +118,10 @@ const CotacoesPDF = ({ user }) => {
           {/* Header */}
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
             <Box>
-              <img
-                src={cot.company?.logoUrl || "/imagens/default-logo.png"}
-                alt="Logotipo"
-                style={{ width: 100 }}
-              />
+            <Typography variant="h4" fontWeight="bold" color="text.primary">
+                PEDIDO DE COTACAO{" "}
+ 
+              </Typography>
               <Typography variant="h6" color="error" fontWeight="bold">
                 {cot.company?.nome}
               </Typography>
@@ -131,12 +130,7 @@ const CotacoesPDF = ({ user }) => {
               </Typography>
             </Box>
             <Box textAlign="right">
-              <Typography variant="h4" fontWeight="bold" color="text.primary">
-                PEDIDO DE COTACAO{" "}
-                <Typography color="error">
-                  {id}
-                </Typography>
-              </Typography>
+             
               <Typography variant="body2">
                 Data: {cot.timestamp}
               </Typography>
@@ -152,7 +146,7 @@ const CotacoesPDF = ({ user }) => {
     <TableContainer component={Paper} className="mt-4">
       <Table>
         <TableHead>
-          <TableRow>
+          <TableRow sx={{ bgcolor: "error.main" }}>
             <TableCell><strong>Serviço/Produto</strong></TableCell>
             <TableCell><strong>Descrição</strong></TableCell>
           </TableRow>
@@ -182,25 +176,7 @@ const CotacoesPDF = ({ user }) => {
   </section>
 )}
 
-          {/* Resumo */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              mt: 3,
-              fontSize: "0.875rem",
-            }}
-          >
-            <Box>
-              <Typography>Subtotal:</Typography>
-              <Typography>IVA:</Typography>
-              <Typography fontWeight="bold">Total:</Typography>
-            </Box>
-            <Box textAlign="right">
-            
-            </Box>
-          </Box>
-
+          
           {/* Rodapé fixo */}
           <Box
             sx={{
