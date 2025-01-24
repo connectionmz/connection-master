@@ -53,6 +53,7 @@ import EditProfileDesk from '../desktop/EditProfileDesk';
 import FeedDesk from '../desktop/FeedDesk';
 import CotacoesPDF from '../pdf/CotacoesPDF';
 import NoticiadosDesk from '../desktop/NoticiadosDesk';
+import NoticiaDetalheDesk from '../desktop/NoticiaDetalheDesk';
 
 
 const theme = createTheme({
@@ -141,7 +142,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
 
         <Route path="/noticiados" element={<NoticiadosDesk />} />
-
+        <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
         <Route path="/proforma" element={<CriarProformaDesk user={user} />} />

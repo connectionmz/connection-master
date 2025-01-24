@@ -15,6 +15,7 @@ import {
   Alert 
 } from '@mui/material';
 import { FaFileDownload } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 const NoticiadosDesk = () => {
   const [anuncios, setAnuncios] = useState([]);
@@ -112,47 +113,39 @@ const NoticiadosDesk = () => {
                     height: '100%',
                   }}
                 >
-                  <CardMedia
-                    component="img"
-                    height="160"
-                    image={anuncio.fileUrl || '/images/default-placeholder.png'}
-                    alt={anuncio.company?.nome || 'Imagem do anúncio'}
-                    sx={{ objectFit: 'cover' }}
-                  />
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" gutterBottom>
-                      {anuncio.title || 'Sem título'}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      paragraph
-                    >
-                      {anuncio.content?.length > 100
-                        ? `${anuncio.content.substring(0, 100)}...`
-                        : anuncio.content || 'Sem descrição disponível.'}
-                    </Typography>
-                    <Typography variant="caption" display="block" gutterBottom>
-                      Publicado por: {anuncio.company?.nome || 'Desconhecido'}{' '}
-                      ({anuncio.company?.provincia || 'N/A'})
-                    </Typography>
-                    <Typography variant="caption" display="block" gutterBottom>
-                      Data: {formatDate(anuncio.date)}
-                    </Typography>
-                  </CardContent>
-                  {anuncio.fileUrl && (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<FaFileDownload />}
-                      href={anuncio.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ margin: 2 }}
-                    >
-                      Baixar Anexo
-                    </Button>
-                  )}
+                  <Link
+                    to={`/noticia/${anuncio.id}`}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <CardMedia
+                      component="img"
+                      height="160"
+                      image={anuncio.fileUrl || '/images/default-placeholder.png'}
+                      alt={anuncio.company?.nome || 'Imagem do anúncio'}
+                      sx={{ objectFit: 'cover' }}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" gutterBottom>
+                        {anuncio.title || 'Sem título'}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        paragraph
+                      >
+                        {anuncio.content?.length > 100
+                          ? `${anuncio.content.substring(0, 100)}...`
+                          : anuncio.content || 'Sem descrição disponível.'}
+                      </Typography>
+                      <Typography variant="caption" display="block" gutterBottom>
+                        Publicado por: {anuncio.company?.nome || 'Desconhecido'}{' '}
+                        ({anuncio.company?.provincia || 'N/A'})
+                      </Typography>
+                      <Typography variant="caption" display="block" gutterBottom>
+                        Data: {formatDate(anuncio.date)}
+                      </Typography>
+                    </CardContent>
+                  </Link>
                 </Card>
               </Grid>
             ))}
