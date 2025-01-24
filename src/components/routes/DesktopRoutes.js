@@ -52,6 +52,7 @@ import ProfileDesk from '../desktop/ProfileDesk';
 import EditProfileDesk from '../desktop/EditProfileDesk';
 import FeedDesk from '../desktop/FeedDesk';
 import CotacoesPDF from '../pdf/CotacoesPDF';
+import NoticiadosDesk from '../desktop/NoticiadosDesk';
 
 
 const theme = createTheme({
@@ -65,7 +66,6 @@ const theme = createTheme({
     },
   },
 });
-
 
 const DesktopRoutes = ({ user }) => {
   const [language, setLanguage] = useState('pt'); 
@@ -140,6 +140,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk />} />
         <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
 
+        <Route path="/noticiados" element={<NoticiadosDesk />} />
 
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />

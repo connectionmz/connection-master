@@ -27,7 +27,6 @@ const App = () => {
 
       if (snapshot.exists()) {
         const data = snapshot.val();
-        console.log(data)
         setUserData({
           ...data,
           photoURL: data.logoUrl || 'https://via.placeholder.com/150',

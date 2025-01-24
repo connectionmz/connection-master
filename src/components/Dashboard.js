@@ -20,6 +20,7 @@ import { limitToFirst, onValue, orderByKey, query, ref } from "firebase/database
 import { Link } from "react-router-dom";
 import { db } from "../fb";
 import BannerDesk from "./desktop/BannerDesk";
+import StorieListDesk from "./desktop/StorieListDesk";
 
 const InfoBlock = ({ title, items, linkBase }) => (
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
@@ -97,8 +98,7 @@ const Dashboard = ({ user }) => {
     <Box >
    
       <Container sx={{ marginTop: 10 }}>
-      <StorieList user={user.provincia} />
-
+      <StorieListDesk user={user.provincia} />
         <Grid container spacing={2}>
           {/* Sidebar Esquerda */}
           <Grid item xs={12} sm={3}>
