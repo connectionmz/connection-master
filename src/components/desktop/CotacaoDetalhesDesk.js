@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../fb';
 import { ref, onValue, increment, update } from 'firebase/database';
-import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload } from '@mui/icons-material';
+import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload, Timelapse, CalendarToday, AccessTime } from '@mui/icons-material';
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import {
   Avatar,
   Box,
 } from '@mui/material';
+import BackButton from '../BackButton';
 
 const CotacaoDetalhesDesk = () => {
   const { id, companyId } = useParams();
@@ -58,11 +59,12 @@ const CotacaoDetalhesDesk = () => {
   };
 
   if (!cotacao) {
-    return <Typography align="center" color="textSecondary">Carregando...</Typography>;
+    return <Typography align="center" color="textSecondary">Carregando...</Typography>
   }
 
   return (
     <Box maxWidth="lg" mx="auto" p={3}>
+    <BackButton sx={{ mb: 2 }} />
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Grid container spacing={3} alignItems="center">
@@ -83,6 +85,37 @@ const CotacaoDetalhesDesk = () => {
                   <Grid item><RemoveRedEye color="primary" /> {cotacao.views || 0} visualizações</Grid>
                   <Grid item><AdsClick color="success" /> {cotacao.clicks || 0} cliques</Grid>
                   <Grid item><Inbox color="warning" /> {propostas.length} propostas</Grid>
+                </Grid>
+              </Box>
+              <Box mt={1}>
+                <Grid container spacing={2}>
+
+
+                    {/* Data Limite */}
+                    <Grid item>
+                      <Typography color="primary" style={{ verticalAlign: 'middle', marginRight: 4 }} >Publicado</Typography>
+                      <Typography variant="body2" component="span">
+                        {new Date(cotacao.datalimite).toLocaleDateString('pt-PT', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </Typography>
+                    </Grid>
+
+                    {/* Data de Criação */}
+                    <Grid item>
+                      <Typography color="warning" style={{ verticalAlign: 'middle', marginRight: 4 }} >Limite</Typography>
+                      <Typography variant="body2" component="span">
+                        {new Date(cotacao.timestamp).toLocaleString('pt-PT', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Typography>
+                  </Grid>
                 </Grid>
               </Box>
             </Grid>
