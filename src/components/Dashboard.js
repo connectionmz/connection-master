@@ -19,6 +19,7 @@ import Banner from "./Banner";
 import { limitToFirst, onValue, orderByKey, query, ref } from "firebase/database";
 import { Link } from "react-router-dom";
 import { db } from "../fb";
+import BannerDesk from "./desktop/BannerDesk";
 
 const InfoBlock = ({ title, items, linkBase }) => (
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
@@ -127,7 +128,9 @@ const Dashboard = ({ user }) => {
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
           <MarqueeAnuncios />
-            <Banner />
+          <Box sx={{ padding: 2 }}>
+    <BannerDesk />
+  </Box>
            
           </Grid>
 
