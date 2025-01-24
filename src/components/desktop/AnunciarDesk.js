@@ -118,7 +118,7 @@ const AnunciarDesk = ({ user }) => {
   };
 
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" padding={2}>
+    <Box width='100%' minHeight="100vh">
         
       <Paper  sx={{  width: '100%', padding: 3 }}>      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
       <BackButton sx={{ mb: 2 }} />

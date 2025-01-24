@@ -98,6 +98,7 @@ const Dashboard = ({ user }) => {
     <Box >
    
       <Container sx={{ marginTop: 10 }}>
+      <MarqueeParceiros/>
       <StorieListDesk user={user.provincia} />
         <Grid container spacing={2}>
           {/* Sidebar Esquerda */}
