@@ -119,7 +119,7 @@ const ExploreDesk = () => {
   }
 
   return (
-    <Box p={4}>
+    <Box width='100%' minHeight="100vh">
       <Typography variant="h4" gutterBottom>
         Empresas Disponíveis
       </Typography>
