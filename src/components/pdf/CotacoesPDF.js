@@ -37,6 +37,7 @@ const CotacoesPDF = ({ user }) => {
         );
         if (proformaSnap.exists()) {
           setCotacao(proformaSnap.val());
+          console.log(proformaSnap.val())
         } else {
           setError("Proforma não encontrada.");
         }
@@ -125,14 +126,20 @@ const CotacoesPDF = ({ user }) => {
               <Typography variant="h6" color="error" fontWeight="bold">
                 {cot.company?.nome}
               </Typography>
+              <Typography variant="h6" fontWeight="bold">
+                #{cot.title}
+              </Typography>
               <Typography variant="body2">
-                {cot.company?.endereco}, {cot.company?.distrito}
+                {cot.company?.provincia} - {cot.company?.distrito}
               </Typography>
             </Box>
             <Box textAlign="right">
              
               <Typography variant="body2">
-                Data: {cot.timestamp}
+                Publicado: {cot.timestamp}
+              </Typography>
+              <Typography variant="body2 text-gray-700">
+                Data Limite: {cot.datalimite}
               </Typography>
             </Box>
           </Box>
@@ -140,15 +147,17 @@ const CotacoesPDF = ({ user }) => {
 {/* Tabela */}
 {cot.items && cot.items.length > 0 && (
   <section >
-    <Typography variant="h6" className="text-gray-700 font-semibold">
+     <Typography variant="body2" className="font-semibold"  dangerouslySetInnerHTML={{ __html: cot.description }}> 
+    </Typography>
+    <Typography variant="h6" className="font-semibold">
       Itens da Cotação
     </Typography>
     <TableContainer component={Paper} className="mt-4">
       <Table>
         <TableHead>
           <TableRow sx={{ bgcolor: "error.main" }}>
-            <TableCell><strong>Serviço/Produto</strong></TableCell>
-            <TableCell><strong>Descrição</strong></TableCell>
+            <TableCell><strong style={{color:'white'}}>Serviço/Produto</strong></TableCell>
+            <TableCell><strong style={{color:'white'}}>Descrição</strong></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
