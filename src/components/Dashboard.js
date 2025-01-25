@@ -22,7 +22,7 @@ import { db } from "../fb";
 import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
 
-const InfoBlock = ({ title, items, linkBase }) => (
+const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
     <Typography variant="h6" sx={{ fontWeight: "bold" }}>
       {title}
@@ -34,8 +34,12 @@ const InfoBlock = ({ title, items, linkBase }) => (
         </Typography>
       ) : (
         items.map((item) => (
-          <Link key={item.id} to={`${linkBase}/${item.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <ListItemText secondary={item.name || item.title} />
+          <Link
+            key={item.id}
+            to={`${linkBase}/${isCategory ? item.name : item.id}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            <ListItemText primary={item.name || item.title} />
           </Link>
         ))
       )}
@@ -46,6 +50,7 @@ const InfoBlock = ({ title, items, linkBase }) => (
     </Button>
   </Paper>
 );
+
 
 const Dashboard = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
@@ -137,7 +142,7 @@ const Dashboard = ({ user }) => {
 
           {/* Sidebar Direita */}
           <Grid item xs={12} sm={3}>
-            <InfoBlock title="Categorias" items={categorias} linkBase="/servicos" />
+            <InfoBlock title="Categorias" items={categorias} linkBase="/servicos" isCategory={true}/>
             <InfoBlock title="Inquéritos" items={inqueritos} linkBase="/inquerito" />
           </Grid>
         </Grid>
