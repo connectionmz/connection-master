@@ -7,7 +7,6 @@ import { Avatar } from '@mui/material';
 
 const MarqueeParceiros = () => {
   const [parceiros, setParceiros] = useState([]);
-  const [selectedParceiro, setSelectedParceiro] = useState(null);
   const navigate = useNavigate();
 
   const fetchParceiros = async () => {
@@ -25,12 +24,8 @@ const MarqueeParceiros = () => {
     fetchParceiros();
   }, []);
 
-  const handleOpenModal = (parceiro) => {
-    setSelectedParceiro(parceiro);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedParceiro(null);
+  const handleNavigateToTabs = () => {
+    navigate('/parceiros-investidores'); // Redireciona para o componente com tabs
   };
 
   const handleCompanyClick = (companyId) => {
@@ -38,33 +33,39 @@ const MarqueeParceiros = () => {
   };
 
   return (
-      <>
+    <>
       <div className="flex items-center bg-blue-600 text-white p-4 mb-6">
-      <div className="ml-4 flex-shrink-0">
+        <div className="ml-4 flex-shrink-0">
           <button
-            className="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-gray-200 transition">
-           Parceiros / Investidores
+            className="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-gray-200 transition"
+            onClick={handleNavigateToTabs} // Navega para o novo componente
+          >
+            Parceiros / Investidores
           </button>
         </div>
         <div className="flex-grow overflow-hidden">
           <div className="whitespace-nowrap animate-marquee">
           {parceiros.map((parceiro, index) => (
-              <span
-                key={index}
-                className="mx-8 cursor-pointer flex items-center space-x-2"
-                onClick={() => handleCompanyClick(parceiro.companyId)}>
-              <Avatar
-                src={parceiro.logo}
-                alt={parceiro.nome || 'Logo da Empresa'}
-                sx={{ width: 40, height: 40, marginRight: 2 }} />
-                <strong>{parceiro.nome || 'Empresa Desconhecida'}:</strong>
-              </span>
-            ))}
+  <a
+    key={index}
+    className="mx-8 cursor-pointer flex items-center space-x-2"
+    onClick={() => handleCompanyClick(parceiro.companyId)}
+  >
+    <Avatar
+      src={parceiro.logo}
+      alt={parceiro.nome || 'Logo da Empresa'}
+      sx={{ width: 40, height: 40, marginRight: 2 }}
+    />
+    <span className="flex items-center">
+      <strong>{parceiro.nome || 'Empresa Desconhecida'}:</strong>
+    </span>
+  </a>
+))}
+
           </div>
         </div>
-        
       </div>
-        </>
+    </>
   );
 };
 

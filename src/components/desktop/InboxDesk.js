@@ -5,6 +5,7 @@ import { auth, db } from '../../fb';
 import { Clear, DoneAll } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { Box, Tabs, Tab, List, ListItem, ListItemText, IconButton, Button, Typography } from '@mui/material';
+import BackButton from '../BackButton';
 
 const InboxDesk = () => {
   const [user] = useAuthState(auth);
@@ -51,7 +52,8 @@ const InboxDesk = () => {
 
   return (
     <Box width='100%' minHeight="100vh">
-      <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+        <BackButton sx={{ mb: 2 }} />
+        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
         Caixa de entrada
       </Typography>
 

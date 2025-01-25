@@ -23,7 +23,6 @@ const ListaDeServicosDesk = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Observa os serviços
     const servicosRef = ref(db, `servicosExternos/${categoriaId}`);
     const unsubscribe = onValue(servicosRef, (snapshot) => {
       const data = snapshot.val();
@@ -34,7 +33,6 @@ const ListaDeServicosDesk = () => {
         setServicos([]);
       }
       setLoading(false)
-
     });
 
     const fetchCompanies = async () => {
@@ -48,7 +46,7 @@ const ListaDeServicosDesk = () => {
               id: key,
               ...data[key],
             }))
-            .filter((company) => company.categoriaExterna === categoriaId); // Filtra por categoria
+            .filter((company) => company.categoriaExterna === categoriaId); 
           setCompanies(companyList);
         } else {
           setCompanies([]);
@@ -61,14 +59,12 @@ const ListaDeServicosDesk = () => {
 
     fetchCompanies();
 
-    // Cleanup para desinscrever listeners
     return () => unsubscribe();
   }, [categoriaId]);
 
   const handleCompanyClick = (companyId) => {
     navigate(`/vperfil/${companyId}`);
   };
-
 
   return (
     <Box width='100%' minHeight="100vh">
@@ -126,7 +122,6 @@ const ListaDeServicosDesk = () => {
           Nenhuma empresa encontrada para esta categoria.
         </Typography>
       )}
-
       <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
         <Button
           variant="contained"

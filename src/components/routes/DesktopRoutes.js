@@ -54,6 +54,7 @@ import FeedDesk from '../desktop/FeedDesk';
 import CotacoesPDF from '../pdf/CotacoesPDF';
 import NoticiadosDesk from '../desktop/NoticiadosDesk';
 import NoticiaDetalheDesk from '../desktop/NoticiaDetalheDesk';
+import ParceirosInvestidoresDesk from '../desktop/ParceirosInvestidoresDesk';
 
 
 const theme = createTheme({
@@ -119,7 +120,7 @@ const DesktopRoutes = ({ user }) => {
  
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
-      
+        <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
         <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
         <Route path="/app" element={<ApxDesk user={user} />} />

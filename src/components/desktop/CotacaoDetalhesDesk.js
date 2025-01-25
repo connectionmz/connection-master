@@ -148,8 +148,8 @@ const CotacaoDetalhesDesk = () => {
       </Card>
 
       <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>Itens Solicitados</Typography>
+
+      <Typography variant="h6" gutterBottom>Itens Solicitados</Typography>
           {cotacao.items && cotacao.items.length > 0 ? (
             <Grid container spacing={2}>
               {cotacao.items.map((item, index) => (
@@ -167,7 +167,6 @@ const CotacaoDetalhesDesk = () => {
           ) : (
             <Typography color="textSecondary">Nenhum item disponível.</Typography>
           )}
-        </CardContent>
       </Card>
     </Box>
   );
