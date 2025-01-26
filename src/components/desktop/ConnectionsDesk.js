@@ -3,23 +3,31 @@ import {
   Box,
   Typography,
   List,
-  ListItem,
+  ListItemButton, 
   ListItemAvatar,
   Avatar,
   ListItemText,
   Divider,
   Badge,
   Button,
+  Tabs,
+  Tab,
+  Paper,
+  ListItem,
+  TextField,  // Importando TextField para o campo de pesquisa
 } from "@mui/material";
 import { Person, Check, Close } from "@mui/icons-material";
 import { ref, onValue, update } from "firebase/database";
 import { db } from "../../fb";
+import { Link } from "react-router-dom"; 
 
 const ConnectionsDesk = ({ user }) => {
   const [connections, setConnections] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [searchQuery, setSearchQuery] = useState(""); // Estado para o campo de pesquisa
 
-  const userId = user.id
+  const userId = user.id;
 
   useEffect(() => {
     if (!userId) return;
@@ -30,7 +38,6 @@ const ConnectionsDesk = ({ user }) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
 
-        console.log(data)
         const accepted = [];
         const pending = [];
 
@@ -51,7 +58,7 @@ const ConnectionsDesk = ({ user }) => {
       }
     });
 
-    return () => unsubscribe(); // Limpar o listener ao desmontar o componente
+    return () => unsubscribe();
   }, [userId]);
 
   const handleAccept = (requestId) => {
@@ -68,88 +75,134 @@ const ConnectionsDesk = ({ user }) => {
     );
   };
 
+  const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue);
+  };
+
+  // Função para filtrar com base no nome
+  const filterItems = (items) => {
+    return items.filter((item) =>
+      item.fromUserName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
   return (
-    <Box width='100%' minHeight="100vh">
+    <Box width="100%" minHeight="100vh">
       <Typography variant="h5" sx={{ marginBottom: 2, fontWeight: "bold" }}>
         Conexões
       </Typography>
 
-      {/* Pending Requests */}
-      <Box sx={{ marginBottom: 4 }}>
-        <Typography variant="h6" sx={{ marginBottom: 1 }}>
-          Pedidos Pendentes
-        </Typography>
-        <List>
-          {pendingRequests.length > 0 ? (
-            pendingRequests.map((request, index) => (
-              <React.Fragment key={index}>
-                <ListItem alignItems="center">
-                  <ListItemAvatar>
-                    <Avatar src={request.avatar} alt={request.name}>
-                      <Person />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText primary={request.name} secondary={request.email} />
-                  <Box display="flex" gap={1}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<Check />}
-                      onClick={() => handleAccept(request.id)}
-                    >
-                      Aceitar
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<Close />}
-                      onClick={() => handleReject(request.id)}
-                    >
-                      Rejeitar
-                    </Button>
-                  </Box>
-                </ListItem>
-                {index < pendingRequests.length - 1 && <Divider />}
-              </React.Fragment>
-            ))
-          ) : (
-            <Typography variant="body1" sx={{ color: "#555" }}>
-              Não há pedidos pendentes no momento.
-            </Typography>
-          )}
-        </List>
-      </Box>
+      {/* Campo de pesquisa */}
+      <TextField
+        label="Pesquisar por nome"
+        variant="outlined"
+        fullWidth
+        sx={{ marginBottom: 2 }}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
 
-      {/* Connections List */}
-      <Box>
-        <Typography variant="h6" sx={{ marginBottom: 1 }}>
-          Minhas Conexões
-        </Typography>
-        <List>
-          {connections.length > 0 ? (
-            connections.map((connection, index) => (
-              <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemAvatar>
-                    <Avatar src={connection.avatar} alt={connection.name}>
-                      <Person />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={connection.name}
-                    secondary={connection.email}
-                  />
-                </ListItem>
-                {index < connections.length - 1 && <Divider />}
-              </React.Fragment>
-            ))
-          ) : (
-            <Typography variant="body1" sx={{ color: "#555" }}>
-              Ainda não há conexões.
-            </Typography>
-          )}
-        </List>
-      </Box>
+      {/* Tabs para Pedidos Pendentes e Conexões */}
+      <Paper sx={{ marginBottom: 4 }}>
+        <Tabs
+          value={selectedTab}
+          onChange={handleTabChange}
+          aria-label="connection tabs"
+          centered
+          variant="fullWidth"
+        >
+          <Tab label="Pedidos Pendentes" />
+          <Tab label="Minhas Conexões" />
+        </Tabs>
+      </Paper>
+
+      {/* Conteúdo da Aba: Pedidos Pendentes */}
+      {selectedTab === 0 && (
+        <Box sx={{ padding: 2 }}>
+          <Typography variant="h6" sx={{ marginBottom: 1 }}>
+            Pedidos Pendentes
+          </Typography>
+          <List>
+            {filterItems(pendingRequests).length > 0 ? (
+              filterItems(pendingRequests).map((request, index) => (
+                <React.Fragment key={index}>
+                  <ListItem alignItems="center">
+                    <ListItemButton
+                      component={Link}
+                      to={`/vprofile/${request.id}`}
+                      sx={{ textDecoration: "none" }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar src={request.fromLogo} alt={request.name}>
+                          <Person />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText primary={request.fromUserName} />
+                      <Box display="flex" gap={1}>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<Check />}
+                          onClick={() => handleAccept(request.id)}
+                        >
+                          Aceitar
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Close />}
+                          onClick={() => handleReject(request.id)}
+                        >
+                          Rejeitar
+                        </Button>
+                      </Box>
+                    </ListItemButton>
+                  </ListItem>
+                  {index < pendingRequests.length - 1 && <Divider />}
+                </React.Fragment>
+              ))
+            ) : (
+              <Typography variant="body1" sx={{ color: "#555" }}>
+                Não há pedidos pendentes no momento.
+              </Typography>
+            )}
+          </List>
+        </Box>
+      )}
+
+      {/* Conteúdo da Aba: Conexões */}
+      {selectedTab === 1 && (
+        <Box sx={{ padding: 2 }}>
+          <Typography variant="h6" sx={{ marginBottom: 1 }}>
+            Minhas Conexões
+          </Typography>
+          <List>
+            {filterItems(connections).length > 0 ? (
+              filterItems(connections).map((connection, index) => (
+                <React.Fragment key={index}>
+                  <ListItemButton
+                    component={Link}
+                    to={`/vprofile/${connection.requestedBy}`}
+                    sx={{ textDecoration: "none" }}
+                  >
+                    <ListItemAvatar>
+                      <Avatar src={connection.fromLogo} alt={connection.name}>
+                        <Person />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText primary={connection.fromUserName} />
+                  </ListItemButton>
+                  {index < connections.length - 1 && <Divider />}
+                </React.Fragment>
+              ))
+            ) : (
+              <Typography variant="body1" sx={{ color: "#555" }}>
+                Ainda não há conexões.
+              </Typography>
+            )}
+          </List>
+        </Box>
+      )}
     </Box>
   );
 };
