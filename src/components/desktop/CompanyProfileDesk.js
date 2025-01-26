@@ -111,8 +111,6 @@ const CompanyProfile = ({ user }) => {
 
     useEffect(() => {
 
-      console.log(userId)
-  
       const connectionRef = ref(db, `connections/${userId}/${user.id}`);
       const unsubscribe = onValue(connectionRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -276,20 +274,20 @@ const CompanyProfile = ({ user }) => {
 
                 <Button
   variant={
-    connectionStatus === "connected"
+    connectionStatus === "accepted"
       ? "contained"
       : connectionStatus === "pending"
       ? "outlined"
       : "outlined"
   }
-  disabled={connectionStatus === "connected"}
+  disabled={connectionStatus === "accepted"}
   onClick={
     connectionStatus === "pending" ? handleCancelarConexao : handleConectar
   }
 >
   {connectionStatus === "pending"
     ? "Cancelar Solicitação"
-    : connectionStatus === "connected"
+    : connectionStatus === "accepted"
     ? "Conectado"
     : "Conectar"}
                 </Button>

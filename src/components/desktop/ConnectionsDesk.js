@@ -14,7 +14,7 @@ import {
   Tab,
   Paper,
   ListItem,
-  TextField,  // Importando TextField para o campo de pesquisa
+  TextField, // Importando TextField para o campo de pesquisa
 } from "@mui/material";
 import { Person, Check, Close } from "@mui/icons-material";
 import { ref, onValue, update } from "firebase/database";
@@ -63,16 +63,26 @@ const ConnectionsDesk = ({ user }) => {
 
   const handleAccept = (requestId) => {
     const requestRef = ref(db, `connections/${userId}/${requestId}`);
-    update(requestRef, { status: "accepted" }).catch((error) =>
-      console.error("Erro ao aceitar o pedido:", error)
-    );
+    update(requestRef, { status: "accepted" })
+      .then(() => {
+        // Atualiza o estado sem precisar de uma nova requisição ao Firebase
+        setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+        setConnections(prev => [
+          ...prev,
+          pendingRequests.find(req => req.id === requestId)
+        ]);
+      })
+      .catch((error) => console.error("Erro ao aceitar o pedido:", error));
   };
 
   const handleReject = (requestId) => {
     const requestRef = ref(db, `connections/${userId}/${requestId}`);
-    update(requestRef, { status: "rejected" }).catch((error) =>
-      console.error("Erro ao rejeitar o pedido:", error)
-    );
+    update(requestRef, { status: "rejected" })
+      .then(() => {
+        // Atualiza o estado sem precisar de uma nova requisição ao Firebase
+        setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+      })
+      .catch((error) => console.error("Erro ao rejeitar o pedido:", error));
   };
 
   const handleTabChange = (event, newValue) => {
@@ -129,7 +139,7 @@ const ConnectionsDesk = ({ user }) => {
                   <ListItem alignItems="center">
                     <ListItemButton
                       component={Link}
-                      to={`/vprofile/${request.id}`}
+                      to={`/vperfil/${request.id}`}
                       sx={{ textDecoration: "none" }}
                     >
                       <ListItemAvatar>
@@ -182,7 +192,7 @@ const ConnectionsDesk = ({ user }) => {
                 <React.Fragment key={index}>
                   <ListItemButton
                     component={Link}
-                    to={`/vprofile/${connection.requestedBy}`}
+                    to={`/vperfil/${connection.requestedBy}`}
                     sx={{ textDecoration: "none" }}
                   >
                     <ListItemAvatar>
