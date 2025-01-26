@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, Logout, Edit, CameraAlt, Language, Store, RequestQuote, Message, Phone, WhatsApp, Facebook } from "@mui/icons-material";
 import { useNavigate, useParams } from 'react-router-dom';
-import { get, ref, update, push } from 'firebase/database'; 
+import { get, ref, update, push, set, onValue } from 'firebase/database'; 
 import { auth, db } from '../../fb'; 
 import PostGallery from '../PostGallery';
 import {
@@ -32,7 +32,9 @@ const CompanyProfile = ({ user }) => {
     const userId = id;
     const [posts, setPosts] = useState([]);
     const [visits, setVisits] = useState([]);
+    const [connectionStatus, setConnectionStatus] = useState(null); 
 
+    
     useEffect(() => {
         if (userId) {
             const fetchData = async () => {
@@ -106,9 +108,52 @@ const CompanyProfile = ({ user }) => {
         }
     }, [userId, navigate, user]);
 
+    useEffect(() => {
+
+      console.log(userId)
+  
+      const connectionRef = ref(db, `connections/${userId}/${user.id}`);
+      const unsubscribe = onValue(connectionRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setConnectionStatus(snapshot.val().status); // Atualiza o estado com o status da conexão
+          console.log(snapshot.val())
+        } else {
+          setConnectionStatus(null); // Sem conexão existente
+        }
+      });
+  
+      return () => unsubscribe(); // Remove o listener quando o componente desmontar
+    }, [userId, user.id, db]);
     const handleCotacaoClick = (id, companyId) => {
         console.log(id);
         console.log(companyId);
+    };
+    const handleConectar = () => {
+      if (!userId) {
+        alert("Usuário inválido. Não é possível conectar.");
+        return;
+      }
+    
+      const currentUserId = user.id; // Substitua pelo ID do usuário logado (ex.: via autenticação)
+    
+      // Referência no Realtime Database para a solicitação pendente
+      const targetUserConnectionRef = ref(db, `connections/${userId}/${currentUserId}`);
+    
+      const connectionRequest = {
+        requestedBy: currentUserId,
+        requestedTo: userId,
+        status: "pending", // Solicitação pendente
+        requestedAt: new Date().toISOString(),
+      };
+    
+      set(targetUserConnectionRef, connectionRequest)
+        .then(() => {
+          alert("Solicitação de conexão enviada!");
+        })
+        .catch((error) => {
+          console.error("Erro ao enviar solicitação:", error);
+          alert("Erro ao tentar enviar a solicitação. Tente novamente.");
+        });
     };
     
     if (loading) {
@@ -204,7 +249,18 @@ const CompanyProfile = ({ user }) => {
                 <Typography variant="h5" fontWeight="bold">{userData?.displayName}</Typography>
                 <Typography color="text.secondary" mt={1}>{userData?.bio}</Typography>
 
-              {/* Botões e Contatos */}
+                <Button
+      variant={connectionStatus === "connected" ? "contained" : "outlined"}
+      disabled={connectionStatus === "pending" || connectionStatus === "connected"}
+      onClick={handleConectar}
+    >
+      {connectionStatus === "pending"
+        ? "Solicitação Pendente"
+        : connectionStatus === "connected"
+        ? "Conectado"
+        : "Conectar"}
+    </Button>
+
 <Box
   display="flex"
   justifyContent="center"
@@ -230,6 +286,7 @@ const CompanyProfile = ({ user }) => {
       <RequestQuote />
     </IconButton>
   </Tooltip>
+
 
   {/* Contatos */}
   {userData.contacto && (

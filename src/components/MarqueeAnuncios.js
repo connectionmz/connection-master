@@ -73,6 +73,7 @@ const MarqueeAnuncios = () => {
               <strong>{anuncio.company.nome || 'Empresa Desconhecida'}:</strong>              <span>{anuncio.title}</span>
             </span>
           ))}
+          Saiba tudo sobre regulamentos e notícias essenciais para empresas e cidadãos
         </div>
       </div>
       <div className="ml-4 flex-shrink-0">
