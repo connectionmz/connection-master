@@ -142,11 +142,12 @@ const CompanyProfile = ({ user }) => {
       const connectionRequest = {
         requestedBy: currentUserId,
         requestedTo: userId,
+        fromLogo: user.logoUrl,
+        fromUserName: user.nome,
         status: "pending",
         requestedAt: new Date().toISOString(),
       };
     
-
       const notification = {
         type: "connection_request",
         message: `Você recebeu uma solicitação de conexão de ${user.nome}`,

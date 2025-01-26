@@ -56,6 +56,7 @@ import NoticiadosDesk from '../desktop/NoticiadosDesk';
 import NoticiaDetalheDesk from '../desktop/NoticiaDetalheDesk';
 import ParceirosInvestidoresDesk from '../desktop/ParceirosInvestidoresDesk';
 import ConcursoDesk from '../desktop/ConcursoDesk';
+import ConnectionsDesk from '../desktop/ConnectionsDesk';
 
 
 const theme = createTheme({
@@ -113,10 +114,10 @@ const DesktopRoutes = ({ user }) => {
       <div
         style={{
           display: 'flex',
-          alignItems: 'center', // Centraliza o conteúdo no eixo vertical
-          justifyContent: 'center', // Centraliza no eixo horizontal
-          maxWidth: '80%', // Largura máxima do conteúdo
-          margin: '0 auto', // Centraliza o contêiner horizontalmente
+          alignItems: 'center',
+          justifyContent: 'center',
+          maxWidth: '80%', 
+          margin: '0 auto', 
         }}>
  
         <Routes>
@@ -124,6 +125,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
         <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
+        <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
         <Route path="/app" element={<ApxDesk user={user} />} />
         <Route path="/feed" element={<FeedDesk user={user} />} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
