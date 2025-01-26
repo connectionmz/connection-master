@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, Logout, Edit, CameraAlt, Language, Store, RequestQuote, Message, Phone, WhatsApp, Facebook } from "@mui/icons-material";
 import { useNavigate, useParams } from 'react-router-dom';
-import { get, ref, update, push, set, onValue } from 'firebase/database'; 
+import { get, ref, update, push, set, onValue, remove } from 'firebase/database'; 
 import { auth, db } from '../../fb'; 
 import PostGallery from '../PostGallery';
 import {
@@ -17,6 +17,7 @@ import {
     IconButton,
     Tooltip,
 } from '@mui/material';
+import { saveContentToInbox } from '../SaveToInbox';
 
 const CompanyProfile = ({ user }) => {
     const { id } = useParams(); 
@@ -134,28 +135,48 @@ const CompanyProfile = ({ user }) => {
         return;
       }
     
-      const currentUserId = user.id; // Substitua pelo ID do usuário logado (ex.: via autenticação)
+      const currentUserId = user.id; 
     
-      // Referência no Realtime Database para a solicitação pendente
       const targetUserConnectionRef = ref(db, `connections/${userId}/${currentUserId}`);
     
       const connectionRequest = {
         requestedBy: currentUserId,
         requestedTo: userId,
-        status: "pending", // Solicitação pendente
+        status: "pending",
         requestedAt: new Date().toISOString(),
       };
     
+
+      const notification = {
+        type: "connection_request",
+        message: `Você recebeu uma solicitação de conexão de ${user.nome}`,
+        fromUserId: user.id,
+        fromUserName: user.nome,
+        timestamp: new Date().toISOString(),
+        status: "unread",
+      };
+
       set(targetUserConnectionRef, connectionRequest)
         .then(() => {
           alert("Solicitação de conexão enviada!");
+          saveContentToInbox(userId, notification)
         })
         .catch((error) => {
           console.error("Erro ao enviar solicitação:", error);
           alert("Erro ao tentar enviar a solicitação. Tente novamente.");
         });
     };
-    
+    const handleCancelarConexao = () => {
+      const targetUserConnectionRef = ref(db, `connections/${userId}/${user.id}`);
+        remove(targetUserConnectionRef)
+        .then(() => {
+          alert("Solicitação de conexão cancelada!");
+        })
+        .catch((error) => {
+          console.error("Erro ao cancelar a solicitação:", error);
+          alert("Erro ao tentar cancelar a solicitação. Tente novamente.");
+        });
+    };
     if (loading) {
         return <div>Carregando...</div>;
     }
@@ -248,18 +269,29 @@ const CompanyProfile = ({ user }) => {
             <Box textAlign="center" mt={8}>
                 <Typography variant="h5" fontWeight="bold">{userData?.displayName}</Typography>
                 <Typography color="text.secondary" mt={1}>{userData?.bio}</Typography>
+                
+                
+                {/* CONECTAR */}
 
                 <Button
-      variant={connectionStatus === "connected" ? "contained" : "outlined"}
-      disabled={connectionStatus === "pending" || connectionStatus === "connected"}
-      onClick={handleConectar}
-    >
-      {connectionStatus === "pending"
-        ? "Solicitação Pendente"
-        : connectionStatus === "connected"
-        ? "Conectado"
-        : "Conectar"}
-    </Button>
+  variant={
+    connectionStatus === "connected"
+      ? "contained"
+      : connectionStatus === "pending"
+      ? "outlined"
+      : "outlined"
+  }
+  disabled={connectionStatus === "connected"}
+  onClick={
+    connectionStatus === "pending" ? handleCancelarConexao : handleConectar
+  }
+>
+  {connectionStatus === "pending"
+    ? "Cancelar Solicitação"
+    : connectionStatus === "connected"
+    ? "Conectado"
+    : "Conectar"}
+                </Button>
 
 <Box
   display="flex"
