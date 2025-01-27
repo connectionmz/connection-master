@@ -13,7 +13,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
+import { Add, Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, SectorDeActividades } from '../../utils/formUtils';
 import sendMessage from '../sms/sendMessage';
 import BackButton from '../BackButton';
@@ -43,106 +43,69 @@ const NovaCotacao = ({ user }) => {
     setItems(newItems);
   };
 
+  const handleImageUpload = (index, file) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const newItems = [...items];
+      newItems[index].imageUrl = reader.result; // Armazena a imagem como base64 temporariamente
+      setItems(newItems);
+    };
+    if (file) {
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setSnackbarMessage('');
 
     try {
-        const cotacaoRef = ref(db, 'cotacoes');
-        const newCotacaoRef = push(cotacaoRef);
-        const cotacaoId = newCotacaoRef.key;
+      const cotacaoRef = ref(db, 'cotacoes');
+      const newCotacaoRef = push(cotacaoRef);
+      const cotacaoId = newCotacaoRef.key;
 
-        const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
+      const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
 
-        await set(ref(db, `cotacoes/${cotacaoId}`), {
-            title,
-            description,
-            id: cotacaoId,
-            userId:user.id,
-            items,
-            company: {
-              nome:user.nome,
-              id:user.id,
-              logoUrl:user.logoUrl,
-              sigla:user.sigla,
-              provincia: user.provincia,
-              distrito:user.distrito
-            },
-            sector,
-            timestamp: new Date().toISOString(),
-            datalimite: new Date(deadline).toISOString(),
-            status: 'open',
-            link: linkDoPedido,
-        });
+      await set(ref(db, `cotacoes/${cotacaoId}`), {
+        title,
+        description,
+        id: cotacaoId,
+        userId: user.id,
+        items,
+        company: {
+          nome: user.nome,
+          id: user.id,
+          logoUrl: user.logoUrl,
+          sigla: user.sigla,
+          provincia: user.provincia,
+          distrito: user.distrito,
+        },
+        sector,
+        timestamp: new Date().toISOString(),
+        datalimite: new Date(deadline).toISOString(),
+        status: 'open',
+        link: linkDoPedido,
+      });
 
-        setSnackbarMessage('Cotação criada com sucesso!');
-        setSnackbarSeverity('success');
-        setOpenSnackbar(true);
+      setSnackbarMessage('Cotação criada com sucesso!');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
 
-        const empresasRef = ref(db, 'company');
-        const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));
-        const snapshot = await get(setorQuery);
-
-        if (snapshot.exists()) {
-            const empresas = snapshot.val();
-            for (const key in empresas) {
-              const empresa = empresas[key];
-          
-              if (!empresa || !empresa.activeModules || !empresa.activeModules.moduloSMS) {
-                  continue;
-              }
-          
-              const moduleSMS = empresa.activeModules.moduloSMS.status === "active";
-              const smsCount = empresa.activeModules.moduloSMS.paymentDetails?.smsCount;
-
-              if (empresa.provincia !== user.provincia || !moduleSMS || (smsCount === undefined || smsCount <= 0)) {
-                  continue;
-              }
-          
-              if (!empresa.contacto) {
-                  continue;
-              }
-
-              const message = `
-                  Nova Cotação para sua Empresa
-                  Título: ${title}
-                  Descrição: ${description}
-                  Acesse: ${linkDoPedido}
-              `.trim();
-
-              const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "").replace(/\n/g, " ").replace(/\t/g, " ");
-              const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-          
-              try {
-                  await sendMessage(contatos, cleanMessage);
-                  const updatedSmsCount = smsCount - 1;
-                  await set(ref(db, `company/${key}/activeModules/moduloSMS/paymentDetails/smsCount`), updatedSmsCount);
-                  window.location="/cotacoes";
-
-              } catch (error) {
-                  console.error('Erro ao enviar SMS:', error.message);
-              }
-          }
-          
-        } else {
-            console.log('Nenhuma empresa encontrada para este setor.');
-        }
-
-        setTitle('');
-        setDescription('');
-        setItems([]);
-        setSector('');
-        setDeadline('');
+      setTitle('');
+      setDescription('');
+      setItems([]);
+      setSector('');
+      setDeadline('');
     } catch (error) {
-        setSnackbarMessage('Erro ao criar cotação. Tente novamente.');
-        setSnackbarSeverity('error');
-        setOpenSnackbar(true);
-        console.error('Erro ao criar cotação:', error.message);
+      setSnackbarMessage('Erro ao criar cotação. Tente novamente.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+      console.error('Erro ao criar cotação:', error.message);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
 
   const handleSectorChange = (e) => {
     setSector(e.target.value);
@@ -175,9 +138,9 @@ const NovaCotacao = ({ user }) => {
           />
         </Box>
         <Box sx={{ mb: 2 }}>
-          <SectorDeActividades 
-            companyData={{ sector }} 
-            handleChange={handleSectorChange} 
+          <SectorDeActividades
+            companyData={{ sector }}
+            handleChange={handleSectorChange}
             inputStyles="w-full px-3 py-2 border rounded"
           />
         </Box>
@@ -209,7 +172,7 @@ const NovaCotacao = ({ user }) => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   label="Descrição do Item"
                   value={item.description}
@@ -218,6 +181,29 @@ const NovaCotacao = ({ user }) => {
                   multiline
                   rows={2}
                 />
+              </Grid>
+              <Grid item xs={12} sm={2}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<ImageIcon />}
+                  fullWidth
+                >
+                  Adicionar Imagem
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(index, e.target.files[0])}
+                  />
+                </Button>
+                {item.imageUrl && (
+                  <img
+                    src={item.imageUrl}
+                    alt="Pré-visualização"
+                    style={{ width: '100%', marginTop: 10, borderRadius: 5 }}
+                  />
+                )}
               </Grid>
               <Grid item xs={12} sm={2}>
                 <IconButton color="error" onClick={() => handleRemoveItem(index)}>
