@@ -1,35 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../fb';
 import { ref, get } from 'firebase/database';
-import { useNavigate } from 'react-router-dom'; // Navegação com React Router
+import { useNavigate } from 'react-router-dom'; 
+import { Avatar, Box, Button, Typography } from '@mui/material';
 import '../styles/main.css';
-import { Avatar } from '@mui/material';
+import Marquee from 'react-fast-marquee'; // Biblioteca para o efeito de marquee
 
+// Função para buscar anúncios do Firebase
 export const fetchAnuncios = async () => {
   try {
     const snapshot = await get(ref(db, 'publicAnnouncements'));
     if (snapshot.exists()) {
-      
       return Object.values(snapshot.val());
-      
     } else {
       return [];
     }
   } catch (error) {
     console.error('Erro ao buscar anúncios:', error);
-    throw error; // Repassa o erro para ser tratado pelo componente que chamou
-
-    //POXA TO CANSADO SENTADO DESDE 21H DE ONTEM, ESPERO QUE GANHE MUITA GRANA COM ISSO
+    throw error; 
   }
 };
 
-
 const MarqueeAnuncios = () => {
   const [anuncios, setAnuncios] = useState([]);
-  const [selectedAnuncio, setSelectedAnuncio] = useState(null);
   const navigate = useNavigate();
 
-
+  // Carregar os anúncios ao montar o componente
   useEffect(() => {
     const loadAnuncios = async () => {
       try {
@@ -43,57 +39,75 @@ const MarqueeAnuncios = () => {
     loadAnuncios();
   }, []);
 
-  const handleOpenModal = (anuncio) => {
-    setSelectedAnuncio(anuncio);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedAnuncio(null);
-  };
-
   const handleVerMais = () => {
     navigate('/noticiados');
   };
 
   return (
-<div className="flex items-center bg-blue-600 text-white p-4 mb-6">
-  {/* Marquee */}
-  <div className="flex-grow overflow-hidden">
-    <div className="whitespace-nowrap animate-marquee">
-      {/* Mapeamento dos anúncios */}
-      {anuncios.map((anuncio, index) => (
-        <span
-          key={index}
-          className="mx-8 cursor-pointer flex items-center space-x-2"
-          onClick={() => handleOpenModal(anuncio)}>
-          <Avatar
-            src={anuncio.company.logo}
-            alt={anuncio.company.nome || 'Logo da Empresa'}
-            sx={{ width: 40, height: 40, marginRight: 2 }} // Tamanho e margem
-          />
-          <strong>{anuncio.company.nome || 'Empresa Desconhecida'}:</strong>              
-          <span>{anuncio.title}</span>
-        </span>
-      ))}
-      
-      {/* Mensagem "Saiba tudo" que aparece após os anúncios */}
-      <span className="mx-8">{/* Adiciona o espaço entre os anúncios e a mensagem */}
-        <strong>Saiba tudo sobre regulamentos e notícias essenciais para empresas e cidadãos</strong>
-      </span>
-    </div>
-  </div>
-
-  {/* Botão "Ver Mais" */}
-  <div className="ml-4 flex-shrink-0">
-    <button
-      onClick={handleVerMais}
-      className="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-gray-200 transition"
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        backgroundColor: 'primary.main',
+        color: 'white',
+        padding: 2,
+        marginBottom: 3,
+        borderRadius: 2,
+      }}
     >
-      Ver Mais
-    </button>
-  </div>
-</div>
+      {/* Componente Marquee */}
+      <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+        <Marquee pauseOnHover gradient={false}>
+          {/* Mapeamento dos anúncios */}
+          {anuncios.map((anuncio, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                marginX: 4,
+                cursor: 'pointer',
+              }}
+            >
+              <Avatar
+                src={anuncio.company?.logo || ''}
+                alt={anuncio.company?.nome || 'Logo da Empresa'}
+                sx={{ width: 40, height: 40, marginRight: 1 }}
+              />
+              <Typography variant="body1" component="span" fontWeight="bold">
+                {anuncio.company?.nome || 'Empresa Desconhecida'}:
+              </Typography>
+              <Typography variant="body2" component="span" sx={{ marginLeft: 1 }}>
+                {anuncio.title}
+              </Typography>
+            </Box>
+          ))}
 
+          {/* Mensagem adicional após os anúncios */}
+          <Box sx={{ marginX: 4 }}>
+            <Typography variant="body1" component="span" fontWeight="bold">
+              Saiba tudo sobre regulamentos e notícias essenciais para empresas e cidadãos
+            </Typography>
+          </Box>
+        </Marquee>
+      </Box>
+
+      {/* Botão "Ver Mais" */}
+      <Box sx={{ flexShrink: 0, marginLeft: 2 }}>
+        <Button
+          onClick={handleVerMais}
+          variant="contained"
+          color="secondary"
+          sx={{
+            backgroundColor: 'white',
+            color: 'primary.main',
+            '&:hover': { backgroundColor: 'grey.200' },
+          }}
+        >
+          Ver Mais
+        </Button>
+      </Box>
+    </Box>
   );
 };
 

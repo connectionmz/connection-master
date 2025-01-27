@@ -14,7 +14,9 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  IconButton,
 } from '@mui/material';
+import { Delete, Add } from '@mui/icons-material';
 
 const CriarInqueritoDesk = ({ user }) => {
   const [titulo, setTitulo] = useState('');
@@ -34,8 +36,8 @@ const CriarInqueritoDesk = ({ user }) => {
   ];
 
   const adicionarPergunta = (tipo) => {
-    setPerguntas([
-      ...perguntas,
+    setPerguntas([...
+      perguntas,
       { tipo, texto: '', opcoes: tipo === 'multipla_escolha' ? [''] : [] },
     ]);
   };
@@ -58,6 +60,16 @@ const CriarInqueritoDesk = ({ user }) => {
     setPerguntas(novasPerguntas);
   };
 
+  const removerPergunta = (index) => {
+    setPerguntas(perguntas.filter((_, i) => i !== index));
+  };
+
+  const removerOpcao = (indexPergunta, indexOpcao) => {
+    const novasPerguntas = [...perguntas];
+    novasPerguntas[indexPergunta].opcoes = novasPerguntas[indexPergunta].opcoes.filter((_, i) => i !== indexOpcao);
+    setPerguntas(novasPerguntas);
+  };
+
   const handleCloseSnackbar = () => {
     setSnackbar({ open: false, message: '', severity: '' });
   };
@@ -65,6 +77,11 @@ const CriarInqueritoDesk = ({ user }) => {
   const salvarInquerito = async () => {
     if (!titulo || !descricao || !setor || !tipoInquerito || perguntas.length === 0) {
       setSnackbar({ open: true, message: 'Por favor, preencha todos os campos.', severity: 'warning' });
+      return;
+    }
+
+    if (perguntas.some((p) => !p.texto || (p.tipo === 'multipla_escolha' && p.opcoes.some((o) => !o)))) {
+      setSnackbar({ open: true, message: 'Certifique-se de que todas as perguntas e opções estão preenchidas.', severity: 'warning' });
       return;
     }
 
@@ -77,9 +94,9 @@ const CriarInqueritoDesk = ({ user }) => {
         provincia: provincias,
         company: {
           nome: user.nome,
-          logo:user.logoUrl,
-          provincia:user.provincia, 
-          id:user.id
+          logo: user.logoUrl,
+          provincia: user.provincia,
+          id: user.id,
         },
         setor,
         tipoInquerito,
@@ -107,6 +124,7 @@ const CriarInqueritoDesk = ({ user }) => {
       <Typography variant="h5" gutterBottom>
         Criar Novo Inquérito
       </Typography>
+
       <TextField
         label="Título do Inquérito"
         value={titulo}
@@ -115,6 +133,7 @@ const CriarInqueritoDesk = ({ user }) => {
         variant="outlined"
         margin="normal"
       />
+
       <TextField
         label="Descrição"
         value={descricao}
@@ -155,6 +174,7 @@ const CriarInqueritoDesk = ({ user }) => {
       <Typography variant="h6" gutterBottom>
         Perguntas
       </Typography>
+
       {perguntas.map((pergunta, index) => (
         <div key={index} className="border p-2 mb-4 rounded">
           <TextField
@@ -169,26 +189,38 @@ const CriarInqueritoDesk = ({ user }) => {
             <div className="mt-2">
               <Typography variant="subtitle2">Opções:</Typography>
               {pergunta.opcoes.map((opcao, i) => (
-                <TextField
-                  key={i}
-                  label={`Opção ${i + 1}`}
-                  value={opcao}
-                  onChange={(e) => atualizarOpcao(index, i, e.target.value)}
-                  fullWidth
-                  variant="outlined"
-                  margin="normal"
-                />
+                <div key={i} className="flex items-center gap-2 mb-2">
+                  <TextField
+                    label={`Opção ${i + 1}`}
+                    value={opcao}
+                    onChange={(e) => atualizarOpcao(index, i, e.target.value)}
+                    variant="outlined"
+                    fullWidth
+                  />
+                  <IconButton color="error" onClick={() => removerOpcao(index, i)}>
+                    <Delete />
+                  </IconButton>
+                </div>
               ))}
               <Button
                 onClick={() => adicionarOpcao(index)}
                 variant="contained"
                 color="primary"
-                className="mt-2"
+                startIcon={<Add />}
               >
                 Adicionar Opção
               </Button>
             </div>
           )}
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => removerPergunta(index)}
+            className="mt-2"
+            startIcon={<Delete />}
+          >
+            Remover Pergunta
+          </Button>
         </div>
       ))}
 

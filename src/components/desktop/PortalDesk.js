@@ -29,6 +29,7 @@ const PortalDesk = ({user}) => {
   const [activeTab, setActiveTab] = useState('publish');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [validity, setValidity] = useState('');
   const [file, setFile] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false); // Para carregar anúncios
@@ -38,35 +39,43 @@ const PortalDesk = ({user}) => {
   const [modalAction, setModalAction] = useState(null);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
-  // Função para publicar anúncio
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       let fileUrl = '';
+      let fileFormat = '';
+  
       if (file) {
+        // Extrai o formato do arquivo
+        const fileNameParts = file.name.split('.');
+        fileFormat = fileNameParts[fileNameParts.length - 1].toLowerCase();
+  
         const storageReference = storageRef(storage, `announcements/${file.name}`);
         await uploadBytes(storageReference, file);
         fileUrl = await getDownloadURL(storageReference);
       }
-
+  
       const newAnnouncement = {
         title,
         content,
+        validity, // Data de validade do anúncio
         fileUrl,
-        company:{
-            nome:user.nome,
-            logo:user.photoURL,
-            provincia:user.provincia,
-            id:user.id
+        fileFormat, // Formato do arquivo
+        company: {
+          nome: user.nome,
+          logo: user.photoURL,
+          provincia: user.provincia,
+          id: user.id,
         },
         date: new Date().toISOString(),
       };
-
+  
       await push(ref(db, 'publicAnnouncements'), newAnnouncement);
       setTitle('');
       setContent('');
       setFile(null);
+      setValidity(''); // Reset do campo de validade
       fetchAnnouncements();
     } catch (error) {
       console.error('Erro ao publicar anúncio:', error);
@@ -190,54 +199,67 @@ const PortalDesk = ({user}) => {
       {/* Aba para Publicar Anúncio */}
       {activeTab === 'publish' && (
         <form onSubmit={handleSubmit}>
-          <TextField
-            label="Título do Anúncio"
-            variant="outlined"
-            fullWidth
-            margin="normal"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
+        <TextField
+          label="Título do Anúncio"
+          variant="outlined"
+          fullWidth
+          margin="normal"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
+        <TextField
+          label="Conteúdo"
+          variant="outlined"
+          fullWidth
+          margin="normal"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          multiline
+          rows={4}
+        />
+        <TextField
+          label="Data de Validade"
+          type="date"
+          variant="outlined"
+          fullWidth
+          margin="normal"
+          value={validity}
+          onChange={(e) => setValidity(e.target.value)}
+          InputLabelProps={{
+            shrink: true,
+          }}
+          required
+        />
+        <Button
+          variant="contained"
+          component="label"
+          sx={{ marginBottom: 2 }}
+        >
+          Carregar Arquivo
+          <input
+            type="file"
+            hidden
+            onChange={(e) => setFile(e.target.files[0])}
           />
-          <TextField
-            label="Conteúdo"
-            variant="outlined"
-            fullWidth
-            margin="normal"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            multiline
-            rows={4}
-          />
-          <Button
-            variant="contained"
-            component="label"
-            sx={{ marginBottom: 2 }}
-          >
-            Carregar Arquivo
-            <input
-              type="file"
-              hidden
-              onChange={(e) => setFile(e.target.files[0])}
-            />
-          </Button>
-          <Box>
-            {file && (
-              <Typography variant="body2" color="textSecondary">
-                {file.name}
-              </Typography>
-            )}
-          </Box>
-          <Button
-            variant="contained"
-            color="primary"
-            type="submit"
-            sx={{ marginTop: 2 }}
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} color="inherit" /> : 'Publicar Anúncio'}
-          </Button>
-        </form>
+        </Button>
+        <Box>
+          {file && (
+            <Typography variant="body2" color="textSecondary">
+              {file.name}
+            </Typography>
+          )}
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          type="submit"
+          sx={{ marginTop: 2 }}
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={24} color="inherit" /> : 'Publicar Anúncio'}
+        </Button>
+      </form>
       )}
 
       {/* Aba para Ver Anúncios */}
