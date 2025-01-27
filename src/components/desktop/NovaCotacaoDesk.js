@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, push, set } from 'firebase/database';
 import { db } from '../../fb';
 import {
   TextField,
@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import { Add, Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, SectorDeActividades } from '../../utils/formUtils';
-import sendMessage from '../sms/sendMessage';
 import BackButton from '../BackButton';
 
 const NovaCotacao = ({ user }) => {
@@ -23,6 +22,7 @@ const NovaCotacao = ({ user }) => {
   const [description, setDescription] = useState('');
   const [items, setItems] = useState([]);
   const [deadline, setDeadline] = useState('');
+  const [maxProposals, setMaxProposals] = useState('');
   const [sector, setSector] = useState('');
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -47,7 +47,7 @@ const NovaCotacao = ({ user }) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const newItems = [...items];
-      newItems[index].imageUrl = reader.result; // Armazena a imagem como base64 temporariamente
+      newItems[index].imageUrl = reader.result;
       setItems(newItems);
     };
     if (file) {
@@ -59,6 +59,25 @@ const NovaCotacao = ({ user }) => {
     e.preventDefault();
     setLoading(true);
     setSnackbarMessage('');
+
+    const currentDate = new Date();
+    const selectedDate = new Date(deadline);
+
+    if (!deadline || selectedDate <= currentDate) {
+      setSnackbarMessage('A data limite deve ser superior à data atual.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+      setLoading(false);
+      return;
+    }
+
+    if (!maxProposals || parseInt(maxProposals, 10) <= 0) {
+      setSnackbarMessage('Defina um valor máximo válido para as propostas.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+      setLoading(false);
+      return;
+    }
 
     try {
       const cotacaoRef = ref(db, 'cotacoes');
@@ -82,8 +101,9 @@ const NovaCotacao = ({ user }) => {
           distrito: user.distrito,
         },
         sector,
+        maxProposals: parseInt(maxProposals, 10),
         timestamp: new Date().toISOString(),
-        datalimite: new Date(deadline).toISOString(),
+        datalimite: selectedDate.toISOString(),
         status: 'open',
         link: linkDoPedido,
       });
@@ -97,6 +117,7 @@ const NovaCotacao = ({ user }) => {
       setItems([]);
       setSector('');
       setDeadline('');
+      setMaxProposals('');
     } catch (error) {
       setSnackbarMessage('Erro ao criar cotação. Tente novamente.');
       setSnackbarSeverity('error');
@@ -105,10 +126,6 @@ const NovaCotacao = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSectorChange = (e) => {
-    setSector(e.target.value);
   };
 
   const handleSnackbarClose = () => {
@@ -140,7 +157,7 @@ const NovaCotacao = ({ user }) => {
         <Box sx={{ mb: 2 }}>
           <SectorDeActividades
             companyData={{ sector }}
-            handleChange={handleSectorChange}
+            handleChange={(e) => setSector(e.target.value)}
             inputStyles="w-full px-3 py-2 border rounded"
           />
         </Box>
@@ -154,7 +171,25 @@ const NovaCotacao = ({ user }) => {
             InputLabelProps={{
               shrink: true,
             }}
+            error={deadline && new Date(deadline) <= new Date()}
+            helperText={
+              deadline && new Date(deadline) <= new Date()
+                ? 'A data deve ser superior à data atual.'
+                : ''
+            }
             required
+          />
+        </Box>
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            label="Valor Máximo de Propostas"
+            type="number"
+            value={maxProposals}
+            onChange={(e) => setMaxProposals(e.target.value)}
+            fullWidth
+            required
+            inputProps={{ min: 1 }}
+            helperText="Defina o número máximo de propostas que podem ser recebidas."
           />
         </Box>
         <Typography variant="h6" gutterBottom>
@@ -167,7 +202,9 @@ const NovaCotacao = ({ user }) => {
                 <TextField
                   label="Nome do Item"
                   value={item.name}
-                  onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                  onChange={(e) =>
+                    handleItemChange(index, 'name', e.target.value)
+                  }
                   fullWidth
                   required
                 />
@@ -176,7 +213,9 @@ const NovaCotacao = ({ user }) => {
                 <TextField
                   label="Descrição do Item"
                   value={item.description}
-                  onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                  onChange={(e) =>
+                    handleItemChange(index, 'description', e.target.value)
+                  }
                   fullWidth
                   multiline
                   rows={2}
@@ -194,19 +233,28 @@ const NovaCotacao = ({ user }) => {
                     type="file"
                     hidden
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(index, e.target.files[0])}
+                    onChange={(e) =>
+                      handleImageUpload(index, e.target.files[0])
+                    }
                   />
                 </Button>
                 {item.imageUrl && (
                   <img
                     src={item.imageUrl}
                     alt="Pré-visualização"
-                    style={{ width: '100%', marginTop: 10, borderRadius: 5 }}
+                    style={{
+                      width: '100%',
+                      marginTop: 10,
+                      borderRadius: 5,
+                    }}
                   />
                 )}
               </Grid>
               <Grid item xs={12} sm={2}>
-                <IconButton color="error" onClick={() => handleRemoveItem(index)}>
+                <IconButton
+                  color="error"
+                  onClick={() => handleRemoveItem(index)}
+                >
                   <Delete />
                 </IconButton>
               </Grid>
@@ -229,7 +277,18 @@ const NovaCotacao = ({ user }) => {
             disabled={loading}
             sx={{ position: 'relative' }}
           >
-            {loading && <CircularProgress size={24} sx={{ position: 'absolute', left: '50%', top: '50%', marginTop: '-12px', marginLeft: '-12px' }} />}
+            {loading && (
+              <CircularProgress
+                size={24}
+                sx={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  marginTop: '-12px',
+                  marginLeft: '-12px',
+                }}
+              />
+            )}
             {loading ? 'Enviando...' : 'Criar Cotação'}
           </Button>
         </Box>
@@ -243,7 +302,12 @@ const NovaCotacao = ({ user }) => {
         <Alert
           onClose={handleSnackbarClose}
           severity={snackbarSeverity}
-          sx={{ width: '100%', backgroundColor: snackbarSeverity === 'error' ? '#f44336' : '#4caf50', color: '#fff' }}
+          sx={{
+            width: '100%',
+            backgroundColor:
+              snackbarSeverity === 'error' ? '#f44336' : '#4caf50',
+            color: '#fff',
+          }}
         >
           {snackbarMessage}
         </Alert>
