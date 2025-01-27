@@ -12,31 +12,49 @@ import {
   Grid,
   Avatar,
   Box,
+  Modal,
 } from '@mui/material';
 import BackButton from '../BackButton';
 
-const CotacaoDetalhesDesk = () => {
+const CotacaoDetalhesDesk = ({user}) => {
   const { id, companyId } = useParams();
   const [cotacao, setCotacao] = useState(null);
   const [isCompanyOwner, setIsCompanyOwner] = useState(false);
   const [propostas, setPropostas] = useState([]);
+  const [viewsModalOpen, setViewsModalOpen] = useState(false);
+  const [empresasQueVisualizaram, setEmpresasQueVisualizaram] = useState([]);
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const cotacaoRef = ref(db, `cotacoes/${id}`);
 
-    update(cotacaoRef, { views: increment(1) });
+  // Referência para a lista de visualizações
+  const viewsRef = ref(db, `cotacoes/${id}/views/${user.id}`);
 
+  // Verifica se o usuário já visualizou a cotação
+  onValue(viewsRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      // Adiciona o usuário à lista de visualizações e incrementa o contador
+      update(cotacaoRef, {
+        [`views/${user.id}`]: true, // Marca que o usuário visualizou
+        viewCount: increment(1), // Incrementa o contador
+      });
+    }
+  }, { onlyOnce: true });
+
+    // Carregar dados da cotação e empresas que visualizaram
     onValue(cotacaoRef, (snapshot) => {
       const data = snapshot.val();
       setCotacao(data);
 
-      if (data?.proposals) {
-        setPropostas(Object.values(data.proposals));
-      }
-
-      if (auth.currentUser && data?.company?.id === auth.currentUser.uid) {
-        setIsCompanyOwner(true);
+      if (data?.views) {
+        const empresasIds = Object.keys(data.views);
+        const empresas = empresasIds.map((empresaId) => ({
+          id: empresaId,
+          ...data.views[empresaId], // Exemplo: { id: 'empresa1', nome: 'Empresa 1', logoUrl: '...' }
+        }));
+        setEmpresasQueVisualizaram(empresas);
       }
     });
   }, [id]);
@@ -57,6 +75,10 @@ const CotacaoDetalhesDesk = () => {
       alert('Nenhuma proposta foi recebida ainda.');
     }
   };
+
+  const handleOpenModal = () => setViewsModalOpen(true);
+  const handleCloseModal = () => setViewsModalOpen(false);
+
 
   if (!cotacao) {
     return <Typography align="center" color="textSecondary">Carregando...</Typography>
@@ -82,9 +104,13 @@ const CotacaoDetalhesDesk = () => {
               </Typography>
               <Box mt={1}>
                 <Grid container spacing={2}>
-                  <Grid item><RemoveRedEye color="primary" /> {cotacao.views || 0} visualizações</Grid>
-                  <Grid item><AdsClick color="success" /> {cotacao.clicks || 0} cliques</Grid>
-                  <Grid item><Inbox color="warning" /> {propostas.length} propostas</Grid>
+                <Typography
+                      color="primary"
+                      sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      onClick={handleOpenModal}>
+                      <RemoveRedEye color="primary" /> {cotacao.viewCount || 0} visualizações
+                    </Typography>
+                    <Grid item><Inbox color="warning" /> {propostas.length} propostas</Grid>
                 </Grid>
               </Box>
               <Box mt={1}>
@@ -95,7 +121,7 @@ const CotacaoDetalhesDesk = () => {
                     <Grid item>
                       <Typography color="primary" style={{ verticalAlign: 'middle', marginRight: 4 }} >Publicado</Typography>
                       <Typography variant="body2" component="span">
-                        {new Date(cotacao.datalimite).toLocaleDateString('pt-PT', {
+                        {new Date(cotacao.timestamp).toLocaleDateString('pt-PT', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric',
@@ -105,9 +131,9 @@ const CotacaoDetalhesDesk = () => {
 
                     {/* Data de Criação */}
                     <Grid item>
-                      <Typography color="warning" style={{ verticalAlign: 'middle', marginRight: 4 }} >Limite</Typography>
+                      <Typography color="red" style={{ verticalAlign: 'middle', marginRight: 4 }} >Limite</Typography>
                       <Typography variant="body2" component="span">
-                        {new Date(cotacao.timestamp).toLocaleString('pt-PT', {
+                        {new Date(cotacao.datalimite).toLocaleString('pt-PT', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric',
@@ -168,6 +194,53 @@ const CotacaoDetalhesDesk = () => {
             <Typography color="textSecondary">Nenhum item disponível.</Typography>
           )}
       </Card>
+
+
+  {/* Modal */}
+  <Modal
+        open={viewsModalOpen}
+        onClose={handleCloseModal}
+        aria-labelledby="modal-title"
+        aria-describedby="modal-description"
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+            width: '80%',
+            maxHeight: '80%',
+            overflowY: 'auto',
+          }}
+        >
+          <Typography id="modal-title" variant="h6" component="h2" gutterBottom>
+            Empresas que visualizaram
+          </Typography>
+          {empresasQueVisualizaram.length > 0 ? (
+            <Grid container spacing={2}>
+              {empresasQueVisualizaram.map((empresa) => (
+                <Grid item xs={12} sm={6} key={empresa.id}>
+                  <Box display="flex" alignItems="center" p={2} border={1} borderColor="divider" borderRadius={2}>
+                    <Avatar src={empresa.logoUrl || 'default-logo.png'} alt={empresa.nome} sx={{ mr: 2 }} />
+                    <Typography variant="body1">{empresa.nome || 'Empresa Desconhecida'}</Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography color="textSecondary">Nenhuma empresa visualizou até o momento.</Typography>
+          )}
+          <Box mt={3} textAlign="right">
+            <Button variant="contained" onClick={handleCloseModal}>Fechar</Button>
+          </Box>
+        </Box>
+      </Modal>
+
     </Box>
   );
 };

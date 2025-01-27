@@ -141,8 +141,8 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />
         <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
         <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
-        <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk />} />
-        <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk />} />
+        <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk  user={user}/>} />
+        <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk  user={user}/>} />
         <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
 
 
