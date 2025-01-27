@@ -1,61 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Paper, Typography, Button, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, Paper, Typography, Button, TextField, FormControl, RadioGroup, FormControlLabel, Radio, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { db } from "../../fb";
-import { ref, set, get, child } from "firebase/database";
+import { ref, set, get } from "firebase/database";
 import { useNavigate } from 'react-router-dom';
 
 const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
-
   const [responses, setResponses] = useState({});
-  const [hasResponded, setHasResponded] = useState(false); // Estado para verificar se o usuário já respondeu
+  const [hasResponded, setHasResponded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false); // Controle do diálogo de confirmação
+  const [isSubmitting, setIsSubmitting] = useState(false); // Para evitar múltiplos cliques durante a submissão
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verifica se o usuário já respondeu ao inquérito
-    const responsesRef = ref(db, `survey_responses/${surveyId}/${user.id}`); // Caminho correto com surveyId e userId
+    const responsesRef = ref(db, `survey_responses/${surveyId}/${user.id}`);
     get(responsesRef).then(snapshot => {
       if (snapshot.exists()) {
-        setHasResponded(true); // Se já existe uma resposta do usuário, marcamos que ele já respondeu
+        setHasResponded(true);
       }
     });
-  }, [user.id, surveyId]); // A consulta será feita sempre que o ID do usuário ou surveyId mudar
+  }, [user.id, surveyId]);
 
-  // Função para lidar com as mudanças nas respostas
-  const handleChange = (questionId, value) => {
+  const handleChange = useCallback((questionId, value) => {
     setResponses(prev => ({
       ...prev,
       [questionId]: value
     }));
-  };
+  }, []);
 
-  // Função para lidar com a submissão do formulário
-  const handleSubmit = () => {
-    const surveyRef = ref(db, `survey_responses/${surveyId}/${user.id}`); // Salvar as respostas no caminho correto
+  const handleSubmit = async () => {
+    if (loading || isSubmitting) return;
 
-    // Salva as respostas no Firebase, associadas ao ID do usuário e do inquérito
-    set(surveyRef, {
-     company: {
-        nome: user.nome,
-        logo:user.logoUrl,
-        provincia:user.provincia, 
-        id:user.id
-      },  // Armazenando o ID do usuário
-      surveyId: surveyId,  // Usando a estrutura correta do inquérito
-      responses: responses,
-      submittedAt: Date.now(),
-    })
-      .then(() => {
-        // Redireciona o usuário para uma página de confirmação ou sucesso
-        alert("Respostas enviadas com sucesso!");
-        navigate("/dashboard");
-      })
-      .catch((error) => {
-        console.error("Erro ao salvar as respostas:", error);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const surveyRef = ref(db, `survey_responses/${surveyId}/${user.id}`);
+      await set(surveyRef, {
+        company: {
+          nome: user.nome,
+          logo: user.logoUrl,
+          provincia: user.provincia,
+          id: user.id
+        },
+        surveyId: surveyId,
+        responses: responses,
+        submittedAt: Date.now(),
       });
+
+      alert("Respostas enviadas com sucesso!");
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Erro ao salvar as respostas:", err);
+      setError("Ocorreu um erro ao enviar suas respostas. Tente novamente.");
+    } finally {
+      setLoading(false);
+      setIsSubmitting(false); // Permitir novo envio
+    }
   };
 
-  // Renderiza as perguntas do inquérito com base nos dados
-  const renderQuestions = () => {
+  const handleOpenConfirmDialog = () => {
+    setOpenConfirmDialog(true); // Abre o diálogo de confirmação
+  };
+
+  const handleCloseConfirmDialog = () => {
+    setOpenConfirmDialog(false); // Fecha o diálogo de confirmação
+  };
+
+  const handleConfirmSubmit = () => {
+    setIsSubmitting(true); // Bloqueia envio múltiplo enquanto está processando
+    handleSubmit(); // Chama a função de envio
+    setOpenConfirmDialog(false); // Fecha o diálogo após confirmação
+  };
+
+  const renderQuestions = useCallback(() => {
     return surveyData.questions.map((question, index) => {
       switch (question.tipo) {
         case "aberta":
@@ -99,7 +118,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
           return null;
       }
     });
-  };
+  }, [surveyData.questions, responses, handleChange]);
 
   if (hasResponded) {
     return (
@@ -125,12 +144,44 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
         {renderQuestions()}
 
+        {error && (
+          <Typography color="error" sx={{ marginBottom: 2 }}>
+            {error}
+          </Typography>
+        )}
+
         <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
-          <Button variant="contained" color="primary" onClick={handleSubmit}>
-            Enviar Respostas
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleOpenConfirmDialog} // Abre o diálogo de confirmação
+            disabled={loading || isSubmitting}
+          >
+            {loading || isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Enviar Respostas"}
           </Button>
         </Box>
       </Paper>
+
+      {/* Dialog de confirmação */}
+      <Dialog
+        open={openConfirmDialog}
+        onClose={handleCloseConfirmDialog}
+      >
+        <DialogTitle>Confirmar Envio</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Tem certeza de que deseja enviar suas respostas? Após o envio, não será possível editar.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirmDialog} color="primary">
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirmSubmit} color="primary">
+            Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

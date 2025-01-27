@@ -131,7 +131,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
         <Route path="/profile" element={<ProfileDesk />} />
         <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
-        <Route path="/inbox" element={<InboxDesk />} />
+        <Route path="/inbox" element={<InboxDesk user={user}/>} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
         <Route path="/sobre" element={<Sobre />} />
         <Route path="/email-verification" element={<EmailVerification />} />

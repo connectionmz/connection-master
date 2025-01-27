@@ -1,158 +1,107 @@
 import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton } from '@mui/material';
 import { ref, onValue, update, remove } from 'firebase/database';
-import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../../fb';
-import { Clear, DoneAll } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
-import { Box, Tabs, Tab, List, ListItem, ListItemText, IconButton, Button, Typography } from '@mui/material';
 import BackButton from '../BackButton';
+import DeleteIcon from '@mui/icons-material/Delete';
 
-const InboxDesk = () => {
-  const [user] = useAuthState(auth);
-  const [messages, setMessages] = useState([]);
-  const [selectedMessage, setSelectedMessage] = useState(null);
-  const [tabIndex, setTabIndex] = useState(0);
+const InboxDesk = ({ user }) => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // Função para buscar notificações
   useEffect(() => {
-    if (user) {
-      const inboxRef = ref(db, `company/${user.uid}/inbox`);
-      onValue(inboxRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          const messagesArray = Object.keys(data)
-            .map(key => ({ id: key, ...data[key] }))
-            .sort((a, b) => b.timestamp - a.timestamp); 
-          setMessages(messagesArray);
+    const notificationsRef = ref(db, 'notifications');
+    onValue(notificationsRef, (snapshot) => {
+      const data = snapshot.val();
+      const userNotifications = [];
+
+      // Filtrando as notificações para o usuário logado
+      for (const userId in data) {
+        // Verifica se o usuário tem notificações
+        if (data[userId]) {
+          for (const notificationId in data[userId]) {
+            const notification = data[userId][notificationId];
+            if (userId === user.id) {
+              userNotifications.push({
+                id: notificationId,
+                fromUserId: notification.fromUserId,
+                fromUserName: notification.fromUserName,
+                message: notification.message,
+                status: notification.status,
+                timestamp: notification.timestamp,
+                type: notification.type,
+              });
+            }
+          }
         }
-      });
-    }
-  }, [user]);
+      }
 
-  const markAsRead = (messageId) => {
-    const messageRef = ref(db, `company/${user.uid}/inbox/${messageId}`);
-    update(messageRef, { opened: true });
-  };
-
-  const deleteMessage = (messageId) => {
-    const messageRef = ref(db, `company/${user.uid}/inbox/${messageId}`);
-    remove(messageRef).then(() => {
-      setMessages(prevMessages => prevMessages.filter(message => message.id !== messageId));
-    }).catch((error) => {
-      console.error('Error deleting message:', error);
+      setNotifications(userNotifications);
+      setLoading(false);
     });
+
+    return () => {
+      setNotifications([]);
+      setLoading(true);
+    };
+  }, [user.id]);
+
+  // Função para marcar a notificação como lida
+  const markAsRead = (notificationId) => {
+    const notificationRef = ref(db, `notifications/${user.id}/${notificationId}`);
+    update(notificationRef, { status: 'read' });
   };
 
-  const handleOpenMessage = (message) => {
-    setSelectedMessage(message);
-    markAsRead(message.id);
+  // Função para excluir a notificação
+  const deleteNotification = (notificationId) => {
+    const notificationRef = ref(db, `notifications/${user.id}/${notificationId}`);
+    remove(notificationRef);
   };
 
-  const unreadMessages = messages.filter(message => !message.opened);
-  const readMessages = messages.filter(message => message.opened);
+  if (loading) {
+    return <Typography>Carregando...</Typography>;
+  }
 
   return (
-    <Box width='100%' minHeight="100vh">
-        <BackButton sx={{ mb: 2 }} />
-        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-        Caixa de entrada
+    <Box width="100%" minHeight="100vh">
+      <BackButton sx={{ mb: 2 }} />
+      <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+        Caixa de Entrada
       </Typography>
 
-      {selectedMessage ? (
-        <Box sx={{ bgcolor: 'gray.100', p: 4, borderRadius: 2 }}>
-          <Typography variant="h6" fontWeight="bold">{selectedMessage.title}</Typography>
-          <Typography variant="body2" color="textSecondary">{new Date(selectedMessage.timestamp).toLocaleString()}</Typography>
-          <Typography variant="body1" sx={{ my: 2 }} dangerouslySetInnerHTML={{ __html: selectedMessage.proposal }} />
-          <Link to={selectedMessage.content.url} target="_blank" rel="noopener noreferrer">
-            Ir ao conteúdo
-          </Link>
-          <Button sx={{ mt: 2 }} variant="contained" color="primary" onClick={() => setSelectedMessage(null)}>
-            Voltar
-          </Button>
-        </Box>
+      {notifications.length === 0 ? (
+        <Typography variant="h6" color="textSecondary">
+          Nenhuma notificação encontrada.
+        </Typography>
       ) : (
-        <>
-          <Tabs value={tabIndex} onChange={(e, newIndex) => setTabIndex(newIndex)} aria-label="messages tabs">
-            <Tab label={`Não lidas (${unreadMessages.length})`} />
-            <Tab label={`Lidas (${readMessages.length})`} />
-            <Tab label={`Todas (${messages.length})`} />
-          </Tabs>
-
-          <Box sx={{ mt: 4 }}>
-            {tabIndex === 0 && (
-              <List>
-                {unreadMessages.length > 0 ? (
-                  unreadMessages.map((message) => (
-                    <ListItem key={message.id} sx={{ bgcolor: 'gray.100', mb: 2 }}>
-                      <ListItemText
-                        primary={message.title || 'No Title'}
-                        secondary={new Date(message.timestamp).toLocaleString()}
-                        onClick={() => handleOpenMessage(message)}
-                        sx={{ cursor: 'pointer' }}
-                      />
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <IconButton color="success" onClick={() => markAsRead(message.id)}><DoneAll /></IconButton>
-                        <IconButton color="error" onClick={() => deleteMessage(message.id)}><Clear /></IconButton>
-                      </Box>
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography color="textSecondary">Nenhuma mensagem não lida.</Typography>
-                )}
-              </List>
-            )}
-
-            {tabIndex === 1 && (
-              <List>
-                {readMessages.length > 0 ? (
-                  readMessages.map((message) => (
-                    <ListItem key={message.id} sx={{ bgcolor: 'gray.50', mb: 2 }}>
-                      <ListItemText
-                        primary={message.title || 'No Title'}
-                        secondary={new Date(message.timestamp).toLocaleString()}
-                        onClick={() => handleOpenMessage(message)}
-                        sx={{ cursor: 'pointer' }}
-                      />
-                      <Button variant="outlined" color="error" onClick={() => deleteMessage(message.id)}>
-                        Excluir
-                      </Button>
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography color="textSecondary">Nenhuma mensagem lida.</Typography>
-                )}
-              </List>
-            )}
-
-            {tabIndex === 2 && (
-              <List>
-                {messages.length > 0 ? (
-                  messages.map((message) => (
-                    <ListItem key={message.id} sx={{ bgcolor: message.opened ? 'gray.50' : 'gray.100', mb: 2 }}>
-                      <ListItemText
-                        primary={message.title || 'No Title'}
-                        secondary={new Date(message.timestamp).toLocaleString()}
-                        onClick={() => handleOpenMessage(message)}
-                        sx={{ cursor: 'pointer' }}
-                      />
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        {!message.opened && (
-                          <Button variant="contained" color="primary" onClick={() => markAsRead(message.id)} sx={{ mr: 2 }}>
-                            Marcar como lida
-                          </Button>
-                        )}
-                        <Button variant="outlined" color="error" onClick={() => deleteMessage(message.id)}>
-                          Excluir
-                        </Button>
-                      </Box>
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography color="textSecondary">Nenhuma notificação.</Typography>
-                )}
-              </List>
-            )}
-          </Box>
-        </>
+        <List>
+          {notifications.map((notification) => (
+            <ListItem key={notification.id}>
+              <ListItemText
+                primary={`${notification.fromUserName}: ${notification.message}`}
+                secondary={`Tipo: ${notification.type} | Data: ${new Date(notification.timestamp).toLocaleString()}`}
+              />
+              <ListItemSecondaryAction>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => markAsRead(notification.id)}
+                  disabled={notification.status === 'read'}
+                >
+                  {notification.status === 'read' ? 'Lida' : 'Marcar como lida'}
+                </Button>
+                <IconButton
+                  edge="end"
+                  aria-label="delete"
+                  onClick={() => deleteNotification(notification.id)}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </ListItemSecondaryAction>
+            </ListItem>
+          ))}
+        </List>
       )}
     </Box>
   );
