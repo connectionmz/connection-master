@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ref, push, set } from 'firebase/database';
+import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from '../../fb';
 import {
   TextField,
@@ -16,6 +16,7 @@ import {
 import { Add, Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, SectorDeActividades } from '../../utils/formUtils';
 import BackButton from '../BackButton';
+import sendMessage from '../sms/sendMessage';
 
 const NovaCotacao = ({ user }) => {
   const [title, setTitle] = useState('');
@@ -60,73 +61,94 @@ const NovaCotacao = ({ user }) => {
     setLoading(true);
     setSnackbarMessage('');
 
-    const currentDate = new Date();
-    const selectedDate = new Date(deadline);
-
-    if (!deadline || selectedDate <= currentDate) {
-      setSnackbarMessage('A data limite deve ser superior à data atual.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
-      setLoading(false);
-      return;
-    }
-
-    if (!maxProposals || parseInt(maxProposals, 10) <= 0) {
-      setSnackbarMessage('Defina um valor máximo válido para as propostas.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
-      setLoading(false);
-      return;
+    if (!user) {
+        setSnackbarMessage('Por favor, recarregue a página e tente novamente.');
+        setSnackbarSeverity('error');
+        setOpenSnackbar(true);
+        setLoading(false);
+        return;
     }
 
     try {
-      const cotacaoRef = ref(db, 'cotacoes');
-      const newCotacaoRef = push(cotacaoRef);
-      const cotacaoId = newCotacaoRef.key;
+        // Referência ao banco de dados
+        const cotacaoRef = ref(db, 'cotacoes');
+        const newCotacaoRef = push(cotacaoRef);
+        const cotacaoId = newCotacaoRef.key;
 
-      const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
+        const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
 
-      await set(ref(db, `cotacoes/${cotacaoId}`), {
-        title,
-        description,
-        id: cotacaoId,
-        userId: user.id,
-        items,
-        company: {
-          nome: user.nome,
-          id: user.id,
-          logoUrl: user.logoUrl,
-          sigla: user.sigla,
-          provincia: user.provincia,
-          distrito: user.distrito,
-        },
-        sector,
-        maxProposals: parseInt(maxProposals, 10),
-        timestamp: new Date().toISOString(),
-        datalimite: selectedDate.toISOString(),
-        status: 'open',
-        link: linkDoPedido,
-      });
+        // Publicar a cotação no banco de dados
+        await set(ref(db, `cotacoes/${cotacaoId}`), {
+            title: title.trim(),
+            description: description.trim(),
+            id: cotacaoId,
+            items,
+            company: user,
+            sector: sector.trim(),
+            timestamp: new Date().toISOString(),
+            datalimite: new Date(deadline).toISOString(),
+            status: 'open',
+            link: linkDoPedido,
+        });
 
-      setSnackbarMessage('Cotação criada com sucesso!');
-      setSnackbarSeverity('success');
-      setOpenSnackbar(true);
+        // Exibir mensagem de sucesso
+        setSnackbarMessage('Cotação publicada com sucesso!');
+        setSnackbarSeverity('success');
+        setOpenSnackbar(true);
 
-      setTitle('');
-      setDescription('');
-      setItems([]);
-      setSector('');
-      setDeadline('');
-      setMaxProposals('');
+        // Buscar empresas do setor
+        const empresasRef = ref(db, 'company');
+        const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector.trim()));
+        const snapshot = await get(setorQuery);
+
+        if (snapshot.exists()) {
+            const empresas = snapshot.val();
+
+            // Iterar sobre as empresas para envio de mensagens
+            for (const key in empresas) {
+                const empresa = empresas[key];
+
+                if (!empresa.contacto) {
+                    console.warn(`Empresa ${key} não possui contato. Ignorando...`);
+                    continue;
+                }
+
+                const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+
+                const message = `
+                    Nova Cotação para sua Empresa
+                    Título: ${title}
+                    Descrição: ${description}
+                    Data Limite: ${new Date(deadline).toLocaleDateString('pt-PT')}
+                    Setor de Atividade: ${sector}
+                    Acesse: ${linkDoPedido}
+                `.trim();
+
+                const cleanMessage = message.replace(/\s+/g, ' '); // Remove múltiplos espaços ou quebras de linha
+
+                // Enviar mensagens a todos os contatos
+                for (const contato of contatos) {
+                    try {
+                        await sendMessage(contato, cleanMessage);
+                    } catch (sendError) {
+                        console.error(`Erro ao enviar mensagem para o contato ${contato}:`, sendError.message);
+                    }
+                }
+            }
+        } else {
+            console.log('Nenhuma empresa encontrada para este setor.');
+        }
     } catch (error) {
-      setSnackbarMessage('Erro ao criar cotação. Tente novamente.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
-      console.error('Erro ao criar cotação:', error.message);
+        // Tratamento de erros
+        console.error('Erro ao publicar a cotação:', error.message);
+        setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
+        setSnackbarSeverity('error');
+        setOpenSnackbar(true);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
+
 
   const handleSnackbarClose = () => {
     setOpenSnackbar(false);
