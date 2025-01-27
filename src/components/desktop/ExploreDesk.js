@@ -68,7 +68,7 @@ const ExploreDesk = () => {
       setSectores(snapshot.val() || []);
     });
 
-    onValue(ref(db, 'tipos_de_entidade'), (snapshot) => {
+    onValue(ref(db, 'tipos_entidades'), (snapshot) => {
       setTiposEntidades(snapshot.val() || []);
     });
 
