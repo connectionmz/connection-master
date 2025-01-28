@@ -57,6 +57,7 @@ import NoticiaDetalheDesk from '../desktop/NoticiaDetalheDesk';
 import ParceirosInvestidoresDesk from '../desktop/ParceirosInvestidoresDesk';
 import ConcursoDesk from '../desktop/ConcursoDesk';
 import ConnectionsDesk from '../desktop/ConnectionsDesk';
+import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 
 
 const theme = createTheme({
@@ -128,6 +129,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
         <Route path="/app" element={<ApxDesk user={user} />} />
         <Route path="/feed" element={<FeedDesk user={user} />} />
+        <Route path="/post/:postId" element={<PostDetailPageDesk user={user}/>} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
         <Route path="/profile" element={<ProfileDesk />} />
         <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
@@ -164,7 +166,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/checkout" element={<CreditCardCheckoutDesk user={user}/>} />
 
         {/* Campanha e Posts */}
-        <Route path="/post" element={<PostInputDesk user={user?.id} />} />
+        <Route path="/post" element={<PostInputDesk user={user} />} />
         <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
         <Route path="/sms" element={<SmsDesk user={user}/>} /> 
 

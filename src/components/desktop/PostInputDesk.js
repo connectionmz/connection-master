@@ -13,13 +13,18 @@ const PostInputDesk = ({ user }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const handleSavePublishedPhotos = () => {
-    if (newPhotos.length > 0 && user) {
+    if (!user || !user.id) {
+      console.error('Usuário não definido ou ID do usuário ausente');
+      return;
+    }
+  
+    if (newPhotos.length > 0) {
       const storage = getStorage();
-
+  
       newPhotos.forEach((photo) => {
-        const fileRef = storageRef(storage, `published/${user}/${photo.name}`);
+        const fileRef = storageRef(storage, `published/${user.id}/${photo.name}`);
         const uploadTask = uploadBytesResumable(fileRef, photo);
-
+  
         uploadTask.on(
           'state_changed',
           (snapshot) => {
@@ -28,29 +33,50 @@ const PostInputDesk = ({ user }) => {
             setSnackbarOpen(true);
           },
           (error) => {
-            console.error('Error uploading photo: ', error);
+            console.error('Erro ao carregar foto: ', error);
           },
           () => {
             getDownloadURL(uploadTask.snapshot.ref)
               .then((url) => {
-                const description = photoDescriptions[photo.name] || ''; // Get the description for this photo
-                const newPhotoRef = push(ref(db, `company/${user}/publishedPhotos`));
-
-                // Save both URL and description in the database
-                set(newPhotoRef, { url, description }).then(() => {
-                  setUploadSuccess(true);
-                });
+                const description = photoDescriptions[photo.name] || '';
+                const newPostRef = push(ref(db, 'posts'));
+                const postId = newPostRef.key; // ID único gerado
+  
+                // Log para depuração
+                console.log('Carregando post com ID:', postId, 'e Company ID:', user.id);
+  
+                const postData = {
+                  id: postId,
+                  company:{
+                    id: user.id,
+                    name: user.nome,
+                    logo: user.logoUrl,
+                    sector:user.sector
+                  } , 
+                  description,
+                  url,
+                  timestamp: Date.now(),
+                };
+  
+                set(newPostRef, postData)
+                  .then(() => {
+                    setUploadSuccess(true);
+                  })
+                  .catch((error) => {
+                    console.error('Erro ao salvar dados do post no Firebase: ', error);
+                  });
               })
               .catch((error) => {
-                console.error('Error getting photo URL: ', error);
+                console.error('Erro ao obter URL da foto: ', error);
               });
           }
         );
       });
     } else {
-      console.error('No photos or user data available');
+      console.error('Sem fotos para carregar ou dados do usuário ausentes');
     }
   };
+  
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);

@@ -1,14 +1,26 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';  // Usaremos useNavigate para redirecionar
 
 const PostCardDesk = ({ post }) => {
+  const navigate = useNavigate();  // Hook para navegação
+  console.log(post)
+  
   const randomSpan = () => Math.random() > 0.7 ? 'row-span-2 col-span-2' : 'row-span-1 col-span-1';
+
+  const handleClick = () => {
+    navigate(`/post/${post.id}`);  // Redireciona para a página de detalhes do post
+  };
+
   return (
     <div 
-      className={`relative group overflow-hidden rounded-lg cursor-pointer ${randomSpan()}`} >
+      className={`relative group overflow-hidden rounded-lg cursor-pointer ${randomSpan()}`} 
+      onClick={handleClick}  // Adicionamos a função de navegação ao clicar
+    >
       <img 
         src={post.url} 
         alt={`Post ${post.id}`} 
-        className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"/>
+        className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+      />
       
       <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <p className="text-center px-2 text-sm mb-2">{post.description || 'Sem descrição'}</p>
@@ -26,4 +38,5 @@ const PostCardDesk = ({ post }) => {
     </div>
   );
 };
+
 export default PostCardDesk;

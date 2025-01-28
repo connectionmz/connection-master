@@ -1,71 +1,72 @@
 import React, { useEffect, useState } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../../fb'; 
-import StoriesCompanyPost from '../StoriesCompanyPost';
-import PostCardDesk from './PostCardDesk';
+import { useNavigate } from 'react-router-dom';
 
 const FeedDesk = () => {
+  const navigate = useNavigate();  
+
   const [posts, setPosts] = useState([]);
-  const [filteredPosts, setFilteredPosts] = useState([]); 
-  const [companiesWithPosts, setCompaniesWithPosts] = useState([]);
-  const [selectedCompany, setSelectedCompany] = useState(null);
 
   useEffect(() => {
-    const companiesRef = ref(db, 'company');
+    const postsRef = ref(db, 'posts');
 
-    onValue(companiesRef, (snapshot) => {
-      const companiesData = snapshot.val();
-      let allPosts = [];
-      let companiesWithPosts = [];
+    onValue(postsRef, (snapshot) => {
+      const data = snapshot.val();
+      const allPosts = [];
 
-      if (companiesData) {
-        Object.values(companiesData).forEach(company => {
-          if (company.publishedPhotos) {
-            const companyPosts = Object.values(company.publishedPhotos).map(post => ({
-              ...post,
-              company: company.nome,
-              logoUrl: company.logoUrl || null
-            }));
-            allPosts = [...allPosts, ...companyPosts];
-
-            companiesWithPosts.push({ 
-              name: company.name, 
-              logoUrl: company.logoUrl || 'https://via.placeholder.com/150' 
-            });
-          }
+      if (data) {
+        Object.entries(data).forEach(([postId, post]) => {
+          allPosts.push({
+            id: postId,
+            description: post.description || '',
+            url: post.url || '',
+            companyName: post.company.name || 'Empresa Desconhecida',
+            logoUrl: post.company.logo || 'https://via.placeholder.com/150',
+          });
         });
       }
-      setPosts(allPosts);
-      setCompaniesWithPosts(companiesWithPosts);
-      setFilteredPosts(allPosts); 
+
+      setPosts(allPosts); 
     });
   }, []);
 
-  const handleSelectCompany = (companyName) => {
-    const companyPosts = posts.filter(post => post.company === companyName);
-    setFilteredPosts(companyPosts);
-    setSelectedCompany(companyName);
-  };
+  const randomSpan = () => Math.random() > 0.7 ? 'row-span-2 col-span-2' : 'row-span-1 col-span-1';
 
-  const handleShowAllPosts = () => {
-    setFilteredPosts(posts);
-    setSelectedCompany(null);
+  const handleClick = (postId) => {
+    navigate(`/post/${postId}`);  
   };
 
   return (
     <div className="p-2 bg-white">
-      {companiesWithPosts.length > 0 && (
-        <StoriesCompanyPost companies={companiesWithPosts} onSelectCompany={handleSelectCompany} />
-      )}
-      {selectedCompany && (
-        <button 
-          className="mb-4 bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600" 
-          onClick={handleShowAllPosts}>Ver todas as publicações</button>
-      )}
-
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1">
-        {filteredPosts.map((post, index) => (
-          <PostCardDesk post={post} key={index} />
+        {posts.map((post) => (
+          <div 
+            key={post.id}
+            className={`relative group overflow-hidden rounded-lg cursor-pointer ${randomSpan()}`} 
+            onClick={() => handleClick(post.id)}  
+          >
+            <img 
+              src={post.url} 
+              alt={`Post ${post.id}`} 
+              className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+            />
+            
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <p className="text-center px-2 text-sm mb-2">{post.description || 'Sem descrição'}</p>
+            </div>
+
+            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-2 text-xs flex items-center justify-between">
+              <div className="flex items-center">
+                <img 
+                  src={post.logoUrl || 'https://via.placeholder.com/32'} 
+                  alt={post.companyName} 
+                  className="w-6 h-6 object-cover rounded-full mr-2"
+                />
+                <span>{post.companyName || 'Empresa desconhecida'}</span>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </div>
