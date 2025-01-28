@@ -39,27 +39,28 @@ const PostDetailPageDesk = ({ user }) => {
     });
   }, [postId]);
 
-  // Função para adicionar um comentário
-  const handleAddComment = () => {
-    if (commentText.trim()) {
-      const commentRef = ref(db, `posts/${postId}/comments`);  // Referência para os comentários
-      const newCommentRef = push(commentRef);  // Cria uma nova chave para o comentário
+// Função para adicionar um comentário
+const handleAddComment = () => {
+  if (commentText.trim()) {
+    const commentRef = ref(db, `posts/${postId}/comments`);  // Referência para os comentários
+    const newCommentRef = push(commentRef);  // Cria uma nova chave para o comentário
 
-      const comment = {
-        userId: user.id,  // ID do usuário que fez o comentário
-        userName: user.nome,  // Nome do usuário
-        comment: commentText,  // Texto do comentário
-        data: new Date().toISOString()  // Data e hora do comentário
-      };
+    const comment = {
+      id: newCommentRef.key,  // ID único gerado automaticamente pelo Firebase
+      userId: user.id,  // ID do usuário que fez o comentário
+      userName: user.nome,  // Nome do usuário
+      comment: commentText,  // Texto do comentário
+      data: new Date().toISOString()  // Data e hora do comentário
+    };
 
-      // Usa set para salvar o comentário na nova chave
-      set(newCommentRef, comment).then(() => {
-        setCommentText('');  // Limpa o campo de texto após adicionar o comentário
-      }).catch((error) => {
-        console.error('Erro ao adicionar comentário: ', error);
-      });
-    }
-  };
+    // Usa set para salvar o comentário na nova chave
+    set(newCommentRef, comment).then(() => {
+      setCommentText('');  // Limpa o campo de texto após adicionar o comentário
+    }).catch((error) => {
+      console.error('Erro ao adicionar comentário: ', error);
+    });
+  }
+};
 
   const handleLike = () => {
     const postRef = ref(db, `posts/${postId}/likes`);
@@ -91,6 +92,7 @@ const PostDetailPageDesk = ({ user }) => {
 
   // Função para excluir um comentário
   const handleDeleteComment = (commentId) => {
+    console.log(commentId)
     const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
     remove(commentRef).then(() => {
       console.log('Comentário excluído com sucesso!');
@@ -171,7 +173,7 @@ const PostDetailPageDesk = ({ user }) => {
                 {/* Verifica se o usuário atual é o dono do comentário ou do post */}
                 {(comment.userId === user.id || post.companyId === user.id) && (
                   <Button 
-                    onClick={() => handleDeleteComment(index)} 
+                    onClick={() => handleDeleteComment(comment.id)} 
                     variant="outlined" 
                     color="error"
                   >
