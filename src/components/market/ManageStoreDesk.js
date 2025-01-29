@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ref, get, remove, update } from 'firebase/database';
+import { ref, get, remove, update, set } from 'firebase/database';
 import { db } from '../../fb';
 import { Link } from 'react-router-dom';
 import {
@@ -21,8 +21,10 @@ import {
   TableSortLabel,
   Snackbar,
   Alert,
+  Modal,
+  Switch,
 } from '@mui/material';
-import { Search, Edit, Delete } from '@mui/icons-material';
+import { Search, Edit, Delete, Settings } from '@mui/icons-material';
 
 const ManageStoreDesk = ({ storeId }) => {
   const [products, setProducts] = useState([]);
@@ -36,6 +38,14 @@ const ManageStoreDesk = ({ storeId }) => {
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('name');
   const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
+  const [openModal, setOpenModal] = useState(false);
+  const [paypalCode, setPaypalCode] = useState(''); 
+  const [showPrices, setShowPrices] = useState(true); 
+
+
+  const handleOpenModal = () => setOpenModal(true);
+  const handleCloseModal = () => setOpenModal(false);
+
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -64,6 +74,25 @@ const ManageStoreDesk = ({ storeId }) => {
     setProducts((prevProducts) => [...prevProducts, ...newProducts]);
     resetFormState();
     setFeedback({ open: true, message: 'Produto adicionado com sucesso!', severity: 'success' });
+  };
+
+  const handleSaveSettings = () => {
+    // Função para salvar as configurações
+    const settings = {
+      paypalCode,
+      showPrices,
+    };
+    
+    // Salve as configurações no banco de dados (Firebase, por exemplo)
+    const settingsRef = ref(db, `stores/${storeId}/settings`);
+    set(settingsRef, settings)
+      .then(() => {
+        console.log('Configurações salvas com sucesso');
+        handleCloseModal(); // Fechar o modal após salvar
+      })
+      .catch((error) => {
+        console.error('Erro ao salvar configurações:', error);
+      });
   };
 
   const handleRemoveProduct = async (productId) => {
@@ -145,35 +174,43 @@ const ManageStoreDesk = ({ storeId }) => {
   };
 
   return (
-    <Box sx={{ p: 4, bgcolor: 'white' }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Gerir Loja
-      </Typography>
+    <Box sx={{ p: 4, bgcolor: 'white' }}>  <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
+    Gerir Loja
+  </Typography>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <TextField
-          placeholder="Pesquisar produto..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-          }}
-          fullWidth
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          component={Link}
-          to={`/addProduct/${storeId}`}
-          sx={{ ml: 2 }}
-        >
-          Adicionar Produto
-        </Button>
-      </Box>
+  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <TextField
+      placeholder="Pesquisar produto..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <Search />
+          </InputAdornment>
+        ),
+      }}
+      fullWidth
+    />
+    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      <Button
+        variant="contained"
+        color="primary"
+        component={Link}
+        to={`/addProduct/${storeId}`}
+        sx={{ ml: 2 }}
+      >
+        Adicionar Produto
+      </Button>
+      <IconButton
+        color="primary"
+        sx={{ ml: 2 }}
+        onClick={handleOpenModal} >
+        <Settings />
+      </IconButton>
+    </Box>
+  </Box>
+
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -262,6 +299,8 @@ const ManageStoreDesk = ({ storeId }) => {
         </TableContainer>
       )}
 
+      
+
       <Snackbar
         open={feedback.open}
         autoHideDuration={6000}
@@ -274,6 +313,67 @@ const ManageStoreDesk = ({ storeId }) => {
           {feedback.message}
         </Alert>
       </Snackbar>
+
+
+     {/* Modal para configurações */}
+<Modal
+  open={openModal}
+  onClose={handleCloseModal}
+  aria-labelledby="settings-modal-title"
+  aria-describedby="settings-modal-description"
+>
+  <Box
+    sx={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: 400,
+      bgcolor: 'background.paper',
+      boxShadow: 24,
+      p: 4,
+      borderRadius: 2,
+    }}
+  >
+    <Typography id="settings-modal-title" variant="h6" sx={{ mb: 2 }}>
+      Configurações da Loja
+    </Typography>
+    <Typography id="settings-modal-description" variant="body1" sx={{ mb: 3 }}>
+      Configure as preferências da sua loja abaixo.
+    </Typography>
+
+    {/* Campo para inserir código PayPal */}
+    <TextField
+      fullWidth
+      label="Código PayPal"
+      placeholder="Insira o código PayPal aqui"
+      value={paypalCode} // Estado associado ao código PayPal
+      onChange={(e) => setPaypalCode(e.target.value)}
+      sx={{ mb: 3 }}
+    />
+
+    {/* Alternar para exibir ou não os preços */}
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+      <Typography>Exibir Preços dos Produtos</Typography>
+      <Switch
+        checked={showPrices} // Estado associado à exibição de preços
+        onChange={(e) => setShowPrices(e.target.checked)}
+        color="primary"
+      />
+    </Box>
+
+    {/* Botões de ação */}
+    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+      <Button variant="contained" color="secondary" onClick={handleCloseModal}>
+        Cancelar
+      </Button>
+      <Button variant="contained" color="primary" onClick={handleSaveSettings}>
+        Salvar
+      </Button>
+    </Box>
+  </Box>
+</Modal>
+
     </Box>
   );
 };

@@ -25,7 +25,7 @@ const CreditCardCheckoutDesk = () => {
     const loadPayPalScript = () => {
       if (!window.paypal) {
         const script = document.createElement('script');
-        script.src = 'https://www.paypal.com/sdk/js?client-id=AWcsjZQEu-WVWR6db5yfR-lEL7uRrvGWfVXHcZ54CtRmcPH93Z2MJmE_0S0PZ9dfeIHLyyhVvZ-6bmpx'; // Adicione seu client-id aqui
+        script.src = ''; // Adicione seu client-id aqui
         script.async = true;
         script.onload = () => setPaypalLoaded(true);
         document.body.appendChild(script);

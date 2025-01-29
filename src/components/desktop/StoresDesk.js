@@ -96,22 +96,19 @@ const StoresDesk = () => {
           mb: 4,
         }}
       >
-        <Typography
-          variant="h4"
-          gutterBottom
-          sx={{ fontWeight: "bold" }}
-        >
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
           Lojas e Produtos
         </Typography>
-        {/* Carrinho de compras */}
         <IconButton component={Link} to="/cart" color="primary">
-          <Badge badgeContent={cart.reduce((sum, item) => sum + item.quantity, 0)} color="secondary">
+          <Badge
+            badgeContent={cart.reduce((sum, item) => sum + item.quantity, 0)}
+            color="secondary"
+          >
             <ShoppingCartIcon fontSize="large" />
           </Badge>
         </IconButton>
       </Box>
 
-      {/* Barra de Pesquisa */}
       <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
         <TextField
           label="Pesquisar loja por nome..."
@@ -123,7 +120,6 @@ const StoresDesk = () => {
         />
       </Box>
 
-      {/* Stories de Empresas */}
       <Box
         sx={{
           display: "flex",
@@ -164,7 +160,6 @@ const StoresDesk = () => {
         ))}
       </Box>
 
-      {/* Carregando ou lista de lojas e produtos */}
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
           <CircularProgress />
@@ -172,126 +167,131 @@ const StoresDesk = () => {
       ) : (
         <Grid container spacing={4}>
           {filteredStores.length > 0 ? (
-            shuffleArray(
-              filteredStores.flatMap((store) =>
-                store.products
-                  ? Object.entries(store.products).map(([productId, product]) => ({
-                      ...product,
-                      storeName: store.name,
-                      storeId: store.id,
-                      logo: store.logo,
-                      id: productId,
-                    }))
-                  : []
-              )
-            ).map((product) => (
-              <Grid item xs={12} sm={6} md={4} key={product.id}>
-                <Card
-                  sx={{
-                    height: 320,
-                    boxShadow: 4,
-                    transition: "transform 0.2s, box-shadow 0.2s",
-                    "&:hover": {
-                      transform: "scale(1.03)",
-                      boxShadow: 6,
-                    },
-                  }}
-                >
-                  <CardActionArea
-                    sx={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                    component={Link}
-                    to={`/product/${product.id}/store/${product.storeId}`}
-                  >
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 150,
-                        overflow: "hidden",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        backgroundColor: "#f5f5f5",
-                      }}
-                    >
-                      <CardMedia
-                        component="img"
-                        image={product.imageUrl || "https://via.placeholder.com/150"}
-                        alt={product.name}
-                        sx={{
-                          width: "auto",
-                          height: "100%",
-                          objectFit: "contain",
-                        }}
-                      />
-                    </Box>
-                    <CardContent
-                      sx={{
-                        flexGrow: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: "bold",
-                          fontSize: "1rem",
-                          textAlign: "center",
-                          mb: 0.5,
-                        }}
-                      >
-                        {product.name}
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          color: "#ff5722",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "0.875rem",
-                        }}
-                      >
-                        {`${product.price} Mt`}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: "gray",
-                          textAlign: "center",
-                          mt: 0.5,
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        {product.storeName}
-                      </Typography>
-                    </CardContent>
-                  </CardActionArea>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    onClick={() => addToCart(product)}
-                    sx={{ mt: 1 }}
-                  >
-                    Adicionar ao Carrinho
-                  </Button>
-                </Card>
-              </Grid>
-            ))
-          ) : (
+  shuffleArray(
+    filteredStores.flatMap((store) =>
+      store.products
+        ? Object.entries(store.products).map(([productId, product]) => ({
+            ...product,
+            storeName: store.name || "Loja Desconhecida", // Nome padrão se faltar o nome
+            storeId: store.id,
+            logo: store.logo || "https://via.placeholder.com/80", // Logo padrão
+            id: productId,
+            storeSettings: store.settings || {}, // Configurações padrão
+          }))
+        : []
+    )
+  ).map((product) => (
+    <Grid item xs={12} sm={6} md={4} key={product.id}>
+      <Card
+        sx={{
+          height: 320,
+          boxShadow: 4,
+          transition: "transform 0.2s, box-shadow 0.2s",
+          "&:hover": {
+            transform: "scale(1.03)",
+            boxShadow: 6,
+          },
+        }}
+      >
+        <CardActionArea
+          sx={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+          component={Link}
+          to={`/product/${product.id}/store/${product.storeId}`}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              height: 150,
+              overflow: "hidden",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#f5f5f5",
+            }}
+          >
+            <CardMedia
+              component="img"
+              image={product.imageUrl || "https://via.placeholder.com/150"}
+              alt={product.name || "Produto sem nome"}
+              sx={{
+                width: "auto",
+                height: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+          <CardContent
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              padding: 1,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: "bold",
+                fontSize: "1rem",
+                textAlign: "center",
+                mb: 0.5,
+              }}
+            >
+              {product.name || "Produto sem nome"}
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "#ff5722",
+                textAlign: "center",
+                fontWeight: "bold",
+                fontSize: "0.875rem",
+              }}
+            >
+              {product.storeSettings.showPrice === false
+                ? "Preço indisponível"
+                : product.price
+                ? `${product.price} Mt`
+                : "Preço não informado"}
+            </Typography>
             <Typography
               variant="body2"
-              sx={{ color: "gray", textAlign: "center", width: "100%" }}
+              sx={{
+                color: "gray",
+                textAlign: "center",
+                mt: 0.5,
+                fontSize: "0.75rem",
+              }}
             >
-              Nenhum produto encontrado.
+              {product.storeName}
             </Typography>
-          )}
+          </CardContent>
+        </CardActionArea>
+        <Button
+          variant="contained"
+          color="primary"
+          fullWidth
+          onClick={() => addToCart(product)}
+          sx={{ mt: 1 }}
+        >
+          Adicionar ao Carrinho
+        </Button>
+      </Card>
+    </Grid>
+  ))
+) : (
+  <Typography
+    variant="body2"
+    sx={{ color: "gray", textAlign: "center", width: "100%" }}
+  >
+    Nenhum produto encontrado.
+  </Typography>
+)}
         </Grid>
       )}
     </Box>

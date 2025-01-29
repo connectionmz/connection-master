@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";  // Importar useNavigate
+import { useParams, useNavigate } from "react-router-dom";  
 import { ref, get } from "firebase/database";
 import { db } from "../../fb";
 import {
@@ -18,7 +18,7 @@ import BackButton from "../BackButton";
 
 const ProductDetailsDesk = () => {
   const { productId, store } = useParams();
-  const navigate = useNavigate();  // Usar useNavigate para navegação
+  const navigate = useNavigate();  
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -62,7 +62,7 @@ const ProductDetailsDesk = () => {
       state: {
         product: {
           name: product.name,
-          priceWithIVA: totalWithIva, // Preço com IVA
+          priceWithIVA: totalWithIva,
         },
       },
     });
