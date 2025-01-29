@@ -58,6 +58,7 @@ import ParceirosInvestidoresDesk from '../desktop/ParceirosInvestidoresDesk';
 import ConcursoDesk from '../desktop/ConcursoDesk';
 import ConnectionsDesk from '../desktop/ConnectionsDesk';
 import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
+import AnalyticsDesk from '../desktop/AnalyticsDesk';
 
 
 const theme = createTheme({
@@ -150,6 +151,7 @@ const DesktopRoutes = ({ user }) => {
 
         <Route path="/noticiados" element={<NoticiadosDesk />} />
         <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
+
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
         <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
@@ -178,14 +180,11 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/painel" element={<PortalDesk user={user}/>} />
         <Route path="/sendmail" element={<SendMail user={user}/>} />
         <Route path="/destacar" element={<DestacarModule user={user}/>} />
+        <Route path="/analises" element={<AnalyticsDesk />} />
         
-
-
-        
-        <Route path="*" element={<Navigate to="/" />} />
-
-        </Routes>
-        </div>
+       <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </div>
       <FooterDesk />
       <Fab
         color="primary"

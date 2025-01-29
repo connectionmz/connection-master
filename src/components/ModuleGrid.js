@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FaReceipt, FaStore, FaAd, FaSms, FaPhone, FaPoll, FaTruckLoading, FaStar } from 'react-icons/fa';
+import { FaReceipt, FaStore, FaAd, FaSms, FaPhone, FaPoll, FaTruckLoading, FaStar, FaChartLine } from 'react-icons/fa';
 const ModuleGrid = ({ activeModules }) => {
   const navigate = useNavigate();
 
@@ -11,9 +11,10 @@ const ModuleGrid = ({ activeModules }) => {
     { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter' },
     { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement' },
     { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
-    { name: 'Destacar', link: '/destacar', icon: <FaStar size={40} />, key: 'moduloDestacar' }
+    { name: 'Destacar', link: '/destacar', icon: <FaStar size={40} />, key: 'moduloDestacar' },
+    { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' } // Módulo Analises
   ];
-
+  
   const handleAcquireModule = (module) => {
     navigate(`/pagamento-modulo/${module.key}`);
   };
