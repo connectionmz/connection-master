@@ -2,18 +2,45 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Container, Typography, Button } from '@mui/material';
 import BackButton from '../BackButton';
+import { db } from '../../fb';
+import { get, ref } from 'firebase/database';
 
-const CreditCardCheckoutDesk = () => {
+const CreditCardCheckoutDesk = ({user}) => {
   const location = useLocation();
   const navigate = useNavigate();
-  
   const [paypalLoaded, setPaypalLoaded] = useState(false);
   const [product, setProduct] = useState(null);
+  const [paypalID, setPaypalID] = useState();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const meticalToUSD = (mzn) => {
     const exchangeRate = 63.45; 
     return (mzn / exchangeRate).toFixed(2); 
   };
+
+  useEffect(() => {
+    // Carrega o código PayPal da loja do usuário
+    const loadStoreData = async () => {
+      try {
+        const storeRef = ref(db, `stores/${user.id}`);
+        const storeSnapshot = await get(storeRef);
+
+        if (storeSnapshot.exists()) {
+          setPaypalID(storeSnapshot.val().paypalCode);
+        } else {
+          setError('Loja não encontrada.');
+        }
+      } catch (err) {
+        console.error('Erro ao verificar loja:', err);
+        setError('Ocorreu um erro ao carregar as informações da loja. Tente novamente mais tarde.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStoreData();
+  }, [user.id]);
 
   useEffect(() => {
     if (location.state && location.state.product) {
@@ -25,7 +52,7 @@ const CreditCardCheckoutDesk = () => {
     const loadPayPalScript = () => {
       if (!window.paypal) {
         const script = document.createElement('script');
-        script.src = ''; // Adicione seu client-id aqui
+        script.src = `https://www.paypal.com/sdk/js?client-id=${paypalID}`; // Adicione seu client-id aqui
         script.async = true;
         script.onload = () => setPaypalLoaded(true);
         document.body.appendChild(script);
