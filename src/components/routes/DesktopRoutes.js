@@ -59,6 +59,7 @@ import ConcursoDesk from '../desktop/ConcursoDesk';
 import ConnectionsDesk from '../desktop/ConnectionsDesk';
 import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import AnalyticsDesk from '../desktop/AnalyticsDesk';
+import LandingPage from '../LandingPage';
 
 
 const theme = createTheme({
@@ -148,6 +149,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk  user={user}/>} />
         <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
         <Route path="/concursos" element={<ConcursoDesk user={user} />} />
+        <Route path="/website" element={<LandingPage user={user} />} />
 
         <Route path="/noticiados" element={<NoticiadosDesk />} />
         <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />

@@ -103,42 +103,34 @@ const NovaCotacao = ({ user }) => {
 
         if (snapshot.exists()) {
           const empresas = snapshot.val();
-      
-          // Iterar sobre as empresas para envio de mensagens
+
           for (const key in empresas) {
               const empresa = empresas[key];
-      
+
               if (!empresa.contacto) {
                   console.warn(`Empresa ${key} não possui contato. Ignorando...`);
                   continue;
               }
-      
-              // Garantir que 'contacto' seja sempre um array
-              const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-      
+
               const message = `
-                  Nova Cotação para sua Empresa
-                  Título: ${title}
-                  Descrição: ${description}
-                  Data Limite: ${new Date(deadline).toLocaleDateString('pt-PT')}
-                  Setor de Atividade: ${sector}
-                  Acesse: ${linkDoPedido}
-              `.trim();
-      
-              const cleanMessage = message.replace(/\s+/g, ' '); // Remove múltiplos espaços ou quebras de linha
-      
-              // Enviar mensagens a todos os contatos
-              for (const contato of contatos) {
-                  try {
-                      await sendMessage(contato, cleanMessage);
-                  } catch (sendError) {
-                      console.error(`Erro ao enviar mensagem para o contato ${contato}:`, sendError.message);
-                  }
-              }
+              Nova Cotação para sua Empresa
+              Título: ${title}
+              Descrição: ${description}
+              Data Limite: ${deadline}
+              Setor de Atividade: ${sector}
+              Acesse: ${linkDoPedido}
+          `.trim();
+          
+          const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
+          const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
+
+              const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+                    
+              await sendMessage(contatos, finalMessage);
           }
       } else {
           console.log('Nenhuma empresa encontrada para este setor.');
-      }      
+      }    
     } catch (error) {
         // Tratamento de erros
         console.error('Erro ao publicar a cotação:', error.message);

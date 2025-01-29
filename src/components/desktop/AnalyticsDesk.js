@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Line, Bar, Pie } from 'react-chartjs-2';
-import { Box, Grid, Typography, Paper } from '@mui/material';
+import { Box, Grid, Typography, Paper, Tab, Tabs } from '@mui/material';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 
 ChartJS.register(
@@ -16,6 +16,12 @@ ChartJS.register(
 );
 
 const AnalyticsDesk = () => {
+  const [tabValue, setTabValue] = useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
   // Dados para os gráficos
   const lineData = {
     labels: ['January', 'February', 'March', 'April', 'May'],
@@ -52,38 +58,73 @@ const AnalyticsDesk = () => {
   };
 
   return (
-    <Box sx={{ padding: 3 }}>
+    <Box width='100%' minHeight="100vh">
       <Typography variant="h4" gutterBottom>
         Análises de Desempenho
       </Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={6} md={4}>
-          <Paper sx={{ padding: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Crescimento de Vendas (Line)
-            </Typography>
-            <Line data={lineData} options={{ responsive: true }} />
-          </Paper>
-        </Grid>
 
-        <Grid item xs={12} sm={6} md={4}>
-          <Paper sx={{ padding: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Vendas por Produto (Bar)
-            </Typography>
-            <Bar data={barData} options={{ responsive: true }} />
-          </Paper>
-        </Grid>
+      {/* Tabs */}
+      <Tabs value={tabValue} onChange={handleTabChange} aria-label="Analytics tabs" centered>
+        <Tab label="Cotações" />
+        <Tab label="Concursos" />
+        <Tab label="Módulos" />
+        <Tab label="Impressões" />
+      </Tabs>
 
-        <Grid item xs={12} sm={6} md={4}>
-          <Paper sx={{ padding: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Fontes de Tráfego (Pie)
-            </Typography>
-            <Pie data={pieData} options={{ responsive: true }} />
-          </Paper>
-        </Grid>
-      </Grid>
+      {/* Conteúdo das Abas */}
+      <Box sx={{ paddingTop: 2 }}>
+        {tabValue === 0 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper sx={{ padding: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Crescimento de Vendas (Line)
+                </Typography>
+                <Line data={lineData} options={{ responsive: true }} />
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+
+        {tabValue === 1 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper sx={{ padding: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Vendas por Produto (Bar)
+                </Typography>
+                <Bar data={barData} options={{ responsive: true }} />
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+
+        {tabValue === 2 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper sx={{ padding: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Fontes de Tráfego (Pie)
+                </Typography>
+                <Pie data={pieData} options={{ responsive: true }} />
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+
+        {tabValue === 3 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper sx={{ padding: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Impressões (Bar)
+                </Typography>
+                <Bar data={barData} options={{ responsive: true }} />
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+      </Box>
     </Box>
   );
 };
