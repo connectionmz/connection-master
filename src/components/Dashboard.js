@@ -11,11 +11,10 @@ import {
   List,
   ListItemText,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import MarqueeParceiros from "./MarqueeParceiros";
 import MarqueeAnuncios, { fetchAnuncios } from "./MarqueeAnuncios";
-import StorieList from "./StorieList";
-import Banner from "./Banner";
 import { get, limitToFirst, onValue, orderByKey, query, ref } from "firebase/database";
 import { Link } from "react-router-dom";
 import { db } from "../fb";
@@ -42,7 +41,7 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
             >
               <ListItemText primary={item.name || item.title} />
             </Link>
-            {item.company && ( // Renderizar informações da empresa, caso seja um inquérito
+            {item.company && (
               <div style={{ marginTop: '8px' }}>
                 <Typography variant="body2" color="textSecondary">
                   {item.company.nome}
@@ -60,16 +59,52 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
   </Paper>
 );
 
-const Dashboard = ({ user }) => {
-  const [anuncios, setAnuncios] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [inqueritos, setInqueritos] = useState([]);
-  const [hasRespondedIds, setHasRespondedIds] = useState(new Set()); // IDs dos inquéritos respondidos
-  const [loading, setLoading] = useState(true); // Estado de carregamento
-  const [error, setError] = useState(null); // Estado de erro
+// Hook personalizado para carregar dados do Firebase
+const useFirebaseData = (path, limit = 10) => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Função para carregar anúncios
+    const dataRef = query(ref(db, path), orderByKey(), limitToFirst(limit));
+    const unsubscribe = onValue(
+      dataRef,
+      (snapshot) => {
+        const rawData = snapshot.val();
+        if (rawData) {
+          const formattedData = Object.keys(rawData).map((key) => ({
+            id: key,
+            ...rawData[key],
+          }));
+          setData(formattedData);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        setError("Erro ao carregar os dados");
+        console.error("Erro ao carregar os dados:", error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [path, limit]);
+
+  return { data, loading, error };
+};
+
+const Dashboard = ({ user }) => {
+  const [anuncios, setAnuncios] = useState([]);
+  const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Carregar categorias e inquéritos usando o hook personalizado
+  const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
+  const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
+
+  // Carregar anúncios
+  useEffect(() => {
     const loadAnuncios = async () => {
       try {
         const data = await fetchAnuncios();
@@ -77,76 +112,53 @@ const Dashboard = ({ user }) => {
       } catch (error) {
         setError("Erro ao carregar os anúncios");
         console.error("Erro ao carregar os anúncios:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    // Função para carregar categorias
-    const fetchCategorias = () => {
-      const categoriasRef = query(ref(db, "categoriasExternas"), orderByKey(), limitToFirst(10));
-      const unsubscribeCategorias = onValue(categoriasRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          const categoriasList = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
-          setCategorias(categoriasList);
-        }
-      });
+    loadAnuncios();
+  }, []);
 
-      return unsubscribeCategorias;
-    };
-
-    // Função para carregar inquéritos
-    const fetchInqueritos = () => {
-      const inqueritosRef = query(ref(db, "surveys"), orderByKey(), limitToFirst(10));
-      const unsubscribeInqueritos = onValue(inqueritosRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          const inqueritosList = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
-          setInqueritos(inqueritosList);
-        }
-      });
-
-      return unsubscribeInqueritos;
-    };
-
-    // Verificar inquéritos respondidos
-    const fetchRespondedInqueritos = () => {
-      const responsesRef = ref(db, `survey_responses/`);
-      get(responsesRef).then((snapshot) => {
+  // Verificar inquéritos respondidos
+  useEffect(() => {
+    const fetchRespondedInqueritos = async () => {
+      try {
+        const responsesRef = ref(db, "survey_responses/");
+        const snapshot = await get(responsesRef);
         if (snapshot.exists()) {
           const respondedIds = Object.keys(snapshot.val());
           setHasRespondedIds(new Set(respondedIds));
         }
-      });
+      } catch (error) {
+        console.error("Erro ao carregar inquéritos respondidos:", error);
+      }
     };
 
-    loadAnuncios();
-    fetchCategorias();
-    fetchInqueritos();
     fetchRespondedInqueritos();
-
-    setLoading(false);
-
-    return () => {
-      // Limpar subscrições
-      fetchCategorias();
-      fetchInqueritos();
-    };
   }, []);
 
-  // Filtrando os inquéritos respondidos
+  // Filtrar inquéritos não respondidos
   const filteredInqueritos = useMemo(() => {
     return inqueritos.filter((inquerito) => !hasRespondedIds.has(inquerito.id));
   }, [inqueritos, hasRespondedIds]);
 
-  // Verificando se os dados estão carregados
-  if (loading) return <Typography>Carregando...</Typography>;
-  if (error) return <Typography color="error">{error}</Typography>;
+  // Verificar se há erros ou carregamento
+  if (loading || categoriasLoading || inqueritosLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || categoriasError || inqueritosError) {
+    return (
+      <Typography color="error" align="center">
+        {error || categoriasError || inqueritosError}
+      </Typography>
+    );
+  }
 
   return (
     <Box>

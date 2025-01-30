@@ -37,17 +37,21 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
-            const cotacoesData = snapshot.val() || {};
-            const cotacoesList = Object.entries(cotacoesData)
-                .map(([id, data]) => ({ id, ...data }))
-                .filter((cotacao) =>
-                    cotacao.userId === user.id || // Mostrar todas as cotações do utilizador
-                    (cotacao.provincia === user.provincia && cotacao.sector === user.sector) // Filtrar por província e setor para as demais
-                );
+            const cotacoesData = snapshot.val();
+            
+            if (cotacoesData) {
+                // Converte o objeto para um array
+                const cotacoesArray = Object.values(cotacoesData);
+                setCotacoes(cotacoesArray);
+            } else {
+                // Caso não haja dados, define como array vazio
+                setCotacoes([]);
+            }
         
-            setCotacoes(cotacoesList);
+            console.log(cotacoesData); // Para inspecionar os dados
             setLoading(false);
         });
+        
         
         
         return () => unsubscribeCotacoes();
