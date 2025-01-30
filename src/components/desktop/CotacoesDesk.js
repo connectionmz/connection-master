@@ -38,11 +38,15 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val();
-            
+        
             if (cotacoesData) {
                 // Converte o objeto para um array
                 const cotacoesArray = Object.values(cotacoesData);
-                setCotacoes(cotacoesArray);
+        
+                // Filtra as cotações pelo setor do usuário
+                const filteredCotacoes = cotacoesArray.filter((cotacao) => cotacao.company.provincia === user.provincia);
+        
+                setCotacoes(filteredCotacoes);
             } else {
                 // Caso não haja dados, define como array vazio
                 setCotacoes([]);
@@ -51,6 +55,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             console.log(cotacoesData); // Para inspecionar os dados
             setLoading(false);
         });
+        
         
         
         
