@@ -176,7 +176,7 @@ const DesktopRoutes = ({ user }) => {
 
           {/* Módulos */}
         <Route path="/callcenter" element={<CallCenterModuleDesk />} />
-        <Route path="/logistica" element={<LogisticaModuleDesk />} />
+        <Route path="/procurement" element={<LogisticaModuleDesk />} />
         <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
         <Route path="/inquerito/:surveyId" element={<SurveyPageDesk user={user}/>} />
         <Route path="/painel" element={<PortalDesk user={user}/>} />

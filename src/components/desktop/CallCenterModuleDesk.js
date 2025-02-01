@@ -1,11 +1,11 @@
 import React from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemText } from '@mui/material';
+import { Box, Typography, Paper, List, ListItem, ListItemText, Button, Stack } from '@mui/material';
 import BackButton from '../BackButton';
 
 const CallCenterModuleDesk = () => {
   return (
     <Box sx={{ padding: 4, backgroundColor: 'white', borderRadius: 2, boxShadow: 3 }}>
-            <BackButton sx={{ mb: 2 }} />
+      <BackButton sx={{ mb: 2 }} />
 
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
         Call Center - Funcionamento
@@ -42,10 +42,21 @@ const CallCenterModuleDesk = () => {
           </ListItem>
         </List>
       </Paper>
-      <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-        As empresas que utilizam este módulo podem gerenciar suas chamadas, garantindo que todas as
+      <Typography variant="body1" sx={{ color: 'text.secondary', marginBottom: 2 }}>
+        O módulo funciona mediante contrato. As empresas que utilizam este módulo podem gerenciar suas chamadas, garantindo que todas as
         solicitações sejam tratadas com a devida atenção.
       </Typography>
+      <Typography variant="body1" sx={{ color: 'text.secondary', marginBottom: 2 }}>
+        Para mais informações, entre em contato por e-mail ou chamada:
+      </Typography>
+      <Stack direction="row" spacing={2}>
+        <Button variant="contained" color="primary" href="mailto:contato@empresa.com">
+          Contatar por E-mail
+        </Button>
+        <Button variant="contained" color="secondary" href="tel:+55123456789">
+          Contatar por Chamada
+        </Button>
+      </Stack>
     </Box>
   );
 };

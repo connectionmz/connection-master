@@ -161,30 +161,41 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
             {/* Espaço para "Anunciar Aqui" */}
             <Box
-                sx={{
-                    padding: 2,
-                    backgroundColor: '#f5f5f5',
-                    margin: 2,
-                    textAlign: 'center',
-                    border: '1px dashed #ccc',
-                    borderRadius: '8px',
-                }}
-            >
-                <Typography variant="h6" color="primary">
-                    Anuncie Aqui!
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                    Destaque sua empresa ou produto. Entre em contacto para mais informações.
-                </Typography>
-                <Button
-                    variant="outlined"
-                    color="primary"
-                    sx={{ mt: 1 }}
-                    onClick={() => alert('Entre em contacto para anunciar!')}
-                >
-                    Saiba Mais
-                </Button>
-            </Box>
+    sx={{
+        padding: 4, // Aumenta o padding para dar mais espaço interno
+        backgroundColor: '#f5f5f5',
+        margin: 2,
+        textAlign: 'center',
+        border: '1px dashed #ccc',
+        borderRadius: '12px', // Bordas um pouco mais arredondadas
+        minHeight: '300px', // Altura mínima para espaço publicitário
+        display: 'flex', // Centraliza o conteúdo
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 2, // Espaço entre os elementos
+    }}
+>
+    <Typography variant="h5" color="primary">
+        Anuncie Aqui!
+    </Typography>
+    <Typography variant="body1" color="text.secondary">
+        Destaque sua empresa ou produto. Entre em contacto para mais informações.
+    </Typography>
+    <Button
+        variant="outlined"
+        color="primary"
+        sx={{
+            mt: 2,
+            fontSize: '1rem',
+            padding: '8px 16px', // Botão mais destacado
+        }}
+        onClick={() => alert('Entre em contacto para anunciar!')}
+    >
+        Saiba Mais
+    </Button>
+</Box>
+
 
             <Tabs
                 value={activeTab}

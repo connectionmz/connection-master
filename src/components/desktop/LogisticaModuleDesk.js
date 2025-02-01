@@ -1,57 +1,47 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button, Paper, List, ListItem, ListItemText } from '@mui/material';
 
-const LogisticaModuleDesk = ({ isAvailable }) => {
-  const [pedidos, setPedidos] = useState([
-    { id: 1, item: 'Computador', destino: 'Centro da Cidade', status: 'Pendente' },
-    { id: 2, item: 'Impressora', destino: 'Distrito Industrial', status: 'Pendente' }
-  ]);
-
-  const handleConfirmarEntrega = (id) => {
-    setPedidos(pedidos.map(pedido =>
-      pedido.id === id ? { ...pedido, status: 'Entregue' } : pedido
-    ));
-    alert(`Entrega confirmada!`);
-  };
-
+const LogisticaModuleDesk = () => {
   return (
     <Box sx={{ padding: 4, backgroundColor: 'white', borderRadius: 2, boxShadow: 3 }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-        Logística - Pedidos de Entrega
+        Procurement - Soluções Personalizadas
       </Typography>
-      {isAvailable ? (
+      <Typography variant="body1" sx={{ color: 'text.secondary', marginBottom: 3 }}>
+        Nosso módulo de Procurement oferece uma experiência otimizada para empresas que necessitam de eficiência na busca e entrega de soluções.
+      </Typography>
+      <Paper sx={{ padding: 3, marginBottom: 3, backgroundColor: 'background.paper' }}>
         <List>
-          {pedidos.map((pedido) => (
-            <ListItem key={pedido.id} sx={{ backgroundColor: 'gray.100', padding: 2, marginBottom: 2, borderRadius: 1 }}>
-              <ListItemText
-                primary={<Typography variant="body1" sx={{ fontWeight: 'bold' }}>Item: {pedido.item}</Typography>}
-                secondary={
-                  <>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Destino: {pedido.destino}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>Status: {pedido.status}</Typography>
-                  </>
-                }
-              />
-              {pedido.status === 'Pendente' && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={() => handleConfirmarEntrega(pedido.id)}
-                  sx={{ marginTop: 1 }}
-                >
-                  Confirmar Entrega
-                </Button>
-              )}
-            </ListItem>
-          ))}
+          <ListItem>
+            <ListItemText
+              primary={<Typography variant="body1" sx={{ fontWeight: 'bold' }}>Pesquisa Inteligente de Produtos e Serviços:</Typography>}
+              secondary="Sistema avançado de busca que facilita a identificação de fornecedores e parceiros ideais para cada necessidade."
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemText
+              primary={<Typography variant="body1" sx={{ fontWeight: 'bold' }}>Obtenção Ágil de Orçamentos:</Typography>}
+              secondary="Processo simplificado e automatizado para cotação rápida e eficiente, garantindo melhores preços e prazos."
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemText
+              primary={<Typography variant="body1" sx={{ fontWeight: 'bold' }}>Entrega de Soluções Eficientes e Personalizadas:</Typography>}
+              secondary="Integração de logística avançada para oferecer soluções sob medida que atendem às necessidades específicas de cada cliente."
+            />
+          </ListItem>
         </List>
-      ) : (
-        <Typography variant="body1" color="error" align="center" sx={{ fontWeight: 'bold' }}>
-          Módulo Indisponível
-        </Typography>
-      )}
+      </Paper>
+      <Typography variant="body1" sx={{ color: 'text.secondary', marginBottom: 2 }}>
+        Para mais informações, entre em contato por e-mail ou chamada:
+      </Typography>
+      <Button variant="contained" color="primary" href="mailto:contato@empresa.com" sx={{ marginRight: 2 }}>
+        Contatar por E-mail
+      </Button>
+      <Button variant="contained" color="secondary" href="tel:+55123456789">
+        Contatar por Chamada
+      </Button>
     </Box>
   );
 };
-
 export default LogisticaModuleDesk;

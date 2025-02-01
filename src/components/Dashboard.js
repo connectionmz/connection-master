@@ -64,7 +64,7 @@ const useFirebaseData = (path, limit = 10) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  
   useEffect(() => {
     const dataRef = query(ref(db, path), orderByKey(), limitToFirst(limit));
     const unsubscribe = onValue(
@@ -98,6 +98,7 @@ const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [campanhasAtivas, setCampanhasAtivas] = useState([]);
 
   // Carregar categorias e inquéritos usando o hook personalizado
   const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
@@ -105,6 +106,27 @@ const Dashboard = ({ user }) => {
 
   // Carregar anúncios
   useEffect(() => {
+
+    const fetchCampanhasAtivas = async () => {
+      try {
+        const campanhasRef = ref(db, "campanhas");
+        onValue(campanhasRef, (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            // Mapeia todas as campanhas a partir do objeto de chaves
+            const campanhasArray = Object.keys(data)
+    
+            setCampanhasAtivas(campanhasArray);
+
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao carregar campanhas ativas:", error);
+        setError("Erro ao carregar campanhas");
+      }
+    };
+    
+
     const loadAnuncios = async () => {
       try {
         const data = await fetchAnuncios();
@@ -117,11 +139,7 @@ const Dashboard = ({ user }) => {
       }
     };
 
-    loadAnuncios();
-  }, []);
 
-  // Verificar inquéritos respondidos
-  useEffect(() => {
     const fetchRespondedInqueritos = async () => {
       try {
         const responsesRef = ref(db, "survey_responses/");
@@ -135,15 +153,17 @@ const Dashboard = ({ user }) => {
       }
     };
 
+    fetchCampanhasAtivas();
     fetchRespondedInqueritos();
+    loadAnuncios();
   }, []);
 
-  // Filtrar inquéritos não respondidos
+
+
   const filteredInqueritos = useMemo(() => {
     return inqueritos.filter((inquerito) => !hasRespondedIds.has(inquerito.id));
   }, [inqueritos, hasRespondedIds]);
 
-  // Verificar se há erros ou carregamento
   if (loading || categoriasLoading || inqueritosLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -168,27 +188,30 @@ const Dashboard = ({ user }) => {
         <Grid container spacing={2}>
           {/* Sidebar Esquerda */}
           <Grid item xs={12} sm={3}>
-            <Paper sx={{ padding: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Empresas Destacadas
-              </Typography>
-              <List>
-                {anuncios
-                  .filter((anuncio) => anuncio.isFeatured)
-                  .slice(0, 5)
-                  .map((anuncio, index) => (
-                    <ListItemText
-                      key={index}
-                      primary={<strong>{anuncio.title || "Indisponível"}</strong>}
-                      secondary={anuncio.company ? anuncio.company.nome : "Empresa Desconhecida"}
-                    />
-                  ))}
-              </List>
-              <Divider sx={{ my: 2 }} />
-              <Button fullWidth variant="text" sx={{ color: "#0a66c2" }}>
-                Ver todas
-              </Button>
-            </Paper>
+          <Paper sx={{ padding: 2 }}>
+  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+    Empresas Destacadas
+  </Typography>
+  <List>
+    {campanhasAtivas.map((campanha) => (
+      <div key={campanha.id} style={{ marginBottom: "16px", cursor: "pointer" }}>
+        <Link
+          to={`/campanha/${campanha.id}`}
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <ListItemText
+            primary={
+              <strong>
+                {campanha.company?.nome || "Nome da Empresa Não Disponível"}
+              </strong>
+            }
+          />
+        </Link>
+      </div>
+    ))}
+  </List>
+</Paper>
+
           </Grid>
 
           {/* Feed Central */}

@@ -75,10 +75,6 @@ const CriarInqueritoDesk = ({ user }) => {
   };
 
   const salvarInquerito = async () => {
-    if (!titulo || !descricao || !setor || !tipoInquerito || perguntas.length === 0) {
-      setSnackbar({ open: true, message: 'Por favor, preencha todos os campos.', severity: 'warning' });
-      return;
-    }
 
     if (perguntas.some((p) => !p.texto || (p.tipo === 'multipla_escolha' && p.opcoes.some((o) => !o)))) {
       setSnackbar({ open: true, message: 'Certifique-se de que todas as perguntas e opções estão preenchidas.', severity: 'warning' });

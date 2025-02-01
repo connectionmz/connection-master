@@ -42,7 +42,7 @@ const ProductFormDesk = () => {
   const handleAddProduct = () => {
     setProducts((prev) => [
       ...prev,
-      { name: '', price: '', description: '', imageUrl: '', imageFile: null },
+      { name: '', price: '', description: '', imageUrl: '', imageFile: null, stock: '' },
     ]);
   };
 
@@ -87,7 +87,7 @@ const ProductFormDesk = () => {
 
   const validateProducts = () => {
     for (const product of products) {
-      if (!product.name || !product.price || !product.imageFile) {
+      if (!product.name || !product.price || !product.stock || !product.imageFile) {
         setErrorMessage('Por favor, preencha todos os campos e carregue uma imagem.');
         return false;
       }
@@ -113,6 +113,7 @@ const ProductFormDesk = () => {
           price: product.price,
           description: product.description,
           imageUrl: product.imageUrl || '',
+          stock: product.stock,
         });
       }
 
@@ -153,6 +154,7 @@ const ProductFormDesk = () => {
               <TableCell>Nome</TableCell>
               <TableCell>Preço</TableCell>
               <TableCell>Descrição</TableCell>
+              <TableCell>Quantidade em Estoque</TableCell>
               <TableCell>Imagem</TableCell>
               <TableCell>Ações</TableCell>
             </TableRow>
@@ -191,6 +193,16 @@ const ProductFormDesk = () => {
                   />
                 </TableCell>
                 <TableCell>
+                  <TextField
+                    fullWidth
+                    placeholder="Quantidade em Estoque"
+                    type="number"
+                    value={product.stock}
+                    onChange={(e) => handleProductChange(index, 'stock', e.target.value)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
                   <Button variant="outlined" component="label" size="small">
                     Carregar
                     <input
@@ -222,7 +234,6 @@ const ProductFormDesk = () => {
       {uploadProgress > 0 && <LinearProgress variant="determinate" value={uploadProgress} sx={{ mb: 2 }} />}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-      
         <Button
           variant="contained"
           startIcon={<Add />}

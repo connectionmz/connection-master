@@ -17,6 +17,10 @@ import {
   IconButton,
   Box,
   Tooltip,
+  Select,
+  MenuItem as DropdownItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
@@ -26,6 +30,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 const FaturacaoDesk = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClient, setSelectedClient] = useState('');
   const [proformas, setProformas] = useState([]);
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -51,10 +56,6 @@ const FaturacaoDesk = ({ user }) => {
 
     fetchInvoices();
   }, [user]);
-
-  const filteredProformas = proformas.filter((proforma) =>
-    proforma.cliente.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleMenuClick = (event, proforma) => {
     setAnchorEl(event.currentTarget);
@@ -94,6 +95,19 @@ const FaturacaoDesk = ({ user }) => {
     }
   };
 
+  const uniqueClients = [
+    ...new Set(proformas.map((proforma) => proforma.cliente || 'Indefinido')),
+  ];
+
+  const filteredProformas = proformas.filter((proforma) => {
+    const matchesSearchTerm = proforma.cliente
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesClientFilter =
+      !selectedClient || proforma.cliente === selectedClient;
+    return matchesSearchTerm && matchesClientFilter;
+  });
+
   return (
     <Box width="100%" minHeight="100vh" p={3}>
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
@@ -110,6 +124,20 @@ const FaturacaoDesk = ({ user }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ mr: 2 }}
           />
+          <FormControl sx={{ minWidth: 200, mr: 2 }}>
+            <InputLabel>Filtrar por Cliente</InputLabel>
+            <Select
+              value={selectedClient}
+              onChange={(e) => setSelectedClient(e.target.value)}
+            >
+              <DropdownItem value="">Todos</DropdownItem>
+              {uniqueClients.map((client, index) => (
+                <DropdownItem key={index} value={client}>
+                  {client}
+                </DropdownItem>
+              ))}
+            </Select>
+          </FormControl>
           <Button
             variant="contained"
             color="primary"

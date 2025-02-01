@@ -83,7 +83,7 @@ const ParceirosInvestidoresDesk = () => {
       >
         <Tab label="Parceiros" />
         <Tab label="Financiadores" />
-        <Tab label="Investidores" />
+        <Tab label="Patrocinadores" />
       </Tabs>
 
       <Box sx={{ padding: 2 }}>
