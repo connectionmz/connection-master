@@ -14,49 +14,82 @@ import {
     CircularProgress,
 } from '@mui/material';
 import { Delete, AccessTime, CheckCircle, History } from '@mui/icons-material';
-import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
+import { ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../../fb';
-import { onAuthStateChanged } from 'firebase/auth';
 import PaySMSCheckout from '../PaySMSCheckout';
+import { db } from '../../fb';
+import AnunciarDesk from './AnunciarDesk';
+import AnunciosDesk from './AnunciosDesk';
 
 const ConcursoDesk = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [isPaying, setIsPaying] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [campanhasAtivas, setCampanhasAtivas] = useState([]);
+
     const navigate = useNavigate();
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
 
     useEffect(() => {
-        if (!hasModuleSMS) return;
+        if (!hasModuleSMS) {
+            setLoading(false);
+            return;
+        }
 
-        const cotacoesRef = ref(db, 'cotacoes');
+        const cotacoesRef = ref(db, 'concursos');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
-            const cotacoesData = snapshot.val() || {};
-            const cotacoesList = Object.entries(cotacoesData).map(([id, data]) => ({
-                id,
-                ...data,
-            }));
-
-            const filteredCotacoes = cotacoesList.filter(
-                (cotacao) =>
-                    cotacao.userId === user.id || 
-                    (cotacao.sector === user.sector &&
-                        cotacao.company?.provincia === user.provincia)
-            );
-
-            setCotacoes(filteredCotacoes);
+            const cotacoesData = snapshot.val();
+        
+            if (cotacoesData) {
+                const cotacoesArray = Object.values(cotacoesData);
+              
+                setCotacoes(cotacoesArray);
+            } else {
+                setCotacoes([]);
+            }
+            console.log(cotacoesData);
+            setLoading(false);
         });
-
+               
         return () => unsubscribeCotacoes();
-    }, [db, user, hasModuleSMS]);
+    }, [hasModuleSMS]);
+
+  useEffect(() => {
+    const fetchCampanhasAtivas = async () => {
+      try {
+        const campanhasRef = ref(db, "campanhas");
+        onValue(campanhasRef, (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const campanhasArray = [];
+    
+            Object.keys(data).forEach((campanhaKey) => {
+              const campanhasInternas = data[campanhaKey];
+    
+              Object.keys(campanhasInternas).forEach((subKey) => {
+                const campanha = campanhasInternas[subKey];
+                if (campanha.component === "home") {
+                  campanhasArray.push({ id: subKey, ...campanha });
+                }
+              });
+            });
+            setCampanhasAtivas(campanhasArray);
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao carregar campanhas ativas:", error);
+      }
+    }
+    fetchCampanhasAtivas()
+}, [])
+
 
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
-            alert('Você precisa ativar o módulo SMS para emitir cotações.');
+            setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir cotações.', severity: 'warning' });
             return;
         }
         navigate('/cotacao');
@@ -67,24 +100,23 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
             const cotacaoRef = ref(db, `cotacoes/${cotacaoId}`);
             remove(cotacaoRef)
                 .then(() => {
-                    setSnackbarMessage('Cotação excluída com sucesso!');
-                    setSnackbarOpen(true);
+                    setSnackbar({ open: true, message: 'Cotação excluída com sucesso!', severity: 'success' });
                 })
                 .catch((error) => {
                     console.error('Erro ao excluir a cotação: ', error);
+                    setSnackbar({ open: true, message: 'Erro ao excluir a cotação.', severity: 'error' });
                 });
         }
     };
 
     const filteredCotacoes = () => {
+        const now = new Date();
         switch (activeTab) {
             case 'recentes':
-                return cotacoes.filter(
-                    (cotacao) => new Date(cotacao.timestamp).toDateString() === new Date().toDateString()
-                );
+                return cotacoes.filter((cotacao) => new Date(cotacao.timestamp).toDateString() === now.toDateString());
             case 'expiradas':
                 return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.datalimite));
-            case 'Fechada':
+            case 'fechada':
                 return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
             case 'minhas':
                 return cotacoes.filter((cotacao) => cotacao?.company?.id === user?.id);
@@ -94,92 +126,108 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
     };
 
     const handleCotacaoClick = (id, companyId) => {
-        navigate(`/cotacao/${id}/${companyId}`);
+        navigate(`/concurso/${id}/${companyId}`);
     };
 
     return (
-        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            {!hasModuleSMS && !isPaying && (
-                <Alert
-                    severity="warning"
-                    action={
-                        <Button color="inherit" size="small" onClick={() => setIsPaying(true)}>
-                            Ativar Módulo SMS
-                        </Button>
-                    }
+<Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    {!hasModuleSMS && !isPaying && (
+        <Alert
+            severity="warning"
+            action={
+                <Button color="inherit" size="small" onClick={() => setIsPaying(true)}>
+                    Ativar Módulo SMS
+                </Button>
+            }
+        >
+            O módulo SMS está inativo. Para usar este serviço, ative o módulo SMS.
+        </Alert>
+    )}
+
+    {isPaying && (
+        <PaySMSCheckout
+            user={user}
+            onPaymentSuccess={(details) => {
+                const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS`);
+                update(userRef, {
+                    status: 'active',
+                    activatedAt: new Date().toISOString(),
+                    paymentDetails: details,
+                }).then(() => {
+                    setSnackbar({ open: true, message: 'Módulo SMS ativado com sucesso!', severity: 'success' });
+                });
+                setIsPaying(false);
+            }}
+        />
+    )}
+
+    {!isPaying && (
+        <>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: 2,
+                    backgroundColor: 'white',
+                    boxShadow: 1,
+                }}
+            >
+                <Typography variant="h5">Concursos</Typography>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handlePublishQuotation}
+                    disabled={!hasModuleSMS}
                 >
-                    O módulo SMS está inativo. Para usar este serviço, ative o módulo SMS.
-                </Alert>
-            )}
+                    Emitir
+                </Button>
+            </Box>
 
-            {isPaying && (
-                <PaySMSCheckout
-                    user={user}
-                    onPaymentSuccess={(details) => {
-                        const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS`);
-                        update(userRef, {
-                            status: 'active',
-                            activatedAt: new Date().toISOString(),
-                            paymentDetails: details,
-                        }).then(() => {
-                            setSnackbarMessage('Módulo SMS ativado com sucesso!');
-                            setSnackbarOpen(true);
-                        });
-                    }}
-                />
-            )}
+            {/* Espaço para "Anunciar Aqui" */}
+            <AnunciosDesk  campanhas = {campanhasAtivas}/>
 
-            {!isPaying && (
-                <>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: 2,
-                            backgroundColor: 'white',
-                        }}
-                    >
-                        <Typography variant="h5">Concursos</Typography>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handlePublishQuotation}
-                            disabled={!hasModuleSMS}
-                        >
-                            Emitir
-                        </Button>
+            <Tabs
+                value={activeTab}
+                onChange={(_, newValue) => setActiveTab(newValue)}
+                indicatorColor="primary"
+                textColor="primary"
+                sx={{ backgroundColor: 'white', boxShadow: 1 }}
+            >
+                <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
+                <Tab value="expiradas" label="Expiradas" icon={<History />} />
+                <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
+                <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} />} />
+            </Tabs>
+
+            <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
+                {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                        <CircularProgress />
                     </Box>
-
-                    <Tabs
-                        value={activeTab}
-                        onChange={(_, newValue) => setActiveTab(newValue)}
-                        indicatorColor="primary"
-                        textColor="primary"
-                        sx={{ backgroundColor: 'white' }}
-                    >
-                         <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
-                        <Tab value="expiradas" label="Expiradas" icon={<History />} />
-                        <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                        <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} />} />
-                    </Tabs>
-
-                    <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
-                        {filteredCotacoes().length > 0 ? (
-                            filteredCotacoes().map((cotacao) => (
-                                <Card
-                                    key={cotacao.id}
-                                    sx={{ mb: 2, backgroundColor: 'white', cursor: 'pointer' }}
-                                    onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
-                                >
-                                    <CardContent>
-                                        <Box display="flex" alignItems="center" mb={2}>
-                                            <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
-                                            <Typography variant="h6">{cotacao.company?.nome || 'Empresa'}</Typography>
-                                        </Box>
-                                        <Typography>{cotacao.title}</Typography>
-                                    </CardContent>
-                                    <CardActions>
+                ) : filteredCotacoes().length > 0 ? (
+                    filteredCotacoes().map((cotacao) => (
+                        <Card
+                            key={cotacao.id}
+                            sx={{ mb: 2, backgroundColor: 'white', cursor: 'pointer', boxShadow: 2 }}
+                            onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
+                        >
+                            <CardContent>
+                                <Box display="flex" alignItems="center" mb={2}>
+                                    <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
+                                    <Typography variant="h6">{cotacao.company?.nome || 'Empresa'}</Typography>
+                                </Box>
+                                <Typography variant="subtitle1" sx={{ mb: 1 }}>{cotacao.title}</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
+                                </Typography>
+                                <Typography variant="body2" color="error">
+                                    Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                </Typography>
+                            </CardContent>
+                            <CardActions>
+                                {cotacao?.company?.id === user?.id && (
+                                    <>
                                         <Button
                                             color="error"
                                             onClick={(e) => {
@@ -189,24 +237,36 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                                         >
                                             Excluir
                                         </Button>
-                                    </CardActions>
-                                </Card>
-                            ))
-                        ) : (
-                            <Typography textAlign="center">Nenhuma cotação disponível.</Typography>
-                        )}
-                    </Box>
-                </>
-            )}
+                                        <Button
+                                            color="primary"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/editar-cotacao/${cotacao.id}`);
+                                            }}
+                                        >
+                                            Editar
+                                        </Button>
+                                    </>
+                                )}
+                            </CardActions>
+                        </Card>
+                    ))
+                ) : (
+                    <Typography textAlign="center">Nenhuma cotação disponível.</Typography>
+                )}
+            </Box>
+        </>
+    )}
 
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={3000}
-                onClose={() => setSnackbarOpen(false)}
-            >
-                <Alert severity="success">{snackbarMessage}</Alert>
-            </Snackbar>
-        </Box>
+    <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+    >
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
+    </Snackbar>
+</Box>
+
     );
 };
 

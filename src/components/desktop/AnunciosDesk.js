@@ -6,8 +6,6 @@ import { Box, Button, Typography } from "@mui/material";
 
 const AnunciosDesk = ({ campanhas }) => {
 
-    console.log(campanhas)
-
   const settings = {
     dots: true,
     infinite: true,
