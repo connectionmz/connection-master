@@ -18,6 +18,8 @@ import { ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
+import AnunciarDesk from './AnunciarDesk';
+import AnunciosDesk from './AnunciosDesk';
 
 const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
@@ -25,6 +27,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [isPaying, setIsPaying] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [campanhasAtivas, setCampanhasAtivas] = useState([]);
+
     const navigate = useNavigate();
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
@@ -40,19 +44,16 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             const cotacoesData = snapshot.val();
         
             if (cotacoesData) {
-                // Converte o objeto para um array
                 const cotacoesArray = Object.values(cotacoesData);
         
-                // Filtra as cotações pelo setor do usuário
                 const filteredCotacoes = cotacoesArray.filter((cotacao) => cotacao.company.provincia === user.provincia);
         
                 setCotacoes(filteredCotacoes);
             } else {
-                // Caso não haja dados, define como array vazio
                 setCotacoes([]);
             }
         
-            console.log(cotacoesData); // Para inspecionar os dados
+            console.log(cotacoesData);
             setLoading(false);
         });
         
@@ -61,6 +62,37 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         
         return () => unsubscribeCotacoes();
     }, [hasModuleSMS]);
+
+  useEffect(() => {
+    const fetchCampanhasAtivas = async () => {
+      try {
+        const campanhasRef = ref(db, "campanhas");
+        onValue(campanhasRef, (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const campanhasArray = [];
+    
+            Object.keys(data).forEach((campanhaKey) => {
+              const campanhasInternas = data[campanhaKey];
+    
+              Object.keys(campanhasInternas).forEach((subKey) => {
+                const campanha = campanhasInternas[subKey];
+                if (campanha.component === "home") {
+                  campanhasArray.push({ id: subKey, ...campanha });
+                }
+              });
+            });
+            setCampanhasAtivas(campanhasArray);
+            console.log(campanhasArray)
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao carregar campanhas ativas:", error);
+      }
+    }
+    fetchCampanhasAtivas()
+}, [])
+
 
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
@@ -160,42 +192,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             </Box>
 
             {/* Espaço para "Anunciar Aqui" */}
-            <Box
-    sx={{
-        padding: 4, // Aumenta o padding para dar mais espaço interno
-        backgroundColor: '#f5f5f5',
-        margin: 2,
-        textAlign: 'center',
-        border: '1px dashed #ccc',
-        borderRadius: '12px', // Bordas um pouco mais arredondadas
-        minHeight: '300px', // Altura mínima para espaço publicitário
-        display: 'flex', // Centraliza o conteúdo
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 2, // Espaço entre os elementos
-    }}
->
-    <Typography variant="h5" color="primary">
-        Anuncie Aqui!
-    </Typography>
-    <Typography variant="body1" color="text.secondary">
-        Destaque sua empresa ou produto. Entre em contacto para mais informações.
-    </Typography>
-    <Button
-        variant="outlined"
-        color="primary"
-        sx={{
-            mt: 2,
-            fontSize: '1rem',
-            padding: '8px 16px', // Botão mais destacado
-        }}
-        onClick={() => alert('Entre em contacto para anunciar!')}
-    >
-        Saiba Mais
-    </Button>
-</Box>
-
+            <AnunciosDesk  campanhas = {campanhasAtivas}/>
 
             <Tabs
                 value={activeTab}

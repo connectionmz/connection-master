@@ -106,18 +106,27 @@ const Dashboard = ({ user }) => {
 
   // Carregar anúncios
   useEffect(() => {
-
     const fetchCampanhasAtivas = async () => {
       try {
         const campanhasRef = ref(db, "campanhas");
         onValue(campanhasRef, (snapshot) => {
           const data = snapshot.val();
           if (data) {
-            // Mapeia todas as campanhas a partir do objeto de chaves
-            const campanhasArray = Object.keys(data)
+            const campanhasArray = [];
+    
+            Object.keys(data).forEach((campanhaKey) => {
+              const campanhasInternas = data[campanhaKey];
+    
+              Object.keys(campanhasInternas).forEach((subKey) => {
+                const campanha = campanhasInternas[subKey];
+                if (campanha.component === "home") {
+                  campanhasArray.push({ id: subKey, ...campanha });
+                }
+              });
+            });
     
             setCampanhasAtivas(campanhasArray);
-
+            console.log(campanhasAtivas.length)
           }
         });
       } catch (error) {
@@ -189,31 +198,44 @@ const Dashboard = ({ user }) => {
           {/* Sidebar Esquerda */}
           <Grid item xs={12} sm={3}>
           <Paper sx={{ padding: 2 }}>
-  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-    Empresas Destacadas
-  </Typography>
-  <List>
-    {campanhasAtivas.map((campanha) => (
-      <div key={campanha.id} style={{ marginBottom: "16px", cursor: "pointer" }}>
-        <Link
-          to={`/campanha/${campanha.id}`}
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
-          <ListItemText
-            primary={
-              <strong>
-                {campanha.company?.nome || "Nome da Empresa Não Disponível"}
-              </strong>
-            }
-          />
-        </Link>
-      </div>
-    ))}
-  </List>
-</Paper>
+              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                Empresas Destacadas
+              </Typography>
+              <List>
+                {campanhasAtivas.length === 0 ? (
+                  <Typography variant="body2" color="textSecondary">
+                    Nenhuma campanha disponível no momento.
+                  </Typography>
+                ) : (
+                  campanhasAtivas.map((campanha) => (
+                    <div key={campanha.id} style={{ marginBottom: "16px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                      <Link
+                        to={`/vperfil/${campanha.company.id}`}
+                        style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center" }}
+                      >
+                        {/* Logo da empresa */}
+                        {campanha.company?.logo && (
+                          <img 
+                            src={campanha.company.logo} 
+                            alt="Logo da empresa"
+                            style={{ width: 40, height: 40, borderRadius: "50%", marginRight: 10 }} 
+                          />
+                        )}
+
+                        {/* Nome da empresa */}
+                        <ListItemText
+                          primary={
+                            <span>{campanha.company?.nome || "Nome da Empresa Não Disponível"}</span>
+                          }
+                        />
+                      </Link>
+                    </div>
+                  ))
+                )}
+              </List>
+            </Paper>
 
           </Grid>
-
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
             <MarqueeAnuncios />
