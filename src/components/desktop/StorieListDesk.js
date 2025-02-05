@@ -33,7 +33,7 @@ const StorieListDesk = ({ user }) => {
               id: key,
               ...data[key],
             }))
-            .filter((company) => company.provincia === user);
+            .filter((company) => company.provincia === user.provincia && company.id !== user.id); 
 
           const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
           setStories(randomCompanies);
@@ -49,7 +49,7 @@ const StorieListDesk = ({ user }) => {
   }, [user]);
 
   const handleCompanyClick = (companyId) => {
-    navigate(`/vperfil/${companyId}`);
+    navigate(`/perfil/${companyId}`);
   };
 
   const handleExploreClick = () => {

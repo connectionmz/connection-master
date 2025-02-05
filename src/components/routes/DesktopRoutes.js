@@ -126,7 +126,7 @@ const DesktopRoutes = ({ user }) => {
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
-        <Route path="/vperfil/:id" element={<CompanyProfileDesk user={user} />} />
+        <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
         <Route path="/explore" element={<ExploreDesk user={user.provincia} />} />
         <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
         <Route path="/app" element={<ApxDesk user={user} />} />
