@@ -23,6 +23,7 @@ import StorieListDesk from "./desktop/StorieListDesk";
 
 // Componente InfoBlock para exibir categorias e inquéritos
 const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
+  
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
     <Typography variant="h6" sx={{ fontWeight: "bold" }}>
       {title}
@@ -35,10 +36,11 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
       ) : (
         items.map((item) => (
           <div key={item.id} style={{ marginBottom: '16px' }}>
-            <Link
-              to={`${linkBase}/${isCategory ? item.name : item.id}`}
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
+          <Link
+  to={`${linkBase}/${isCategory ? item.name : item.id}`}
+  style={{ textDecoration: "none", color: "blue", fontWeight: "bold" }}
+>
+
               <ListItemText primary={item.name || item.title} />
             </Link>
             {item.company && (
@@ -53,9 +55,6 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
       )}
     </List>
     <Divider sx={{ my: 2 }} />
-    <Button fullWidth variant="outlined" color="primary">
-      Ver Mais
-    </Button>
   </Paper>
 );
 
@@ -103,6 +102,8 @@ const Dashboard = ({ user }) => {
   // Carregar categorias e inquéritos usando o hook personalizado
   const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
   const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
+
+  
 
   // Carregar anúncios
   useEffect(() => {

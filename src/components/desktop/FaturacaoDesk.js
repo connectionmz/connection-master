@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ref, get, remove } from 'firebase/database';
+import { ref, get, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import {
   TableContainer,
@@ -21,25 +21,36 @@ import {
   MenuItem as DropdownItem,
   FormControl,
   InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
 import ShareIcon from '@mui/icons-material/Share';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 const FaturacaoDesk = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [proformas, setProformas] = useState([]);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [clients, setClients] = useState([]);
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProforma, setSelectedProforma] = useState(null);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [currentClient, setCurrentClient] = useState({ id: '', name: '', nuit:'', morada:'', contacto:'' });
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
-
+  
     const fetchInvoices = async () => {
       try {
         const invoicesRef = ref(db, `invoices/${user.id}`);
@@ -53,8 +64,23 @@ const FaturacaoDesk = ({ user }) => {
         setError('Erro ao carregar proformas.');
       }
     };
-
+  
+    const fetchClients = async () => {
+      try {
+        const clientsRef = ref(db, `clients/${user.id}`);
+        const snapshot = await get(clientsRef);
+        if (snapshot.exists()) {
+          setClients(Object.values(snapshot.val()));
+        } else {
+          setClients([]);
+        }
+      } catch (err) {
+        setError('Erro ao carregar clientes.');
+      }
+    };
+  
     fetchInvoices();
+    fetchClients();
   }, [user]);
 
   const handleMenuClick = (event, proforma) => {
@@ -95,10 +121,77 @@ const FaturacaoDesk = ({ user }) => {
     }
   };
 
-  const uniqueClients = [
-    ...new Set(proformas.map((proforma) => proforma.cliente || 'Indefinido')),
-  ];
+  const handleAddClient = () => {
+    setCurrentClient({  id: '', name: '', nuit:'', morada:'', contacto:''  });
+    setIsClientModalOpen(true);
+  };
 
+  const handleEditClient = (client) => {
+    setCurrentClient(client);
+    setIsClientModalOpen(true);
+  };
+
+  const handleDeleteClient = async (clientId) => {
+    if (window.confirm('Tem certeza de que deseja excluir este cliente?')) {
+      try {
+        const clientRef = ref(db, `clients/${user.id}/${clientId}`);
+        await remove(clientRef);
+        setClients(clients.filter((c) => c.id !== clientId));
+        alert('Cliente excluído com sucesso!');
+      } catch (error) {
+        alert('Erro ao excluir o cliente.');
+      }
+    }
+  };
+
+
+  const handleSaveClient = async () => {
+    if (!currentClient.name) {
+      alert('O nome do cliente é obrigatório.');
+      return;
+    }
+  
+    // Verifica se o cliente já existe
+    const duplicateField = await checkIfClientExists(
+      currentClient.name,
+      currentClient.nuit,
+      currentClient.contacto
+    );
+  
+    if (duplicateField) {
+      alert(`Já existe um cliente com o mesmo ${duplicateField}.`);
+      return;
+    }
+  
+    try {
+      const clientRef = ref(db, `clients/${user.id}/${currentClient.id || Date.now()}`);
+      await set(clientRef, {
+        id: clientRef.key,
+        name: currentClient.name,
+        nuit: currentClient.nuit,
+        contacto: currentClient.contacto,
+        email: currentClient.email,
+        morada: currentClient.morada,
+      });
+  
+      setIsClientModalOpen(false);
+      setCurrentClient({ id: '', name: '', nuit: '', morada: '', contacto: '' });
+  
+      // Atualiza a lista de clientes após salvar
+      const clientsRef = ref(db, `clients/${user.id}`);
+      const snapshot = await get(clientsRef);
+      if (snapshot.exists()) {
+        setClients(Object.values(snapshot.val()));
+      }
+    } catch (error) {
+      alert('Erro ao salvar o cliente.');
+    }
+  };
+
+  const uniqueClients = [
+    ...new Set(clients.map((client) => client.name || 'Indefinido')),
+  ];
+  
   const filteredProformas = proformas.filter((proforma) => {
     const matchesSearchTerm = proforma.cliente
       .toLowerCase()
@@ -108,13 +201,47 @@ const FaturacaoDesk = ({ user }) => {
     return matchesSearchTerm && matchesClientFilter;
   });
 
+  const checkIfClientExists = async (name, nuit, contacto) => {
+    try {
+      const clientsRef = ref(db, `clients/${user.id}`);
+      const snapshot = await get(clientsRef);
+  
+      if (snapshot.exists()) {
+        const clients = Object.values(snapshot.val());
+        const duplicateClient = clients.find(
+          (client) =>
+            client.name === name ||
+            client.nuit === nuit ||
+            client.contacto === contacto
+        );
+  
+        if (duplicateClient) {
+          if (duplicateClient.name === name) return 'nome';
+          if (duplicateClient.nuit === nuit) return 'NUIT';
+          if (duplicateClient.contacto === contacto) return 'contacto';
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao verificar cliente:', error);
+      return null;
+    }
+  };
+
   return (
     <Box width="100%" minHeight="100vh" p={3}>
+    <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+      <Typography variant="h6" gutterBottom>
+       Proformas
+      </Typography>
+      <Tabs value={tabIndex} onChange={(e, newIndex) => setTabIndex(newIndex)}>
+        <Tab label="Proformas" />
+        <Tab label="Clientes" />
+      </Tabs>
+    </Paper>
+    
+    {tabIndex === 0 && (
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-        <BackButton sx={{ mb: 2 }} />
-        <Typography variant="h6" gutterBottom>
-          Gerenciamento de Proformas
-        </Typography>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <TextField
             label="Pesquisar proformas"
@@ -124,54 +251,46 @@ const FaturacaoDesk = ({ user }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ mr: 2 }}
           />
-          <FormControl sx={{ minWidth: 200, mr: 2 }}>
-            <InputLabel>Filtrar por Cliente</InputLabel>
-            <Select
-              value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
-            >
-              <DropdownItem value="">Todos</DropdownItem>
-              {uniqueClients.map((client, index) => (
-                <DropdownItem key={index} value={client}>
-                  {client}
-                </DropdownItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Button
+        <FormControl sx={{ minWidth: 200, mr: 2 }}>
+                <InputLabel>Filtrar por Cliente</InputLabel>
+                <Select
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                >
+                  <DropdownItem value="">Todos</DropdownItem>
+                  {uniqueClients.map((client, index) => (
+                    <DropdownItem key={index} value={client}>
+                      {client}
+                    </DropdownItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button
             variant="contained"
             color="primary"
             onClick={() => navigate('/proforma')}
           >
             Emitir Proforma
           </Button>
-        </Box>
-      </Paper>
+                  </Box>
 
-      {error && (
-        <Typography color="error" gutterBottom>
-          {error}
-        </Typography>
-      )}
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell align="center">Nr</TableCell>
-              <TableCell>Cliente</TableCell>
-              <TableCell align="center">Emitido</TableCell>
-              <TableCell align="center">Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredProformas.length > 0 ? (
-              filteredProformas.map((proforma, index) => (
-                <TableRow key={index} hover>
-                  <TableCell align="center">{proforma.numeroProforma}</TableCell>
-                  <TableCell>{proforma.cliente || 'Indefinido'}</TableCell>
-                  <TableCell align="center">{proforma.dataEmissao}</TableCell>
-                  <TableCell align="center">
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell align="center">Nr</TableCell>
+                <TableCell>Cliente</TableCell>
+                <TableCell align="center">Emitido</TableCell>
+                <TableCell align="center">Ações</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredProformas.length > 0 ? (
+                filteredProformas.map((proforma, index) => (
+                  <TableRow key={index} hover>
+                    <TableCell align="center">{proforma.numeroProforma}</TableCell>
+                    <TableCell>{proforma.cliente || "Indefinido"}</TableCell>
+                    <TableCell align="center">{proforma.dataEmissao}</TableCell>
                     <Tooltip title="Opções">
                       <IconButton
                         aria-controls="simple-menu"
@@ -191,20 +310,77 @@ const FaturacaoDesk = ({ user }) => {
                       <MenuItem onClick={handleEdit}>Editar</MenuItem>
                       <MenuItem onClick={handleDelete}>Excluir</MenuItem>
                     </Menu>
-                  </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">Nenhuma proforma encontrada</TableCell>
                 </TableRow>
-              ))
-            ) : (
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    )}
+
+    {tabIndex === 1 && (
+      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => setIsClientModalOpen(true)}>
+          Adicionar Cliente
+        </Button>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={4} align="center">
-                  Nenhuma proforma encontrada
-                </TableCell>
+                <TableCell>Nome</TableCell>
+                <TableCell align="center">Ações</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+            </TableHead>
+            <TableBody>
+              {clients.length > 0 ? (
+                clients.map((client, index) => (
+                  <TableRow key={index} hover>
+                    <TableCell>{client.name}</TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="Editar">
+                        <IconButton>
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Excluir">
+                        <IconButton>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2} align="center">Nenhum cliente encontrado</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    )}
+
+    <Dialog open={isClientModalOpen} onClose={() => setIsClientModalOpen(false)}>
+      <DialogTitle>{currentClient.id ? "Editar Cliente" : "Adicionar Cliente"}</DialogTitle>
+      <DialogContent>
+        <TextField label="Nome do Cliente" fullWidth variant="outlined" sx={{ mt: 2 }} />
+        <TextField label="Nuit" fullWidth variant="outlined" sx={{ mt: 2 }} />
+        <TextField label="Contacto" fullWidth variant="outlined" sx={{ mt: 2 }} />
+        <TextField label="Morada" fullWidth variant="outlined" sx={{ mt: 2 }} />
+        <TextField label="Email" fullWidth variant="outlined" sx={{ mt: 2 }} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setIsClientModalOpen(false)}>Cancelar</Button>
+        <Button color="primary">Salvar</Button>
+      </DialogActions>
+    </Dialog>
+  </Box>
   );
 };
 

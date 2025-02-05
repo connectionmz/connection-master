@@ -28,23 +28,26 @@ const CriarProformaDesk = ({ user }) => {
         telefone: '',
         endereco: '',
         nuit: '',
-        empresa: '',
-        notas: '',
     });
 
     useEffect(() => {
-        fetchClientes();
+        fetchClients();
         fetchProdutos();  
     }, []);
 
-    const fetchClientes = async () => {
-        const clientesRef = ref(db, `clientes/${user.id}`);
-        const snapshot = await get(clientesRef);
-        const data = snapshot.val();
-        if (data) {
-            setClientes(Object.values(data));
+    const fetchClients = async () => {
+        try {
+          const clientsRef = ref(db, `clients/${user.id}`);
+          const snapshot = await get(clientsRef);
+          if (snapshot.exists()) {
+            setClientes(Object.values(snapshot.val()));
+          } else {
+            setClientes([]);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar clientes.'+err);
         }
-    };
+      };
 
     const fetchProdutos = async () => {
         const produtosRef = ref(db, `stores/${user.id}/products`);
@@ -193,14 +196,12 @@ const handleCloseModal = () => {
                         >
                             <option value="">Selecione um cliente</option>
                             {clientes.map((c, index) => (
-                                <option key={index} value={c.nome}>
-                                    {c.nome}
+                                <option key={index} value={c.name}>
+                                    {c.name}
                                 </option>
                             ))}
                         </select>
-                        <Button onClick={handleOpenModal} variant="contained" color="primary">
-                            Cliente +
-                        </Button>
+                    
                     </div>
                 </div>
 
@@ -325,77 +326,6 @@ const handleCloseModal = () => {
                 </div>
             </form>
 
-            <Dialog open={openModal} onClose={handleCloseModal}>
-    <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
-    <DialogContent>
-        <TextField
-            label="Nome"
-            value={novoCliente.nome}
-            onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
-            fullWidth
-            margin="normal"
-        />
-        <TextField
-            label="Email"
-            value={novoCliente.email}
-            onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
-            fullWidth
-            margin="normal"
-        />
-        <TextField
-            label="Telefone"
-            value={novoCliente.telefone}
-            onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
-            fullWidth
-            margin="normal"
-        />
-        <TextField
-            label="Endereço"
-            value={novoCliente.endereco}
-            onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
-            fullWidth
-            margin="normal"
-        />
-        <TextField
-            label="Nuit"
-            value={novoCliente.nuit}
-            onChange={(e) => setNovoCliente({ ...novoCliente, nuit: e.target.value })}
-            fullWidth
-            margin="normal"
-        />
-        <TextField
-            label="Empresa"
-            value={novoCliente.empresa}
-            onChange={(e) => setNovoCliente({ ...novoCliente, empresa: e.target.value })}
-            fullWidth
-            margin="normal"
-        />
-        <TextField
-            label="Notas"
-            value={novoCliente.notas}
-            onChange={(e) => setNovoCliente({ ...novoCliente, notas: e.target.value })}
-            fullWidth
-            margin="normal"
-        />
-    </DialogContent>
-    <DialogActions>
-        <Button onClick={handleCloseModal} color="primary">
-            Fechar
-        </Button>
-        <Button
-            onClick={async () => {
-                const clienteRef = ref(db, `clientes/${user.id}`);
-                const clienteId = push(clienteRef).key;
-                await set(ref(db, `clientes/${user.id}/${clienteId}`), novoCliente);
-                setClientes([...clientes, novoCliente]);
-                setOpenModal(false);
-            }}
-            color="primary"
-        >
-            Salvar
-        </Button>
-        </DialogActions>
-    </Dialog>
             <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={handleCloseSnackbar}>
                 <MuiAlert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
                     {snackbarMessage}

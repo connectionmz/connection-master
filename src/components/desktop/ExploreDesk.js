@@ -22,7 +22,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 
-const ExploreDesk = () => {
+const ExploreDesk = ({user}) => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,11 +47,15 @@ const ExploreDesk = () => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const companyList = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
-          setCompanies(companyList);
+          const companyList = Object.keys(data)
+            .map((key) => ({
+              id: key,
+              ...data[key],
+            }))
+            .filter((company) => company.provincia === user.provincia && company.id !== user.id); 
+
+          const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
+          setCompanies(randomCompanies);
         }
       } catch (error) {
         console.error('Error fetching companies:', error);
