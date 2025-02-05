@@ -71,11 +71,11 @@ const PagamentoModulo = ({ user }) => {
   };
 
   return (
-    <Box sx={{ p: 6, backgroundColor: '#f5f5f5', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <Box sx={{ p: 6, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', width:'100%' }}>
       <Typography variant="h3" fontWeight="bold" gutterBottom>
         Pagamento do Módulo
       </Typography>
-      <Card sx={{ width: '100%', maxWidth: 400, boxShadow: 3 }}>
+      <Card sx={{ width: '100%', boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             {currentModule.name}

@@ -60,6 +60,7 @@ import ConnectionsDesk from '../desktop/ConnectionsDesk';
 import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import AnalyticsDesk from '../desktop/AnalyticsDesk';
 import LandingPage from '../LandingPage';
+import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
 
 
 const theme = createTheme({
@@ -93,9 +94,8 @@ const DesktopRoutes = ({ user }) => {
     setAnchorEl(null);
   };
 
-
-  if (user?.subscriptions?.isverity==='false') {
-    console.log(user?.subscriptions?.isverity);
+  if (user?.subscriptions?.isverify==='false') {
+    console.log(user?.subscriptions?.isverify);
     // Use Navigate para redirecionar ou encapsule o Route em Routes
     return (
       <Routes>
@@ -148,11 +148,14 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk  user={user}/>} />
         <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk  user={user}/>} />
         <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
-        <Route path="/concursos" element={<ConcursoDesk user={user} />} />
         <Route path="/website" element={<LandingPage user={user} />} />
 
         <Route path="/noticiados" element={<NoticiadosDesk />} />
         <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
+
+      {/* Concursos */}
+      <Route path="/concursos" element={<ConcursoDesk user={user} />} />
+      <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
 
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />

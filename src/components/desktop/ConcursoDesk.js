@@ -92,7 +92,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
             setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir cotações.', severity: 'warning' });
             return;
         }
-        navigate('/cotacao');
+        navigate('/concurso');
     };
 
     const deleteCotacao = (cotacaoId) => {
@@ -115,7 +115,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
             case 'recentes':
                 return cotacoes.filter((cotacao) => new Date(cotacao.timestamp).toDateString() === now.toDateString());
             case 'expiradas':
-                return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.datalimite));
+                return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.prazo));
             case 'fechada':
                 return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
             case 'minhas':
@@ -180,7 +180,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                     onClick={handlePublishQuotation}
                     disabled={!hasModuleSMS}
                 >
-                    Emitir
+                    Publicar Concurso
                 </Button>
             </Box>
 
@@ -222,7 +222,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                                     Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
                                 </Typography>
                                 <Typography variant="body2" color="error">
-                                    Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                    Data limite: {new Date(cotacao.prazo).toLocaleDateString('pt-PT')}
                                 </Typography>
                             </CardContent>
                             <CardActions>
