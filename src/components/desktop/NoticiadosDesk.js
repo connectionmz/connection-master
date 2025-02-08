@@ -12,10 +12,13 @@ import {
   CardMedia, 
   Button, 
   CircularProgress, 
-  Alert 
+  Alert, 
+  Box,
+  IconButton
 } from '@mui/material';
-import { FaFileDownload } from 'react-icons/fa';
+import { FaFileDownload, FaArrowRight } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import { height, width } from '@mui/system';
 
 const NoticiadosDesk = () => {
   const [anuncios, setAnuncios] = useState([]);
@@ -91,7 +94,7 @@ const NoticiadosDesk = () => {
   }
 
   return (
-    <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box style={{ width: '100%', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       <AppBar position="static" color="primary">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
@@ -101,7 +104,7 @@ const NoticiadosDesk = () => {
       </AppBar>
       <Container maxWidth="lg" sx={{ paddingY: 4 }}>
         {anuncios.length === 0 ? (
-          <Alert severity="info">Nenhum anúncio disponível no momento.</Alert>
+          <Alert severity="info">Nenhuma noticia disponível no momento.</Alert>
         ) : (
           <Grid container spacing={3}>
             {anuncios.map((anuncio) => (
@@ -111,6 +114,11 @@ const NoticiadosDesk = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     height: '100%',
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      transform: 'scale(1.03)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                    },
                   }}
                 >
                   <Link
@@ -146,13 +154,35 @@ const NoticiadosDesk = () => {
                       </Typography>
                     </CardContent>
                   </Link>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: 2 }}>
+                    {anuncio.fileUrl && (
+                      <IconButton
+                        color="primary"
+                        aria-label="download"
+                        component="a"
+                        href={anuncio.fileUrl}
+                        download
+                      >
+                        <FaFileDownload />
+                      </IconButton>
+                    )}
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      endIcon={<FaArrowRight />}
+                      component={Link}
+                      to={`/noticia/${anuncio.id}`}
+                    >
+                      Ver mais
+                    </Button>
+                  </Box>
                 </Card>
               </Grid>
             ))}
           </Grid>
         )}
       </Container>
-    </div>
+    </Box>
   );
 };
 

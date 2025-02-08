@@ -33,14 +33,15 @@ const CompanyDataFormDesk = () => {
     nome: '',
     sigla: '',
     nuit: '',
-    nuel:'',
-    nrContriuinte:'',
+    nuel: '',
+    nrContriuinte: '',
     contacto: '',
     endereco: '',
     provincia: '',
     distrito: '',
     logo: null,
     sector: '',
+    customSector: '',
     subsectores: [],
     tipoEntidade: '',
     subtipoEntidade: '',
@@ -49,13 +50,23 @@ const CompanyDataFormDesk = () => {
 
   const sectoresComCapacidade = [
     'Recursos Naturais',
-    'Indústria e Comércio',
+    'Indústria e Comércio',  
     'Agronegócio',
     'Energia',
     'Água e Saneamento',
   ];
 
+
   useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      navigate('/auth'); 
+    }
+  }, [navigate]);
+
+
+  useEffect(() => {
+
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
     const tipoEntidadeRef = ref(db, 'tipos_entidades');
@@ -95,21 +106,39 @@ const CompanyDataFormDesk = () => {
       subsectores: [],
       capacidadeProducao: '',
     }));
+
+    if (selectedSector === "Outro") {
+      setCompanyData((prev) => ({ ...prev, customSector: "" }));
+    }
+
     const foundSector = sectores.find((s) => s.setor === selectedSector);
     setSubsectores(foundSector ? foundSector.subsectores : []);
+  };
+
+  const handleCustomSectorChange = (event) => {
+    setCompanyData({ ...companyData, customSector: event.target.value });
+  };
+
+  const handleAddSector = () => {
+    if (companyData.customSector.trim() && !sectores.includes(companyData.customSector)) {
+      setSectores([...sectores, companyData.customSector]);
+      setCompanyData({ ...companyData, customSector: companyData.customSector });
+    }
   };
 
   const handleChange = (e) => {
     const { name, value, type, files, multiple, options } = e.target;
   
     let newValue = value;
-
+  
     if (type === "file") {
       newValue = multiple ? Array.from(files) : files[0];
     } else if (multiple && options) {
       newValue = Array.from(options)
         .filter((option) => option.selected)
         .map((option) => option.value);
+    } else if (typeof value === "string" && (name === "nuit" || name === "nuel" || name === "nrContriuinte")) {
+      newValue = value.replace(/\D/g, '');
     }
   
     setCompanyData((prevData) => ({
@@ -117,20 +146,64 @@ const CompanyDataFormDesk = () => {
       [name]: newValue,
     }));
   };
-  
-  const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
+
+  const validateStep = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          companyData.nome &&
+          companyData.nuit &&
+          companyData.nuit.length >= 9 &&
+          companyData.nuel &&
+          companyData.nuel.length >= 9 &&
+          companyData.nrContriuinte &&
+          companyData.nrContriuinte.length >= 9
+        );
+      case 1:
+        return (
+          companyData.endereco &&
+          companyData.contacto &&
+          companyData.provincia &&
+          companyData.distrito
+        );
+      case 2:
+        return (
+          companyData.sector &&
+          companyData.tipoEntidade &&
+          (companyData.sector !== "outro" || companyData.customSector)
+        );
+      case 3:
+        return companyData.logo; 
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (!validateStep(activeStep)) {
+      setErrorMessage("Por favor, preencha todos os campos obrigatórios *.");
+      return;
+    }
+    setErrorMessage(""); 
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
   const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
- 
+
   const handleSubmit = async () => {
+    if (!validateStep(activeStep)) {
+      setErrorMessage("Por favor, preencha todos os campos obrigatórios *.");
+      return;
+    }
     setIsLoading(true);
     try {
       const user = auth.currentUser;
       if (user) {
         const companyRef = ref(db, "company");
         const snapshot = await get(companyRef);
-  
+
         let camposDuplicados = [];
-  
+
         snapshot.forEach((child) => {
           const data = child.val();
           if (data.nome === companyData.nome) camposDuplicados.push("Nome da Empresa");
@@ -139,7 +212,7 @@ const CompanyDataFormDesk = () => {
           if (data.nrContriuinte === companyData.nrContriuinte) camposDuplicados.push("Número de Contribuinte");
           if (data.contacto === companyData.contacto) camposDuplicados.push("Contacto");
         });
-  
+
         if (camposDuplicados.length > 0) {
           setErrorMessage(
             `Os seguintes dados já estão cadastrados: ${camposDuplicados.join(", ")}. ` +
@@ -148,7 +221,7 @@ const CompanyDataFormDesk = () => {
           setIsLoading(false);
           return;
         }
-  
+
         let logoUrl = "";
         if (companyData.logo) {
           const storage = getStorage();
@@ -156,7 +229,7 @@ const CompanyDataFormDesk = () => {
           await uploadBytes(fileRef, companyData.logo);
           logoUrl = await getDownloadURL(fileRef);
         }
-  
+
         const dataToSave = {
           ...companyData,
           id: user.uid,
@@ -170,8 +243,10 @@ const CompanyDataFormDesk = () => {
         };
         await set(ref(db, `company/${user.uid}`), dataToSave);
         await push(ref(db, `subscriptions/${user.uid}`), { status: "active" });
-  
+
         window.location.reload();
+      }else{
+        setErrorMessage("Impossivel cadastrar. Tente novamente");
       }
     } catch (error) {
       setErrorMessage("Ocorreu um erro ao salvar os dados. Tente novamente.");
@@ -180,7 +255,6 @@ const CompanyDataFormDesk = () => {
       setIsLoading(false);
     }
   };
-  
 
   const renderStepContent = (step) => {
     switch (step) {
@@ -202,15 +276,14 @@ const CompanyDataFormDesk = () => {
               value={companyData.sigla}
               onChange={handleChange}
               fullWidth
-              required
               margin="normal"
             />
-<TextField
+            <TextField
   label="NUIT"
   name="nuit"
   value={companyData.nuit}
   onChange={handleChange}
-  error={!!companyData.nuit && companyData.nuit.length < 9} // Apenas mostra erro se for menor que 9
+  error={!!companyData.nuit && companyData.nuit.length < 9}
   helperText={
     !!companyData.nuit && companyData.nuit.length < 9
       ? "NUIT deve ter no mínimo 9 dígitos."
@@ -219,24 +292,30 @@ const CompanyDataFormDesk = () => {
   fullWidth
   required
   margin="normal"
+  inputProps={{
+    inputMode: 'numeric', // Define o teclado como numérico em dispositivos móveis
+    pattern: '[0-9]*', // Garante que apenas números sejam aceitos
+  }}
 />
-
 <TextField
   label="NUEL"
   name="nuel"
   value={companyData.nuel}
   onChange={handleChange}
-  error={!!companyData.nuel && companyData.nuel.length < 6}
+  error={!!companyData.nuel && companyData.nuel.length < 9}
   helperText={
-    !!companyData.nuel && companyData.nuel.length < 6
-      ? "NUEL deve ter no mínimo 6 dígitos."
+    !!companyData.nuel && companyData.nuel.length < 9
+      ? "NUEL deve ter no mínimo 9 dígitos."
       : ""
   }
   fullWidth
   required
   margin="normal"
+  inputProps={{
+    inputMode: 'numeric',
+    pattern: '[0-9]*',
+  }}
 />
-
 <TextField
   label="Número de Contribuinte"
   name="nrContriuinte"
@@ -251,8 +330,12 @@ const CompanyDataFormDesk = () => {
   fullWidth
   required
   margin="normal"
+  inputProps={{
+    inputMode: 'numeric',
+    pattern: '[0-9]*',
+  }}
 />
-  </Box>
+          </Box>
         );
       case 1:
         return (
@@ -264,17 +347,17 @@ const CompanyDataFormDesk = () => {
               onChange={handleChange}
               fullWidth
               required
-              margin="normal"/>
-      <TextField
-  label="Contacto"
-  name="contacto" // Certifique-se de que está em minúsculas e corresponde ao estado
-  value={companyData.contacto || ""} // Evita valores undefined
-  onChange={handleChange}
-  fullWidth
-  required
-  margin="normal"
-/>
-
+              margin="normal"
+            />
+            <TextField
+              label="Contacto"
+              name="contacto"
+              value={companyData.contacto || ""}
+              onChange={handleChange}
+              fullWidth
+              required
+              margin="normal"
+            />
             <TextField
               select
               label="Província"
@@ -283,7 +366,8 @@ const CompanyDataFormDesk = () => {
               onChange={handleProvinceChange}
               fullWidth
               required
-              margin="normal">
+              margin="normal"
+            >
               <MenuItem value="">Selecione</MenuItem>
               {provincias.map((prov) => (
                 <MenuItem key={prov.provincia} value={prov.provincia}>
@@ -329,20 +413,24 @@ const CompanyDataFormDesk = () => {
                   {s.setor}
                 </MenuItem>
               ))}
+              <MenuItem value="outro">Outro</MenuItem>
             </TextField>
-              {/*
-                          {sectoresComCapacidade.includes(companyData.sector) && (
-              <TextField
-                label="Capacidade de Produção"
-                name="capacidadeProducao"
-                value={companyData.capacidadeProducao}
-                onChange={handleChange}
-                type="text"
-                fullWidth
-                required
-                margin="normal"
-              />
-            )}*/}
+
+            {companyData.sector === "outro" && (
+              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                <TextField
+                  label="Novo Setor"
+                  value={companyData.customSector}
+                  onChange={handleCustomSectorChange}
+                  fullWidth
+                  margin="normal"
+                />
+                <button onClick={handleAddSector} style={{ padding: "10px", cursor: "pointer" }}>
+                  Adicionar
+                </button>
+              </div>
+            )}
+
             {subsectores.length > 0 && (
               <TextField
                 select
@@ -351,6 +439,7 @@ const CompanyDataFormDesk = () => {
                 value={companyData.subsectores}
                 onChange={handleChange}
                 fullWidth
+                required
                 margin="normal"
                 SelectProps={{
                   multiple: true,
@@ -363,6 +452,7 @@ const CompanyDataFormDesk = () => {
                 ))}
               </TextField>
             )}
+
             <TextField
               select
               label="Tipo de Entidade"
@@ -371,7 +461,8 @@ const CompanyDataFormDesk = () => {
               onChange={handleEntidadeChange}
               fullWidth
               required
-              margin="normal">
+              margin="normal"
+            >
               <MenuItem value="">Selecione</MenuItem>
               {tiposEntidades.map((ent) => (
                 <MenuItem key={ent.tipo} value={ent.tipo}>
@@ -379,45 +470,60 @@ const CompanyDataFormDesk = () => {
                 </MenuItem>
               ))}
             </TextField>
+
             {subtiposEntidade.length > 0 && (
-                    <TextField
-                      select
-                      label="Subtipo de Entidade"
-                      name="subtipoEntidade"
-                      value={companyData.subtipoEntidade || ""}
-                      onChange={handleChange}
-                      required
-                      fullWidth
-                      margin="normal"
-                    >
-                      <MenuItem value="">Selecione o subtipo</MenuItem>
-                      {subtiposEntidade.map((sub, index) => (
-                        <MenuItem key={index} value={sub}>
-                          {sub}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
+              <TextField
+                select
+                label="Subtipo de Entidade"
+                name="subtipoEntidade"
+                value={companyData.subtipoEntidade || ""}
+                onChange={handleChange}
+                required
+                fullWidth
+                margin="normal"
+              >
+                <MenuItem value="">Selecione o subtipo</MenuItem>
+                {subtiposEntidade.map((sub, index) => (
+                  <MenuItem key={index} value={sub}>
+                    {sub}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
           </Box>
-          
         );
       case 3:
         return (
           <Box>
-            <Typography variant="body1" gutterBottom>
-              Faça upload do logotipo da empresa:
-            </Typography>
-            <Button variant="contained" component="label">
-              Upload
-              <input
-                type="file"
-                hidden
-                name="logo"
-                accept="image/*"
-                onChange={handleChange}
+          <Typography variant="body1" gutterBottom>
+            Faça carregamento do logotipo da empresa*
+          </Typography>
+          <Button variant="contained" component="label">
+            Carregar
+            <input
+              type="file"
+              hidden
+              name="logo"
+              accept="image/*"
+              onChange={handleChange}
+              required
+            />
+          </Button>
+          {companyData.logo && (
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <img
+                src={URL.createObjectURL(companyData.logo)} 
+                alt="Preview do Logotipo"
+                style={{
+                  maxWidth: '100px',
+                  maxHeight: '100px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                }}
               />
-            </Button>
-          </Box>
+            </Box>
+          )}
+        </Box>
         );
       default:
         return null;
@@ -425,19 +531,18 @@ const CompanyDataFormDesk = () => {
   };
 
   const handleLoginRedirect = () => {
-    navigate('/auth'); // Altere a rota caso o login esteja em uma rota diferente
+    navigate('/auth'); 
   };
-
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
-        <Button
+      <Button
         variant="contained"
         color="primary"
         size="large"
         onClick={handleLoginRedirect}
       >
-       Retornar para Inicio Sessão
+        Retornar para Inicio Sessão
       </Button>
       <Stepper activeStep={activeStep}>
         {steps.map((label, index) => (
@@ -449,7 +554,7 @@ const CompanyDataFormDesk = () => {
       <Box sx={{ mt: 4 }}>
         {renderStepContent(activeStep)}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-          <Button disabled={activeStep === 0} onClick={handleBack}>
+          <Button variant="contained" color="primary" disabled={activeStep === 0} onClick={handleBack}>
             Voltar
           </Button>
           {activeStep === steps.length - 1 ? (

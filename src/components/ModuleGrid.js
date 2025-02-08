@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FaReceipt, FaStore, FaAd, FaSms, FaPhone, FaPoll, FaTruckLoading, FaStar, FaChartLine } from 'react-icons/fa';
+
 const ModuleGrid = ({ activeModules }) => {
   const navigate = useNavigate();
 
@@ -8,11 +9,11 @@ const ModuleGrid = ({ activeModules }) => {
     { name: 'Market', link: '/market', icon: <FaStore size={40} />, key: 'moduloMarket' },
     { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloAnunciar' },
     { name: 'SMS', link: '/sms', icon: <FaSms size={40} />, key: 'moduloSMS' },
-    { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter' },
-    { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement' },
+    { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter', alwaysEnabled: true },
+    { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement', alwaysEnabled: true },
     { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
     { name: 'Destacar', link: '/destacar', icon: <FaStar size={40} />, key: 'moduloDestacar' },
-    { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' } // Módulo Analises
+    { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' }
   ];
   
   const handleAcquireModule = (module) => {
@@ -20,7 +21,7 @@ const ModuleGrid = ({ activeModules }) => {
   };
 
   const handleModuleClick = (module) => {
-    if (activeModules[module.key]) {
+    if (module.alwaysEnabled || activeModules[module.key]) {
       navigate(module.link);
     } else {
       handleAcquireModule(module);
@@ -35,7 +36,7 @@ const ModuleGrid = ({ activeModules }) => {
           <div
             key={module.name}
             className={`flex flex-col items-center cursor-pointer p-4 rounded-md transition-all duration-150 ${
-              activeModules[module.key] ? 'hover:bg-gray-200' : 'opacity-50 hover:bg-gray-300'
+              module.alwaysEnabled || activeModules[module.key] ? 'hover:bg-gray-200' : 'opacity-50 hover:bg-gray-300'
             }`}
             onClick={() => handleModuleClick(module)}
           >

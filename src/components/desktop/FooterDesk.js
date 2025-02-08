@@ -35,16 +35,12 @@ const FooterDesk = () => {
             <IconButton href="https://www.linkedin.com/company/connectionmz/" target="_blank" sx={{ color: "#0e76a8", marginRight: 2 }}>
               <LinkedInIcon />
             </IconButton>
-            <IconButton href="https://www.connectionmz.com" target="_blank" sx={{ color: "#333", marginRight: 2 }}>
+            <IconButton href="https://www.connectionmozambique.com" target="_blank" sx={{ color: "#333", marginRight: 2 }}>
               <Language />
             </IconButton>
           </Box>
 
-          <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
-            <Link href="https://www.connectionmozambique.com" target="_blank" sx={{ color: "text.secondary", textDecoration: "none" }}>
-              www.connectionmozambique.com
-            </Link>
-          </Typography>
+      
 
           <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>
             <small>© {new Date().getFullYear()} Empresa. Todos os direitos reservados.</small>

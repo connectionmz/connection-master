@@ -165,6 +165,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
         <>
             <Box
                 sx={{
+                    width:'100%',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -173,7 +174,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                     boxShadow: 1,
                 }}
             >
-                <Typography variant="h5">Concursos</Typography>
+                <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom >Concursos</Typography>
                 <Button
                     variant="contained"
                     color="primary"
@@ -197,7 +198,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                 <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
                 <Tab value="expiradas" label="Expiradas" icon={<History />} />
                 <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} />} />
+                <Tab value="minhas" label="Meus" icon={<Avatar src={user?.logoUrl} />} />
             </Tabs>
 
             <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
@@ -252,7 +253,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                         </Card>
                     ))
                 ) : (
-                    <Typography textAlign="center">Nenhuma cotação disponível.</Typography>
+                    <Typography textAlign="center">Nenhum concurso disponível.</Typography>
                 )}
             </Box>
         </>

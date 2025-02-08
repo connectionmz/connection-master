@@ -93,7 +93,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     fetchCampanhasAtivas()
 }, [])
 
-
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
             setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir cotações.', severity: 'warning' });
@@ -172,28 +171,24 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         <>
             <Box
                 sx={{
+                    width:'100%',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: 2,
                     backgroundColor: 'white',
                     boxShadow: 1,
-                }}
-            >
-                <Typography variant="h5">Cotações</Typography>
+                }}>
+                <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom >Pedidos de Cotações</Typography>
                 <Button
                     variant="contained"
                     color="primary"
-                    onClick={handlePublishQuotation}
-                    disabled={!hasModuleSMS}
-                >
-                    Emitir
+                    onClick={handlePublishQuotation}disabled={!hasModuleSMS}>
+                    Fazer pedido
                 </Button>
             </Box>
-
-            {/* Espaço para "Anunciar Aqui" */}
+            
             <AnunciosDesk  campanhas = {campanhasAtivas}/>
-
             <Tabs
                 value={activeTab}
                 onChange={(_, newValue) => setActiveTab(newValue)}
@@ -206,7 +201,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
                 <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} />} />
             </Tabs>
-
             <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -259,7 +253,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         </Card>
                     ))
                 ) : (
-                    <Typography textAlign="center">Nenhuma cotação disponível.</Typography>
+                    <Typography textAlign="center">Nenhum pedido de cotação disponível.</Typography>
                 )}
             </Box>
         </>

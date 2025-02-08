@@ -122,19 +122,7 @@ const ListaDeServicosDesk = () => {
           Nenhuma empresa encontrada para esta categoria.
         </Typography>
       )}
-      <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-        <Button
-          variant="contained"
-          sx={{
-            backgroundColor: '#0a66c2',
-            '&:hover': {
-              backgroundColor: '#084b92',
-            },
-          }}
-        >
-          Ver todas as empresas
-        </Button>
-      </Box>
+    
     </Box>
   );
 };

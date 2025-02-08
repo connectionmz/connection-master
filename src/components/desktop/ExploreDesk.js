@@ -18,11 +18,13 @@ import {
   DialogActions,
   CircularProgress,
   Box,
+  CardActionArea,
+  Avatar,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 
-const ExploreDesk = ({user}) => {
+const ExploreDesk = ({ user }) => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +54,7 @@ const ExploreDesk = ({user}) => {
               id: key,
               ...data[key],
             }))
-            .filter((company) => company.provincia === user.provincia && company.id !== user.id); 
+            .filter((company) => company.id !== user.id);
 
           const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
           setCompanies(randomCompanies);
@@ -108,7 +110,7 @@ const ExploreDesk = ({user}) => {
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }));
 
   const handleCompanyClick = (companyId) => {
-    navigate(`/vperfil/${companyId}`);
+    navigate(`/perfil/${companyId}`);
   };
 
   const openModal = () => setIsModalOpen(true);
@@ -123,8 +125,9 @@ const ExploreDesk = ({user}) => {
   }
 
   return (
-    <Box width='100%' minHeight="100vh">
-      <Typography variant="h4" gutterBottom>
+    <Box width="100%" minHeight="100vh">
+      <br/>
+      <Typography variant="h4" gutterBottom textAlign={'center'} fontWeight={'bold'}>
         Empresas Disponíveis
       </Typography>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
@@ -228,45 +231,72 @@ const ExploreDesk = ({user}) => {
         </DialogActions>
       </Dialog>
 
-      {/* Lista de Empresas */}
-      <Grid container spacing={4}>
-        {filteredCompanies.map((company) => (
-          <Grid item xs={12} sm={6} md={4} key={company.id}>
-            <Card onClick={() => handleCompanyClick(company.id)} sx={{ cursor: 'pointer' }}>
-              <Box
-                sx={{
-                  width: '100%',
-                  height: '140px',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: '#f5f5f5',
-                  overflow: 'hidden',
-                }}
-              >
-                <CardMedia
-                  component="img"
-                  image={company.logoUrl || defaultLogoUrl}
-                  alt={`${company.nome} logo`}
-                  sx={{
-                    width: 'auto',
-                    height: '100%',
-                    objectFit: 'contain',
-                  }}
-                />
-              </Box>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {company.nome}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {company.sector}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {/* Informação sobre o número de empresas encontradas */}
+      <Typography variant="subtitle1" gutterBottom>
+        {filteredCompanies.length === 0
+          ? 'Nenhuma empresa encontrada.'
+          : `Mostrando ${filteredCompanies.length} empresa(s) encontrada(s).`}
+      </Typography>
+
+     {/* Lista de Empresas */}
+<Grid container spacing={4}>
+  {filteredCompanies.map((store) => (
+    <Grid item key={store.id} xs={2} sm={1} md={2} display="flex" justifyContent="center">
+      <Card
+        sx={{
+          width: 160,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          border:'1px solid #ccc',
+          p: 2,
+          textAlign: "center",
+        }}
+      >
+        <CardActionArea onClick={() => handleCompanyClick(store.id)}>
+          <Avatar
+            src={store.logoUrl || defaultLogoUrl}
+            alt={`Logotipo de ${store.nome}`}
+            sx={{
+              width: 64,
+              height: 64,
+              mb: 1,
+              margin: "0 auto", 
+            }}
+          />
+          <CardContent sx={{ p: 0 }}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                textTransform: "capitalize",
+              }}
+            >
+              {store.sigla || store.nome}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                fontSize: 12,
+              }}
+            >
+              {store.sector || "Setor não especificado"}
+            </Typography>
+          </CardContent>
+        </CardActionArea>
+      </Card>
+    </Grid>
+  ))}
+</Grid>
+
     </Box>
   );
 };

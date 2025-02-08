@@ -26,7 +26,7 @@ const shuffleArray = (array) => {
     .map(({ item }) => item);
 };
 
-const StoresDesk = () => {
+const StoresDesk = ({user}) => {
   const [storesList, setStoresList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStores, setFilteredStores] = useState([]);
@@ -48,16 +48,18 @@ const StoresDesk = () => {
   };
 
   useEffect(() => {
+    if (!user || !user.provincia) return;
+  
     const fetchStores = async () => {
       try {
         const storesRef = ref(db, "stores");
         const snapshot = await get(storesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const storesArray = Object.entries(data).map(([id, store]) => ({
-            id,
-            ...store,
-          }));
+          const storesArray = Object.entries(data)
+            .map(([id, store]) => ({ id, ...store }))
+            .filter((store) => store.company?.provincia === user.provincia);
+          
           const shuffledStores = shuffleArray(storesArray);
           setStoresList(shuffledStores);
           setFilteredStores(shuffledStores);
@@ -71,10 +73,10 @@ const StoresDesk = () => {
         setLoading(false);
       }
     };
-
+  
     fetchStores();
-  }, []);
-
+  }, [user?.provincia]);
+  
   useEffect(() => {
     if (searchQuery.trim()) {
       const filtered = storesList.filter((store) =>
@@ -87,7 +89,7 @@ const StoresDesk = () => {
   }, [searchQuery, storesList]);
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ p: 4, width:'100%'}}>
       <Box
         sx={{
           display: "flex",

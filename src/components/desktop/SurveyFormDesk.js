@@ -3,6 +3,7 @@ import { Box, Paper, Typography, Button, TextField, FormControl, RadioGroup, For
 import { db } from "../../fb";
 import { ref, set, get } from "firebase/database";
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../BackButton';
 
 const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
   const [responses, setResponses] = useState({});
@@ -122,19 +123,29 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
   if (hasResponded) {
     return (
-      <Box sx={{ padding: 3 }}>
-        <Paper sx={{ padding: 3 }}>
-          <Typography variant="h5">
-            Você já respondeu a este inquérito.
-          </Typography>
-        </Paper>
+      <Box
+      width="100%"
+      height="100vh"
+> 
+    <Paper sx={{ padding: 3 }}>
+    <BackButton sx={{ mb: 2 }} />
+
+      <Typography variant="h5">
+        Você já respondeu a este inquérito.
+      </Typography>
+      </Paper>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ padding: 3 }}>
-      <Paper sx={{ padding: 3 }}>
+    <Box
+    width="100%"
+    height="100vh"
+  >    
+    <Paper sx={{ padding: 3 }}>
+    <BackButton sx={{ mb: 2 }} />
+
         <Typography variant="h5" sx={{ marginBottom: 2 }}>
           {surveyData.title}
         </Typography>

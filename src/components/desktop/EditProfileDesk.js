@@ -3,24 +3,83 @@ import { ref, update } from 'firebase/database';
 import { db } from '../../fb';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import { Tabs, Tab, Box } from '@mui/material';
+import { Tabs, Tab, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
 import { EditorText } from '../../utils/formUtils';
 import ChangePassword from '../password/ChangePassword';
 import DadosBancarios from '../DadosBancarios';
-import DadosEmpresariais from '../DadosEmpresariais';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp'; 
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
-const InputField = ({ label, name, value, onChange, type = "text", disabled = false }) => (
+const InputField = ({ label, name, value, onChange, type = "text", disabled = false, endAdornment }) => (
   <div className="mb-4">
-    <label className="block font-medium mb-1">{label}</label>
-    <input
-      type={type}
+    <TextField
+      label={label}
       name={name}
       value={value}
       onChange={onChange}
-      className={`border p-2 w-full rounded ${disabled ? 'bg-gray-100' : ''}`}
+      type={type}
       disabled={disabled}
+      fullWidth
+      variant="outlined"
+      InputProps={{
+        endAdornment: endAdornment ? (
+          <InputAdornment position="end">
+            {endAdornment}
+          </InputAdornment>
+        ) : null,
+      }}
+      sx={{
+        '& .MuiOutlinedInput-root': {
+          '&:hover fieldset': {
+            borderColor: '#1976d2',
+          },
+          '&.Mui-focused fieldset': {
+            borderColor: '#1976d2',
+          },
+        },
+      }}
     />
   </div>
+);
+
+const EndAdornmentExample = ({ value }) => (
+  <InputField
+    label="WhatsApp"
+    name="whatsappUrl"
+    value={value}
+    onChange={() => {}}
+    endAdornment={
+      <IconButton
+        size="small"
+        onClick={() => window.open(value, '_blank')}
+      >
+        <WhatsAppIcon fontSize="small" />
+      </IconButton>
+    }
+  />
+);
+
+const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
+  <form onSubmit={handleSubmit} className="space-y-4">
+    <InputField label="Facebook" name="facebook" value={formData.facebook} onChange={handleInputChange} />
+    <InputField
+      label="WhatsApp"
+      name="whatsappUrl"
+      value={formData.whatsappUrl}
+      onChange={handleInputChange} />
+    <InputField label="Instagram" name="instagram" value={formData.instagram} onChange={handleInputChange} />
+    <InputField label="LinkedIn" name="linkedin" value={formData.linkedin} onChange={handleInputChange} />
+    <InputField label="x" name="x" value={formData.x} onChange={handleInputChange} />
+    <InputField
+      label="Website"
+      name="website"
+      value={formData.website}
+      onChange={handleInputChange}
+    />
+    <Button type="submit" variant="contained" color="primary" fullWidth>
+      Salvar Redes Sociais
+    </Button>
+  </form>
 );
 
 const EditProfileDesk = ({ user }) => {
@@ -32,9 +91,10 @@ const EditProfileDesk = ({ user }) => {
     provincia: user?.provincia || '',
     missaoVisaoValores: user?.missaoVisaoValores || '',
     facebook: user.social?.facebook || '',
-    whatsappUrl: user.social?.contacto ? `https://wa.me/${user.contacto}` : '',
+    whatsappUrl: user.social?.whatsapp || `https://wa.me/${user.contacto}`,
     instagram: user.social?.instagram || '',
     linkedin: user.social?.linkedin || '',
+    x: user.social?.x || '', 
     website: user.social?.website || '',
   };
 
@@ -71,6 +131,7 @@ const EditProfileDesk = ({ user }) => {
         whatsapp: formData.whatsappUrl,
         instagram: formData.instagram,
         linkedin: formData.linkedin,
+        x: formData.x,
         website: formData.website,
       },
     };
@@ -91,7 +152,6 @@ const EditProfileDesk = ({ user }) => {
         <Tab label="Editar Perfil" />
         <Tab label="Mudar Senha" />
         <Tab label="Dados Bancários" />
-       {/** <Tab label="Dados Empresariais" /> */}
         <Tab label="Redes Sociais" />
       </Tabs>
 
@@ -109,43 +169,15 @@ const EditProfileDesk = ({ user }) => {
               <EditorText description={formData.missaoVisaoValores} setDescription={handleEditorChange} />
             </div>
 
-            <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded w-full">
+            <Button type="submit" variant="contained" color="primary" fullWidth>
               Salvar
-            </button>
+            </Button>
           </form>
         )}
 
-        {tabIndex === 1 && (
-          <div>
-            <ChangePassword />
-          </div>
-        )}
-
-        {tabIndex === 2 && (
-          <div>
-            <DadosBancarios user={user} />
-          </div>
-        )}
-
-      {/**  {tabIndex === 3 && (
-          <div>
-            <DadosEmpresariais user={user} />
-          </div>
-        )} */}
-
-        {tabIndex === 3 && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <InputField label="Facebook URL" name="facebook" value={formData.facebook} onChange={handleInputChange} />
-            <InputField label="WhatsApp URL" name="whatsappUrl" value={formData.whatsappUrl} disabled />
-            <InputField label="Instagram URL" name="instagram" value={formData.instagram} onChange={handleInputChange} />
-            <InputField label="LinkedIn URL" name="linkedin" value={formData.linkedin} onChange={handleInputChange} />
-            <InputField label="Website" name="website" value={formData.website} onChange={handleInputChange} />
-
-            <button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded w-full">
-              Salvar Redes Sociais
-            </button>
-          </form>
-        )}
+        {tabIndex === 1 && <ChangePassword />}
+        {tabIndex === 2 && <DadosBancarios user={user} />}
+        {tabIndex === 3 && <SocialMediaForm formData={formData} handleInputChange={handleInputChange} handleSubmit={handleSubmit} />}
       </Box>
 
       <Snackbar

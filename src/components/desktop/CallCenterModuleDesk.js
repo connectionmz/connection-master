@@ -6,7 +6,6 @@ const CallCenterModuleDesk = () => {
   return (
     <Box sx={{ padding: 4, backgroundColor: 'white', borderRadius: 2, boxShadow: 3 }}>
       <BackButton sx={{ mb: 2 }} />
-
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
         Call Center - Funcionamento
       </Typography>
@@ -25,20 +24,17 @@ const CallCenterModuleDesk = () => {
           <ListItem>
             <ListItemText
               primary={<Typography variant="body1" sx={{ fontWeight: 'bold' }}>Pedido de Cotação:</Typography>}
-              secondary="Solicitações feitas por clientes em busca de informações sobre preços e serviços."
-            />
+              secondary="Solicitações feitas por clientes em busca de informações sobre preços e serviços."/>
           </ListItem>
           <ListItem>
             <ListItemText
               primary={<Typography variant="body1" sx={{ fontWeight: 'bold' }}>Resposta a Cotação:</Typography>}
-              secondary="Retorno das empresas aos clientes que solicitaram cotações."
-            />
+              secondary="Retorno das empresas aos clientes que solicitaram cotações."/>
           </ListItem>
           <ListItem>
             <ListItemText
               primary={<Typography variant="body1" sx={{ fontWeight: 'bold' }}>Concurso:</Typography>}
-              secondary="Chamadas relacionadas a concursos públicos ou ofertas de serviços."
-            />
+              secondary="Chamadas relacionadas a concursos públicos ou ofertas de serviços."/>
           </ListItem>
         </List>
       </Paper>
@@ -50,7 +46,7 @@ const CallCenterModuleDesk = () => {
         Para mais informações, entre em contato por e-mail ou chamada:
       </Typography>
       <Stack direction="row" spacing={2}>
-        <Button variant="contained" color="primary" href="mailto:contato@empresa.com">
+        <Button variant="contained" color="primary" href="mailto:suporte@connectionmozambique.com">
           Contatar por E-mail
         </Button>
         <Button variant="contained" color="secondary" href="tel:+55123456789">
@@ -58,7 +54,7 @@ const CallCenterModuleDesk = () => {
         </Button>
       </Stack>
     </Box>
-  );
-};
+  )
+}
 
 export default CallCenterModuleDesk;

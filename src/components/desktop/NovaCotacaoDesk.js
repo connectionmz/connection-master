@@ -57,91 +57,110 @@ const NovaCotacao = ({ user }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSnackbarMessage('');
+  e.preventDefault();
+  setLoading(true);
+  setSnackbarMessage('');
 
-    if (!user) {
-        setSnackbarMessage('Por favor, recarregue a página e tente novamente.');
-        setSnackbarSeverity('error');
-        setOpenSnackbar(true);
-        setLoading(false);
-        return;
+  if (!user) {
+    setSnackbarMessage('Por favor, recarregue a página e tente novamente.');
+    setSnackbarSeverity('error');
+    setOpenSnackbar(true);
+    setLoading(false);
+    return;
+  }
+
+  try {
+    // Verificar se já existe uma cotação com o mesmo título
+    const cotacoesRef = ref(db, 'cotacoes');
+    const tituloQuery = query(cotacoesRef, orderByChild('title'), equalTo(title.trim()));
+    const snapshot = await get(tituloQuery);
+
+    if (snapshot.exists()) {
+      setSnackbarMessage('Já existe uma cotação com este título.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+      setLoading(false);
+      return;
     }
 
-    try {
-        // Referência ao banco de dados
-        const cotacaoRef = ref(db, 'cotacoes');
-        const newCotacaoRef = push(cotacaoRef);
-        const cotacaoId = newCotacaoRef.key;
+    // Referência ao banco de dados
+    const newCotacaoRef = push(cotacoesRef);
+    const cotacaoId = newCotacaoRef.key;
 
-        const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
+    const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
 
-        // Publicar a cotação no banco de dados
-        await set(ref(db, `cotacoes/${cotacaoId}`), {
-            title: title.trim(),
-            description: description.trim(),
-            id: cotacaoId,
-            items,
-            company: user,
-            sector: sector.trim(),
-            timestamp: new Date().toISOString(),
-            datalimite: new Date(deadline).toISOString(),
-            status: 'open',
-            link: linkDoPedido,
-        });
+    // Publicar a cotação no banco de dados
+    await set(ref(db, `cotacoes/${cotacaoId}`), {
+      title: title.trim(),
+      description: description.trim(),
+      id: cotacaoId,
+      items,
+      company: user,
+      sector: sector.trim(),
+      timestamp: new Date().toISOString(),
+      datalimite: new Date(deadline).toISOString(),
+      status: 'open',
+      link: linkDoPedido,
+    });
 
-        // Exibir mensagem de sucesso
-        setSnackbarMessage('Cotação publicada com sucesso!');
-        setSnackbarSeverity('success');
-        setOpenSnackbar(true);
+    // Exibir mensagem de sucesso
+    setSnackbarMessage('Cotação publicada com sucesso!');
+    setSnackbarSeverity('success');
+    setOpenSnackbar(true);
 
-        // Buscar empresas do setor
-        const empresasRef = ref(db, 'company');
-        const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector.trim()));
-        const snapshot = await get(setorQuery);
+    // Buscar empresas do setor
+    const empresasRef = ref(db, 'company');
+    const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector.trim()));
+    const empresasSnapshot = await get(setorQuery);
 
-        if (snapshot.exists()) {
-          const empresas = snapshot.val();
+    if (empresasSnapshot.exists()) {
+      const empresas = empresasSnapshot.val();
 
-          for (const key in empresas) {
-              const empresa = empresas[key];
+      for (const key in empresas) {
+        const empresa = empresas[key];
 
-              if (!empresa.contacto) {
-                  console.warn(`Empresa ${key} não possui contato. Ignorando...`);
-                  continue;
-              }
+        if (!empresa.contacto) {
+          console.warn(`Empresa ${key} não possui contato. Ignorando...`);
+          continue;
+        }
 
-              const message = `
-              Nova Cotação para sua Empresa
-              Título: ${title}
-              Descrição: ${description}
-              Data Limite: ${deadline}
-              Setor de Atividade: ${sector}
-              Acesse: ${linkDoPedido}
-          `.trim();
-          
-          const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
-          const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
+        const message = `
+          Título: ${title}
+          Descrição: ${description}
+          Data Limite: ${deadline}
+          Setor de Atividade: ${sector}
+          Acesse: ${linkDoPedido}
+        `.trim();
 
-              const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-                    
-              await sendMessage(contatos, finalMessage);
-          }
-      } else {
-          console.log('Nenhuma empresa encontrada para este setor.');
-      }    
-    } catch (error) {
-        // Tratamento de erros
-        console.error('Erro ao publicar a cotação:', error.message);
-        setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
-        setSnackbarSeverity('error');
-        setOpenSnackbar(true);
-    } finally {
-        setLoading(false);
+        const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
+        const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
+
+        const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+
+        await sendMessage(contatos, finalMessage);
+
+        setTitle('')
+        setDescription('')
+        setDeadline('')
+        setItems([])
+        setMaxProposals()
+
+        window.location.reload()
+
+      }
+    } else {
+      console.log('Nenhuma empresa encontrada para este setor.');
     }
+  } catch (error) {
+    // Tratamento de erros
+    console.error('Erro ao publicar a cotação:', error.message);
+    setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
+    setSnackbarSeverity('error');
+    setOpenSnackbar(true);
+  } finally {
+    setLoading(false);
+  }
 };
-
 
 
   const handleSnackbarClose = () => {
@@ -152,7 +171,7 @@ const NovaCotacao = ({ user }) => {
     <Box sx={{ p: 3 }}>
       <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom>
-        Nova Cotação
+        Novo Pedido de Cotação
       </Typography>
       <form onSubmit={handleSubmit}>
         <Box sx={{ mb: 2 }}>
@@ -305,7 +324,7 @@ const NovaCotacao = ({ user }) => {
                 }}
               />
             )}
-            {loading ? 'Enviando...' : 'Criar Cotação'}
+            {loading ? 'Enviando...' : 'Enviar'}
           </Button>
         </Box>
       </form>

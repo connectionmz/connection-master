@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button, Paper, List, ListItem, ListItemText } from '@mui/material';
+import BackButton from '../BackButton';
 
 const LogisticaModuleDesk = () => {
   return (
     <Box sx={{ padding: 4, backgroundColor: 'white', borderRadius: 2, boxShadow: 3 }}>
+      <BackButton sx={{ mb: 2 }} />
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
         Procurement - Soluções Personalizadas
       </Typography>

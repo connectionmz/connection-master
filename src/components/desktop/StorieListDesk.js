@@ -33,8 +33,11 @@ const StorieListDesk = ({ user }) => {
               id: key,
               ...data[key],
             }))
-            .filter((company) => company.provincia === user.provincia && company.id !== user.id); 
-
+            .filter((company) =>
+              (company.provincia === user.provincia || company.provincia === user.provinciaTemp) &&
+              company.id !== user.id
+            );
+            
           const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
           setStories(randomCompanies);
         }

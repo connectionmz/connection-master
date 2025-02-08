@@ -50,10 +50,20 @@ const AuthDesk = ({ data }) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
+  
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
+  
+      if (!result.user.emailVerified) {
+        setErrorMessage('Por favor, verifique seu e-mail antes de fazer login.');
+        navigate('/email-verification')
+        setShowSnackbar(true);
+        setIsLoading(false);
+        return;
+      }
+  
       await saveUserData(result.user);
-
+  
       if (data) {
         if (data.status) {
           navigate('/');
@@ -64,7 +74,7 @@ const AuthDesk = ({ data }) => {
         navigate('/setup');
       }
     } catch (error) {
-      console.log(error.code)
+      console.log(error.code);
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);
       setErrorMessage(userFriendlyMessage);
       setShowSnackbar(true);
@@ -72,14 +82,12 @@ const AuthDesk = ({ data }) => {
       setIsLoading(false);
     }
   };
-
   const togglePasswordVisibility = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
   };
 
   return (
     <Grid container sx={{ height: '100vh' }}>
-      {/* Left side (form) */}
       <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <Box sx={{ maxWidth: 400, width: '100%' }}>
           <div className="text-center mb-6">
@@ -150,15 +158,13 @@ const AuthDesk = ({ data }) => {
         </Box>
       </Grid>
 
-      {/* Right side (background image) */}
       <Grid item xs={12} md={6} sx={{
-        backgroundImage: `url(${marketing})`, // Replace with the path to your background image
+        backgroundImage: `url(${marketing})`, 
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         height: '100vh',
       }}></Grid>
 
-      {/* Snackbar for error messages */}
       <Snackbar
         open={showSnackbar}
         autoHideDuration={6000}

@@ -265,31 +265,24 @@ const PublicarConcursoDesk = ({ user }) => {
                         <MenuItem value="Fornecimentos">Fornecimentos</MenuItem>
                     </Select>
                 </FormControl>
-
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Modalidade de Concurso</InputLabel>
                     <Select
                         name="modalidade"
                         value={formData.modalidade}
                         onChange={handleChange}
-                        label="Modalidade de Concurso"
-                    >
+                        label="Modalidade de Concurso">
                         <MenuItem value="">Selecione a Modalidade</MenuItem>
                         <MenuItem value="Concurso Público">Concurso Público</MenuItem>
-                        <MenuItem value="Concurso Limitado">Concurso Limitado</MenuItem>
-                        <MenuItem value="Convite">Convite</MenuItem>
                     </Select>
                 </FormControl>
-
                 <TextField
                     fullWidth
                     type="file"
                     name="anexos"
                     inputProps={{ multiple: true }}
                     onChange={handleFileUpload}
-                    margin="normal"
-                />
-
+                    margin="normal"/>
                 <TextField
                     fullWidth
                     label="Local de Entrega"
@@ -297,9 +290,7 @@ const PublicarConcursoDesk = ({ user }) => {
                     value={formData.localEntrega}
                     onChange={handleChange}
                     required
-                    margin="normal"
-                />
-
+                    margin="normal"/>
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Província</InputLabel>
                     <Select
@@ -307,8 +298,7 @@ const PublicarConcursoDesk = ({ user }) => {
                         value={formData.provincia}
                         onChange={handleChange}
                         label="Província"
-                        required
-                    >
+                        required>
                         <MenuItem value="">Selecione a Província</MenuItem>
                         {provincias.map((provinciaObj, index) => (
                             <MenuItem key={index} value={provinciaObj.provincia}>
@@ -317,7 +307,6 @@ const PublicarConcursoDesk = ({ user }) => {
                         ))}
                     </Select>
                 </FormControl>
-
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Setor de Atividade</InputLabel>
                     <Select
@@ -325,8 +314,7 @@ const PublicarConcursoDesk = ({ user }) => {
                         value={formData.setor}
                         onChange={handleChange}
                         label="Setor de Atividade"
-                        required
-                    >
+                        required>
                         <MenuItem value="">Selecione o Setor</MenuItem>
                         {sectores.map((setorObj, index) => (
                             <MenuItem key={index} value={setorObj.setor}>
@@ -335,7 +323,6 @@ const PublicarConcursoDesk = ({ user }) => {
                         ))}
                     </Select>
                 </FormControl>
-
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Tipo de Entidade</InputLabel>
                     <Select
@@ -343,8 +330,7 @@ const PublicarConcursoDesk = ({ user }) => {
                         value={formData.tipoEntidade}
                         onChange={handleChange}
                         label="Tipo de Entidade"
-                        required
-                    >
+                        required>
                         <MenuItem value="">Selecione o Tipo de Entidade</MenuItem>
                         {tiposEntidades.map((tipoObj, index) => (
                             <MenuItem key={index} value={tipoObj.tipo}>
@@ -363,67 +349,61 @@ const PublicarConcursoDesk = ({ user }) => {
                     onChange={handleChange}
                     required
                     margin="normal"
-                    InputLabelProps={{ shrink: true }}
-                />
-
+                    InputLabelProps={{ shrink: true }}/>
                 <TextField
-                    fullWidth
-                    label="Valor Estimado do Contrato"
-                    type="number"
-                    name="valorEstimado"
-                    value={formData.valorEstimado}
-                    onChange={handleChange}
-                    required
-                    margin="normal"
-                />
-
+                fullWidth
+                label="Valor Estimado do Contrato"
+                type="number"
+                name="valorEstimado"
+                value={formData.valorEstimado}
+                onChange={handleChange}
+                required
+                margin="normal"
+                inputProps={{ 
+                    maxLength: 20,  
+                    inputMode: 'numeric',  
+                }}/>
                 <Typography variant="h6" gutterBottom>
                     Objeto do Concurso
                 </Typography>
                 <ReactQuill
                     value={richTextData.objeto}
-                    onChange={(value) => handleRichTextChange('objeto', value)}
-                />
+                    onChange={(value) => handleRichTextChange('objeto', value)}/>
 
                 <Typography variant="h6" gutterBottom>
                     Condições de Participação
                 </Typography>
                 <ReactQuill
                     value={richTextData.condicoes}
-                    onChange={(value) => handleRichTextChange('condicoes', value)}
-                />
+                    onChange={(value) => handleRichTextChange('condicoes', value)}/>
 
                 <Typography variant="h6" gutterBottom>
                     Documentação Necessária
                 </Typography>
                 <ReactQuill
                     value={richTextData.documentacao}
-                    onChange={(value) => handleRichTextChange('documentacao', value)}
-                />
+                    onChange={(value) => handleRichTextChange('documentacao', value)}/>
 
                 <Typography variant="h6" gutterBottom>
                     Critérios de Avaliação
                 </Typography>
                 <ReactQuill
                     value={richTextData.criterios}
-                    onChange={(value) => handleRichTextChange('criterios', value)}
-                />
+                    onChange={(value) => handleRichTextChange('criterios', value)}/>
 
                 <Typography variant="h6" gutterBottom>
                     Condições de Pagamento
                 </Typography>
                 <ReactQuill
                     value={richTextData.condicoesPagamento}
-                    onChange={(value) => handleRichTextChange('condicoesPagamento', value)}
-                />
+                    onChange={(value) => handleRichTextChange('condicoesPagamento', value)}/>
 
                 <Typography variant="h6" gutterBottom>
                     Observações
                 </Typography>
                 <ReactQuill
                     value={richTextData.observacoes}
-                    onChange={(value) => handleRichTextChange('observacoes', value)}
-                />
+                    onChange={(value) => handleRichTextChange('observacoes', value)}/>
 
                 <Button type="submit" variant="contained" color="primary" sx={{ mt: 3 }} disabled={loading}>
                     {loading ? <CircularProgress size={24} /> : 'Publicar Concurso'}
@@ -433,8 +413,7 @@ const PublicarConcursoDesk = ({ user }) => {
             <Snackbar
                 open={openSnackbar}
                 autoHideDuration={6000}
-                onClose={handleCloseSnackbar}
-            >
+                onClose={handleCloseSnackbar}>
                 <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity}>
                     {snackbarMessage}
                 </Alert>

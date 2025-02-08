@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Twitter, Instagram, LinkedIn, Language, Edit, EditAttributes, CameraAlt, ExitToApp } from "@mui/icons-material";
+import { Twitter, Instagram, LinkedIn, Language, Edit, EditAttributes, CameraAlt, ExitToApp, X, WhatsApp } from "@mui/icons-material";
 import { useNavigate } from 'react-router-dom';
 import { get, ref, update } from 'firebase/database';
 import { signOut } from 'firebase/auth';
@@ -369,27 +369,48 @@ const handleDeletePost = (postToDelete) => {
             )}
           </Box>
   
-          <MuiLink href="editar-perfil" aria-label="Editar Perfil">
-            <AiFillSetting size={24} style={{ marginLeft: 8 }} />
-          </MuiLink>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: 2 }}>
+      <Button
+        component="a"
+        href="editar-perfil"
+        variant="outlined"
+        color="primary"
+        startIcon={<AiFillSetting size={24} />}
+        sx={{ display: 'flex', alignItems: 'center', padding: '6px 16px', width: '20%' }}
+      >
+        <Typography variant="body1" sx={{ marginLeft: 1 }}>
+          Editar Perfil
+        </Typography>
+      </Button>
+    </Box>
   
-          <Box display="flex" justifyContent="center" mt={3} gap={2}>
-            {social?.linkedin && (
-              <MuiLink href={social.linkedin} aria-label="LinkedIn">
-                <LinkedIn sx={{ color: "primary.main", fontSize: 32 }} />
-              </MuiLink>
-            )}
-            {social?.instagram && (
-              <MuiLink href={social.instagram} aria-label="Instagram">
-                <Instagram sx={{ color: "secondary.main", fontSize: 32 }} />
-              </MuiLink>
-            )}
-            {social?.website && (
-              <MuiLink href={social.website} aria-label="Website">
-                <Language sx={{ color: "text.secondary", fontSize: 32 }} />
-              </MuiLink>
-            )}
-          </Box>
+    <Box display="flex" justifyContent="center" mt={3} gap={2}>
+      {social?.linkedin && (
+        <MuiLink href={social.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+          <LinkedIn sx={{ color: "#0077b5", fontSize: 32 }} /> {/* Cor do LinkedIn */}
+        </MuiLink>
+      )}
+      {social?.instagram && (
+        <MuiLink href={social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+          <Instagram sx={{ color: "#C13584", fontSize: 32 }} /> {/* Cor do Instagram */}
+        </MuiLink>
+      )}
+      {social?.x && (
+        <MuiLink href={social.x} target="_blank" rel="noopener noreferrer" aria-label="X">
+          <X sx={{ color: "#1DA1F2", fontSize: 32 }} /> {/* Cor do Twitter/X */}
+        </MuiLink>
+      )}
+      {social?.whatsapp && (
+        <MuiLink href={social.whatsapp} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+          <WhatsApp sx={{ color: "#25D366", fontSize: 32 }} /> {/* Cor do WhatsApp */}
+        </MuiLink>
+      )}
+      {social?.website && (
+        <MuiLink href={social.website} target="_blank" rel="noopener noreferrer" aria-label="Website">
+          <Language sx={{ color: "#4285F4", fontSize: 32 }} /> {/* Cor do Website */}
+        </MuiLink>
+      )}
+    </Box>
         </Box>
   
         <Box mt={6} borderBottom={1} borderColor="divider">

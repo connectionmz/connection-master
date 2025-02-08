@@ -10,6 +10,7 @@ import {
   useMediaQuery,
   Button,
   Badge,
+  Avatar,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
@@ -44,18 +45,17 @@ const HeaderDesk = ({ user }) => {
         }
       });
 
-      return () => unsubscribe(); // Cleanup
+      return () => unsubscribe(); 
     }
   }, [user?.id]);
 
   const navItems = [
-    { to: "/search", icon: <SearchIcon fontSize="large" />, label: "Pesquisar" },
-    { to: "/stores", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
-    { to: "/feed", icon: <FeedIcon fontSize="large" />, label: "Feed" },
-    { to: "/concursos", icon: <GavelIcon fontSize="large" />, label: "Concursos" },
     { to: "/explore", icon: <DomainIcon fontSize="large" />, label: "Empresas" },
+    { to: "/stores", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
+    { to: "/concursos", icon: <GavelIcon fontSize="large" />, label: "Concursos" },
     { to: "/cotacoes", icon: <DescriptionIcon fontSize="large" />, label: "Cotações" },
-    { to: "/inbox", icon: <ChatIcon fontSize="large" />, label: "Mensagens" },
+    { to: "/feed", icon: <FeedIcon fontSize="large" />, label: "Feed" },
+    { to: "/inbox", icon: <ChatIcon fontSize="large" />, label: "Notificações" },
     {
       to: "/conexoes",
       icon: (
@@ -69,8 +69,16 @@ const HeaderDesk = ({ user }) => {
       ),
       label: "Conexões",
     },
-    { to: "/app", icon: <AccountCircleIcon fontSize="large" />, label: "Perfil do Usuário" },
-  ];
+    {
+      to: "/app",
+      icon: (
+        <Avatar src={user.logoUrl || ""} alt="Perfil">
+          {!user.logoUrl && <AccountCircleIcon fontSize="large" />}
+        </Avatar>
+      ),
+      label: "Perfil"
+    }
+      ];
 
   return (
     <AppBar position="sticky" sx={{ backgroundColor: "#fff", boxShadow: 3 }}>
@@ -86,7 +94,7 @@ const HeaderDesk = ({ user }) => {
           {navItems.map((item, index) => {
             const isActive = location.pathname === item.to;
             return (
-              <Link to={item.to} key={index} title={item.label}>
+              <Link to={item.to} key={index} title={item.label} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <IconButton
                   sx={{
                     color: isActive ? "#1976d2" : "#444",
@@ -100,6 +108,9 @@ const HeaderDesk = ({ user }) => {
                 >
                   {item.icon}
                 </IconButton>
+                <Typography variant="caption" sx={{ color: isActive ? "#1976d2" : "#444" }}>
+                  {item.label}
+                </Typography>
               </Link>
             );
           })}

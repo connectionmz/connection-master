@@ -65,8 +65,8 @@ const InboxDesk = ({ user }) => {
 
   return (
     <Box width="100%" minHeight="100vh">
-      <BackButton sx={{ mb: 2 }} />
-      <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+      <br/>
+      <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom sx={{textAlign:'center'}}>
         Caixa de Entrada
       </Typography>
 

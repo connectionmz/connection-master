@@ -211,7 +211,7 @@ const Dashboard = ({ user }) => {
                   campanhasAtivas.map((campanha) => (
                     <div key={campanha.id} style={{ marginBottom: "16px", cursor: "pointer", display: "flex", alignItems: "center" }}>
                       <Link
-                        to={`/vperfil/${campanha.company.id}`}
+                        to={`/perfil/${campanha.company.id}`}
                         style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center" }}
                       >
                         {/* Logo da empresa */}

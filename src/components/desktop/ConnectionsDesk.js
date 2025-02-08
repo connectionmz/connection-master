@@ -139,7 +139,7 @@ const ConnectionsDesk = ({ user }) => {
                   <ListItem alignItems="center">
                     <ListItemButton
                       component={Link}
-                      to={`/vperfil/${request.id}`}
+                      to={`/perfil/${request.id}`}
                       sx={{ textDecoration: "none" }}
                     >
                       <ListItemAvatar>
