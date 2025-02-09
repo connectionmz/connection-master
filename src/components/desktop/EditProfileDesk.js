@@ -167,7 +167,7 @@ const EditProfileDesk = ({ user }) => {
             <InputField label="Província" name="provincia" value={formData.provincia} onChange={handleInputChange} />
             {/* Campo de Capacidade de Produção adicionado */}
             <InputField
-              label="Capacidade de Produção"
+              label="Capacidade de Produção da actividade Principal"
               name="capacidadeDeProducao"
               value={formData.capacidadeDeProducao}
               onChange={handleInputChange}

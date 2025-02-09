@@ -119,16 +119,18 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         const now = new Date();
         switch (activeTab) {
             case 'recentes':
-                return cotacoes.filter((cotacao) => new Date(cotacao.timestamp).toDateString() === now.toDateString());
+              return cotacoes.filter(
+                (cotacao) => new Date(cotacao.datalimite) >= new Date() && cotacao.status !== 'Fechada'
+              );
             case 'expiradas':
-                return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.datalimite));
+              return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.datalimite));
             case 'fechada':
-                return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
+              return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
             case 'minhas':
-                return cotacoes.filter((cotacao) => cotacao?.company?.id === user?.id);
+              return cotacoes.filter((cotacao) => cotacao?.company?.id === user?.id);
             default:
-                return cotacoes;
-        }
+              return cotacoes;
+          }
     };
 
     const handleCotacaoClick = (id, companyId) => {

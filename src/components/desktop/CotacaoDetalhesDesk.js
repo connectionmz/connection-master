@@ -79,6 +79,17 @@ const CotacaoDetalhesDesk = ({user}) => {
   const handleOpenModal = () => setViewsModalOpen(true);
   const handleCloseModal = () => setViewsModalOpen(false);
 
+  const handleFecharCotacao = () => {
+    if (window.confirm("Tem certeza que deseja fechar esta cotação?")) {
+      update(ref(db, `cotacoes/${id}`), {
+        status: "Fechada",
+      }).then(() => {
+        alert("Cotação fechada com sucesso!");
+      }).catch((error) => {
+        alert("Erro ao fechar a cotação:", error);
+      });
+    }
+  };
 
   if (!cotacao) {
     return <Typography align="center" color="textSecondary">Carregando...</Typography>
@@ -155,14 +166,23 @@ const CotacaoDetalhesDesk = ({user}) => {
             Partilhar
           </Button>
           {isCompanyOwner ? (
+          <>
             <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
               Ver Propostas
             </Button>
-          ) : (
+            {cotacao.status !== "Fechada" && (
+              <Button variant="contained" color="error" onClick={handleFecharCotacao}>
+                Fechar Cotação
+              </Button>
+            )}
+          </>
+        ) : (
+          user.id !== cotacao.company.id && (
             <Button variant="contained" color="primary" onClick={handleEnviarProposta}>
               Enviar Proposta
             </Button>
-          )}
+          )
+        )}
         </CardActions>
       </Card>
 

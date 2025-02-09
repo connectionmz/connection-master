@@ -219,25 +219,47 @@ const CompanyProfile = ({ user }) => {
                 );
             case 'sobre':
                 return (
-                    <Box mt={3}>
-                        <Typography><strong>Endereço:</strong> {mCompany?.endereco || 'Não informado'}</Typography>
-                        <Typography><strong>Província:</strong> {mCompany?.provincia || 'Não informado'} </Typography>
-                        <Typography> <strong>Distrito:</strong> {mCompany?.distrito || 'Não informado'}</Typography>
-                        <Typography><strong>Capacidade de Produção:</strong> {mCompany?.capacidadeDeProducao || 'Não informado'}</Typography>
-                        <Typography>
-                      <strong>Email:</strong>{' '}
-                      {mCompany?.email ? (
-                        <a href={`mailto:${mCompany.email}`} style={{ textDecoration: 'none', color: 'blue' }}>
-                          {mCompany.email}
-                        </a>
-                      ) : (
-                        'Não informado'
-                      )}
-                    </Typography>
-                        <Typography><strong>Contacto:</strong> {mCompany?.contacto || 'Não informado'}</Typography>
-                        <Typography><strong>Sector:</strong> {mCompany?.sector || 'Não informado'}</Typography>
-                        <Typography><strong>Tipo de Entidade:</strong> {mCompany?.tipoEntidade || 'Não informado'}</Typography>
-                    </Box>
+                  <Box mt={3} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="body1">
+                    <strong>Endereço:</strong> {mCompany?.endereco || 'Não informado'}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Província:</strong> {mCompany?.provincia || 'Não informado'}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Distrito:</strong> {mCompany?.distrito || 'Não informado'}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Capacidade de Produção:</strong> {mCompany?.capacidadeDeProducao || 'Não informado'}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Email:</strong>{' '}
+                    {mCompany?.email ? (
+                      <a href={`mailto:${mCompany.email}`} style={{ textDecoration: 'none', color: '#1976D2' }}>
+                        {mCompany.email}
+                      </a>
+                    ) : (
+                      'Não informado'
+                    )}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Contacto:</strong>{' '}
+                    {mCompany?.contacto ? (
+                      <a href={`tel:${mCompany.contacto}`} style={{ textDecoration: 'none', color: '#1976D2' }}>
+                        {mCompany.contacto}
+                      </a>
+                    ) : (
+                      'Não informado'
+                    )}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Sector:</strong> {mCompany?.sector || 'Não informado'}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Tipo de Entidade:</strong> {mCompany?.tipoEntidade || 'Não informado'}
+                  </Typography>
+                </Box>
+                
                 );
             default:
                 return <Typography color="text.secondary" align="center">Nenhum conteúdo disponível.</Typography>;
