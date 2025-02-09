@@ -22,7 +22,7 @@ import VetrineDesk from './VetrineDesk';
 
 
 
-const ProfileDesk = () => {
+const ProfileDesk = ({userI}) => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('Publicados');
     const [userData, setUserData] = useState(null);
@@ -208,7 +208,7 @@ const handleDeletePost = (postToDelete) => {
         case "Publicados":
           return <PostGallery posts={posts} onDelete={handleDeletePost} onEdit={handleEditCaption} />;
           case "Repositorio":
-            return <VetrineDesk id={user}  />;
+            return <VetrineDesk id={user} userId={user} />;
         case "liked":
           return (
             <Grid container spacing={3}>

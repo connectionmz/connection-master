@@ -20,7 +20,7 @@ const getFileTypeIcon = (fileType) => {
     return <InsertDriveFileIcon style={{ color: 'gray' }} />;
 };
 
-const VetrineDesk = ({ id }) => {
+const VetrineDesk = ({ id , userId}) => {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -142,7 +142,7 @@ const VetrineDesk = ({ id }) => {
                                                 onClick={() => handleDownload(file.url, file.description, file.id)}>
                                                 Baixar
                                             </Button>
-                                            {file.ownerId == id && (
+                                            {file.ownerId === userId && (
                                                 <Button
                                                     variant="contained"
                                                     color="secondary"
