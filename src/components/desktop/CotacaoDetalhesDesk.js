@@ -96,7 +96,7 @@ const CotacaoDetalhesDesk = ({user}) => {
   }
 
   return (
-    <Box maxWidth="lg" mx="auto" p={3}>
+    <Box width='100%' mx="auto" p={3}>
     <BackButton sx={{ mb: 2 }} />
       <Card sx={{ mb: 4 }}>
         <CardContent>
@@ -165,24 +165,25 @@ const CotacaoDetalhesDesk = ({user}) => {
           <Button variant="contained" onClick={handlePartilhar} startIcon={<Share />}>
             Partilhar
           </Button>
-          {isCompanyOwner ? (
-          <>
-            <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
-              Ver Propostas
-            </Button>
-            {cotacao.status !== "Fechada" && (
-              <Button variant="contained" color="error" onClick={handleFecharCotacao}>
-                Fechar Cotação
-              </Button>
-            )}
-          </>
-        ) : (
-          user.id !== cotacao.company.id && (
-            <Button variant="contained" color="primary" onClick={handleEnviarProposta}>
-              Enviar Proposta
-            </Button>
-          )
-        )}
+          {user.id === cotacao.company.id ? (
+  // Botões para o proprietário da cotação
+  <>
+    <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
+      Ver Propostas
+    </Button>
+    {cotacao.status !== "Fechada" && (
+      <Button variant="contained" color="error" onClick={handleFecharCotacao}>
+        Fechar Cotação
+      </Button>
+    )}
+  </>
+) : (
+  // Botão para enviar proposta, disponível para outros usuários
+  <Button variant="contained" color="primary" onClick={handleEnviarProposta}>
+    Enviar Proposta
+  </Button>
+)}
+
         </CardActions>
       </Card>
 
