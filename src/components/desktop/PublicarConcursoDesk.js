@@ -102,7 +102,7 @@ const PublicarConcursoDesk = ({ user }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-
+    
         const sanitizedData = Object.fromEntries(
             Object.entries({
                 ...formData,
@@ -111,18 +111,29 @@ const PublicarConcursoDesk = ({ user }) => {
                 dataCriacao: new Date().toISOString(),
             }).filter(([_, v]) => v !== undefined)
         );
-
+    
         try {
             const concursosRef = ref(db, 'concursos');
             const newConcursoRef = push(concursosRef);
-            await set(newConcursoRef, sanitizedData);
-
+    
+            // Obtendo o ID gerado automaticamente para o novo concurso
+            const concursoId = newConcursoRef.key;
+    
+            // Adicionando o ID ao objeto de dados
+            const concursoWithId = {
+                ...sanitizedData,
+                id: concursoId,  // Adiciona o ID do concurso aos dados
+            };
+    
+            // Salvando o concurso com o ID no banco de dados
+            await set(newConcursoRef, concursoWithId);
+    
             await notifySectorCompanies(formData.setor, formData.titulo, richTextData.objeto, formData.prazo, formData.valorEstimado, formData.localEntrega);
-
+    
             setSnackbarMessage('Concurso publicado com sucesso!');
             setSnackbarSeverity('success');
             setOpenSnackbar(true);
-
+    
             // Limpar o formulário após o envio
             setFormData({
                 titulo: '',
@@ -146,7 +157,7 @@ const PublicarConcursoDesk = ({ user }) => {
                 modalidade: '',
                 numeroReferencia: '',
             });
-
+    
             setRichTextData({
                 objeto: '',
                 condicoes: '',
@@ -164,7 +175,7 @@ const PublicarConcursoDesk = ({ user }) => {
             setLoading(false);
         }
     };
-
+    
     const notifySectorCompanies = async (sector, title, description, deadline, valorEstimado, localEntrega) => {
         const empresasRef = ref(db, 'company');
         const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector));

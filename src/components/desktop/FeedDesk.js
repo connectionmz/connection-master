@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, remove } from 'firebase/database';
 import { db } from '../../fb'; 
 import { useNavigate } from 'react-router-dom';
 
-const FeedDesk = () => {
+const FeedDesk = ({ user }) => {
   const navigate = useNavigate();  
 
   const [posts, setPosts] = useState([]);
@@ -23,7 +23,8 @@ const FeedDesk = () => {
             url: post.url || '',
             companyName: post.company.name || 'Empresa Desconhecida',
             logoUrl: post.company.logo || 'https://via.placeholder.com/150',
-            timestamp: post.timestamp || 0
+            timestamp: post.timestamp || 0,
+            companyId: post.company.id || null // Garantir que o ID da empresa seja incluído
           });
         });
       }
@@ -52,6 +53,20 @@ const FeedDesk = () => {
       return `As ${formattedTime}`;
     } else {
       return date.toLocaleDateString('pt-BR') + '  ' + formattedTime;
+    }
+  };
+
+  const handleDelete = (postId) => {
+    const isConfirmed = window.confirm("Tem certeza de que deseja excluir este post?");
+    if (isConfirmed) {
+      const postRef = ref(db, 'posts/' + postId);
+      remove(postRef)
+        .then(() => {
+          console.log('Post eliminado com sucesso');
+        })
+        .catch((error) => {
+          console.error('Erro ao eliminar post:', error);
+        });
     }
   };
 
@@ -87,6 +102,17 @@ const FeedDesk = () => {
                 <span>{post.companyName || 'Empresa desconhecida'}</span>
               </div>
               <p>{formatTimestamp(post.timestamp)}</p>
+              {post.companyId === user.id && (
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); // Impede o clique no botão de redirecionar para a página do post
+                    handleDelete(post.id); 
+                  }} 
+                  className="bg-red-500 text-white px-2 py-1 rounded-md text-xs"
+                >
+                  Eliminar
+                </button>
+              )}
             </div>
           </div>
         ))}

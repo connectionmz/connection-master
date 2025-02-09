@@ -89,7 +89,7 @@ const ProfileDesk = ({userI}) => {
               try {
                   const companyRef = ref(db, `company/${user}`);
                   const socialRef = ref(db, `company/${user}/social`);
-                  const postsRef = ref(db, `posts`); // Alterado para buscar todos os posts
+                  const postsRef = ref(db, `posts`); 
                   const cotacoesRef = ref(db, `cotacoes`);
                   const visitasRef = ref(db, `company/${user}/visitas`);
   
@@ -111,10 +111,7 @@ const ProfileDesk = ({userI}) => {
                           displayName: companyData.nome || 'A carregar',
                           username: companyData.id || 'A carregar',
                           endereco: companyData.endereco || 'A carregar'
-                      });
-                    
-                      
-               
+                      })
                   }
                   if (socialSnapshot.exists()) {
                       setSocial(socialSnapshot.val());

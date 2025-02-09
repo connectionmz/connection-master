@@ -61,6 +61,7 @@ import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import AnalyticsDesk from '../desktop/AnalyticsDesk';
 import LandingPage from '../LandingPage';
 import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
+import ConcursoDetalhesDesk from '../desktop/CotacaoDetalhesDesk copy';
 
 
 const theme = createTheme({
@@ -122,7 +123,6 @@ const DesktopRoutes = ({ user }) => {
           maxWidth: '80%', 
           margin: '0 auto', 
         }}>
- 
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
@@ -133,7 +133,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/feed" element={<FeedDesk user={user} />} />
         <Route path="/post/:postId" element={<PostDetailPageDesk user={user}/>} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
-        <Route path="/profile" element={<ProfileDesk />} />
+        <Route path="/profile" element={<ProfileDesk userI={user}/>} />
         <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
         <Route path="/inbox" element={<InboxDesk user={user}/>} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
@@ -149,13 +149,12 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacao/:id/:companyId" element={<CotacaoDetalhesDesk  user={user}/>} />
         <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
         <Route path="/website" element={<LandingPage user={user} />} />
-
         <Route path="/noticiados" element={<NoticiadosDesk />} />
         <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
-
       {/* Concursos */}
       <Route path="/concursos" element={<ConcursoDesk user={user} />} />
       <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
+      <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
 
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
@@ -163,7 +162,6 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
         <Route path="/edit-proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
         <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
-
         {/* Mercado e Produtos */}
         <Route path="/market" element={<MarketDesk user={user} />} />
         <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
@@ -171,12 +169,10 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/stores/:storeId" element={<StoreDetailDesk />} />
         <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
         <Route path="/checkout" element={<CreditCardCheckoutDesk user={user}/>} />
-
         {/* Campanha e Posts */}
         <Route path="/post" element={<PostInputDesk user={user} />} />
         <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
         <Route path="/sms" element={<SmsDesk user={user}/>} /> 
-
           {/* Módulos */}
         <Route path="/callcenter" element={<CallCenterModuleDesk />} />
         <Route path="/procurement" element={<LogisticaModuleDesk />} />
@@ -185,8 +181,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/painel" element={<PortalDesk user={user}/>} />
         <Route path="/sendmail" element={<SendMail user={user}/>} />
         <Route path="/destacar" element={<DestacarModule user={user}/>} />
-        <Route path="/analises" element={<AnalyticsDesk />} />
-        
+        <Route path="/analises" element={<AnalyticsDesk />} />  
        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
