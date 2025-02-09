@@ -339,16 +339,6 @@ const CompanyProfile = ({ user }) => {
     </IconButton>
   </Tooltip>
 
-  <Tooltip title="Solicitação de Cotação" arrow>
-    <IconButton
-      onClick={() => userId && navigate(`/rfq/${userId}`)}
-      color="success"
-    >
-      <RequestQuote />
-    </IconButton>
-  </Tooltip>
-
-
 {/* Contatos */}
 {userData.contacto && (
   <Tooltip title="Ligar" arrow>

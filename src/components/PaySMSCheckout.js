@@ -47,13 +47,13 @@ const PaySMSCheckout = ({ user, onPaymentSuccess }) => {
         console.log(response); // Verifique a estrutura da resposta aqui
       
         const { data } = response;
-        const { status, response: apiResponse, message, transactionId } = data;
+        const { status, response: apiResponse, message } = data;
         const statusCode = response.status; // Status HTTP (200, 201, etc.)
       
         // Cenário 1: Sucesso
         if (statusCode === 200 && status === "success" && apiResponse.success === true) {
           alert(`Pagamento de ${planPrice} Mt confirmado com sucesso!`);
-          onPaymentSuccess({ amount: planPrice, method: paymentMethod.toUpperCase(), transactionId, smsCount });
+          onPaymentSuccess({ amount: planPrice, method: paymentMethod.toUpperCase(), smsCount });
         }
         // Cenário 2: Erro na Transação (status HTTP 200, mas sucesso false)
         else if (statusCode === 200 && status === "success" && apiResponse.success === false) {

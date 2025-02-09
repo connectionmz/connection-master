@@ -38,31 +38,24 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             setLoading(false);
             return;
         }
-
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val();
-        
             if (cotacoesData) {
                 const cotacoesArray = Object.values(cotacoesData);
-        
-                const filteredCotacoes = cotacoesArray.filter((cotacao) => cotacao.company.provincia === user.provincia);
-        
-                setCotacoes(filteredCotacoes);
+                const filteredCotacoes = cotacoesArray.filter((cotacao) => cotacao.provincia === user.provincia);
+                const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                setCotacoes(sortedCotacoes);
             } else {
                 setCotacoes([]);
             }
-        
-            console.log(cotacoesData);
+    
             setLoading(false);
         });
-        
-        
-        
-        
+    
         return () => unsubscribeCotacoes();
     }, [hasModuleSMS]);
-
+    
   useEffect(() => {
     const fetchCampanhasAtivas = async () => {
       try {
@@ -226,6 +219,9 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                 </Typography>
                                 <Typography variant="body2" color="error">
                                     Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                </Typography>
+                                <Typography variant="body2" >
+                                    Sector: {cotacao.sector}
                                 </Typography>
                             </CardContent>
                             <CardActions>

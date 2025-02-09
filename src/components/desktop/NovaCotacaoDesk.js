@@ -14,7 +14,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Add, Delete, Image as ImageIcon } from '@mui/icons-material';
-import { EditorText, SectorDeActividades } from '../../utils/formUtils';
+import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUtils';
 import BackButton from '../BackButton';
 import sendMessage from '../sms/sendMessage';
 
@@ -25,13 +25,14 @@ const NovaCotacao = ({ user }) => {
   const [deadline, setDeadline] = useState('');
   const [maxProposals, setMaxProposals] = useState('');
   const [sector, setSector] = useState('');
+  const [provincia, setProvincia] = useState('');
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
   const handleAddItem = () => {
-    setItems([...items, { name: '', description: '', imageUrl: '' }]);
+    setItems([...items, { name: '', description: '', qtd: '', imageUrl: '' }]);
   };
 
   const handleRemoveItem = (index) => {
@@ -70,24 +71,14 @@ const NovaCotacao = ({ user }) => {
   }
 
   try {
-    // Verificar se já existe uma cotação com o mesmo título
     const cotacoesRef = ref(db, 'cotacoes');
-    const tituloQuery = query(cotacoesRef, orderByChild('title'), equalTo(title.trim()));
-    const snapshot = await get(tituloQuery);
-
-    if (snapshot.exists()) {
-      setSnackbarMessage('Já existe uma cotação com este título.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
-      setLoading(false);
-      return;
-    }
+ 
 
     // Referência ao banco de dados
     const newCotacaoRef = push(cotacoesRef);
     const cotacaoId = newCotacaoRef.key;
 
-    const linkDoPedido = `http://appconnectionmozambique.com/cotacao/${cotacaoId}`;
+    const linkDoPedido = `http://app.connectionmozambique.com/cotacao/${cotacaoId}`;
 
     // Publicar a cotação no banco de dados
     await set(ref(db, `cotacoes/${cotacaoId}`), {
@@ -97,6 +88,7 @@ const NovaCotacao = ({ user }) => {
       items,
       company: user,
       sector: sector.trim(),
+      provincia: provincia.trim(),
       timestamp: new Date().toISOString(),
       datalimite: new Date(deadline).toISOString(),
       status: 'open',
@@ -197,6 +189,13 @@ const NovaCotacao = ({ user }) => {
           />
         </Box>
         <Box sx={{ mb: 2 }}>
+          <Provincias
+            companyData={{ provincia }}
+            handleChange={(e) => setProvincia(e.target.value)}
+            inputStyles="w-full px-3 py-2 border rounded"
+          />
+        </Box>
+        <Box sx={{ mb: 2 }}>
           <TextField
             label="Data Limite"
             type="date"
@@ -222,7 +221,6 @@ const NovaCotacao = ({ user }) => {
             value={maxProposals}
             onChange={(e) => setMaxProposals(e.target.value)}
             fullWidth
-            required
             inputProps={{ min: 1 }}
             helperText="Defina o número máximo de propostas que podem ser recebidas."
           />
@@ -244,6 +242,18 @@ const NovaCotacao = ({ user }) => {
                   required
                 />
               </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="Qtd do Item"
+                  type="number"
+                  value={item.qtd}
+                  onChange={(e) =>
+                    handleItemChange(index, 'qtd', e.target.value.replace(/\D/g, ''))
+                  }
+                  fullWidth
+                />
+              </Grid>
+
               <Grid item xs={12} sm={4}>
                 <TextField
                   label="Descrição do Item"

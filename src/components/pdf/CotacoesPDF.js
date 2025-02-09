@@ -84,142 +84,161 @@ const CotacoesPDF = ({ user }) => {
       const imgHeight = canvasHeight * ratio;
 
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      pdf.save(`Proforma_${id}.pdf`);
+      pdf.save(`Proforma_${cot.title}.pdf`);
     });
   };
 
+// Função para formatar datas
+const formatDate = (timestamp) => {
+  return new Date(timestamp).toLocaleString('pt-PT', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+   
+  });
+};
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center", // Para centralizar verticalmente
-        minHeight: "100vh",
-        p: 2,
-        bgcolor: "background.default",
-      }}
+<Box
+  sx={{
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center", // Para centralizar verticalmente
+    minHeight: "100vh",
+    p: 2,
+    bgcolor: "background.default",
+    flexDirection: 'column', // Muda a direção para coluna para que o conteúdo fique empilhado
+  }}
 >
-    <BackButton sx={{ mb: 2 }} />
+  {/* Botões no topo */}
+  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+    <BackButton sx={{ mb: 2 }}  variant="contained"
+        color="primary"
+       
+        onClick={gerarPDF}/>
+    {cot && (
+      <Button
+        variant="contained"
+        color="primary"
+        sx={{ mt: 3 }}
+        onClick={gerarPDF}
+      >
+        Baixar PDF
+      </Button>
+    )}
+  </Box>
 
-      {error && <Alert severity="error">{error}</Alert>}
-      {cot ? (
-        <Paper
-          ref={faturaRef}
-          elevation={3}
-          sx={{
-            width: "210mm", // Largura do A4
-            minHeight: "297mm", // Altura mínima do A4
-            p: 3,
-            display: "flex",
-            flexDirection: "column",
-            position: "relative", // Permite rodapé fixo
-          }}
-        >
-          {/* Header */}
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
-            <Box>
-            <Typography variant="h4" fontWeight="bold" color="text.primary">
-                PEDIDO DE COTACAO{" "}
- 
-              </Typography>
-              <Typography variant="h6" color="error" fontWeight="bold">
-                {cot.company?.nome}
-              </Typography>
-              <Typography variant="h6" fontWeight="bold">
-                #{cot.title}
-              </Typography>
-              <Typography variant="body2">
-                {cot.company?.provincia} - {cot.company?.distrito}
-              </Typography>
-            </Box>
-            <Box textAlign="right">
-             
-              <Typography variant="body2">
-                Publicado: {cot.timestamp}
-              </Typography>
-              <Typography variant="body2 text-gray-700">
-                Data Limite: {cot.datalimite}
-              </Typography>
-            </Box>
-          </Box>
+  {error && <Alert severity="error">{error}</Alert>}
+  {cot ? (
+    <Paper
+      ref={faturaRef}
+      elevation={3}
+      sx={{
+        width: "210mm", // Largura do A4
+        minHeight: "297mm", // Altura mínima do A4
+        p: 3,
+        display: "flex",
+        flexDirection: "column",
+        position: "relative", // Permite rodapé fixo
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+        <Box>
+          <br />
+          <Typography variant="h4" fontWeight="bold" color="text.primary">
+            {cot.company?.nome}
+          </Typography>
+          <Typography variant="h6" color="error" fontWeight="bold">
+            PEDIDO DE COTACAO{" "}
+          </Typography>
+          <Typography variant="h6" fontWeight="bold">{cot.title}</Typography>
+          <Typography variant="body2">{cot.company?.provincia} - {cot.company?.distrito}</Typography>
+          <Typography variant="body2">{cot.company?.morada}</Typography>
+          <Typography variant="body2">Nuit:{cot.company?.nuit}</Typography>
+          <Typography variant="body2">{cot.company?.sector}</Typography>
+        </Box>
+        <Box textAlign="right">
+          <br />
+          <Typography variant="body2">Publicado: {formatDate(cot.timestamp)}</Typography>
+          <Typography variant="body2" sx={{ color: 'red' }}>
+            Data Limite: {formatDate(cot.datalimite)}
+          </Typography>
+        </Box>
+      </Box>
 
-{/* Tabela */}
-{cot.items && cot.items.length > 0 && (
-  <section >
-     <Typography variant="body2" className="font-semibold"  dangerouslySetInnerHTML={{ __html: cot.description }}> 
-    </Typography>
-    <Typography variant="h6" className="font-semibold">
-      Itens da Cotação
-    </Typography>
-    <TableContainer component={Paper} className="mt-4">
-      <Table>
-        <TableHead>
-          <TableRow sx={{ bgcolor: "error.main" }}>
-            <TableCell><strong style={{color:'white'}}>Serviço/Produto</strong></TableCell>
-            <TableCell><strong style={{color:'white'}}>Descrição</strong></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {cot.items.map((item, index) => (
-            <TableRow key={index} hover>
-              <TableCell>{item.name}</TableCell>
-              <TableCell>
-                {item.description ? (
-                  <ul style={{ paddingLeft: "1rem", margin: 0 }}>
-                    {item.description.split('\n').map((desc, idx) => (
-                      <li key={idx} style={{ listStyleType: "disc" }}>
-                        {desc}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  'Sem descrição'
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  </section>
-)}
-
-          
-          {/* Rodapé fixo */}
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              fontSize: "0.875rem",
-              color: "text.secondary",
-              p: 2,
-              textAlign: 'center', // Centraliza o conteúdo do rodapé
-            }}
-          >
-            <Typography>Obrigado pela sua preferência!</Typography>
-            <Typography>
-              Tel: {user?.contacto} | Email: {user?.email}
-            </Typography>
-          </Box>
-        </Paper>
-      ) : (
-        <CircularProgress />
+      {/* Tabela */}
+      {cot.items && cot.items.length > 0 && (
+        <section>
+          <Typography variant="body2" className="font-semibold" dangerouslySetInnerHTML={{ __html: cot.description }} />
+          <Typography variant="h6" className="font-semibold">
+            Itens da Cotação
+          </Typography>
+          <TableContainer component={Paper} className="mt-4">
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: "error.main" }}>
+                  <TableCell>
+                    <strong style={{ color: 'white' }}>Serviço/Produto</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong style={{ color: 'white' }}>Qtd</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong style={{ color: 'white' }}>Descrição</strong>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {cot.items.map((item, index) => (
+                  <TableRow key={index} hover>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item?.qtd || 'N/A'}</TableCell>
+                    <TableCell>
+                      {item.description ? (
+                        <ul style={{ paddingLeft: "1rem", margin: 0 }}>
+                          {item.description.split('\n').map((desc, idx) => (
+                            <li key={idx} style={{ listStyleType: "disc" }}>
+                              {desc}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        'Sem descrição'
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </section>
       )}
 
-      {cot && (
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{ mt: 3 }}
-          onClick={gerarPDF}
-        >
-          Baixar PDF
-        </Button>
-      )}
-    </Box>
+      {/* Rodapé fixo */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          fontSize: "0.875rem",
+          color: "text.secondary",
+          p: 2,
+          textAlign: 'center', // Centraliza o conteúdo do rodapé
+        }}
+      >
+        <Typography>
+          Contacto: {cot.company?.contacto} | Email: {cot.company?.email}
+        </Typography>
+        <Typography>connectionmozambique.com</Typography>
+      </Box>
+    </Paper>
+  ) : (
+    <CircularProgress />
+  )}
+</Box>
+
   );
 };
 
