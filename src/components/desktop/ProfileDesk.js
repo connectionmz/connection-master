@@ -83,66 +83,68 @@ const ProfileDesk = () => {
     const user = auth.currentUser?.uid;
 
     useEffect(() => {
-        if (user) {
-            const fetchData = async () => {
-                try {
-                    const companyRef = ref(db, `company/${user}`);
-                    const socialRef = ref(db, `company/${user}/social`);
-                    const postsRef = ref(db, `company/${user}/publishedPhotos`);
-                    const cotacoesRef = ref(db, `cotacoes`);
-
-                    const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot] = await Promise.all([
-                        get(companyRef),
-                        get(socialRef),
-                        get(cotacoesRef),
-                        get(postsRef)
-                    ]);
-
-                    if (companySnapshot.exists()) {
-                        const companyData = companySnapshot.val();
-                        setUserData({
-                            ...companyData,
-                            photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
-                            coverPhotoURL: companyData.coverUrl || "https://via.placeholder.com/600x200",
-                            displayName: companyData.nome || 'Nome da Empresa',
-                            username: companyData.id || 'ID da Empresa',
-                            endereco: companyData.endereco || 'Endereço da Empresa',
-                            bio: companyData.bio || '',
-                        });
-                       
-                    } else {
-                        navigate('/setup');
-                    }
-
-                    if (socialSnapshot.exists()) {
-                        setSocial(socialSnapshot.val());
-                    }
-                    if (postsSnapshot.exists()) {
-                        const posts = Object.values(postsSnapshot.val() || []);
-                        setPosts(posts);
-                    }
-                    if (cotacoesSnapshot.exists()) {
-                        const cotacoesData = cotacoesSnapshot.val();
-                        if (cotacoesData) {
-                            const userCotacoes = Object.keys(cotacoesData).filter(key => 
-                                cotacoesData[key].company && cotacoesData[key].company.id === user
-                            );
-                            setCotacoes(userCotacoes.map(key => cotacoesData[key]));
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching data: ', error);
-                    navigate('/auth');
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchData();
-        } else {
-            navigate('/auth');
-        }
-    }, [user, navigate]);
+      if (user) {
+          const fetchData = async () => {
+              try {
+                  const companyRef = ref(db, `company/${user}`);
+                  const socialRef = ref(db, `company/${user}/social`);
+                  const postsRef = ref(db, `posts`); // Alterado para buscar todos os posts
+                  const cotacoesRef = ref(db, `cotacoes`);
+                  const visitasRef = ref(db, `company/${user}/visitas`);
+  
+                  const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot, visitasSnapshot] = await Promise.all([
+                      get(companyRef),
+                      get(socialRef),
+                      get(cotacoesRef),
+                      get(postsRef),
+                      get(visitasRef)
+                  ]);
+  
+                  if (companySnapshot.exists()) {
+                      const companyData = companySnapshot.val();
+  
+                      console.log(companyData)
+                    
+                      setUserData({
+                          ...companyData,
+                          photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
+                          coverPhotoURL: companyData.coverUrl || "https://via.placeholder.com/600x200",
+                          displayName: companyData.nome || 'A carregar',
+                          username: companyData.id || 'A carregar',
+                          endereco: companyData.endereco || 'A carregar'
+                      });
+                    
+                      
+               
+                  }
+                  if (socialSnapshot.exists()) {
+                      setSocial(socialSnapshot.val());
+                  }
+                  if (postsSnapshot.exists()) {
+                      const postsData = postsSnapshot.val();
+                      const filteredPosts = Object.values(postsData).filter(post => post.company.id === user);
+                      setPosts(filteredPosts);
+                  }
+                  if (cotacoesSnapshot.exists()) {
+                      const cotacoesData = cotacoesSnapshot.val();
+                      const userCotacoes = Object.keys(cotacoesData).filter(key => 
+                          cotacoesData[key].company && cotacoesData[key].company.id === user
+                      );
+                      setCotacoes(userCotacoes.map(key => cotacoesData[key]));
+                  }  
+              } catch (error) {
+                  console.error('Error fetching data: ', error);
+                  navigate('/auth');
+              } finally {
+                  setLoading(false);
+              }
+          };
+  
+          fetchData();
+      } else {
+          navigate('/auth');
+      }
+  }, [user, navigate, user]);
 
     const toggleShowFullText = () => setShowFullText(prevState => !prevState);
 

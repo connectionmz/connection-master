@@ -13,7 +13,7 @@ const FeedDesk = () => {
 
     onValue(postsRef, (snapshot) => {
       const data = snapshot.val();
-      const allPosts = [];
+      let allPosts = [];
 
       if (data) {
         Object.entries(data).forEach(([postId, post]) => {
@@ -23,10 +23,12 @@ const FeedDesk = () => {
             url: post.url || '',
             companyName: post.company.name || 'Empresa Desconhecida',
             logoUrl: post.company.logo || 'https://via.placeholder.com/150',
+            timestamp: post.timestamp || 0
           });
         });
       }
 
+      allPosts.sort((a, b) => b.timestamp - a.timestamp); // Ordena pela data de publicação (mais recente primeiro)
       setPosts(allPosts); 
     });
   }, []);
@@ -35,6 +37,22 @@ const FeedDesk = () => {
 
   const handleClick = (postId) => {
     navigate(`/post/${postId}`);  
+  };
+
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const formattedTime = `${hours}:${minutes}`;
+
+    if (isToday) {
+      return `As ${formattedTime}`;
+    } else {
+      return date.toLocaleDateString('pt-BR') + '  ' + formattedTime;
+    }
   };
 
   return (
@@ -53,11 +71,10 @@ const FeedDesk = () => {
             />
             
             <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <p
-  className="text-center px-2 text-sm mb-2"
-  dangerouslySetInnerHTML={{ __html: post.description || 'Sem descrição' }}
-></p>
-
+              <p
+                className="text-center px-2 text-sm mb-2"
+                dangerouslySetInnerHTML={{ __html: post.description || 'Sem descrição' }}
+              ></p>
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-2 text-xs flex items-center justify-between">
@@ -69,6 +86,7 @@ const FeedDesk = () => {
                 />
                 <span>{post.companyName || 'Empresa desconhecida'}</span>
               </div>
+              <p>{formatTimestamp(post.timestamp)}</p>
             </div>
           </div>
         ))}

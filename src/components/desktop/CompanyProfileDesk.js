@@ -36,92 +36,96 @@ const CompanyProfile = ({ user }) => {
     const [connectionStatus, setConnectionStatus] = useState(null); 
 
     
+
+
+
     useEffect(() => {
-        if (userId) {
-            const fetchData = async () => {
-                try {
-                    const companyRef = ref(db, `company/${userId}`);
-                    const socialRef = ref(db, `company/${userId}/social`);
-                    const postsRef = ref(db, `company/${userId}/publishedPhotos`);
-                    const cotacoesRef = ref(db, `cotacoes`);
-                    const visitasRef = ref(db, `company/${userId}/visitas`);
-
-                    const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot, visitasSnapshot] = await Promise.all([
-                        get(companyRef),
-                        get(socialRef),
-                        get(cotacoesRef),
-                        get(postsRef),
-                        get(visitasRef)
-                    ]);
-
-                    if (companySnapshot.exists()) {
-                        const companyData = companySnapshot.val();
-
-                        console.log(companyData)
-                        setmCompany(companyData);
-                        setUserData({
-                            ...companyData,
-                            photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
-                            coverPhotoURL: companyData.coverUrl || "https://via.placeholder.com/600x200",
-                            displayName: companyData.nome || 'A carregar',
-                            username: companyData.id || 'A carregar',
-                            endereco: companyData.endereco || 'A carregar'
-                        });
-                        setModules(companyData.activeModules || {});
-                        setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
-                        
-                        const newVisitRef = push(visitasRef);
-                        await update(newVisitRef, {
-                            visitorId: user.id, 
-                            visitorName: user.nome || 'Visitante Anônimo', 
-                            timestamp: new Date().toISOString()
-                        });
-                    }
-                    if (socialSnapshot.exists()) {
-                        setSocial(socialSnapshot.val());
-                    }
-                    if (postsSnapshot.exists()) {
-                        const posts = Object.values(postsSnapshot.val() || []);
-                        setPosts(posts);
-                    }
-                    if (cotacoesSnapshot.exists()) {
-                        const cotacoesData = cotacoesSnapshot.val();
-                        const userCotacoes = Object.keys(cotacoesData).filter(key => 
-                            cotacoesData[key].company && cotacoesData[key].company.id === userId
-                        );
-                        setCotacoes(userCotacoes.map(key => cotacoesData[key]));
-                    }
-                    if (visitasSnapshot.exists()) {
-                        setVisits(Object.values(visitasSnapshot.val()));
-                    }
-
-                } catch (error) {
-                    console.error('Error fetching data: ', error);
-                    navigate('/auth');
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            fetchData();
-        } else {
-            navigate('/auth');
-        }
-    }, [userId, navigate, user]);
+      if (userId) {
+          const fetchData = async () => {
+              try {
+                  const companyRef = ref(db, `company/${userId}`);
+                  const socialRef = ref(db, `company/${userId}/social`);
+                  const postsRef = ref(db, `posts`); // Alterado para buscar todos os posts
+                  const cotacoesRef = ref(db, `cotacoes`);
+                  const visitasRef = ref(db, `company/${userId}/visitas`);
+  
+                  const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot, visitasSnapshot] = await Promise.all([
+                      get(companyRef),
+                      get(socialRef),
+                      get(cotacoesRef),
+                      get(postsRef),
+                      get(visitasRef)
+                  ]);
+  
+                  if (companySnapshot.exists()) {
+                      const companyData = companySnapshot.val();
+  
+                      console.log(companyData)
+                      setmCompany(companyData);
+                      setUserData({
+                          ...companyData,
+                          photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
+                          coverPhotoURL: companyData.coverUrl || "https://via.placeholder.com/600x200",
+                          displayName: companyData.nome || 'A carregar',
+                          username: companyData.id || 'A carregar',
+                          endereco: companyData.endereco || 'A carregar'
+                      });
+                      setModules(companyData.activeModules || {});
+                      setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
+                      
+                      const newVisitRef = push(visitasRef);
+                      await update(newVisitRef, {
+                          visitorId: user.id, 
+                          visitorName: user.nome || 'Visitante Anônimo', 
+                          timestamp: new Date().toISOString()
+                      });
+                  }
+                  if (socialSnapshot.exists()) {
+                      setSocial(socialSnapshot.val());
+                  }
+                  if (postsSnapshot.exists()) {
+                      const postsData = postsSnapshot.val();
+                      const filteredPosts = Object.values(postsData).filter(post => post.company.id === userId);
+                      setPosts(filteredPosts);
+                  }
+                  if (cotacoesSnapshot.exists()) {
+                      const cotacoesData = cotacoesSnapshot.val();
+                      const userCotacoes = Object.keys(cotacoesData).filter(key => 
+                          cotacoesData[key].company && cotacoesData[key].company.id === userId
+                      );
+                      setCotacoes(userCotacoes.map(key => cotacoesData[key]));
+                  }
+                  if (visitasSnapshot.exists()) {
+                      setVisits(Object.values(visitasSnapshot.val()));
+                  }
+  
+              } catch (error) {
+                  console.error('Error fetching data: ', error);
+                  navigate('/auth');
+              } finally {
+                  setLoading(false);
+              }
+          };
+  
+          fetchData();
+      } else {
+          navigate('/auth');
+      }
+  }, [userId, navigate, user]);
 
     useEffect(() => {
 
       const connectionRef = ref(db, `connections/${userId}/${user.id}`);
       const unsubscribe = onValue(connectionRef, (snapshot) => {
         if (snapshot.exists()) {
-          setConnectionStatus(snapshot.val().status); // Atualiza o estado com o status da conexão
+          setConnectionStatus(snapshot.val().status);
           console.log(snapshot.val())
         } else {
-          setConnectionStatus(null); // Sem conexão existente
+          setConnectionStatus(null); 
         }
       });
   
-      return () => unsubscribe(); // Remove o listener quando o componente desmontar
+      return () => unsubscribe(); 
     }, [userId, user.id, db]);
     const handleCotacaoClick = (id, companyId) => {
         console.log(id);

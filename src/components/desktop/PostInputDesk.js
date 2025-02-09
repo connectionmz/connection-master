@@ -4,16 +4,17 @@ import { Alert, Snackbar, Button, Box, Typography, LinearProgress } from '@mui/m
 import { push, ref, set } from 'firebase/database';
 import { db } from '../../fb';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // Importar o estilo do Quill
+import 'react-quill/dist/quill.snow.css'; 
 
 const PostInputDesk = ({ user }) => {
   const [newPhotos, setNewPhotos] = useState([]);
   const [photoPreviews, setPhotoPreviews] = useState({});
   const [photoDescriptions, setPhotoDescriptions] = useState({});
-  const [uploadProgress, setUploadProgress] = useState({}); // Progresso de cada foto
+  const [uploadProgress, setUploadProgress] = useState({}); 
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [allUploadsComplete, setAllUploadsComplete] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleSavePublishedPhotos = () => {
     if (!user || !user.id) {
@@ -22,6 +23,7 @@ const PostInputDesk = ({ user }) => {
     }
 
     if (newPhotos.length > 0) {
+      setIsUploading(true);
       const storage = getStorage();
       let completedUploads = 0;
 
@@ -41,13 +43,14 @@ const PostInputDesk = ({ user }) => {
           },
           (error) => {
             console.error('Erro ao carregar foto: ', error);
+            setIsUploading(false);
           },
           () => {
             getDownloadURL(uploadTask.snapshot.ref)
               .then((url) => {
                 const description = photoDescriptions[photo.name] || '';
                 const newPostRef = push(ref(db, 'posts'));
-                const postId = newPostRef.key; // ID único gerado
+                const postId = newPostRef.key; 
 
                 const postData = {
                   id: postId,
@@ -64,20 +67,20 @@ const PostInputDesk = ({ user }) => {
 
                 set(newPostRef, postData)
                   .then(() => {
-                    setUploadSuccess(true);
                     completedUploads++;
-
-                    // Verifica se todos os uploads foram concluídos
                     if (completedUploads === newPhotos.length) {
                       setAllUploadsComplete(true);
+                      setIsUploading(false);
                     }
                   })
                   .catch((error) => {
                     console.error('Erro ao salvar dados do post no Firebase: ', error);
+                    setIsUploading(false);
                   });
               })
               .catch((error) => {
                 console.error('Erro ao obter URL da foto: ', error);
+                setIsUploading(false);
               });
           }
         );
@@ -91,8 +94,8 @@ const PostInputDesk = ({ user }) => {
     if (allUploadsComplete) {
       setSnackbarOpen(true);
       setTimeout(() => {
-        window.location.reload(); // Recarrega a página
-      }, 3000); // Aguarda 3 segundos antes de recarregar
+        window.location.reload(); 
+      }, 3000); 
     }
   }, [allUploadsComplete]);
 
@@ -103,8 +106,7 @@ const PostInputDesk = ({ user }) => {
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
     setNewPhotos(files);
-
-    // Create object URLs for image previews
+    
     const previews = {};
     files.forEach((file) => {
       previews[file.name] = URL.createObjectURL(file);
@@ -124,6 +126,7 @@ const PostInputDesk = ({ user }) => {
           type="file"
           multiple
           onChange={handleFileChange}
+          disabled={isUploading}
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
 
@@ -131,13 +134,11 @@ const PostInputDesk = ({ user }) => {
           <div className="photo-list space-y-6">
             {newPhotos.map((photo, index) => (
               <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                {/* Mini Preview */}
                 <img
                   src={photoPreviews[photo.name]}
                   alt={photo.name}
                   className="w-20 h-20 object-cover rounded-lg border border-gray-300 shadow-sm"
                 />
-                {/* Description Input with ReactQuill */}
                 <Box sx={{ flex: 1, ml: 2 }}>
                   <Typography variant="body2" color="textSecondary" fontWeight="bold">
                     {photo.name}
@@ -157,7 +158,6 @@ const PostInputDesk = ({ user }) => {
                     }}
                     style={{ marginTop: 16, height: '150px' }}
                   />
-                  {/* Barra de progresso para cada foto */}
                   <LinearProgress
                     variant="determinate"
                     value={uploadProgress[photo.name] || 0}
@@ -173,6 +173,7 @@ const PostInputDesk = ({ user }) => {
           onClick={handleSavePublishedPhotos}
           variant="contained"
           color="primary"
+          disabled={isUploading}
           sx={{
             padding: '10px 20px',
             borderRadius: '8px',
@@ -180,15 +181,9 @@ const PostInputDesk = ({ user }) => {
             textTransform: 'none',
           }}
         >
-          Upload Novas Fotos
+          {isUploading ? 'Carregando...' : 'Upload Novas Fotos'}
         </Button>
       </Box>
-
-      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity={uploadSuccess ? 'success' : 'info'} sx={{ width: '100%' }}>
-          {allUploadsComplete ? 'Todas as fotos foram carregadas com sucesso! Recarregando a página...' : `Progresso do upload: ${Math.round(uploadProgress)}%`}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

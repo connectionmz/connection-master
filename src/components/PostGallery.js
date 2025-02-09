@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const PostGallery = ({ posts, onDelete, onEdit }) => {
   const [selectedPost, setSelectedPost] = useState(null); // Selected post for modal
   const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
   const [editedCaption, setEditedCaption] = useState(''); // State for editing caption
+  const navigate = useNavigate();  
 
   // Open the modal with the selected post
   const openModal = (post) => {
@@ -25,6 +27,11 @@ const PostGallery = ({ posts, onDelete, onEdit }) => {
       closeModal(); // Close the modal after deletion
     }
   };
+  const randomSpan = () => Math.random() > 0.7 ? 'row-span-2 col-span-2' : 'row-span-1 col-span-1';
+
+  const handleClick = (postId) => {
+    navigate(`/post/${postId}`);  
+  };
 
   // Handle the save caption action
   const handleSaveCaption = () => {
@@ -34,23 +41,51 @@ const PostGallery = ({ posts, onDelete, onEdit }) => {
     }
   };
 
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const formattedTime = `${hours}:${minutes}`;
+
+    if (isToday) {
+      return `As ${formattedTime}`;
+    } else {
+      return date.toLocaleDateString('pt-BR') + '  ' + formattedTime;
+    }
+  };
+
   return (
     <div>
       {/* Gallery */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      <div className="grid grid-cols-3 gap-4">
-                        {posts.map((post, index) => (
-                            <div key={index} className="relative h-40 bg-gray-200 rounded-md overflow-hidden" onClick={() => openModal(post)}>
-                                <img src={post.url} alt={`Published Photo ${index + 1}`} className="object-cover h-full w-full" />
-                                <div className="absolute bottom-0 left-0 w-full p-2 bg-black bg-opacity-50 text-white text-sm">
-                                    {post.description || ''}
-                                    </div>
-                            </div>
-                        ))}
-                    </div>
+      <div className="p-2 bg-white">
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1">
+        {posts.map((post) => (
+          <div 
+            key={post.id}
+            className={`relative group overflow-hidden rounded-lg cursor-pointer ${randomSpan()}`} 
+            onClick={() => handleClick(post.id)}  
+          >
+            <img 
+              src={post.url} 
+              alt={`Post ${post.id}`} 
+              className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+            />
+            
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <p
+                className="text-center px-2 text-sm mb-2"
+                dangerouslySetInnerHTML={{ __html: post.description || 'Sem descrição' }}
+              ></p>
+            </div>
 
+           
+          </div>
+        ))}
       </div>
-
+    </div>
       {/* Modal for viewing and editing image */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center">

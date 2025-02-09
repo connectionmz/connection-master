@@ -136,7 +136,7 @@ const PostDetailPageDesk = ({ user }) => {
           <div dangerouslySetInnerHTML={{ __html: post.description || '<p>Sem descrição</p>' }} />
         </Typography>
           <Typography variant="body2" color="textSecondary">
-            Publicado por: <a href={`/perfil/${post.companyId}`}>{post.companyName}</a>
+            Publicado por: <a href={`/perfil/${post.companyId}`} style={{color:'blue'}}>{post.companyName}</a>
           </Typography>
         </CardContent>
 
@@ -195,7 +195,6 @@ const PostDetailPageDesk = ({ user }) => {
   <SendIcon />
 </IconButton>
           <Divider sx={{ my: 2 }} />
-
           {comments.length === 0 ? (
             <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center' }}>
               Sem comentários ainda.
