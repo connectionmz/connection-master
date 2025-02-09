@@ -7,7 +7,7 @@ import { Tabs, Tab, Box, Button, IconButton, TextField, InputAdornment } from '@
 import { EditorText } from '../../utils/formUtils';
 import ChangePassword from '../password/ChangePassword';
 import DadosBancarios from '../DadosBancarios';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp'; 
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 const InputField = ({ label, name, value, onChange, type = "text", disabled = false, endAdornment }) => (
@@ -88,13 +88,14 @@ const EditProfileDesk = ({ user }) => {
     bio: user?.bio || '',
     contacto: user?.contacto || '',
     endereco: user?.endereco || '',
+    capacidadeDeProducao: user?.capacidadeDeProducao || '', // Campo adicionado
     provincia: user?.provincia || '',
     missaoVisaoValores: user?.missaoVisaoValores || '',
     facebook: user.social?.facebook || '',
     whatsappUrl: user.social?.whatsapp || `https://wa.me/${user.contacto}`,
     instagram: user.social?.instagram || '',
     linkedin: user.social?.linkedin || '',
-    x: user.social?.x || '', 
+    x: user.social?.x || '',
     website: user.social?.website || '',
   };
 
@@ -124,6 +125,7 @@ const EditProfileDesk = ({ user }) => {
       bio: formData.bio,
       contacto: formData.contacto,
       endereco: formData.endereco,
+      capacidadeDeProducao: formData.capacidadeDeProducao, // Campo adicionado
       provincia: formData.provincia,
       missaoVisaoValores: formData.missaoVisaoValores,
       social: {
@@ -163,6 +165,13 @@ const EditProfileDesk = ({ user }) => {
             <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
             <InputField label="Endereço" name="endereco" value={formData.endereco} onChange={handleInputChange} />
             <InputField label="Província" name="provincia" value={formData.provincia} onChange={handleInputChange} />
+            {/* Campo de Capacidade de Produção adicionado */}
+            <InputField
+              label="Capacidade de Produção"
+              name="capacidadeDeProducao"
+              value={formData.capacidadeDeProducao}
+              onChange={handleInputChange}
+            />
 
             <div>
               <label className="block font-medium mb-1">Missão, Visão e Valores</label>

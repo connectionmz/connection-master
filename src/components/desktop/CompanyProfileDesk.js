@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, Logout, Edit, CameraAlt, Language, Store, RequestQuote, Message, Phone, WhatsApp, Facebook } from "@mui/icons-material";
+import { VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, Logout, Edit, CameraAlt, Language, Store, RequestQuote, Message, Phone, WhatsApp, Facebook, Email } from "@mui/icons-material";
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push, set, onValue, remove } from 'firebase/database'; 
 import { auth, db } from '../../fb'; 
@@ -35,17 +35,13 @@ const CompanyProfile = ({ user }) => {
     const [visits, setVisits] = useState([]);
     const [connectionStatus, setConnectionStatus] = useState(null); 
 
-    
-
-
-
     useEffect(() => {
       if (userId) {
           const fetchData = async () => {
               try {
                   const companyRef = ref(db, `company/${userId}`);
                   const socialRef = ref(db, `company/${userId}/social`);
-                  const postsRef = ref(db, `posts`); // Alterado para buscar todos os posts
+                  const postsRef = ref(db, `posts`); 
                   const cotacoesRef = ref(db, `cotacoes`);
                   const visitasRef = ref(db, `company/${userId}/visitas`);
   
@@ -98,7 +94,6 @@ const CompanyProfile = ({ user }) => {
                   if (visitasSnapshot.exists()) {
                       setVisits(Object.values(visitasSnapshot.val()));
                   }
-  
               } catch (error) {
                   console.error('Error fetching data: ', error);
                   navigate('/auth');
@@ -106,7 +101,6 @@ const CompanyProfile = ({ user }) => {
                   setLoading(false);
               }
           };
-  
           fetchData();
       } else {
           navigate('/auth');
@@ -227,9 +221,19 @@ const CompanyProfile = ({ user }) => {
                 return (
                     <Box mt={3}>
                         <Typography><strong>Endereço:</strong> {mCompany?.endereco || 'Não informado'}</Typography>
-                        <Typography><strong>Província:</strong> {mCompany?.provincia || 'Não informado'}</Typography>
+                        <Typography><strong>Província:</strong> {mCompany?.provincia || 'Não informado'} </Typography>
+                        <Typography> <strong>Distrito:</strong> {mCompany?.distrito || 'Não informado'}</Typography>
                         <Typography><strong>Capacidade de Produção:</strong> {mCompany?.capacidadeDeProducao || 'Não informado'}</Typography>
-                        <Typography><strong>Email:</strong> {mCompany?.email || 'Não informado'}</Typography>
+                        <Typography>
+                      <strong>Email:</strong>{' '}
+                      {mCompany?.email ? (
+                        <a href={`mailto:${mCompany.email}`} style={{ textDecoration: 'none', color: 'blue' }}>
+                          {mCompany.email}
+                        </a>
+                      ) : (
+                        'Não informado'
+                      )}
+                    </Typography>
                         <Typography><strong>Contacto:</strong> {mCompany?.contacto || 'Não informado'}</Typography>
                         <Typography><strong>Sector:</strong> {mCompany?.sector || 'Não informado'}</Typography>
                         <Typography><strong>Tipo de Entidade:</strong> {mCompany?.tipoEntidade || 'Não informado'}</Typography>
@@ -323,84 +327,92 @@ const CompanyProfile = ({ user }) => {
   </Tooltip>
 
 
-  {/* Contatos */}
-  {userData.contacto && (
-    <Tooltip title="Ligar" arrow>
-      <IconButton href={`tel:${userData.contacto}`} color="success">
-        <Phone />
-      </IconButton>
-    </Tooltip>
-  )}
+{/* Contatos */}
+{userData.contacto && (
+  <Tooltip title="Ligar" arrow>
+    <IconButton href={`tel:${userData.contacto}`} sx={{ color: '#4CAF50' }}>
+      <Phone />
+    </IconButton>
+  </Tooltip>
+)}
 
-  {social.facebook && (
-    <Tooltip title="Facebook" arrow>
-      <IconButton
-        href={social.facebook}
-        target="_blank"
-        rel="noopener noreferrer"
-        sx={{ color: '#1877F2' }}
-      >
-        <Facebook />
-      </IconButton>
-    </Tooltip>
-  )}
+{/* E-mail */}
+{userData.email && (
+  <Tooltip title="E-mail" arrow>
+    <IconButton href={`mailto:${userData.email}`} sx={{ color: '#D44638' }}>
+      <Email />
+    </IconButton>
+  </Tooltip>
+)}
 
-  {social.instagram && (
-    <Tooltip title="Instagram" arrow>
-      <IconButton
-        href={social.instagram}
-        target="_blank"
-        rel="noopener noreferrer"
-        sx={{ color: '#E1306C' }}
-      >
-        <Instagram />
-      </IconButton>
-    </Tooltip>
-  )}
+{/* Redes sociais */}
+{social.facebook && (
+  <Tooltip title="Facebook" arrow>
+    <IconButton
+      href={social.facebook}
+      target="_blank"
+      rel="noopener noreferrer"
+      sx={{ color: '#1877F2' }}
+    >
+      <Facebook />
+    </IconButton>
+  </Tooltip>
+)}
 
-  {social.linkedin && (
-    <Tooltip title="LinkedIn" arrow>
-      <IconButton
-        href={social.linkedin}
-        target="_blank"
-        rel="noopener noreferrer"
-        sx={{ color: '#0077B5' }}
-      >
-        <LinkedIn />
-      </IconButton>
-    </Tooltip>
-  )}
+{social.instagram && (
+  <Tooltip title="Instagram" arrow>
+    <IconButton
+      href={social.instagram}
+      target="_blank"
+      rel="noopener noreferrer"
+      sx={{ color: '#E1306C' }}
+    >
+      <Instagram />
+    </IconButton>
+  </Tooltip>
+)}
 
-  {social.whatsapp && (
-    <Tooltip title="WhatsApp" arrow>
-      <IconButton
-        href={social.whatsapp}
-        target="_blank"
-        rel="noopener noreferrer"
-        sx={{ color: '#25D366' }}
-      >
-        <WhatsApp />
-      </IconButton>
-    </Tooltip>
-  )}
+{social.linkedin && (
+  <Tooltip title="LinkedIn" arrow>
+    <IconButton
+      href={social.linkedin}
+      target="_blank"
+      rel="noopener noreferrer"
+      sx={{ color: '#0077B5' }}
+    >
+      <LinkedIn />
+    </IconButton>
+  </Tooltip>
+)}
 
-  {social.website && (
-    <Tooltip title="Website" arrow>
-      <IconButton
-        href={social.website}
-        target="_blank"
-        rel="noopener noreferrer"
-        color="primary"
-      >
-        <Language />
-      </IconButton>
-    </Tooltip>
-  )}
+{social.whatsapp && (
+  <Tooltip title="WhatsApp" arrow>
+    <IconButton
+      href={social.whatsapp}
+      target="_blank"
+      rel="noopener noreferrer"
+      sx={{ color: '#25D366' }}
+    >
+      <WhatsApp />
+    </IconButton>
+  </Tooltip>
+)}
+
+{social.website && (
+  <Tooltip title="Website" arrow>
+    <IconButton
+      href={social.website}
+      target="_blank"
+      rel="noopener noreferrer"
+      sx={{ color: '#4285F4' }}
+    >
+      <Language />
+    </IconButton>
+  </Tooltip>
+)}
+
 </Box>
-
             </Box>
-
-            {/* Tabs */}
             <Box mt={4} borderBottom={1} borderColor="divider">
                 <Tabs
                     value={activeTab}
@@ -413,8 +425,6 @@ const CompanyProfile = ({ user }) => {
                     <Tab label="Cotações" value="liked" />
                 </Tabs>
             </Box>
-
-            {/* Conteúdo */}
             <Box p={3}>{renderContent()}</Box>
         </Box>
     );
