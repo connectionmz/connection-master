@@ -18,6 +18,8 @@ import {
     Tooltip,
 } from '@mui/material';
 import { saveContentToInbox } from '../SaveToInbox';
+import PostDetailPageDesk from './PostDetailPageDesk';
+import VetrineDesk from './VetrineDesk';
 
 const CompanyProfile = ({ user }) => {
     const { id } = useParams(); 
@@ -56,7 +58,6 @@ const CompanyProfile = ({ user }) => {
                   if (companySnapshot.exists()) {
                       const companyData = companySnapshot.val();
   
-                      console.log(companyData)
                       setmCompany(companyData);
                       setUserData({
                           ...companyData,
@@ -194,6 +195,8 @@ const CompanyProfile = ({ user }) => {
                 );
             case 'Publicados':
                 return <PostGallery posts={posts} />;
+                case 'Repositorio':
+                return <VetrineDesk id={userId} />;
             case 'liked':
                 return (
                     <Grid container spacing={2}>
@@ -435,6 +438,8 @@ const CompanyProfile = ({ user }) => {
                     <Tab label="Sobre" value="sobre" />
                     <Tab label="Publicações" value="Publicados" />
                     <Tab label="Cotações" value="liked" />
+                    <Tab label="Repositorio" value="Repositorio" />
+                    
                 </Tabs>
             </Box>
             <Box p={3}>{renderContent()}</Box>

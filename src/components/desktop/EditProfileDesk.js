@@ -9,6 +9,7 @@ import ChangePassword from '../password/ChangePassword';
 import DadosBancarios from '../DadosBancarios';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import PostInputFileDesk from './PostInputFileDesk';
 
 const InputField = ({ label, name, value, onChange, type = "text", disabled = false, endAdornment }) => (
   <div className="mb-4">
@@ -155,6 +156,7 @@ const EditProfileDesk = ({ user }) => {
         <Tab label="Mudar Senha" />
         <Tab label="Dados Bancários" />
         <Tab label="Redes Sociais" />
+        <Tab label="Vertrine" />
       </Tabs>
 
       <Box mt={2}>
@@ -165,7 +167,6 @@ const EditProfileDesk = ({ user }) => {
             <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
             <InputField label="Endereço" name="endereco" value={formData.endereco} onChange={handleInputChange} />
             <InputField label="Província" name="provincia" value={formData.provincia} onChange={handleInputChange} />
-            {/* Campo de Capacidade de Produção adicionado */}
             <InputField
               label="Capacidade de Produção da actividade Principal"
               name="capacidadeDeProducao"
@@ -187,6 +188,7 @@ const EditProfileDesk = ({ user }) => {
         {tabIndex === 1 && <ChangePassword />}
         {tabIndex === 2 && <DadosBancarios user={user} />}
         {tabIndex === 3 && <SocialMediaForm formData={formData} handleInputChange={handleInputChange} handleSubmit={handleSubmit} />}
+        {tabIndex === 4 && <PostInputFileDesk user={user} />}
       </Box>
 
       <Snackbar

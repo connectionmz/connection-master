@@ -38,14 +38,23 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             setLoading(false);
             return;
         }
+    
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val();
             if (cotacoesData) {
                 const cotacoesArray = Object.values(cotacoesData);
-                const filteredCotacoes = cotacoesArray.filter((cotacao) => cotacao.provincia === user.provincia);
+    
+                // Filtrar cotações onde a província do usuário está dentro da lista de províncias da cotação
+                const filteredCotacoes = cotacoesArray.filter((cotacao) => 
+                    Array.isArray(cotacao.provincia) && cotacao.provincia.includes(user.provincia)
+                );
+    
+                // Ordenar por timestamp mais recente
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
                 setCotacoes(sortedCotacoes);
+                console.log(sortedCotacoes);
             } else {
                 setCotacoes([]);
             }
@@ -54,7 +63,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         });
     
         return () => unsubscribeCotacoes();
-    }, [hasModuleSMS]);
+    }, [hasModuleSMS, user.provincia]); 
+    
     
   useEffect(() => {
     const fetchCampanhasAtivas = async () => {

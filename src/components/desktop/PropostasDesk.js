@@ -31,20 +31,26 @@ const PropostasDesk = () => {
     navigate(`/cotacao/${id}/proposta/${propostaId}`);
   };
 
+  const handleEmpresaClick = (empresaId) => {
+    navigate(`/perfil/${empresaId}`);
+  };
+
   return (
-    <Paper sx={{ maxWidth: 900, margin: 'auto', padding: 3 }}>
-      <Typography variant="h5" component="h1" sx={{ marginBottom: 2 }}>
+    <Paper sx={{ width: '100%', margin: 'auto', padding: 3, boxShadow: 3, borderRadius: 2 }}>
+      <BackButton sx={{ mb: 2 }} />
+
+      <Typography variant="h5" component="h1" sx={{ marginBottom: 3, fontWeight: 'bold', color: 'primary.main' }}>
         Propostas Recebidas
       </Typography>
 
       {propostas.length > 0 ? (
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ boxShadow: 2, borderRadius: 2 }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell align="left">Empresa</TableCell>
-                <TableCell align="left">Status</TableCell>
-                <TableCell align="left">#</TableCell>
+                <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Empresa</TableCell>
+                <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Status</TableCell>
+                <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>#</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -53,12 +59,18 @@ const PropostasDesk = () => {
                   key={proposta.id} 
                   hover 
                   onClick={() => handlePropostaClick(proposta.id)}
-                  sx={{ cursor: 'pointer' }}
+                  sx={{ cursor: 'pointer'}}
                 >
-                  <TableCell component="th" scope="row">
-                    <small>{proposta.from.nome}</small>
+                  <TableCell component="th" scope="row" onClick={(e) => { e.stopPropagation(); handleEmpresaClick(proposta.from.id); }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer', textDecoration: 'underline' }}>
+                      {proposta.from.nome}
+                    </Typography>
                   </TableCell>
-                  <TableCell>{proposta.status || 'Pendente'}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color={proposta.status === 'wait' ? 'warning.main' : 'text.primary'}>
+                      {proposta.status === 'wait' ? 'Aguardar' : proposta.status || 'Pendente'}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <Typography color="primary" variant="body2" sx={{ textDecoration: 'underline' }}>
                       Abrir
@@ -72,9 +84,6 @@ const PropostasDesk = () => {
       ) : (
         <Typography sx={{ color: 'gray', marginTop: 2 }}>Nenhuma proposta recebida.</Typography>
       )}
-
-<BackButton sx={{ mb: 2 }} />
-
     </Paper>
   );
 };

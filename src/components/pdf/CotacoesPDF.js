@@ -17,6 +17,7 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Divider,
 } from "@mui/material";
 import { db } from '../../fb';
 import BackButton from '../BackButton';
@@ -37,7 +38,6 @@ const CotacoesPDF = ({ user }) => {
         );
         if (proformaSnap.exists()) {
           setCotacao(proformaSnap.val());
-          console.log(proformaSnap.val())
         } else {
           setError("Proforma não encontrada.");
         }
@@ -214,8 +214,7 @@ const formatDate = (timestamp) => {
           </TableContainer>
         </section>
       )}
-
-      {/* Rodapé fixo */}
+      <Divider/>
       <Box
         sx={{
           position: 'absolute',
@@ -225,7 +224,7 @@ const formatDate = (timestamp) => {
           fontSize: "0.875rem",
           color: "text.secondary",
           p: 2,
-          textAlign: 'center', // Centraliza o conteúdo do rodapé
+          textAlign: 'center', 
         }}
       >
         <Typography>
@@ -238,7 +237,6 @@ const formatDate = (timestamp) => {
     <CircularProgress />
   )}
 </Box>
-
   );
 };
 

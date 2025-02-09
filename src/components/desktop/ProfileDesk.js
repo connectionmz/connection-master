@@ -18,6 +18,7 @@ import {
   Tab,
   Link as MuiLink,
 } from "@mui/material";
+import VetrineDesk from './VetrineDesk';
 
 
 
@@ -103,8 +104,6 @@ const ProfileDesk = () => {
                   if (companySnapshot.exists()) {
                       const companyData = companySnapshot.val();
   
-                      console.log(companyData)
-                    
                       setUserData({
                           ...companyData,
                           photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
@@ -208,6 +207,8 @@ const handleDeletePost = (postToDelete) => {
           );
         case "Publicados":
           return <PostGallery posts={posts} onDelete={handleDeletePost} onEdit={handleEditCaption} />;
+          case "Repositorio":
+            return <VetrineDesk id={user}  />;
         case "liked":
           return (
             <Grid container spacing={3}>
@@ -419,6 +420,7 @@ const handleDeletePost = (postToDelete) => {
           <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)} centered>
             <Tab label="Início" value="inicio" />
             <Tab label="Publicados" value="Publicados" />
+            <Tab label="Repositorio" value="Repositorio" />
           </Tabs>
         </Box>
   

@@ -50,18 +50,35 @@ const EnviarPropostaDesk = ({ user }) => {
 
   useEffect(() => {
     const checkProposal = async () => {
-      const proposalsRef = ref(db, `cotacoes/${id}/proposals`);
-      onValue(proposalsRef, (snapshot) => {
-        const proposals = snapshot.val();
-        const userProposal = Object.values(proposals || {}).find(
-          (proposal) => proposal.from?.id === user.id
-        );
-        if (userProposal) {
-          setHasProposal(true);
-        }
-      });
+      const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
+  
+      try {
+        onValue(proposalsRef, (snapshot) => {
+          const proposals = snapshot.val();
+          
+          // Verifica se existe alguma proposta do usuário
+          const userProposal = Object.values(proposals || {});
+
+          console.log(userProposal)
+          
+          if (userProposal.length > 0) {
+            setHasProposal(true);  // Se houver propostas, atualiza o estado
+          } else {
+            setHasProposal(false);  // Caso contrário, garante que o estado seja false
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao verificar proposta:", error);
+        // Você pode adicionar uma lógica de fallback caso haja erro
+      }
     };
+  
     checkProposal();
+  
+    // Função de cleanup para remover o listener quando o componente desmontar
+    return () => {
+      setHasProposal(false);  // Reseta o estado caso o componente seja desmontado
+    };
   }, [id, user.id]);
 
   const handleAnexoChange = (e) => {
@@ -107,28 +124,38 @@ const EnviarPropostaDesk = ({ user }) => {
   };
 
   const submitProposal = async (fileUrl) => {
-    const proposalsRef = ref(db, `cotacoes/${id}/proposals`);
-    const newProposalRef = push(proposalsRef);
-
+    // Validação antes de enviar
+    if (!description) {
+      alert('Por favor, preencha todos os campos obrigatorios antes de enviar.');
+      return;
+    }
+  
+    const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
+  
     const newProposal = {
-      id: newProposalRef.key,
       cotationId: id,
-      from: user,
+      from:{
+        nome:user.nome,
+        logo:user.logoUrl,
+        provincia:user.provincia,
+        distrito:user.distrito
+      },
       proposal: description,
       fileUrl,
       selectedProducts: selectedProducts.map((product) => ({
         id: product.id,
         name: product.name,
         price: product.price,
-        url: `/product/${user.id}/${product.id}`,
+        url: `/product/${product.id}/store${user.id}`,
       })),
       submittedAt: new Date().toISOString(),
       status: 'wait',
       url: `/cotacao/${id}/${companyId}`,
     };
-
+  
     try {
-      await set(newProposalRef, newProposal);
+      setUploading(true); // Definindo estado de carregamento
+      await set(proposalsRef, newProposal);
       alert('Proposta enviada com sucesso!');
       setDescription('');
       setAnexo(null);
@@ -136,29 +163,48 @@ const EnviarPropostaDesk = ({ user }) => {
       setHasProposal(true);
     } catch (error) {
       console.error('Erro ao submeter a proposta:', error);
-      alert('Erro ao submeter a proposta. Por favor, tente novamente.');
+      alert(error?.message || 'Erro ao submeter a proposta. Por favor, tente novamente.');
     } finally {
-      setUploading(false);
+      setUploading(false); // Resetando estado de carregamento
     }
   };
+  
 
   if (hasProposal) {
     return (
-      <Box sx={{ maxWidth: 1000, margin: 'auto', padding: 3, backgroundColor: 'white', borderRadius: 2, boxShadow: 3 }}>
+      <Box sx={{ width: '100%',height:'100vh', margin: 'auto', padding: 3, backgroundColor: 'white', borderRadius: 2, boxShadow: 3 }}>
       <BackButton sx={{ mb: 2 }} />
-
-        <Typography variant="h6" gutterBottom>
-          Proposta Já Enviada
-        </Typography>
-        <Typography variant="body1" paragraph>
-          Você já enviou uma proposta para esta cotação.
-        </Typography>
+      <Typography variant="h6" gutterBottom>
+        Proposta Já Enviada
+      </Typography>
+      <Typography variant="body1" paragraph>
+        Olá,
+      </Typography>
+      <Typography variant="body1" paragraph>
+        Agradecemos o seu interesse e a proposta enviada para o nosso pedido de cotação. 
+        Informamos que a sua proposta está em fase de verificação.
+      </Typography>
+      <Typography variant="body1" paragraph>
+        Lembre-se de que este é um pedido público e estamos avaliando as melhores propostas. 
+        Caso sua cotação seja aprovada, você será notificado, e o status do pedido será atualizado para <strong>Fechado</strong>.
+      </Typography>
+      <Typography variant="body1" paragraph>
+        Por enquanto, ainda não recebemos a sua resposta oficialmente. 
+        Continue acompanhando a situação e, se necessário, esteja disponível para fornecer mais informações ou ajustes.
+      </Typography>
+      <Typography variant="body1" paragraph>
+        Acreditamos no seu potencial e estamos torcendo pelo seu sucesso! 
+        Grandes oportunidades surgem para quem se prepara e persiste. 
+        Siga em frente com confiança!
+      </Typography>
+      <Typography variant="body1" paragraph>
+        Boa sorte!
+      </Typography>
         <Button
           variant="contained"
           color="primary"
           onClick={() => navigate(`/cotacao/${id}/${companyId}`)}
-          sx={{ marginTop: 2 }}
-        >
+          sx={{ marginTop: 2 }}>
           Ver Proposta Enviada
         </Button>
       </Box>
@@ -187,7 +233,6 @@ const EnviarPropostaDesk = ({ user }) => {
                 [{ size: [] }],
                 ['bold', 'italic', 'underline', 'strike', 'blockquote'],
                 [{ 'list': 'ordered'}, { 'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
-                ['link', 'image', 'video'],
                 ['clean']
               ],
             }}

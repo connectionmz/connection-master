@@ -17,6 +17,7 @@ import { Add, Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUtils';
 import BackButton from '../BackButton';
 import sendMessage from '../sms/sendMessage';
+import { FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 
 const NovaCotacao = ({ user }) => {
   const [title, setTitle] = useState('');
@@ -25,11 +26,16 @@ const NovaCotacao = ({ user }) => {
   const [deadline, setDeadline] = useState('');
   const [maxProposals, setMaxProposals] = useState('');
   const [sector, setSector] = useState('');
-  const [provincia, setProvincia] = useState('');
+  const [provincia, setProvincia] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+
+
+  const provinciasList = [
+    'Maputo', 'Gaza', 'Inhambane', 'Sofala', 'Manica', 'Tete', 'Zambézia', 'Nampula', 'Cabo Delgado', 'Niassa'
+  ];
 
   const handleAddItem = () => {
     setItems([...items, { name: '', description: '', qtd: '', imageUrl: '' }]);
@@ -88,7 +94,7 @@ const NovaCotacao = ({ user }) => {
       items,
       company: user,
       sector: sector.trim(),
-      provincia: provincia.trim(),
+      provincia: provincia,
       timestamp: new Date().toISOString(),
       datalimite: new Date(deadline).toISOString(),
       status: 'open',
@@ -189,11 +195,23 @@ const NovaCotacao = ({ user }) => {
           />
         </Box>
         <Box sx={{ mb: 2 }}>
-          <Provincias
-            companyData={{ provincia }}
-            handleChange={(e) => setProvincia(e.target.value)}
-            inputStyles="w-full px-3 py-2 border rounded"
-          />
+        <FormControl fullWidth>
+  <InputLabel>Províncias</InputLabel>
+  <Select
+    multiple
+    value={provincia}
+    onChange={(e) => setProvincia(e.target.value)}
+    renderValue={(selected) => selected.join(', ')}
+  >
+    {provinciasList.map((prov) => (
+      <MenuItem key={prov} value={prov}>
+        <Checkbox checked={provincia.includes(prov)} />
+        <ListItemText primary={prov} />
+      </MenuItem>
+    ))}
+  </Select>
+</FormControl>
+
         </Box>
         <Box sx={{ mb: 2 }}>
           <TextField

@@ -13,6 +13,7 @@ import {
   Avatar,
   Box,
   Modal,
+  Dialog, DialogActions, DialogContent, DialogTitle,
 } from '@mui/material';
 import BackButton from '../BackButton';
 
@@ -23,40 +24,73 @@ const CotacaoDetalhesDesk = ({user}) => {
   const [propostas, setPropostas] = useState([]);
   const [viewsModalOpen, setViewsModalOpen] = useState(false);
   const [empresasQueVisualizaram, setEmpresasQueVisualizaram] = useState([]);
+  const [hasProposal, setHasProposal] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
+  const [proposalDetails, setProposalDetails] = useState(null); // Detalhes da proposta
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const cotacaoRef = ref(db, `cotacoes/${id}`);
 
-  // Referência para a lista de visualizações
-  const viewsRef = ref(db, `cotacoes/${id}/views/${user.id}`);
+    const viewsRef = ref(db, `cotacoes/${id}/views/${user.id}`);
 
-  // Verifica se o usuário já visualizou a cotação
-  onValue(viewsRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      // Adiciona o usuário à lista de visualizações e incrementa o contador
-      update(cotacaoRef, {
-        [`views/${user.id}`]: true, // Marca que o usuário visualizou
-        viewCount: increment(1), // Incrementa o contador
-      });
-    }
-  }, { onlyOnce: true });
+    onValue(viewsRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        // Adiciona o usuário à lista de visualizações e incrementa o contador
+        update(cotacaoRef, {
+          [`views/${user.id}`]: true, // Marca que o usuário visualizou
+          viewCount: increment(1), // Incrementa o contador
+        });
+      }
+    }, { onlyOnce: true });
 
-    // Carregar dados da cotação e empresas que visualizaram
     onValue(cotacaoRef, (snapshot) => {
       const data = snapshot.val();
       setCotacao(data);
+
+      if (data?.proposals) {
+        const propostasIds = Object.keys(data.views);
+        const prop = propostasIds.map((propostaId) => ({
+          id: propostaId,
+          ...data.proposals[propostaId], 
+        }));
+        setPropostas(prop)
+      }
 
       if (data?.views) {
         const empresasIds = Object.keys(data.views);
         const empresas = empresasIds.map((empresaId) => ({
           id: empresaId,
-          ...data.views[empresaId], // Exemplo: { id: 'empresa1', nome: 'Empresa 1', logoUrl: '...' }
+          ...data.views[empresaId], 
         }));
         setEmpresasQueVisualizaram(empresas);
       }
     });
+
+    const checkProposal = async () => {
+      const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
+  
+      try {
+        onValue(proposalsRef, (snapshot) => {
+          const proposals = snapshot.val();
+          
+          // Verifica se existe alguma proposta do usuário
+          const userProposal = Object.values(proposals || {}); 
+          setProposalDetails(proposals)     
+          console.log(proposals)
+          if (userProposal.length > 0) {
+            setHasProposal(true);  // Se houver propostas, atualiza o estado
+          } else {
+            setHasProposal(false);  // Caso contrário, garante que o estado seja false
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao verificar proposta:", error);
+        // Você pode adicionar uma lógica de fallback caso haja erro
+      }
+    };
+    checkProposal()
   }, [id]);
 
   const handleEnviarProposta = () => navigate(`/enviar-proposta/${id}/${companyId}`);
@@ -78,7 +112,15 @@ const CotacaoDetalhesDesk = ({user}) => {
 
   const handleOpenModal = () => setViewsModalOpen(true);
   const handleCloseModal = () => setViewsModalOpen(false);
+ // Função para abrir o modal
+ const handleOpen = () => {
+  setOpenModal(true);
+};
 
+// Função para fechar o modal
+const handleClose = () => {
+  setOpenModal(false);
+};
   const handleFecharCotacao = () => {
     if (window.confirm("Tem certeza que deseja fechar esta cotação?")) {
       update(ref(db, `cotacoes/${id}`), {
@@ -110,9 +152,9 @@ const CotacaoDetalhesDesk = ({user}) => {
             </Grid>
             <Grid item xs>
               <Typography variant="h5" gutterBottom>{cotacao.company.nome}</Typography>
-              <Typography variant="body2" color="textSecondary">
-                Estado: <strong>{cotacao.status}</strong>
-              </Typography>
+              <Typography variant="body2" sx={{  marginTop: 2 }}>
+              Estado: <strong>{cotacao.status === 'open' ? 'Aberto' : cotacao.status}</strong>
+            </Typography>
               <Box mt={1}>
                 <Grid container spacing={2}>
                 <Typography
@@ -126,9 +168,6 @@ const CotacaoDetalhesDesk = ({user}) => {
               </Box>
               <Box mt={1}>
                 <Grid container spacing={2}>
-
-
-                    {/* Data Limite */}
                     <Grid item>
                       <Typography color="primary" style={{ verticalAlign: 'middle', marginRight: 4 }} >Publicado</Typography>
                       <Typography variant="body2" component="span">
@@ -139,8 +178,6 @@ const CotacaoDetalhesDesk = ({user}) => {
                         })}
                       </Typography>
                     </Grid>
-
-                    {/* Data de Criação */}
                     <Grid item>
                       <Typography color="red" style={{ verticalAlign: 'middle', marginRight: 4 }} >Limite</Typography>
                       <Typography variant="body2" component="span">
@@ -166,7 +203,6 @@ const CotacaoDetalhesDesk = ({user}) => {
             Partilhar
           </Button>
           {user.id === cotacao.company.id ? (
-  // Botões para o proprietário da cotação
   <>
     <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
       Ver Propostas
@@ -178,24 +214,42 @@ const CotacaoDetalhesDesk = ({user}) => {
     )}
   </>
 ) : (
-  // Botão para enviar proposta, disponível para outros usuários
-  <Button variant="contained" color="primary" onClick={handleEnviarProposta}>
-    Enviar Proposta
-  </Button>
+ <>
+ {hasProposal ? (
+      <Button
+      variant="contained"
+      color="error" 
+      onClick={handleOpen} 
+      >Ver Minha Proposta
+    </Button>
+    ) : (
+      <div>
+      {cotacao.status !== "Fechada" ? (
+        <Typography variant="body1" color="error">
+          A cotação está fechada. Não é possível enviar propostas.
+        </Typography>
+      ) : (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleEnviarProposta}
+          disabled={hasProposal || cotacao.status !== "Fechada"} // Desabilita o botão se a proposta já foi enviada ou cotação está fechada
+        >
+          Enviar Proposta
+        </Button>
+      )}
+    </div>
+    )}</>
 )}
-
-        </CardActions>
-      </Card>
-
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>Descrição</Typography>
-          <Typography dangerouslySetInnerHTML={{ __html: cotacao.description }} />
+</CardActions>
+</Card>
+  <Card sx={{ mb: 4 }}>
+    <CardContent>
+      <Typography variant="h6" gutterBottom>Descrição</Typography>
+        <Typography dangerouslySetInnerHTML={{ __html: cotacao.description }} />
         </CardContent>
       </Card>
-
       <Card>
-
       <Typography variant="h6" gutterBottom>Itens Solicitados</Typography>
           {cotacao.items && cotacao.items.length > 0 ? (
             <Grid container spacing={2}>
@@ -217,8 +271,8 @@ const CotacaoDetalhesDesk = ({user}) => {
       </Card>
 
 
-  {/* Modal */}
-  <Modal
+      {/* Modal */}
+      <Modal
         open={viewsModalOpen}
         onClose={handleCloseModal}
         aria-labelledby="modal-title"
@@ -261,6 +315,31 @@ const CotacaoDetalhesDesk = ({user}) => {
           </Box>
         </Box>
       </Modal>
+
+      {/* Modal com os detalhes da proposta */}
+      <Dialog open={openModal} onClose={handleClose}>
+        <DialogTitle>Detalhes da Proposta</DialogTitle>
+        <DialogContent>
+          {proposalDetails ? (
+            <div>
+            <Typography variant="h6">Proposta:</Typography>
+                <div 
+                  dangerouslySetInnerHTML={{ __html: proposalDetails.proposal }} 
+                />             
+                 <Typography variant="body1">Estado: {proposalDetails.status}</Typography>
+                 <Typography variant="body1">Nota: {proposalDetails?.nota || 'Ainda sem nota'}</Typography>
+                 {/* Outros detalhes da proposta aqui */}
+            </div>
+          ) : (
+            <Typography variant="body1">Carregando detalhes...</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            Fechar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </Box>
   );
