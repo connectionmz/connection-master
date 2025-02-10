@@ -50,7 +50,6 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
             } else {
                 setCotacoes([]);
             }
-            console.log(cotacoesData);
             setLoading(false);
         });
                

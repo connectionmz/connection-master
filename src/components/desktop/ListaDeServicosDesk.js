@@ -34,7 +34,6 @@ const ListaDeServicosDesk = ({ user }) => {
             (categoria) => categoria.name === categoriaId
           );
   
-          console.log(categoriaSelecionada)
           if (categoriaSelecionada) {
             setServicos(categoriaSelecionada);
           } else {

@@ -45,10 +45,11 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             if (cotacoesData) {
                 const cotacoesArray = Object.values(cotacoesData);
     
-                // Filtrar cotações onde a província do usuário está dentro da lista de províncias da cotação
-                const filteredCotacoes = cotacoesArray.filter((cotacao) => 
-                    Array.isArray(cotacao.provincia) && cotacao.provincia.includes(user.provincia)
-                );
+          // Filtrar cotações onde a província do usuário ou a província temporária estão dentro da lista de províncias da cotação
+                    const filteredCotacoes = cotacoesArray.filter((cotacao) => 
+                        Array.isArray(cotacao.provincia) && 
+                        (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia))
+                    );
     
                 // Ordenar por timestamp mais recente
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
