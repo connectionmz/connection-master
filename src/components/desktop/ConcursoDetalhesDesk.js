@@ -31,11 +31,12 @@ const ConcursoDetalhesDesk = ({ user }) => {
 
   const navigate = useNavigate();
 
+
   useEffect(() => {
     const concursoRef = ref(db, `concursos/${id}`);
     const viewsRef = ref(db, `concursos/${id}/views/${user.id}`);
 
-    // Increment view count if the user hasn't viewed the tender before
+    // Incrementar visualizações se o usuário ainda não viu o concurso
     onValue(viewsRef, (snapshot) => {
       if (!snapshot.exists()) {
         update(concursoRef, {
@@ -45,14 +46,14 @@ const ConcursoDetalhesDesk = ({ user }) => {
       }
     }, { onlyOnce: true });
 
-    // Fetch tender data
+    // Buscar dados do concurso
     onValue(concursoRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setConcurso(data);
         setLoading(false);
 
-        // Fetch proposals
+        // Buscar propostas
         if (data.proposals) {
           const propostasList = Object.keys(data.proposals).map((propostaId) => ({
             id: propostaId,
@@ -62,7 +63,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
           setHasProposal(propostasList.some((proposta) => proposta.userId === user.id));
         }
 
-        // Fetch companies that viewed the tender
+        // Buscar empresas que visualizaram o concurso
         if (data.views) {
           const empresasIds = Object.keys(data.views);
           const empresas = empresasIds.map((empresaId) => ({
@@ -131,9 +132,6 @@ const ConcursoDetalhesDesk = ({ user }) => {
             </Grid>
             <Grid item xs>
               <Typography variant="h5" gutterBottom>{concurso.company.nome}</Typography>
-              <Typography variant="body2" sx={{ marginTop: 2 }}>
-                Estado: <strong>{concurso.status === 'open' ? 'Aberto' : concurso.status}</strong>
-              </Typography>
               <Box mt={1}>
                 <Grid container spacing={2}>
                   <Typography
@@ -210,12 +208,16 @@ const ConcursoDetalhesDesk = ({ user }) => {
           )}
         </CardActions>
       </Card>
+
+      {/* Seção de Descrição do Concurso */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>Descrição</Typography>
           <Typography dangerouslySetInnerHTML={{ __html: concurso.objeto }} />
         </CardContent>
       </Card>
+
+      {/* Seção de Itens Solicitados */}
       <Card>
         <Typography variant="h6" gutterBottom>Itens Solicitados</Typography>
         {concurso.items && concurso.items.length > 0 ? (
@@ -236,68 +238,6 @@ const ConcursoDetalhesDesk = ({ user }) => {
           <Typography color="textSecondary">Nenhum item disponível.</Typography>
         )}
       </Card>
-
-      {/* Modal for Companies that Viewed the Tender */}
-      <Modal open={viewsModalOpen} onClose={handleCloseModal}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2,
-            width: '80%',
-            maxHeight: '80%',
-            overflowY: 'auto',
-          }}
-        >
-          <Typography id="modal-title" variant="h6" component="h2" gutterBottom>
-            Empresas que visualizaram
-          </Typography>
-          {empresasQueVisualizaram.length > 0 ? (
-            <Grid container spacing={2}>
-              {empresasQueVisualizaram.map((empresa) => (
-                <Grid item xs={12} sm={6} key={empresa.id}>
-                  <Box display="flex" alignItems="center" p={2} border={1} borderColor="divider" borderRadius={2}>
-                    <Avatar src={empresa.logoUrl || 'default-logo.png'} alt={empresa.nome} sx={{ mr: 2 }} />
-                    <Typography variant="body1">{empresa.nome || 'Empresa Desconhecida'}</Typography>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Typography color="textSecondary">Nenhuma empresa visualizou até o momento.</Typography>
-          )}
-          <Box mt={3} textAlign="right">
-            <Button variant="contained" onClick={handleCloseModal}>Fechar</Button>
-          </Box>
-        </Box>
-      </Modal>
-
-      {/* Dialog for Proposal Details */}
-      <Dialog open={openModal} onClose={handleClose}>
-        <DialogTitle>Detalhes da Proposta</DialogTitle>
-        <DialogContent>
-          {proposalDetails ? (
-            <div>
-              <Typography variant="h6">Proposta:</Typography>
-              <div dangerouslySetInnerHTML={{ __html: proposalDetails.proposal }} />
-              <Typography variant="body1">Estado: {proposalDetails.status}</Typography>
-              <Typography variant="body1">Nota: {proposalDetails?.nota || 'Ainda sem nota'}</Typography>
-            </div>
-          ) : (
-            <Typography variant="body1">Carregando detalhes...</Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

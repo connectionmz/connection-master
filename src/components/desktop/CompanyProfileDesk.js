@@ -437,7 +437,6 @@ const CompanyProfile = ({ user }) => {
                     <Tab label="Início" value="inicio" />
                     <Tab label="Sobre" value="sobre" />
                     <Tab label="Publicações" value="Publicados" />
-                    <Tab label="Cotações" value="liked" />
                     <Tab label="Repositorio" value="Repositorio" />
                     
                 </Tabs>

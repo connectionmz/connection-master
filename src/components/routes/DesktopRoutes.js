@@ -61,7 +61,7 @@ import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import AnalyticsDesk from '../desktop/AnalyticsDesk';
 import LandingPage from '../LandingPage';
 import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
-import ConcursoDetalhesDesk from '../desktop/CotacaoDetalhesDesk copy';
+import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
 
 
 const theme = createTheme({
@@ -134,7 +134,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/post/:postId" element={<PostDetailPageDesk user={user}/>} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
         <Route path="/profile" element={<ProfileDesk userI={user}/>} />
-        <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk />} />
+        <Route path="/servicos/:categoriaId/:name" element={<ListaDeServicosDesk />} />
         <Route path="/inbox" element={<InboxDesk user={user}/>} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
         <Route path="/sobre" element={<Sobre />} />

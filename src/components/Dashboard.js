@@ -12,7 +12,19 @@ import {
   ListItemText,
   Divider,
   CircularProgress,
+  ListItemIcon,
+  ListItem,
 } from "@mui/material";
+import {
+  LocalHospital, Business, AttachMoney, School, Receipt, Security, 
+  MedicalServices, Gavel,
+  BusinessCenterRounded,
+  NewReleases,
+  AppRegistration,
+  PeopleAltTwoTone,
+  FireExtinguisher,
+  Fireplace
+} from "@mui/icons-material";
 import MarqueeParceiros from "./MarqueeParceiros";
 import MarqueeAnuncios, { fetchAnuncios } from "./MarqueeAnuncios";
 import { get, limitToFirst, onValue, orderByKey, query, ref } from "firebase/database";
@@ -21,9 +33,22 @@ import { db } from "../fb";
 import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
 
-// Componente InfoBlock para exibir categorias e inquéritos
+
+const getCategoryIcon = (categoryName) => {
+  const icons = {
+    "Emergência": <Fireplace />,
+    "Registo": <AppRegistration />,
+    "Financiamentos PMEs": <BusinessCenterRounded />,
+    "Formações": <School />,
+    "Impostos e Licenças": <Receipt />,
+    "Segurança Social": <PeopleAltTwoTone />,
+    "Saúde Pública": <MedicalServices />,
+    "Entidades Reguladoras": <Gavel />,
+  };
+  return icons[categoryName] || <Business />; // Ícone padrão caso não esteja na lista
+};
+
 const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
-  
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
     <Typography variant="h6" sx={{ fontWeight: "bold" }}>
       {title}
@@ -35,22 +60,35 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
         </Typography>
       ) : (
         items.map((item) => (
-          <div key={item.id} style={{ marginBottom: '16px' }}>
-          <Link
-  to={`${linkBase}/${isCategory ? item.name : item.id}`}
-  style={{ textDecoration: "none", color: "blue", fontWeight: "bold" }}
->
-
-              <ListItemText primary={item.name || item.title} />
-            </Link>
-            {item.company && (
-              <div style={{ marginTop: '8px' }}>
-                <Typography variant="body2" color="textSecondary">
-                  {item.company.nome}
-                </Typography>
-              </div>
-            )}
-          </div>
+          <ListItem
+            key={item.id}
+            sx={{
+              marginBottom: "8px",
+              borderRadius: "8px",
+              transition: "all 0.3s ease-in-out",
+              "&:hover": { backgroundColor: "#f5f5f5" }, // Efeito hover no item inteiro
+            }}
+          >
+          <Box
+              component={Link} // Usa Box para permitir sx
+              to={`${linkBase}/${isCategory ? item.name : item.id}/${item.name}`}
+              sx={{
+                textDecoration: "none",
+                color: "black",
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                transition: "transform 0.3s ease, color 0.3s",
+                "&:hover": {
+                  color: "#1976d2",
+                  transform: "scale(1.1)",
+                },
+              }}
+            >
+              <ListItemIcon>{getCategoryIcon(item.name)}</ListItemIcon>
+              <ListItemText primary={item.name} sx={{ fontWeight: "bold" }} />
+            </Box>
+          </ListItem>
         ))
       )}
     </List>
@@ -58,7 +96,7 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
   </Paper>
 );
 
-// Hook personalizado para carregar dados do Firebase
+
 const useFirebaseData = (path, limit = 10) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +108,7 @@ const useFirebaseData = (path, limit = 10) => {
       dataRef,
       (snapshot) => {
         const rawData = snapshot.val();
+
         if (rawData) {
           const formattedData = Object.keys(rawData).map((key) => ({
             id: key,
@@ -99,13 +138,11 @@ const Dashboard = ({ user }) => {
   const [error, setError] = useState(null);
   const [campanhasAtivas, setCampanhasAtivas] = useState([]);
 
-  // Carregar categorias e inquéritos usando o hook personalizado
   const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
   const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
 
   
 
-  // Carregar anúncios
   useEffect(() => {
     const fetchCampanhasAtivas = async () => {
       try {

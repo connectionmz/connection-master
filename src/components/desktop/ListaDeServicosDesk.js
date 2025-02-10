@@ -15,7 +15,7 @@ import {
 import BackButton from '../BackButton';
 
 const ListaDeServicosDesk = () => {
-  const { categoriaId } = useParams();
+  const { categoriaId, name } = useParams();
   const [servicos, setServicos] = useState([]);
   const [companies, setCompanies] = useState([]);
   const navigate = useNavigate();
@@ -72,7 +72,7 @@ const ListaDeServicosDesk = () => {
             <BackButton sx={{ mb: 2 }} />
 
       <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 2 }}>
-        Empresas Relacionadas
+        {name}
       </Typography>
 
       {loading ? (

@@ -113,7 +113,15 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
         const now = new Date();
         switch (activeTab) {
             case 'recentes':
-                return cotacoes.filter((cotacao) => new Date(cotacao.timestamp).toDateString() === now.toDateString());
+                return cotacoes.filter((cotacao) => {
+                    const hoje = new Date();
+                    hoje.setHours(0, 0, 0, 0); // Remove a parte das horas para comparar só a data
+                    const prazo = new Date(cotacao.prazo);
+                    prazo.setHours(0, 0, 0, 0);
+                  
+                    return prazo >= hoje && cotacao.status !== 'Fechada';
+                  });
+                  
             case 'expiradas':
                 return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.prazo));
             case 'fechada':
