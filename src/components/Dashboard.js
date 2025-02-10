@@ -36,7 +36,7 @@ import StorieListDesk from "./desktop/StorieListDesk";
 
 const getCategoryIcon = (categoryName) => {
   const icons = {
-    "Emergência": <Fireplace />,
+    "Emergência": <MedicalServices />,
     "Registo": <AppRegistration />,
     "Financiamentos PMEs": <BusinessCenterRounded />,
     "Formações": <School />,
@@ -71,7 +71,7 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
           >
           <Box
               component={Link} // Usa Box para permitir sx
-              to={`${linkBase}/${isCategory ? item.name : item.id}/${item.name}`}
+              to={`${linkBase}/${isCategory ? item.name : item.id}`}
               sx={{
                 textDecoration: "none",
                 color: "black",
@@ -164,6 +164,7 @@ const Dashboard = ({ user }) => {
             });
     
             setCampanhasAtivas(campanhasArray);
+            console.log(campanhasArray)
             console.log(campanhasAtivas.length)
           }
         });
@@ -178,6 +179,8 @@ const Dashboard = ({ user }) => {
       try {
         const data = await fetchAnuncios();
         setAnuncios(data);
+        console.log(data)
+
       } catch (error) {
         setError("Erro ao carregar os anúncios");
         console.error("Erro ao carregar os anúncios:", error);

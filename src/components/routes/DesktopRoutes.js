@@ -111,6 +111,8 @@ const DesktopRoutes = ({ user }) => {
     <div
     style={{
       minHeight: '100vh',
+      backgroundColor:"#F1F1F1"
+
     }}
   >
     <ThemeProvider theme={theme}>
@@ -134,7 +136,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/post/:postId" element={<PostDetailPageDesk user={user}/>} />
         <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
         <Route path="/profile" element={<ProfileDesk userI={user}/>} />
-        <Route path="/servicos/:categoriaId/:name" element={<ListaDeServicosDesk />} />
+        <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk user={user}/>} />
         <Route path="/inbox" element={<InboxDesk user={user}/>} />
         <Route path="/search" element={<ConnectionsSearchDesk />} />
         <Route path="/sobre" element={<Sobre />} />

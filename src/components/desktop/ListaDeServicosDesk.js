@@ -9,31 +9,47 @@ import {
   Typography,
   Avatar,
   CircularProgress,
-  Button,
   Box,
 } from '@mui/material';
 import BackButton from '../BackButton';
 
-const ListaDeServicosDesk = () => {
-  const { categoriaId, name } = useParams();
-  const [servicos, setServicos] = useState([]);
+const ListaDeServicosDesk = ({ user }) => {
+  const { categoriaId } = useParams();
+  const [servicos, setServicos] = useState({});
   const [companies, setCompanies] = useState([]);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const servicosRef = ref(db, `servicosExternos/${categoriaId}`);
-    const unsubscribe = onValue(servicosRef, (snapshot) => {
-      const data = snapshot.val();
-      console.log(data)
-      if (data) {
-        setServicos(data);
-      } else {
-        setServicos([]);
+   
+
+    const servicosRef = ref(db, `categoriasExternas`);
+    const unsubscribe = onValue(
+      servicosRef,
+      (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const categoriaSelecionada = Object.values(data).find(
+            (categoria) => categoria.name === categoriaId
+          );
+  
+          console.log(categoriaSelecionada)
+          if (categoriaSelecionada) {
+            setServicos(categoriaSelecionada);
+          } else {
+            setServicos({});
+          }
+        } else {
+          setServicos({});
+        }
+        setLoading(false);
+      },
+      (error) => {
+        setError('Erro ao carregar categorias.');
+        console.error('Erro ao carregar categorias:', error);
       }
-      setLoading(false)
-    });
+    );
 
     const fetchCompanies = async () => {
       try {
@@ -44,35 +60,53 @@ const ListaDeServicosDesk = () => {
           const companyList = Object.keys(data)
             .map((key) => ({
               id: key,
-              ...data[key],
+              nome: data[key].nome,
+              logoUrl: data[key].logoUrl,
+              sector: data[key].sector,
             }))
-            .filter((company) => company.categoriaExterna === categoriaId); 
+            .filter(
+              (company) =>
+                data[company.id].categoriaExterna === categoriaId &&
+                data[company.id].provincia === user.provincia
+            );
           setCompanies(companyList);
         } else {
           setCompanies([]);
         }
       } catch (error) {
+        setError('Erro ao buscar empresas.');
         console.error('Erro ao buscar empresas:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false)
     };
 
     fetchCompanies();
 
     return () => unsubscribe();
-  }, [categoriaId]);
+  }, [categoriaId, user.provincia]);
 
   const handleCompanyClick = (companyId) => {
-    navigate(`/vperfil/${companyId}`);
+    navigate(`/perfil/${companyId}`);
   };
+
+  // Acessar a categoria específica com base no categoriaId
+  const categoriaSelecionada = servicos[categoriaId] || {};
+
+
+
 
   return (
     <Box width='100%' minHeight="100vh">
-      <br/>
-            <BackButton sx={{ mb: 2 }} />
+      <br />
+      <BackButton sx={{ mb: 2 }} />
 
+      {/* Exibir o nome e as notas da categoria selecionada */}
       <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 2 }}>
-        {name}
+        {servicos.name}
+      </Typography>
+      <Typography variant="body1" sx={{ marginBottom: 2, whiteSpace: 'pre-line' }}>
+        {servicos.notes}
       </Typography>
 
       {loading ? (
@@ -123,7 +157,6 @@ const ListaDeServicosDesk = () => {
           Nenhuma empresa encontrada para esta categoria.
         </Typography>
       )}
-    
     </Box>
   );
 };
