@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import BackButton from '../BackButton';
 
 const PortalDesk = ({user}) => {
   const [activeTab, setActiveTab] = useState('publish');
@@ -180,6 +181,8 @@ const PortalDesk = ({user}) => {
 
   return (
     <Box className="container mx-auto p-6">
+                  <BackButton sx={{ mb: 2 }} />
+
       <Typography variant="h4" gutterBottom>
         Setor Público - Anúncios
       </Typography>

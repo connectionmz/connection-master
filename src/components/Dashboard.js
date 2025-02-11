@@ -142,7 +142,6 @@ const Dashboard = ({ user }) => {
   const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
 
   
-
   useEffect(() => {
     const fetchCampanhasAtivas = async () => {
       try {
@@ -157,15 +156,20 @@ const Dashboard = ({ user }) => {
     
               Object.keys(campanhasInternas).forEach((subKey) => {
                 const campanha = campanhasInternas[subKey];
-                if (campanha.component === "home") {
+    
+                // Verifica se a campanha pertence ao componente "home" e se a província coincide
+                if (
+                  campanha.component === "home" &&
+                  (user.provinciaTemp || user.provincia) === campanha.company?.provincia
+                ) {
                   campanhasArray.push({ id: subKey, ...campanha });
                 }
               });
             });
     
             setCampanhasAtivas(campanhasArray);
-            console.log(campanhasArray)
-            console.log(campanhasAtivas.length)
+            console.log(campanhasArray); // Campanhas filtradas
+            console.log(campanhasAtivas.length); // Número total de campanhas ativas
           }
         });
       } catch (error) {
@@ -173,7 +177,6 @@ const Dashboard = ({ user }) => {
         setError("Erro ao carregar campanhas");
       }
     };
-    
 
     const loadAnuncios = async () => {
       try {

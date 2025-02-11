@@ -84,7 +84,10 @@ const DestacarModule = ({ user }) => {
       company: {
         id: user.id,
         nome: user.nome,
-        logo: user.logoUrl
+        logo: user.logoUrl,
+        provincia:user.provincia,
+        sector:user.sector,
+        distrito:user.distrito
       },
       component: selectedOption,
       preco: prices[selectedOption],

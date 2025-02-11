@@ -62,6 +62,7 @@ import AnalyticsDesk from '../desktop/AnalyticsDesk';
 import LandingPage from '../LandingPage';
 import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
 import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
+import ContactForm from '../desktop/Mailer';
 
 
 const theme = createTheme({
@@ -184,6 +185,8 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/sendmail" element={<SendMail user={user}/>} />
         <Route path="/destacar" element={<DestacarModule user={user}/>} />
         <Route path="/analises" element={<AnalyticsDesk />} />  
+        <Route path="/email" element={<ContactForm />} />  
+        
        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
