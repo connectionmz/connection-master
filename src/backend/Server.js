@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
         user: 'mohammadvicentesaide@gmail.com',  // Pegando o email do arquivo .env
-        pass: '65011980' // Pegando a senha do arquivo .env
+        pass: 'sdcddbdsbmszbvah' // Pegando a senha do arquivo .env
     }
 });
 

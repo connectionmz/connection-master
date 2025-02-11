@@ -1,21 +1,20 @@
 import axios from 'axios';
 
-const SendEmail = () => {
-
-  const sendEmail = async () => {
-    const emailData = {
-      to: 'msaide@connectionmozambique.com',
-      subject: 'Assunto do E-mail',
-      message: 'Corpo do e-mail', // Altere para "message"
-    };
-
-    try {
-      const response = await axios.post('http://localhost:5000/send-email', emailData); // Certifique-se de usar a porta 3001
-      console.log(response)
-    } catch (error) {
-      console.error('Erro:', error);
-    }
+const sendEmail = async (to, subject, text) => {
+  const emailData = {
+    to,
+    subject,
+    text, // Corpo do e-mail
   };
+
+  try {
+    const response = await axios.post('http://localhost:5000/send-email', emailData);
+    console.log('E-mail enviado com sucesso:', response.data);
+    return true; // Retorna true se o e-mail for enviado com sucesso
+  } catch (error) {
+    console.error('Erro ao enviar o e-mail:', error);
+    return false; // Retorna false em caso de erro
+  }
 };
 
-export default SendEmail;
+export default sendEmail;

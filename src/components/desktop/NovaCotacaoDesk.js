@@ -18,6 +18,7 @@ import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUti
 import BackButton from '../BackButton';
 import sendMessage from '../sms/sendMessage';
 import { FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
+import sendEmail from '../sms/SendMail';
 
 const NovaCotacao = ({ user }) => {
   const [title, setTitle] = useState('');
@@ -64,101 +65,119 @@ const NovaCotacao = ({ user }) => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setSnackbarMessage('');
-
-  if (!user) {
-    setSnackbarMessage('Por favor, recarregue a página e tente novamente.');
-    setSnackbarSeverity('error');
-    setOpenSnackbar(true);
-    setLoading(false);
-    return;
-  }
-
-  try {
-    const cotacoesRef = ref(db, 'cotacoes');
- 
-
-    // Referência ao banco de dados
-    const newCotacaoRef = push(cotacoesRef);
-    const cotacaoId = newCotacaoRef.key;
-
-    const linkDoPedido = `http://app.connectionmozambique.com/cotacao/${cotacaoId}`;
-
-    // Publicar a cotação no banco de dados
-    await set(ref(db, `cotacoes/${cotacaoId}`), {
-      title: title.trim(),
-      description: description.trim(),
-      id: cotacaoId,
-      items,
-      company: user,
-      sector: sector.trim(),
-      provincia: provincia,
-      timestamp: new Date().toISOString(),
-      datalimite: new Date(deadline).toISOString(),
-      status: 'open',
-      link: linkDoPedido,
-    });
-
-    // Exibir mensagem de sucesso
-    setSnackbarMessage('Cotação publicada com sucesso!');
-    setSnackbarSeverity('success');
-    setOpenSnackbar(true);
-
-    // Buscar empresas do setor
-    const empresasRef = ref(db, 'company');
-    const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector.trim()));
-    const empresasSnapshot = await get(setorQuery);
-
-    if (empresasSnapshot.exists()) {
-      const empresas = empresasSnapshot.val();
-
-      for (const key in empresas) {
-        const empresa = empresas[key];
-
-        if (!empresa.contacto) {
-          console.warn(`Empresa ${key} não possui contato. Ignorando...`);
-          continue;
-        }
-
-        const message = `
-          Título: ${title}
-          Descrição: ${description}
-          Data Limite: ${deadline}
-          Setor de Atividade: ${sector}
-          Acesse: ${linkDoPedido}
-        `.trim();
-
-        const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
-        const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
-
-        const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-
-        await sendMessage(contatos, finalMessage);
-
-        setTitle('')
-        setDescription('')
-        setDeadline('')
-        setItems([])
-        setMaxProposals()
-
-        window.location.reload()
-
-      }
-    } else {
-      console.log('Nenhuma empresa encontrada para este setor.');
+    e.preventDefault();
+    setLoading(true);
+    setSnackbarMessage('');
+  
+    if (!user) {
+      setSnackbarMessage('Por favor, recarregue a página e tente novamente.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+      setLoading(false);
+      return;
     }
-  } catch (error) {
-    // Tratamento de erros
-    console.error('Erro ao publicar a cotação:', error.message);
-    setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
-    setSnackbarSeverity('error');
-    setOpenSnackbar(true);
-  } finally {
-    setLoading(false);
-  }
-};
+  
+    try {
+      const cotacoesRef = ref(db, 'cotacoes');
+      const newCotacaoRef = push(cotacoesRef);
+      const cotacaoId = newCotacaoRef.key;
+      const linkDoPedido = `http://app.connectionmozambique.com/cotacao/${cotacaoId}`;
+  
+      // Publicar a cotação no banco de dados
+      await set(ref(db, `cotacoes/${cotacaoId}`), {
+        title: title.trim(),
+        description: description.trim(),
+        id: cotacaoId,
+        items,
+        company: user,
+        sector: sector.trim(),
+        provincia: provincia,
+        timestamp: new Date().toISOString(),
+        datalimite: new Date(deadline).toISOString(),
+        status: 'open',
+        link: linkDoPedido,
+      });
+  
+      // Exibir mensagem de sucesso
+      setSnackbarMessage('Cotação publicada com sucesso!');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+  
+      // Buscar empresas do setor
+      const empresasRef = ref(db, 'company');
+      const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector.trim()));
+      const empresasSnapshot = await get(setorQuery);
+  
+      if (empresasSnapshot.exists()) {
+        const empresas = empresasSnapshot.val();
+  
+        for (const key in empresas) {
+          const empresa = empresas[key];
+  
+          // Verificar se a empresa possui contato ou e-mail
+          if (!empresa.contacto && !empresa.email) {
+            console.warn(`Empresa ${key} não possui contato nem e-mail. Ignorando...`);
+            continue;
+          }
+  
+          // Mensagem para SMS e e-mail
+          const message = `
+            Título: ${title}
+            Descrição: ${description}
+            Data Limite: ${deadline}
+            Setor de Atividade: ${sector}
+            Acesse: ${linkDoPedido}
+          `.trim();
+  
+          const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
+          const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
+  
+          // Enviar SMS (se houver contato)
+          if (empresa.contacto) {
+            const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+            await sendMessage(contatos, finalMessage).catch((error) => {
+              console.error(`Erro ao enviar SMS para ${contatos}:`, error);
+            });
+          }
+  
+          // Enviar e-mail (se houver e-mail)
+          if (empresa.email) {
+            const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
+            const emailPromises = emails.map((email) =>
+              sendEmail(email, `Nova Cotação - ${title}`, finalMessage)
+            );
+  
+            // Aguardar o envio de todos os e-mails
+            const results = await Promise.all(emailPromises);
+            const allEmailsSent = results.every((success) => success);
+  
+            if (allEmailsSent) {
+              console.log(`Todos os e-mails enviados com sucesso para a empresa ${key}.`);
+            } else {
+              console.error(`Alguns e-mails falharam para a empresa ${key}.`);
+            }
+          }
+        }
+  
+        // Limpar os estados após o processamento completo
+        setTitle('');
+        setDescription('');
+        setDeadline('');
+        setItems([]);
+        setMaxProposals('');
+      } else {
+        console.log('Nenhuma empresa encontrada para este setor.');
+      }
+    } catch (error) {
+      // Tratamento de erros
+      console.error('Erro ao publicar a cotação:', error.message);
+      setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const handleSnackbarClose = () => {
