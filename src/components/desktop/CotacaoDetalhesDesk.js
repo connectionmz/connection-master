@@ -18,7 +18,7 @@ import {
 import BackButton from '../BackButton';
 
 const CotacaoDetalhesDesk = ({user}) => {
-  const { id, companyId } = useParams();
+  const { id } = useParams();
   const [cotacao, setCotacao] = useState(null);
   const [isCompanyOwner, setIsCompanyOwner] = useState(false);
   const [propostas, setPropostas] = useState([]);
@@ -29,71 +29,85 @@ const CotacaoDetalhesDesk = ({user}) => {
   const [proposalDetails, setProposalDetails] = useState(null); // Detalhes da proposta
 
   const navigate = useNavigate();
-
   useEffect(() => {
     const cotacaoRef = ref(db, `cotacoes/${id}`);
-
     const viewsRef = ref(db, `cotacoes/${id}/views/${user.id}`);
-
-    onValue(viewsRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        // Adiciona o usuário à lista de visualizações e incrementa o contador
-        update(cotacaoRef, {
-          [`views/${user.id}`]: true, // Marca que o usuário visualizou
-          viewCount: increment(1), // Incrementa o contador
-        });
-      }
-    }, { onlyOnce: true });
-
-    onValue(cotacaoRef, (snapshot) => {
-      const data = snapshot.val();
-      setCotacao(data);
-
-      if (data?.proposals) {
-        const propostasIds = Object.keys(data.views);
-        const prop = propostasIds.map((propostaId) => ({
-          id: propostaId,
-          ...data.proposals[propostaId], 
-        }));
-        setPropostas(prop)
-      }
-
-      if (data?.views) {
-        const empresasIds = Object.keys(data.views);
-        const empresas = empresasIds.map((empresaId) => ({
-          id: empresaId,
-          ...data.views[empresaId], 
-        }));
-        setEmpresasQueVisualizaram(empresas);
-      }
-    });
-
-    const checkProposal = async () => {
-      const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
+    const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
   
-      try {
-        onValue(proposalsRef, (snapshot) => {
-          const proposals = snapshot.val();
-          
-          // Verifica se existe alguma proposta do usuário
-          const userProposal = Object.values(proposals || {}); 
-          setProposalDetails(proposals)     
-          console.log(proposals)
-          if (userProposal.length > 0) {
-            setHasProposal(true);  // Se houver propostas, atualiza o estado
-          } else {
-            setHasProposal(false);  // Caso contrário, garante que o estado seja false
+    const fetchCotacao = () => {
+      // Verifica se o usuário já visualizou
+      onValue(viewsRef, async (snapshot) => {
+        if (!snapshot.exists()) {
+          try {
+            await update(cotacaoRef, {
+              [`views/${user.id}`]: true,
+              viewCount: increment(1),
+            });
+          } catch (error) {
+            console.error("Erro ao atualizar visualizações:", error);
           }
-        });
-      } catch (error) {
-        console.error("Erro ao verificar proposta:", error);
-        // Você pode adicionar uma lógica de fallback caso haja erro
-      }
+        }
+      }, { onlyOnce: true });
+  
+      // Obtém os dados da cotação
+      const unsubscribeCotacao = onValue(cotacaoRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+  
+        setCotacao(data);
+        console.log(data); // Depuração correta
+  
+        if (data?.proposals) {
+          const propostasIds = Object.keys(data.proposals);
+          const prop = propostasIds.map((propostaId) => ({
+            id: propostaId,
+            ...data.proposals[propostaId], 
+          }));
+          setPropostas(prop);
+        }
+  
+        if (data?.views) {
+          const empresasIds = Object.keys(data.views);
+          const empresas = empresasIds.map((empresaId) => ({
+            id: empresaId,
+            ...data.views[empresaId], 
+          }));
+          setEmpresasQueVisualizaram(empresas);
+        }
+      });
+  
+      return unsubscribeCotacao;
     };
-    checkProposal()
-  }, [id]);
+  
+    const checkProposal = () => {
+      const unsubscribeProposal = onValue(proposalsRef, (snapshot) => {
+        const proposals = snapshot.val();
+        console.log(proposals); // Depuração correta
+        
+        if (proposals) {
+          setProposalDetails(proposals);
+          setHasProposal(true);
+        } else {
+          setHasProposal(false);
+        }
+      });
+  
+      return unsubscribeProposal;
+    };
+  
+    // Executa as funções
+    const unsubscribeCotacao = fetchCotacao();
+    const unsubscribeProposal = checkProposal();
+  
+    // Cleanup para remover listeners quando o componente desmontar
+    return () => {
+      unsubscribeCotacao();
+      unsubscribeProposal();
+    };
+  }, [id, user.id, db]);
+  
 
-  const handleEnviarProposta = () => navigate(`/enviar-proposta/${id}/${companyId}`);
+  const handleEnviarProposta = () => navigate(`/enviar-proposta/${id}/${user.id}`);
   const handleBaixarPedido = () => navigate(`/cotacaoPDF/${id}`);
   const handlePartilhar = () => {
     const url = window.location.href;

@@ -81,7 +81,7 @@ const NovaCotacao = ({ user }) => {
       const cotacoesRef = ref(db, 'cotacoes');
       const newCotacaoRef = push(cotacoesRef);
       const cotacaoId = newCotacaoRef.key;
-      const linkDoPedido = `http://app.connectionmozambique.com/cotacao/${cotacaoId}`;
+      const linkDoPedido = `https://app.connectionmozambique.com/cotacao/${cotacaoId}`;
   
       // Publicar a cotação no banco de dados
       await set(ref(db, `cotacoes/${cotacaoId}`), {

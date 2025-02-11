@@ -137,8 +137,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
           }
     };
 
-    const handleCotacaoClick = (id, companyId) => {
-        navigate(`/cotacao/${id}/${companyId}`);
+    const handleCotacaoClick = (id) => {
+        navigate(`/cotacao/${id}`);
     };
 
     return (
@@ -217,8 +217,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         <Card
                             key={cotacao.id}
                             sx={{ mb: 2, backgroundColor: 'white', cursor: 'pointer', boxShadow: 2 }}
-                            onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
-                        >
+                            onClick={() => handleCotacaoClick(cotacao.id)}>
                             <CardContent>
                                 <Box display="flex" alignItems="center" mb={2}>
                                     <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
