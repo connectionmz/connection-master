@@ -140,14 +140,12 @@ const NovaCotacao = ({ user }) => {
             });
           }
   
-          // Enviar e-mail (se houver e-mail)
           if (empresa.email) {
             const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
             const emailPromises = emails.map((email) =>
               sendEmail(email, `Nova Cotação - ${title}`, finalMessage)
             );
   
-            // Aguardar o envio de todos os e-mails
             const results = await Promise.all(emailPromises);
             const allEmailsSent = results.every((success) => success);
   

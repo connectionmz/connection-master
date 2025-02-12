@@ -30,11 +30,17 @@ const HeaderDesk = ({ user }) => {
   const location = useLocation();
   const publicPanel = user?.publicPainel;
   const isMobile = useMediaQuery("(max-width:600px)");
+  const [pendingQuotes, setPendingQuotes] = useState(0);
+  const [pendingContests, setPendingContests] = useState(0);
+
 
   useEffect(() => {
     if (user?.id) {
       const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
-      const unsubscribe = onValue(targetUserConnectionRef, (snapshot) => {
+      const targetUserQuotesRef = ref(db, `cotacoes/`);
+      const targetUserContestsRef = ref(db, `contests/${user.id}/`);
+  
+      const unsubscribeConnections = onValue(targetUserConnectionRef, (snapshot) => {
         if (snapshot.exists()) {
           const pendingCount = Object.values(snapshot.val()).filter(
             (connection) => connection.status === "pending"
@@ -44,16 +50,67 @@ const HeaderDesk = ({ user }) => {
           setPendingConnections(0);
         }
       });
-
-      return () => unsubscribe(); 
+  
+      const unsubscribeQuotes = onValue(targetUserQuotesRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const quotes = Object.values(snapshot.val());
+      
+          // Filtra as cotações:
+          // 1. Onde o sector da cotação corresponde ao sector do usuário.
+          // 2. Onde o usuário NÃO abriu a cotação (ou seja, o ID do usuário NÃO está em `views`).
+          const pendingCount = quotes.filter((quote) => {
+            return (
+              quote.sector === user.sector && // Verifica se o setor da cotação corresponde ao setor do usuário
+              !(quote.views && quote.views[user.id]) // Verifica se o ID do usuário NÃO está no objeto `views`
+            );
+          }).length;
+      
+          setPendingQuotes(pendingCount); // Atualiza o estado com o número de cotações pendentes
+        } else {
+          setPendingQuotes(0); // Se não houver cotações, define o contador como 0
+        }
+      });
+  
+      const unsubscribeContests = onValue(targetUserContestsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const pendingCount = Object.values(snapshot.val()).filter(
+            (contest) => contest.status === "pending"
+          ).length;
+          setPendingContests(pendingCount);
+        } else {
+          setPendingContests(0);
+        }
+      });
+  
+      return () => {
+        unsubscribeConnections();
+        unsubscribeQuotes();
+        unsubscribeContests();
+      };
     }
-  }, [user?.id]);
+  }, [user?.id, user?.sector]); // Adicione `user.sector` como dependência
 
   const navItems = [
     { to: "/explore", icon: <DomainIcon fontSize="large" />, label: "Empresas" },
     { to: "/stores", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
-    { to: "/concursos", icon: <GavelIcon fontSize="large" />, label: "Concursos" },
-    { to: "/cotacoes", icon: <DescriptionIcon fontSize="large" />, label: "Cotações" },
+    { 
+      to: "/concursos", 
+      icon: (
+        <Badge badgeContent={pendingContests || 0} color="error" overlap="circular">
+          <GavelIcon fontSize="large" />
+        </Badge>
+      ), 
+      label: "Concursos" 
+    },
+    { 
+      to: "/cotacoes", 
+      icon: (
+        <Badge badgeContent={pendingQuotes || 0} color="error" overlap="circular">
+          <DescriptionIcon fontSize="large" />
+        </Badge>
+      ), 
+      label: "Cotações" 
+    },
     { to: "/feed", icon: <FeedIcon fontSize="large" />, label: "Feed" },
     { to: "/inbox", icon: <ChatIcon fontSize="large" />, label: "Notificações" },
     {
@@ -78,7 +135,7 @@ const HeaderDesk = ({ user }) => {
       ),
       label: "Perfil"
     }
-      ];
+  ];
 
   return (
     <AppBar position="sticky" sx={{ backgroundColor: "#fff", boxShadow: 3 }}>

@@ -168,8 +168,7 @@ const Dashboard = ({ user }) => {
             });
     
             setCampanhasAtivas(campanhasArray);
-            console.log(campanhasArray); // Campanhas filtradas
-            console.log(campanhasAtivas.length); // Número total de campanhas ativas
+
           }
         });
       } catch (error) {
@@ -182,7 +181,6 @@ const Dashboard = ({ user }) => {
       try {
         const data = await fetchAnuncios();
         setAnuncios(data);
-        console.log(data)
 
       } catch (error) {
         setError("Erro ao carregar os anúncios");

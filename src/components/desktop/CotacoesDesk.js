@@ -55,7 +55,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
                 setCotacoes(sortedCotacoes);
-                console.log(sortedCotacoes);
             } else {
                 setCotacoes([]);
             }
