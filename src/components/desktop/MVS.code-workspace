@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "../../../../../connections-admin"
+		},
+		{
+			"path": "C:/Users/Connection/mohvi-bulk-sms"
+		},
+		{
+			"path": "C:/Users/Connection/mohvi-sendmail"
 		}
 	],
 	"settings": {}
