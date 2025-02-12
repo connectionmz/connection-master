@@ -61,7 +61,9 @@ const HeaderDesk = ({ user }) => {
           const pendingCount = quotes.filter((quote) => {
             return (
               quote.sector === user.sector && // Verifica se o setor da cotação corresponde ao setor do usuário
-              !(quote.views && quote.views[user.id]) // Verifica se o ID do usuário NÃO está no objeto `views`
+              !(quote.views && quote.views[user.id]) 
+              && quote.company.id!=user.id
+              // Verifica se o ID do usuário NÃO está no objeto `views`
             );
           }).length;
       

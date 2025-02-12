@@ -48,6 +48,7 @@ const CotacaoDetalhesDesk = ({user}) => {
           }
         }
       }, { onlyOnce: true });
+      
   
       // Obtém os dados da cotação
       const unsubscribeCotacao = onValue(cotacaoRef, (snapshot) => {
@@ -238,7 +239,7 @@ const handleClose = () => {
     </Button>
     ) : (
       <div>
-      {cotacao.status !== "Fechada" ? (
+      {cotacao.status === "Fechada" ? (
         <Typography variant="body1" color="error">
           A cotação está fechada. Não é possível enviar propostas.
         </Typography>
@@ -247,7 +248,7 @@ const handleClose = () => {
           variant="contained"
           color="primary"
           onClick={handleEnviarProposta}
-          disabled={hasProposal || cotacao.status !== "Fechada"} // Desabilita o botão se a proposta já foi enviada ou cotação está fechada
+          disabled={hasProposal || cotacao.status === "Fechada"} // Desabilita o botão se a proposta já foi enviada ou cotação está fechada
         >
           Enviar Proposta
         </Button>
