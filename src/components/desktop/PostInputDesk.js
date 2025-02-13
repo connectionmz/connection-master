@@ -58,7 +58,8 @@ const PostInputDesk = ({ user }) => {
                     id: user.id,
                     name: user.nome,
                     logo: user.logoUrl,
-                    sector: user.sector
+                    sector: user.sector,
+                    provincia:user.provincia
                   },
                   description,
                   url,

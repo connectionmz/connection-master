@@ -47,6 +47,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                 const cotacoesArray = Object.values(cotacoesData);
               
                 setCotacoes(cotacoesArray);
+
             } else {
                 setCotacoes([]);
             }

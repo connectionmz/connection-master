@@ -4,9 +4,8 @@ import { ref, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom'; 
 import { Avatar, Box, Button, Typography } from '@mui/material';
 import '../styles/main.css';
-import Marquee from 'react-fast-marquee'; // Biblioteca para o efeito de marquee
+import Marquee from 'react-fast-marquee'; 
 
-// Função para buscar anúncios do Firebase
 export const fetchAnuncios = async () => {
   try {
     const snapshot = await get(ref(db, 'publicAnnouncements'));
@@ -21,23 +20,29 @@ export const fetchAnuncios = async () => {
   }
 };
 
-const MarqueeAnuncios = () => {
+const MarqueeAnuncios = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
   const navigate = useNavigate();
 
-  // Carregar os anúncios ao montar o componente
+
   useEffect(() => {
     const loadAnuncios = async () => {
       try {
         const data = await fetchAnuncios();
-        setAnuncios(data);
+        
+        const anunciosFiltrados = data.filter(anuncio => 
+          anuncio.company?.provincia === user?.provinciaTemp || 
+          anuncio.company?.provincia === user.provincia
+        );
+        
+        setAnuncios(anunciosFiltrados);
       } catch (error) {
         console.error('Erro ao carregar os anúncios:', error);
       }
     };
 
     loadAnuncios();
-  }, []);
+  }, [user]);
 
   const handleVerMais = () => {
     navigate('/noticiados');

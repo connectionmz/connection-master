@@ -16,6 +16,7 @@ const FeedDesk = ({ user }) => {
       let allPosts = [];
 
       if (data) {
+        console.log(data)
         Object.entries(data).forEach(([postId, post]) => {
           allPosts.push({
             id: postId,

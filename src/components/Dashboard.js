@@ -26,7 +26,7 @@ import {
   Fireplace
 } from "@mui/icons-material";
 import MarqueeParceiros from "./MarqueeParceiros";
-import MarqueeAnuncios, { fetchAnuncios } from "./MarqueeAnuncios";
+import MarqueeAnuncios from "./MarqueeAnuncios";
 import { get, limitToFirst, onValue, orderByKey, query, ref } from "firebase/database";
 import { Link } from "react-router-dom";
 import { db } from "../fb";
@@ -134,7 +134,6 @@ const useFirebaseData = (path, limit = 10) => {
 const Dashboard = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [campanhasAtivas, setCampanhasAtivas] = useState([]);
 
@@ -177,20 +176,7 @@ const Dashboard = ({ user }) => {
       }
     };
 
-    const loadAnuncios = async () => {
-      try {
-        const data = await fetchAnuncios();
-        setAnuncios(data);
-
-      } catch (error) {
-        setError("Erro ao carregar os anúncios");
-        console.error("Erro ao carregar os anúncios:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-
+    
     const fetchRespondedInqueritos = async () => {
       try {
         const responsesRef = ref(db, "survey_responses/");
@@ -206,7 +192,6 @@ const Dashboard = ({ user }) => {
 
     fetchCampanhasAtivas();
     fetchRespondedInqueritos();
-    loadAnuncios();
   }, []);
 
 
@@ -215,7 +200,7 @@ const Dashboard = ({ user }) => {
     return inqueritos.filter((inquerito) => !hasRespondedIds.has(inquerito.id));
   }, [inqueritos, hasRespondedIds]);
 
-  if (loading || categoriasLoading || inqueritosLoading) {
+  if (categoriasLoading || inqueritosLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />
@@ -280,7 +265,7 @@ const Dashboard = ({ user }) => {
           </Grid>
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
-            <MarqueeAnuncios />
+            <MarqueeAnuncios user={user}/>
             <Box sx={{ padding: 2 }}>
               <BannerDesk />
             </Box>
