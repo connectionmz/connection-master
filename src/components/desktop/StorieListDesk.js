@@ -56,7 +56,7 @@ const StorieListDesk = ({ user }) => {
   };
 
   const handleExploreClick = () => {
-    navigate("/explore");
+    navigate("/empresas");
   };
 
   if (loading) {
@@ -141,45 +141,57 @@ const StorieListDesk = ({ user }) => {
      </Card>
      
       ))}
-      <Card
-        sx={{
-          width: 160,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          borderRadius: 2,
-          boxShadow: 1,
-          p: 2,
-          textAlign: "center"}}
-        onClick={handleExploreClick}
-      >
-        <CardActionArea>
-          <Avatar
-            sx={{
-              width: 64,
-              height: 64,
-              bgcolor: "gray.200",
-              mb: 1,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Add sx={{ fontSize: 32, color: "text.secondary" }} />
-          </Avatar>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              textTransform: "uppercase",
-              fontWeight: 500,
-              fontSize: 14,
-            }}
-          >
-            Ver mais
-          </Typography>
-        </CardActionArea>
-      </Card>
+   <Card
+  sx={{
+    width: 160,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center", // Centraliza horizontalmente os elementos filhos
+    justifyContent: "center", // Centraliza verticalmente os elementos filhos
+    borderRadius: 2,
+    boxShadow: 1,
+    p: 2,
+    textAlign: "center",
+    cursor: "pointer", // Adiciona cursor de pointer para indicar interação
+  }}
+  onClick={handleExploreClick} // Mantém o clique no nível do Card
+>
+  <CardActionArea
+    sx={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center", // Centraliza horizontalmente o conteúdo
+      justifyContent: "center", // Centraliza verticalmente o conteúdo
+      width: "100%", // Garante que o CardActionArea ocupe todo o espaço do Card
+      height: "100%",
+    }}
+  >
+    <Avatar
+      sx={{
+        width: 64,
+        height: 64,
+        bgcolor: "gray.200",
+        mb: 1, // Margem inferior para espaçamento
+        display: "flex",
+        alignItems: "center", // Centraliza internamente o ícone
+        justifyContent: "center", // Centraliza internamente o ícone
+      }}
+    >
+      <Add sx={{ fontSize: 32, color: "text.secondary" }} />
+    </Avatar>
+    <Typography
+      variant="body2"
+      color="text.secondary"
+      sx={{
+        textTransform: "uppercase",
+        fontWeight: 500,
+        fontSize: 14,
+      }}
+    >
+      Ver mais
+    </Typography>
+  </CardActionArea>
+</Card>
     </Box>
   );
 };

@@ -47,7 +47,7 @@ const ApxDesk = ({ user }) => {
 
     try {
       const companyRef = ref(db, `company/${user.id}`);
-      await update(companyRef, { provincia: provinceTemp });
+      await update(companyRef, { provinciaTemp: provinceTemp });
       window.location='/';
     } catch (error) {
       console.error("Erro ao salvar província: ", error);

@@ -130,7 +130,7 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
         <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
-        <Route path="/explore" element={<ExploreDesk user={user} />} />
+        <Route path="/empresas" element={<ExploreDesk user={user} />} />
         <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
         <Route path="/app" element={<ApxDesk user={user} />} />
         <Route path="/feed" element={<FeedDesk user={user} />} />
@@ -167,8 +167,8 @@ const DesktopRoutes = ({ user }) => {
         {/* Mercado e Produtos */}
         <Route path="/market" element={<MarketDesk user={user} />} />
         <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
-        <Route path="/stores" element={<StoresDesk user={user}/>} />
-        <Route path="/stores/:storeId" element={<StoreDetailDesk />} />
+        <Route path="/lojas" element={<StoresDesk user={user}/>} />
+        <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
         <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
         <Route path="/checkout" element={<CreditCardCheckoutDesk user={user}/>} />
         {/* Campanha e Posts */}

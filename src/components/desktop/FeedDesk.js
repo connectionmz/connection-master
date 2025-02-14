@@ -17,10 +17,8 @@ const FeedDesk = ({ user }) => {
   
       if (data) {
         Object.entries(data).forEach(([postId, post]) => {
-          if (
-            post.company.provincia === user.provinciaTemp ||
-            post.company.provincia === user.provincia
-          ) {
+          const provinciaUsuario = user.provinciaTemp || user.provincia; // Usa provinciaTemp se existir, senão usa provincia
+          if (post.company.provincia === provinciaUsuario) {
             allPosts.push({
               id: postId,
               description: post.description || '',
@@ -28,11 +26,13 @@ const FeedDesk = ({ user }) => {
               companyName: post.company.name || 'Empresa Desconhecida',
               logoUrl: post.company.logo || 'https://via.placeholder.com/150',
               timestamp: post.timestamp || 0,
-              companyId: post.company.id || null, 
+              companyId: post.company.id || null,
             });
           }
         });
       }
+      
+      console.log(data)
   
       allPosts.sort((a, b) => b.timestamp - a.timestamp); 
       setPosts(allPosts);

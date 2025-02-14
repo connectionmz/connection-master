@@ -90,11 +90,11 @@ const HeaderDesk = ({ user }) => {
         unsubscribeContests();
       };
     }
-  }, [user?.id, user?.sector]); // Adicione `user.sector` como dependência
+  }, [user?.id, user?.sector]); 
 
   const navItems = [
-    { to: "/explore", icon: <DomainIcon fontSize="large" />, label: "Empresas" },
-    { to: "/stores", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
+    { to: "/empresas", icon: <DomainIcon fontSize="large" />, label: "Empresas" },
+    { to: "/lojas", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
     { 
       to: "/concursos", 
       icon: (
