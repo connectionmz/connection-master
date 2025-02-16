@@ -1,143 +1,91 @@
-import React from "react";
-import { Container, Box, Typography, Button, Grid, Card, CardContent } from "@mui/material";
+import React from 'react';
+import { useState } from "react";
+import { Menu, X } from "lucide-react"
 
 const LandingPage = () => {
+
+  const [isOpen, setIsOpen] = useState(false);
+  
   return (
-    <div>
-      {/* Hero Section */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #ff4081, #f50057)',
-          color: 'white',
-          padding: '80px 0',
-          textAlign: 'center',
-        }}
-      >
-        <Container maxWidth="lg">
-          <Typography variant="h2" gutterBottom>
-            Bem-vindo à plataforma Connections
-          </Typography>
-          <Typography variant="h6" paragraph>
-            Conecte sua empresa a novas oportunidades de negócios, cotações e muito mais!
-          </Typography>
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: '#f50057',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: '#c51162',
-              },
-            }}
-            size="large"
-          >
-            Comece Agora
-          </Button>
-        </Container>
-      </Box>
+    <div className="bg-gray-100 font-sans">
+    <nav className="bg-white shadow-md p-4 sticky top-0 z-50">
+      <div className="container mx-auto flex justify-between items-center">
+        <h1 className="text-xl font-bold">UIXSHUVO</h1>
+        
+        {/* Desktop Menu */}
+        <ul className="hidden md:flex space-x-6 text-gray-700">
+          <li className="font-semibold text-black px-4 py-2 rounded-lg bg-black text-white">Home</li>
+          <li className="hover:text-black transition">About</li>
+          <li className="hover:text-black transition">Service</li>
+          <li className="hover:text-black transition">Portfolio</li>
+          <li className="hover:text-black transition">Clients</li>
+        </ul>
+        
+        <button className="hidden md:block bg-yellow-400 px-4 py-2 rounded-lg font-semibold text-black hover:bg-yellow-500 transition">
+          We're Hiring
+        </button>
+        
+        {/* Mobile Menu Button */}
+        <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={28} /> : <Menu size={28} />}
+        </button>
+      </div>
+      
+      {/* Mobile Menu */}
+      {isOpen && (
+        <ul className="md:hidden flex flex-col items-center space-y-4 bg-white p-4 border-t shadow-md">
+          <li className="text-black font-semibold">Home</li>
+          <li className="hover:text-black transition">About</li>
+          <li className="hover:text-black transition">Service</li>
+          <li className="hover:text-black transition">Portfolio</li>
+          <li className="hover:text-black transition">Clients</li>
+          <button className="bg-yellow-400 px-4 py-2 rounded-lg font-semibold text-black hover:bg-yellow-500 transition">
+            We're Hiring
+          </button>
+        </ul>
+      )}
+    </nav>
 
-      {/* Funcionalidades Section */}
-      <Container maxWidth="lg" sx={{ py: 6 }}>
-        <Typography variant="h4" gutterBottom align="center">
-          Funcionalidades Principais
-        </Typography>
-        <Grid container spacing={4} justifyContent="center">
-          {/* Funcionalidade 1 */}
-          <Grid item xs={12} md={4}>
-            <Card
-              sx={{
-                boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-                textAlign: 'center',
-                borderRadius: 2,
-                padding: 3,
-              }}
-            >
-              <CardContent>
-                <Typography variant="h5" sx={{ fontWeight: 500 }}>
-                  Cadastro de Empresas
-                </Typography>
-                <Typography sx={{ color: 'gray' }} paragraph>
-                  Facilite a inscrição da sua empresa e aumente a visibilidade no mercado.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+      <div className="bg-gray-50 py-16 px-6 md:px-12 lg:px-24 flex flex-col lg:flex-row items-center">
+      {/* Esquerda */}
+      <div className="lg:w-1/2 text-center lg:text-left">
+        <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          Unlocking the Power of Your Brand.
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Where Vision Meets Identity. Empowering Brands for a Bold Tomorrow.
+        </p>
+        <button className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-3 px-6 rounded-lg">
+          Get Connected
+        </button>
+      </div>
 
-          {/* Funcionalidade 2 */}
-          <Grid item xs={12} md={4}>
-            <Card
-              sx={{
-                boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-                textAlign: 'center',
-                borderRadius: 2,
-                padding: 3,
-              }}
-            >
-              <CardContent>
-                <Typography variant="h5" sx={{ fontWeight: 500 }}>
-                  Pedidos de Cotação
-                </Typography>
-                <Typography sx={{ color: 'gray' }} paragraph>
-                  Solicite cotações de forma rápida e simples diretamente de várias empresas.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+      {/* Direita */}
+      <div className="lg:w-1/2 flex flex-col gap-6 mt-10 lg:mt-0">
+        <div className="relative">
+          <img
+            src="/mnt/data/3c94e798889da3d04ba97d828014b784.jpg"
+            alt="Working"
+            className="rounded-lg shadow-lg w-full h-auto object-cover"
+          />
+        </div>
 
-          {/* Funcionalidade 3 */}
-          <Grid item xs={12} md={4}>
-            <Card
-              sx={{
-                boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-                textAlign: 'center',
-                borderRadius: 2,
-                padding: 3,
-              }}
-            >
-              <CardContent>
-                <Typography variant="h5" sx={{ fontWeight: 500 }}>
-                  Concursos Públicos
-                </Typography>
-                <Typography sx={{ color: 'gray' }} paragraph>
-                  Participe de concursos públicos e encontre novas oportunidades de negócios.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Container>
-
-      {/* Chamada à Ação */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #ff4081, #f50057)',
-          color: 'white',
-          padding: '80px 0',
-          textAlign: 'center',
-        }}
-      >
-        <Container maxWidth="lg">
-          <Typography variant="h4" gutterBottom>
-            Está pronto para começar?
-          </Typography>
-          <Typography variant="h6" paragraph>
-            Conecte-se a empresas e comece a obter cotações agora mesmo.
-          </Typography>
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: '#f50057',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: '#c51162',
-              },
-            }}
-            size="large"
-          >
-            Comece Agora
-          </Button>
-        </Container>
-      </Box>
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="bg-white shadow-md p-4 rounded-lg">
+            <h3 className="text-2xl font-bold text-gray-900">10+</h3>
+            <p className="text-gray-600">Years Experience</p>
+          </div>
+          <div className="bg-white shadow-md p-4 rounded-lg">
+            <h3 className="text-2xl font-bold text-gray-900">600+</h3>
+            <p className="text-gray-600">Projects Done</p>
+          </div>
+          <div className="bg-white shadow-md p-4 rounded-lg">
+            <h3 className="text-2xl font-bold text-gray-900">800+</h3>
+            <p className="text-gray-600">Happy Clients</p>
+          </div>
+        </div>
+      </div>
+    </div>
     </div>
   );
 };

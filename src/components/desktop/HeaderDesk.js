@@ -20,26 +20,29 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import ChatIcon from "@mui/icons-material/Chat";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import FeedIcon from "@mui/icons-material/Feed";
-import { People } from "@mui/icons-material";
+import PeopleIcon from "@mui/icons-material/People";
+import NotificationsIcon from "@mui/icons-material/Notifications"; // Novo ícone para notificações
 import { logo } from "../../utils/utils";
 import { db } from "../../fb";
 
 const HeaderDesk = ({ user }) => {
   const [pendingConnections, setPendingConnections] = useState(0);
+  const [pendingQuotes, setPendingQuotes] = useState(0);
+  const [pendingContests, setPendingContests] = useState(0);
+  const [pendingNotifications, setPendingNotifications] = useState(0); // Estado para notificações
+
   const navigate = useNavigate();
   const location = useLocation();
   const publicPanel = user?.publicPainel;
   const isMobile = useMediaQuery("(max-width:600px)");
-  const [pendingQuotes, setPendingQuotes] = useState(0);
-  const [pendingContests, setPendingContests] = useState(0);
-
 
   useEffect(() => {
     if (user?.id) {
       const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
       const targetUserQuotesRef = ref(db, `cotacoes/`);
       const targetUserContestsRef = ref(db, `contests/${user.id}/`);
-  
+      const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`); // Referência para notificações
+
       const unsubscribeConnections = onValue(targetUserConnectionRef, (snapshot) => {
         if (snapshot.exists()) {
           const pendingCount = Object.values(snapshot.val()).filter(
@@ -50,29 +53,23 @@ const HeaderDesk = ({ user }) => {
           setPendingConnections(0);
         }
       });
-  
+
       const unsubscribeQuotes = onValue(targetUserQuotesRef, (snapshot) => {
         if (snapshot.exists()) {
           const quotes = Object.values(snapshot.val());
-      
-          // Filtra as cotações:
-          // 1. Onde o sector da cotação corresponde ao sector do usuário.
-          // 2. Onde o usuário NÃO abriu a cotação (ou seja, o ID do usuário NÃO está em `views`).
           const pendingCount = quotes.filter((quote) => {
             return (
-              quote.sector === user.sector && // Verifica se o setor da cotação corresponde ao setor do usuário
-              !(quote.views && quote.views[user.id]) 
-              && quote.company.id!=user.id
-              // Verifica se o ID do usuário NÃO está no objeto `views`
+              quote.sector === user.sector &&
+              !(quote.views && quote.views[user.id]) &&
+              quote.company.id !== user.id
             );
           }).length;
-      
-          setPendingQuotes(pendingCount); // Atualiza o estado com o número de cotações pendentes
+          setPendingQuotes(pendingCount);
         } else {
-          setPendingQuotes(0); // Se não houver cotações, define o contador como 0
+          setPendingQuotes(0);
         }
       });
-  
+
       const unsubscribeContests = onValue(targetUserContestsRef, (snapshot) => {
         if (snapshot.exists()) {
           const pendingCount = Object.values(snapshot.val()).filter(
@@ -83,47 +80,64 @@ const HeaderDesk = ({ user }) => {
           setPendingContests(0);
         }
       });
-  
+
+      const unsubscribeNotifications = onValue(targetUserNotificationsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const notifications = Object.values(snapshot.val());
+          const pendingCount = notifications.filter(
+            (notification) => notification.status === "unread"
+          ).length;
+          setPendingNotifications(pendingCount);
+        } else {
+          setPendingNotifications(0);
+        }
+      });
+
       return () => {
         unsubscribeConnections();
         unsubscribeQuotes();
         unsubscribeContests();
+        unsubscribeNotifications(); // Limpar o listener de notificações
       };
     }
-  }, [user?.id, user?.sector]); 
+  }, [user?.id, user?.sector]);
 
   const navItems = [
     { to: "/empresas", icon: <DomainIcon fontSize="large" />, label: "Empresas" },
     { to: "/lojas", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
-    { 
-      to: "/concursos", 
+    {
+      to: "/concursos",
       icon: (
         <Badge badgeContent={pendingContests || 0} color="error" overlap="circular">
           <GavelIcon fontSize="large" />
         </Badge>
-      ), 
-      label: "Concursos" 
+      ),
+      label: "Concursos",
     },
-    { 
-      to: "/cotacoes", 
+    {
+      to: "/cotacoes",
       icon: (
         <Badge badgeContent={pendingQuotes || 0} color="error" overlap="circular">
           <DescriptionIcon fontSize="large" />
         </Badge>
-      ), 
-      label: "Cotações" 
+      ),
+      label: "Cotações",
     },
     { to: "/feed", icon: <FeedIcon fontSize="large" />, label: "Feed" },
-    { to: "/inbox", icon: <ChatIcon fontSize="large" />, label: "Notificações" },
+    {
+      to: "/inbox",
+      icon: (
+        <Badge badgeContent={pendingNotifications || 0} color="error" overlap="circular">
+          <NotificationsIcon fontSize="large" /> {/* Ícone de notificações */}
+        </Badge>
+      ),
+      label: "Notificações",
+    },
     {
       to: "/conexoes",
       icon: (
-        <Badge
-          badgeContent={pendingConnections || 0}
-          color="error"
-          overlap="circular"
-        >
-          <People fontSize="large" />
+        <Badge badgeContent={pendingConnections || 0} color="error" overlap="circular">
+          <PeopleIcon fontSize="large" />
         </Badge>
       ),
       label: "Conexões",
@@ -135,12 +149,12 @@ const HeaderDesk = ({ user }) => {
           {!user.logoUrl && <AccountCircleIcon fontSize="large" />}
         </Avatar>
       ),
-      label: "Perfil"
-    }
+      label: "Perfil",
+    },
   ];
 
   return (
-    <AppBar position="sticky" sx={{ backgroundColor: "#fff", boxShadow: 3 }}>
+    <AppBar position="sticky" sx={{ backgroundColor: "#f1f1f1", boxShadow: 3 }}>
       <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
         <Box display="flex" alignItems="center" gap={2}>
           <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
@@ -153,7 +167,7 @@ const HeaderDesk = ({ user }) => {
           {navItems.map((item, index) => {
             const isActive = location.pathname === item.to;
             return (
-              <Link to={item.to} key={index} title={item.label} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Link to={item.to} key={index} title={item.label} style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <IconButton
                   sx={{
                     color: isActive ? "#1976d2" : "#444",

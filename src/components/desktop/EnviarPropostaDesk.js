@@ -7,6 +7,8 @@ import { db } from '../../fb';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CircularProgress, TextField, Autocomplete, Button, Box, Typography } from '@mui/material';
 import BackButton from '../BackButton';
+import sendEmail from '../sms/SendMail';
+import { saveContentToInbox } from '../SaveToInbox';
 
 const EnviarPropostaDesk = ({ user }) => {
   const { id, companyId } = useParams();
@@ -58,8 +60,6 @@ const EnviarPropostaDesk = ({ user }) => {
           
           // Verifica se existe alguma proposta do usuário
           const userProposal = Object.values(proposals || {});
-
-          console.log(userProposal)
           
           if (userProposal.length > 0) {
             setHasProposal(true);  // Se houver propostas, atualiza o estado
@@ -138,7 +138,9 @@ const EnviarPropostaDesk = ({ user }) => {
         nome:user.nome,
         logo:user.logoUrl,
         provincia:user.provincia,
-        distrito:user.distrito
+        distrito:user.distrito,
+        id:user.id,
+        email:user.email
       },
       proposal: description,
       fileUrl,
@@ -153,8 +155,20 @@ const EnviarPropostaDesk = ({ user }) => {
       url: `/cotacao/${id}/${companyId}`,
     };
   
+
+    const notification = {
+      type: "cotation_reply",
+      message: `${user.nome} enviou uma proposta para voce`,
+      fromUserId: user.id,
+      fromUserName: user.nome,
+      timestamp: new Date().toISOString(),
+      status: "unread",
+      url: `/cotacao/${id}/${companyId}`,
+    };
+      saveContentToInbox(companyId,notification)
+
     try {
-      setUploading(true); // Definindo estado de carregamento
+      setUploading(true); 
       await set(proposalsRef, newProposal);
       alert('Proposta enviada com sucesso!');
       setDescription('');
@@ -165,7 +179,7 @@ const EnviarPropostaDesk = ({ user }) => {
       console.error('Erro ao submeter a proposta:', error);
       alert(error?.message || 'Erro ao submeter a proposta. Por favor, tente novamente.');
     } finally {
-      setUploading(false); // Resetando estado de carregamento
+      setUploading(false); 
     }
   };
   

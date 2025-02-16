@@ -28,6 +28,7 @@
     "jsbarcode": "^3.11.6",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
+    "lucide-react": "^0.475.0",
     "mailgun-js": "^0.22.0",
     "mailgun.js": "^10.2.4",
     "nodemailer": "^6.9.16",

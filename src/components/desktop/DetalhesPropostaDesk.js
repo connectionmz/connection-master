@@ -23,8 +23,9 @@ import {
   Box
 } from '@mui/material';
 import BackButton from '../BackButton';
+import { saveContentToInbox } from '../SaveToInbox';
 
-const DetalhesPropostaDesk = () => {
+const DetalhesPropostaDesk = ({user}) => {
   const { id, propostaId } = useParams();
   const [proposta, setProposta] = useState(null);
   const [nota, setNota] = useState('');
@@ -50,6 +51,18 @@ const DetalhesPropostaDesk = () => {
     update(propostaRef, { status })
       .then(() => {
         setMessage({ open: true, text: `Proposta ${status} com sucesso!`, type: 'success' });
+        
+          const notification = {
+            type: "cotation_reply",
+            message: `${user.nome} Sua Proposta foi aceite`,
+            fromUserId: user.id,
+            fromUserName: user.nome,
+            timestamp: new Date().toISOString(),
+            status: "unread",
+            url: `/cotacao/${id}/proposta/${propostaId}`,
+          };
+            saveContentToInbox(proposta.from.id,notification)
+
       })
       .catch(() => {
         setMessage({ open: true, text: 'Erro ao atualizar status.', type: 'error' });

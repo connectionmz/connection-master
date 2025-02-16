@@ -108,7 +108,7 @@ const CotacaoDetalhesDesk = ({user}) => {
   }, [id, user.id, db]);
   
 
-  const handleEnviarProposta = () => navigate(`/enviar-proposta/${id}/${user.id}`);
+  const handleEnviarProposta = (companyId) => navigate(`/enviar-proposta/${id}/${companyId}`);
   const handleBaixarPedido = () => navigate(`/cotacaoPDF/${id}`);
   const handlePartilhar = () => {
     const url = window.location.href;
@@ -247,7 +247,7 @@ const handleClose = () => {
         <Button
           variant="contained"
           color="primary"
-          onClick={handleEnviarProposta}
+          onClick={handleEnviarProposta(cotacao.company.id)}
           disabled={hasProposal || cotacao.status === "Fechada"} // Desabilita o botão se a proposta já foi enviada ou cotação está fechada
         >
           Enviar Proposta

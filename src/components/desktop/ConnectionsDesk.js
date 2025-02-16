@@ -20,6 +20,7 @@ import { Person, Check, Close } from "@mui/icons-material";
 import { ref, onValue, update } from "firebase/database";
 import { db } from "../../fb";
 import { Link } from "react-router-dom"; 
+import { saveContentToInbox } from "../SaveToInbox";
 
 const ConnectionsDesk = ({ user }) => {
   const [connections, setConnections] = useState([]);
@@ -71,6 +72,15 @@ const ConnectionsDesk = ({ user }) => {
           ...prev,
           pendingRequests.find(req => req.id === requestId)
         ]);
+        const notification = {
+          type: "connection_request",
+          message: `${user.nome} aceitou seu pedido de conexao`,
+          fromUserId: user.id,
+          fromUserName: user.nome,
+          timestamp: new Date().toISOString(),
+          status: "unread",
+        };
+          saveContentToInbox(requestId,notification)
       })
       .catch((error) => console.error("Erro ao aceitar o pedido:", error));
   };
@@ -81,6 +91,16 @@ const ConnectionsDesk = ({ user }) => {
       .then(() => {
         // Atualiza o estado sem precisar de uma nova requisição ao Firebase
         setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+            
+      const notification = {
+        type: "connection_request",
+        message: `${user.nome} recusou seu pedido de conexao`,
+        fromUserId: user.id,
+        fromUserName: user.nome,
+        timestamp: new Date().toISOString(),
+        status: "unread",
+      };
+        saveContentToInbox(requestId,notification)
       })
       .catch((error) => console.error("Erro ao rejeitar o pedido:", error));
   };
