@@ -13,12 +13,11 @@ import {
     Box,
     CircularProgress,
 } from '@mui/material';
-import { Delete, AccessTime, CheckCircle, History } from '@mui/icons-material';
+import {  AccessTime, CheckCircle, History } from '@mui/icons-material';
 import { ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
-import AnunciarDesk from './AnunciarDesk';
 import AnunciosDesk from './AnunciosDesk';
 
 const ConcursoDesk = ({ user, onModuleActivation }) => {

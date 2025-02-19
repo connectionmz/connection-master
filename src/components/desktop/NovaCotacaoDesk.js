@@ -183,7 +183,7 @@ const NovaCotacao = ({ user }) => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, backgroundColor:'white' }}>
       <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom>
         Novo Pedido de Cotação

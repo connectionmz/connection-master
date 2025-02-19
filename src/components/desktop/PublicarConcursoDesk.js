@@ -18,6 +18,7 @@ import {
     Box,
     CircularProgress,
 } from '@mui/material';
+import BackButton from '../BackButton';
 
 const PublicarConcursoDesk = ({ user }) => {
     const [formData, setFormData] = useState({
@@ -216,7 +217,8 @@ const PublicarConcursoDesk = ({ user }) => {
 
     return (
         <Container>
-            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, backgroundColor:'#FFF', padding:'12px' }}>
+            <BackButton sx={{ mb: 2 }} />
                 <Typography variant="h4" gutterBottom>
                     Publicar Concurso
                 </Typography>

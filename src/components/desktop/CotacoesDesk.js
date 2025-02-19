@@ -12,6 +12,8 @@ import {
     Alert,
     Box,
     CircularProgress,
+    useMediaQuery,
+    Grid,
 } from '@mui/material';
 import { Delete, AccessTime, CheckCircle, History } from '@mui/icons-material';
 import { ref, onValue, update, remove } from 'firebase/database';
@@ -30,6 +32,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [campanhasAtivas, setCampanhasAtivas] = useState([]);
 
     const navigate = useNavigate();
+    const isMobile = useMediaQuery('(max-width:600px)');
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
 
@@ -45,13 +48,11 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             if (cotacoesData) {
                 const cotacoesArray = Object.values(cotacoesData);
     
-          // Filtrar cotações onde a província do usuário ou a província temporária estão dentro da lista de províncias da cotação
-                    const filteredCotacoes = cotacoesArray.filter((cotacao) => 
-                        Array.isArray(cotacao.provincia) && 
-                        (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia))
-                    );
+                const filteredCotacoes = cotacoesArray.filter((cotacao) => 
+                    Array.isArray(cotacao.provincia) && 
+                    (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia))
+                );
     
-                // Ordenar por timestamp mais recente
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
                 setCotacoes(sortedCotacoes);
@@ -184,7 +185,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     backgroundColor: 'white',
                     boxShadow: 1,
                 }}>
-                <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom >Pedidos de Cotações</Typography>
+                <Typography variant={isMobile ? "h5" : "h4"} component="h1" fontWeight="bold" gutterBottom >Pedidos de Cotações</Typography>
                 <Button
                     variant="contained"
                     color="primary"
@@ -201,68 +202,71 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 textColor="primary"
                 sx={{ backgroundColor: 'white', boxShadow: 1 }}
             >
-                <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
-                <Tab value="expiradas" label="Expiradas" icon={<History />} />
-                <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} />} />
+                <Tab value="recentes" label={isMobile ? <AccessTime /> : "Recentes"} icon={isMobile ? null : <AccessTime />} />
+                <Tab value="expiradas" label={isMobile ? <History /> : "Expiradas"} icon={isMobile ? null : <History />} />
+                <Tab value="fechada" label={isMobile ? <CheckCircle /> : "Fechada"} icon={isMobile ? null : <CheckCircle />} />
+                <Tab value="minhas" label={isMobile ? <Avatar src={user?.logoUrl} /> : "Minhas"} icon={isMobile ? null : <Avatar src={user?.logoUrl} />} />
             </Tabs>
-            <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
+            <Grid container spacing={2} sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
                 {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
                         <CircularProgress />
-                    </Box>
+                    </Grid>
                 ) : filteredCotacoes().length > 0 ? (
                     filteredCotacoes().map((cotacao) => (
-                        <Card
-                            key={cotacao.id}
-                            sx={{ mb: 2, backgroundColor: 'white', cursor: 'pointer', boxShadow: 2 }}
-                            onClick={() => handleCotacaoClick(cotacao.id)}>
-                            <CardContent>
-                                <Box display="flex" alignItems="center" mb={2}>
-                                    <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
-                                    <Typography variant="h6">{cotacao.company?.nome || 'Empresa'}</Typography>
-                                </Box>
-                                <Typography variant="subtitle1" sx={{ mb: 1 }}>{cotacao.title}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
-                                </Typography>
-                                <Typography variant="body2" color="error">
-                                    Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
-                                </Typography>
-                                <Typography variant="body2" >
-                                    Sector: {cotacao.sector}
-                                </Typography>
-                            </CardContent>
-                            <CardActions>
-                                {cotacao?.company?.id === user?.id && (
-                                    <>
-                                        <Button
-                                            color="error"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteCotacao(cotacao.id);
-                                            }}
-                                        >
-                                            Excluir
-                                        </Button>
-                                        <Button
-                                            color="primary"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigate(`/editar-cotacao/${cotacao.id}`);
-                                            }}
-                                        >
-                                            Editar
-                                        </Button>
-                                    </>
-                                )}
-                            </CardActions>
-                        </Card>
+                        <Grid item xs={12} sm={6} md={4} key={cotacao.id}>
+                            <Card
+                                sx={{ mb: 2, backgroundColor: 'white', cursor: 'pointer', boxShadow: 2 }}
+                                onClick={() => handleCotacaoClick(cotacao.id)}>
+                                <CardContent>
+                                    <Box display="flex" alignItems="center" mb={2}>
+                                        <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
+                                        <Typography variant="h6">{cotacao.company?.nome || 'Empresa'}</Typography>
+                                    </Box>
+                                    <Typography variant="subtitle1" sx={{ mb: 1 }}>{cotacao.title}</Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
+                                    </Typography>
+                                    <Typography variant="body2" color="error">
+                                        Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                    </Typography>
+                                    <Typography variant="body2" >
+                                        Sector: {cotacao.sector}
+                                    </Typography>
+                                </CardContent>
+                                <CardActions>
+                                    {cotacao?.company?.id === user?.id && (
+                                        <>
+                                            <Button
+                                                color="error"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteCotacao(cotacao.id);
+                                                }}
+                                            >
+                                                Excluir
+                                            </Button>
+                                            <Button
+                                                color="primary"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/editar-cotacao/${cotacao.id}`);
+                                                }}
+                                            >
+                                                Editar
+                                            </Button>
+                                        </>
+                                    )}
+                                </CardActions>
+                            </Card>
+                        </Grid>
                     ))
                 ) : (
-                    <Typography textAlign="center">Nenhum pedido de cotação disponível.</Typography>
+                    <Grid item xs={12}>
+                        <Typography textAlign="center">Nenhum pedido de cotação disponível.</Typography>
+                    </Grid>
                 )}
-            </Box>
+            </Grid>
         </>
     )}
 

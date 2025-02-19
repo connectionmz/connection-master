@@ -1,22 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { ref, onValue } from "firebase/database"; 
+import {
+  Box,
+  Tabs,
+  Tab,
+  Typography,
+  Link,
+  Card,
+  CardContent,
+  useMediaQuery,
+  Button,
+} from '@mui/material';
+import { ref, onValue } from 'firebase/database';
 import { db } from '../../fb';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 const ProposalDesk = () => {
   const { id, cotId } = useParams();
-  const [activeTab, setActiveTab] = useState('Aprovada'); 
+  const [activeTab, setActiveTab] = useState('Aprovada');
   const [cotacoes, setCotacoes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useMediaQuery('(max-width:600px)'); // Detecta dispositivos móveis
 
   useEffect(() => {
     const proposalRef = ref(db, `cotacoes/${cotId}`);
-    
+
     const unsubscribe = onValue(proposalRef, (snapshot) => {
       const propData = snapshot.val();
       if (propData && propData.proposals) {
-        setCotacoes(Object.values(propData.proposals)); 
-        console.log(propData);
+        setCotacoes(Object.values(propData.proposals));
       } else {
         setCotacoes([]);
       }
@@ -27,55 +38,98 @@ const ProposalDesk = () => {
   }, [cotId, id]);
 
   const renderProposals = (status) => {
-    const filteredProposals = cotacoes.filter(cotacao => cotacao.status === status);
+    const filteredProposals = cotacoes.filter((cotacao) => cotacao.status === status);
 
     if (filteredProposals.length === 0) {
-      return <p>Nenhuma proposta disponível para este status.</p>;
+      return (
+        <Typography variant="body1" color="textSecondary" align="center">
+          Nenhuma proposta disponível para este status.
+        </Typography>
+      );
     }
 
-    return filteredProposals.map(cotacao => (
-      <div key={cotacao.id} className="p-4 bg-white shadow rounded mb-4">
-        <h3 className="text-lg font-semibold">{cotacao.from.displayName}</h3>
-        <p className="text-gray-600 text-lg mb-6" dangerouslySetInnerHTML={{ __html: cotacao.proposal }}></p>
-        <Link to={cotacao.url}>Ver Cotacao</Link>
-
-      </div>
+    return filteredProposals.map((cotacao) => (
+      <Card
+        key={cotacao.id}
+        sx={{
+          mb: 2,
+          boxShadow: 3,
+          borderRadius: 2,
+          p: isMobile ? 2 : 4, // Ajusta padding para mobile
+        }}
+      >
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            {cotacao.from.displayName || 'Empresa Desconhecida'}
+          </Typography>
+          <Typography
+            variant="body1"
+            dangerouslySetInnerHTML={{ __html: cotacao.proposal || '<p>Sem descrição</p>' }}
+          />
+          <Link
+            to={cotacao.url || '#'}
+            underline="hover"
+            color="primary"
+            sx={{ display: 'block', mt: 2 }}
+          >
+            Ver Cotação
+          </Link>
+        </CardContent>
+      </Card>
     ));
   };
 
   if (loading) {
-    return <p>Carregando propostas...</p>;
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '50vh',
+        }}
+      >
+        <Typography variant="h6">Carregando propostas...</Typography>
+      </Box>
+    );
   }
 
   return (
-    <div className="p-4">
+    <Box
+      sx={{
+        width: '100%',
+        maxWidth: isMobile ? '100%' : '800px', // Ajusta largura máxima para mobile
+        margin: '0 auto',
+        p: isMobile ? 2 : 4, // Ajusta padding para mobile
+      }}
+    >
       {/* Tabs */}
-      <div className="flex space-x-4 border-b mb-4">
-        <button
-          className={`py-2 px-4 ${activeTab === 'Aprovada' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('Aprovada')}
-        >
-          Aprovada
-        </button>
-        <button
-          className={`py-2 px-4 ${activeTab === 'Recusada' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('Recusada')}
-        >
-          Recusada
-        </button>
-        <button
-          className={`py-2 px-4 ${activeTab === 'Em Espera' ? 'border-b-2 border-blue-500' : 'text-gray-500'}`}
-          onClick={() => setActiveTab('Em Espera')}
-        >
-          Em Espera
-        </button>
-      </div>
+      <Tabs
+        value={activeTab}
+        onChange={(e, newValue) => setActiveTab(newValue)}
+        centered
+        variant={isMobile ? 'scrollable' : 'standard'} // Scrollável em mobile
+        scrollButtons="auto"
+        sx={{
+          '& .MuiTabs-indicator': {
+            backgroundColor: 'primary.main',
+          },
+          '& .MuiTab-root': {
+            textTransform: 'capitalize',
+            fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
+          },
+        }}
+      >
+        <Tab label="Aprovada" value="Aprovada" />
+        <Tab label="Recusada" value="Recusada" />
+        <Tab label="Em Espera" value="Em Espera" />
+      </Tabs>
 
       {/* Lista de Propostas */}
-      <div>
+      <Box sx={{ mt: 4 }}>
         {renderProposals(activeTab)}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
 

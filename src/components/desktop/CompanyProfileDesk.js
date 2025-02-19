@@ -273,13 +273,13 @@ const CompanyProfile = ({ user }) => {
     };
 
     return (
-        <Box width='100%' minHeight="100vh">
+        <Box width='100%' minHeight="100vh" sx={{backgroundColor:'white'}}>
                 <BackButton sx={{ mb: 2 }} />
 
               <Box position="relative">
               <Box
                 height={{ xs: 150, sm: 400 }} // Altura ajustada para telas pequenas e maiores
-                sx={{ backgroundColor: 'grey.200', overflow: 'hidden' }}
+                sx={{  overflow: 'hidden' }}
               >
                 {userData?.coverPhotoURL && (
                   <img

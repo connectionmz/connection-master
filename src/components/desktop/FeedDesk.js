@@ -17,7 +17,7 @@ const FeedDesk = ({ user }) => {
   
       if (data) {
         Object.entries(data).forEach(([postId, post]) => {
-          const provinciaUsuario = user.provinciaTemp || user.provincia; // Usa provinciaTemp se existir, senão usa provincia
+          const provinciaUsuario = user.provinciaTemp || user.provincia; 
           if (post.company.provincia === provinciaUsuario) {
             allPosts.push({
               id: postId,
@@ -31,8 +31,6 @@ const FeedDesk = ({ user }) => {
           }
         });
       }
-      
-      console.log(data)
   
       allPosts.sort((a, b) => b.timestamp - a.timestamp); 
       setPosts(allPosts);

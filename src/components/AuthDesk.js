@@ -5,8 +5,8 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import logo from '../img/bg.png';
-import marketing from '../img/marketing.jpg'
-import { Snackbar, Alert, IconButton, TextField, Button, InputAdornment, Grid, Box } from '@mui/material';
+import marketing from '../img/marketing.jpg';
+import { Snackbar, Alert, IconButton, TextField, Button, InputAdornment, Grid, Box, useMediaQuery } from '@mui/material';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 
 const AuthDesk = ({ data }) => {
@@ -17,6 +17,7 @@ const AuthDesk = ({ data }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [showSnackbar, setShowSnackbar] = useState(false);
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   const saveUserData = async (user) => {
     const userRef = ref(db, 'users/' + user.uid);
@@ -82,14 +83,15 @@ const AuthDesk = ({ data }) => {
       setIsLoading(false);
     }
   };
+
   const togglePasswordVisibility = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
   };
 
   return (
     <Grid container sx={{ height: '100vh' }}>
-      <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <Box sx={{ maxWidth: 400, width: '100%' }}>
+      <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 2 : 0 }}>
+        <Box sx={{ maxWidth: 400, width: '100%', p: isMobile ? 2 : 0 }}>
           <div className="text-center mb-6">
             <img src={logo} alt="Logo" className="w-32 mx-auto mb-4" />
             <h2 className="text-2xl font-bold">Connections</h2>
@@ -162,7 +164,7 @@ const AuthDesk = ({ data }) => {
         backgroundImage: `url(${marketing})`, 
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        height: '100vh',
+        height: isMobile ? '50vh' : '100vh',
       }}></Grid>
 
       <Snackbar

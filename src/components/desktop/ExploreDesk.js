@@ -126,7 +126,7 @@ const Explore = ({ user }) => {
   }
 
   return (
-    <Box width="100%" minHeight="100vh" p={isMobile ? 2 : 4}>
+    <Box width="100%" minHeight="100vh" sx={{backgroundColor:'white'}} p={isMobile ? 2 : 4}>
       <br />
       <Typography variant="h4" gutterBottom textAlign="center" fontWeight="bold">
         Empresas

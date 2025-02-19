@@ -91,7 +91,7 @@ const StoresDesk = ({ user }) => {
   }, [searchQuery, storesList]);
 
   return (
-    <Box sx={{ p: isMobile ? 2 : 4, width: '100%' }}>
+    <Box sx={{ p: isMobile ? 2 : 4, width: '100%', backgroundColor:'#fff' }}>
       <Box
         sx={{
           display: "flex",

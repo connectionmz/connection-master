@@ -1,7 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ref, onValue, update } from 'firebase/database';
-import { db } from '../../fb';
 import {
   Button,
   Paper,
@@ -23,8 +20,11 @@ import {
   Box,
   useMediaQuery,
 } from '@mui/material';
+import { ref, onValue, update } from 'firebase/database';
+import { db } from '../../fb';
 import BackButton from '../BackButton';
 import { saveContentToInbox } from '../SaveToInbox';
+import { useParams } from 'react-router-dom';
 
 const DetalhesPropostaDesk = ({ user }) => {
   const { id, propostaId } = useParams();
@@ -33,9 +33,7 @@ const DetalhesPropostaDesk = ({ user }) => {
   const [confirmAccept, setConfirmAccept] = useState(false);
   const [message, setMessage] = useState({ open: false, text: '', type: 'success' });
   const [notaEnviada, setNotaEnviada] = useState(false);
-
-  // Verificar se é um dispositivo móvel
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const isMobile = useMediaQuery('(max-width:600px)'); // Detecta dispositivos móveis
 
   useEffect(() => {
     const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
@@ -45,7 +43,6 @@ const DetalhesPropostaDesk = ({ user }) => {
     });
   }, [id, propostaId]);
 
-  // Função para editar a nota
   const handleEditNota = () => {
     setNotaEnviada(false); // Permite editar a nota
   };
@@ -56,16 +53,18 @@ const DetalhesPropostaDesk = ({ user }) => {
       .then(() => {
         setMessage({ open: true, text: `Proposta ${status} com sucesso!`, type: 'success' });
 
-        const notification = {
-          type: 'cotation_reply',
-          message: `${user.nome} Sua Proposta foi aceite`,
-          fromUserId: user.id,
-          fromUserName: user.nome,
-          timestamp: new Date().toISOString(),
-          status: 'unread',
-          url: `/cotacao/${id}/proposta/${propostaId}`,
-        };
-        saveContentToInbox(proposta.from.id, notification);
+        if (status === 'Aceite') {
+          const notification = {
+            type: 'cotation_reply',
+            message: `${user.nome} Sua Proposta foi aceita`,
+            fromUserId: user.id,
+            fromUserName: user.nome,
+            timestamp: new Date().toISOString(),
+            status: 'unread',
+            url: `/cotacao/${id}/proposta/${propostaId}`,
+          };
+          saveContentToInbox(proposta.from.id, notification);
+        }
       })
       .catch(() => {
         setMessage({ open: true, text: 'Erro ao atualizar status.', type: 'error' });
@@ -113,73 +112,107 @@ const DetalhesPropostaDesk = ({ user }) => {
     <Paper
       sx={{
         width: '100%',
-        margin: 'auto',
+        maxWidth: isMobile ? '100%' : '800px', // Ajusta largura máxima para mobile
+        margin: '0 auto',
         padding: isMobile ? 2 : 3,
+        boxSizing: 'border-box',
       }}
     >
       <BackButton sx={{ mb: 2 }} />
-      <Typography variant="h5" sx={{ marginBottom: 2 }}>
+      <Typography
+        variant="h5"
+        align="center"
+        gutterBottom
+        sx={{
+          fontSize: isMobile ? '1.5rem' : '2rem', // Ajusta tamanho da fonte para mobile
+          fontWeight: 'bold',
+        }}
+      >
         Detalhes da Proposta
       </Typography>
 
-      <Typography variant="h6" sx={{ marginBottom: 1 }}>
-        Empresa: {proposta.from.nome}
-      </Typography>
-      <Typography variant="body1" sx={{ marginBottom: 2 }}>
-        Contacto: {proposta.from.contacto}
-      </Typography>
+      {/* Informações da Empresa */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Empresa: {proposta.from.nome}
+        </Typography>
+        <Typography variant="body1" sx={{ color: 'text.secondary', mb: 2 }}>
+          Contacto: {proposta.from.contacto}
+        </Typography>
 
-      <div
-        className="text-gray-600 mb-2"
-        dangerouslySetInnerHTML={{ __html: proposta.proposal }}
-      />
-      {proposta.fileUrl && (
-        <Button
-          href={proposta.fileUrl}
-          target="_blank"
+        {/* Conteúdo da Proposta */}
+        <div
+          dangerouslySetInnerHTML={{ __html: proposta.proposal }}
           sx={{
-            textDecoration: 'underline',
-            color: 'blue',
+            fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
             mb: 2,
-            display: 'block',
-          }}
-        >
-          Baixar Arquivo
-        </Button>
-      )}
-
-      <Typography
-        variant="body2"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          marginTop: 2,
-        }}
-      >
-        <Box
-          sx={{
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            backgroundColor:
-              proposta.status === 'Aceite'
-                ? 'green'
-                : proposta.status === 'Recusada'
-                ? 'red'
-                : 'gray',
-            marginRight: 1,
           }}
         />
-        <span>{proposta.status || 'Pendente'}</span>
-      </Typography>
+        {proposta.fileUrl && (
+          <Button
+            href={proposta.fileUrl}
+            target="_blank"
+            sx={{
+              textDecoration: 'underline',
+              color: 'primary.main',
+              display: 'block',
+              textAlign: 'center',
+              mb: 2,
+            }}
+          >
+            Baixar Arquivo
+          </Button>
+        )}
 
-      <Grid  spacing={3} sx={{ marginTop: 4 }}>
+        {/* Status da Proposta */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            mt: 2,
+            justifyContent: 'center',
+          }}
+        >
+          <Box
+            sx={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              backgroundColor:
+                proposta.status === 'Aceite'
+                  ? 'success.main'
+                  : proposta.status === 'Recusada'
+                  ? 'error.main'
+                  : 'gray',
+              mr: 1,
+            }}
+          />
+          <Typography variant="body2">
+            {proposta.status || 'Pendente'}
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Produtos/Serviços */}
+      <Grid container spacing={3} sx={{ mt: 4 }}>
         <Grid item xs={12}>
-          <Typography variant="h6">Produtos/Serviços:</Typography>
+          <Typography
+            variant="h6"
+            align="center"
+            sx={{
+              fontSize: isMobile ? '1rem' : '1.25rem', // Ajusta tamanho da fonte para mobile
+              mb: 2,
+            }}
+          >
+            Produtos/Serviços:
+          </Typography>
           {proposta.selectedProducts && proposta.selectedProducts.length > 0 ? (
             <TableContainer
               component={Paper}
-              sx={{ maxHeight: isMobile ? 300 : 400, overflowY: 'auto' }}
+              sx={{
+                maxHeight: isMobile ? 300 : 400, // Altura máxima da tabela para mobile
+                overflowY: 'auto',
+              }}
             >
               <Table stickyHeader>
                 <TableHead>
@@ -200,8 +233,8 @@ const DetalhesPropostaDesk = ({ user }) => {
                           target="_blank"
                           sx={{
                             textDecoration: 'underline',
-                            color: 'blue',
-                            display: 'block',
+                            color: 'primary.main',
+                            fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
                           }}
                         >
                           Ver Detalhes
@@ -213,46 +246,83 @@ const DetalhesPropostaDesk = ({ user }) => {
               </Table>
             </TableContainer>
           ) : (
-            <Typography variant="body2" sx={{ color: 'gray' }}>
+            <Typography variant="body2" align="center" sx={{ color: 'text.secondary', mt: 2 }}>
               Nenhum produto selecionado.
             </Typography>
           )}
         </Grid>
 
-        <Grid item xs={12} sm={6}>
-          <Button
-            onClick={handleAccept}
-            variant="contained"
-            color="success"
-            fullWidth
-            disabled={proposta.status === 'Aceite'}
-            sx={{ marginBottom: 2 }}
-          >
-            Aprovar
-          </Button>
+        {/* Botões de Ação */}
+        <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'center' }}>
+          {proposta.status === 'Aceite' ? (
+            <Button
+              onClick={handleCancelApproval}
+              variant="contained"
+              color="warning"
+              fullWidth={!isMobile} // Ocupa toda a largura em mobile
+              sx={{
+                px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
+                py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+                mb: 2,
+              }}
+            >
+              Cancelar Aprovação
+            </Button>
+          ) : (
+            <Button
+              onClick={handleAccept}
+              variant="contained"
+              color="success"
+              fullWidth={!isMobile} // Ocupa toda a largura em mobile
+              sx={{
+                px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
+                py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+                mb: 2,
+              }}
+            >
+              Aprovar
+            </Button>
+          )}
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'center' }}>
           <Button
             onClick={() => handleStatusUpdate('Recusada')}
             variant="contained"
             color="error"
-            fullWidth
-            sx={{ marginBottom: 2 }}
+            fullWidth={!isMobile} // Ocupa toda a largura em mobile
+            sx={{
+              px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
+              py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+              mb: 2,
+            }}
           >
             Recusar
           </Button>
         </Grid>
+
+        {/* Nota */}
         <Grid item xs={12}>
           {notaEnviada ? (
             <>
-              <Typography variant="body1" sx={{ marginBottom: 2 }}>
+              <Typography
+                variant="body1"
+                align="center"
+                sx={{
+                  fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
+                  mb: 2,
+                }}
+              >
                 Nota enviada: {nota}
               </Typography>
               <Button
                 onClick={handleEditNota}
                 variant="outlined"
                 color="primary"
-                fullWidth
+                fullWidth={!isMobile} // Ocupa toda a largura em mobile
+                sx={{
+                  px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
+                  py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+                }}
               >
                 Editar Nota
               </Button>
@@ -264,16 +334,20 @@ const DetalhesPropostaDesk = ({ user }) => {
                 onChange={handleNotaChange}
                 label="Adicionar uma nota"
                 multiline
-                rows={isMobile ? 3 : 4}
+                rows={isMobile ? 3 : 4} // Ajusta número de linhas para mobile
                 fullWidth
                 variant="outlined"
-                sx={{ marginBottom: 2 }}
+                sx={{ mb: 2 }}
               />
               <Button
                 onClick={handleNotaSubmit}
                 variant="contained"
                 color="primary"
-                fullWidth
+                fullWidth={!isMobile} // Ocupa toda a largura em mobile
+                sx={{
+                  px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
+                  py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+                }}
               >
                 Enviar Nota
               </Button>
@@ -282,7 +356,7 @@ const DetalhesPropostaDesk = ({ user }) => {
         </Grid>
       </Grid>
 
-      {/* Snackbar para exibir mensagens */}
+      {/* Snackbar para mensagens */}
       <Snackbar
         open={message.open}
         autoHideDuration={4000}
@@ -291,23 +365,45 @@ const DetalhesPropostaDesk = ({ user }) => {
         <Alert
           onClose={() => setMessage({ ...message, open: false })}
           severity={message.type}
+          sx={{
+            fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
+          }}
         >
           {message.text}
         </Alert>
       </Snackbar>
 
+      {/* Diálogo de Confirmação */}
       <Dialog open={confirmAccept} onClose={() => setConfirmAccept(false)}>
         <DialogTitle>Confirmação</DialogTitle>
         <DialogContent>
-          <Typography>
+          <Typography
+            sx={{
+              fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
+            }}
+          >
             Tem certeza que deseja aceitar esta proposta?
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleConfirmAccept} color="success">
+          <Button
+            onClick={handleConfirmAccept}
+            color="success"
+            sx={{
+              px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
+              py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+            }}
+          >
             Sim
           </Button>
-          <Button onClick={() => setConfirmAccept(false)} color="error">
+          <Button
+            onClick={() => setConfirmAccept(false)}
+            color="error"
+            sx={{
+              px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
+              py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+            }}
+          >
             Não
           </Button>
         </DialogActions>
