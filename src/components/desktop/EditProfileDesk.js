@@ -3,13 +3,13 @@ import { ref, update } from 'firebase/database';
 import { db } from '../../fb';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import { Tabs, Tab, Box, Button, IconButton, TextField, InputAdornment } from '@mui/material';
+import { Tabs, Tab, Box, Button, IconButton, TextField, InputAdornment, useMediaQuery } from '@mui/material';
 import { EditorText } from '../../utils/formUtils';
 import ChangePassword from '../password/ChangePassword';
 import DadosBancarios from '../DadosBancarios';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PostInputFileDesk from './PostInputFileDesk';
+import BackButton from '../BackButton';
 
 const InputField = ({ label, name, value, onChange, type = "text", disabled = false, endAdornment }) => (
   <div className="mb-4">
@@ -103,6 +103,7 @@ const EditProfileDesk = ({ user }) => {
   const [formData, setFormData] = useState(initialData);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [tabIndex, setTabIndex] = useState(0);
+  const isMobile = useMediaQuery('(max-width:600px)'); // Verifica se a tela é pequena
 
   const handleTabChange = (event, newValue) => setTabIndex(newValue);
 
@@ -150,8 +151,15 @@ const EditProfileDesk = ({ user }) => {
   const handleCloseSnackbar = () => setSnackbar((prev) => ({ ...prev, open: false }));
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-white shadow-md rounded">
-      <Tabs value={tabIndex} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+    <div className={`max-w-4xl mx-auto p-4 bg-white shadow-md rounded ${isMobile ? 'w-full' : ''}`}>
+            <BackButton sx={{ mb: 2 }} />
+
+      <Tabs
+        value={tabIndex}
+        onChange={handleTabChange}
+        variant={isMobile ? "scrollable" : "standard"}
+        scrollButtons="auto"
+      >
         <Tab label="Editar Perfil" />
         <Tab label="Mudar Senha" />
         <Tab label="Dados Bancários" />

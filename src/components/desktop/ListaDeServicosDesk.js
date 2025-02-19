@@ -10,6 +10,8 @@ import {
   Avatar,
   CircularProgress,
   Box,
+  Button,
+  useMediaQuery,
 } from '@mui/material';
 import BackButton from '../BackButton';
 
@@ -20,10 +22,10 @@ const ListaDeServicosDesk = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showFullDescription, setShowFullDescription] = useState(false); // Estado para controlar a descrição
+  const isMobile = useMediaQuery('(max-width:600px)'); // Verifica se a tela é pequena
 
   useEffect(() => {
-   
-
     const servicosRef = ref(db, `categoriasExternas`);
     const unsubscribe = onValue(
       servicosRef,
@@ -33,7 +35,7 @@ const ListaDeServicosDesk = ({ user }) => {
           const categoriaSelecionada = Object.values(data).find(
             (categoria) => categoria.name === categoriaId
           );
-  
+
           if (categoriaSelecionada) {
             setServicos(categoriaSelecionada);
           } else {
@@ -89,14 +91,20 @@ const ListaDeServicosDesk = ({ user }) => {
     navigate(`/perfil/${companyId}`);
   };
 
-  // Acessar a categoria específica com base no categoriaId
-  const categoriaSelecionada = servicos[categoriaId] || {};
+  // Função para alternar entre "ver mais" e "ver menos"
+  const toggleDescription = () => {
+    setShowFullDescription(!showFullDescription);
+  };
 
-
-
+  // Limita o número de caracteres da descrição
+  const maxDescriptionLength = 200;
+  const truncatedDescription =
+    servicos.notes && servicos.notes.length > maxDescriptionLength
+      ? servicos.notes.slice(0, maxDescriptionLength) + '...'
+      : servicos.notes;
 
   return (
-    <Box width='100%' minHeight="100vh">
+    <Box width="100%" minHeight="100vh" p={isMobile ? 2 : 4}>
       <br />
       <BackButton sx={{ mb: 2 }} />
 
@@ -105,7 +113,20 @@ const ListaDeServicosDesk = ({ user }) => {
         {servicos.name}
       </Typography>
       <Typography variant="body1" sx={{ marginBottom: 2, whiteSpace: 'pre-line' }}>
-        {servicos.notes}
+        {showFullDescription ? servicos.notes : truncatedDescription}
+        {servicos.notes && servicos.notes.length > maxDescriptionLength && (
+          <Button
+            onClick={toggleDescription}
+            sx={{
+              color: '#1976d2',
+              textTransform: 'none',
+              fontWeight: 'bold',
+              marginLeft: 1,
+            }}
+          >
+            {showFullDescription ? 'ver menos' : 'ver mais'}
+          </Button>
+        )}
       </Typography>
 
       {loading ? (
@@ -117,7 +138,7 @@ const ListaDeServicosDesk = ({ user }) => {
           {error}
         </Typography>
       ) : companies.length > 0 ? (
-        <Grid container spacing={4}>
+        <Grid container spacing={isMobile ? 2 : 4}>
           {companies.map((company) => (
             <Grid item xs={12} sm={6} md={4} key={company.id}>
               <Card

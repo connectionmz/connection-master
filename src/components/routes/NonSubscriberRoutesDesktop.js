@@ -62,7 +62,6 @@ const NonSubscriberRoutesDesktop  = ({ userDb }) => {
       <Route path="/stores/:storeId" element={<StoreDetails />} />
       <Route path="/forget-password" element={<ForgetPasswordDesk />} />
       <Route path="/change-password" element={<ChangePassword user={user} />} />
-      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 };

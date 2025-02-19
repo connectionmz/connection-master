@@ -16,10 +16,12 @@ import {
     CardContent,
     IconButton,
     Tooltip,
+    useMediaQuery,
 } from '@mui/material';
 import { saveContentToInbox } from '../SaveToInbox';
 import PostDetailPageDesk from './PostDetailPageDesk';
 import VetrineDesk from './VetrineDesk';
+import BackButton from '../BackButton';
 
 const CompanyProfile = ({ user }) => {
     const { id } = useParams(); 
@@ -36,7 +38,8 @@ const CompanyProfile = ({ user }) => {
     const [posts, setPosts] = useState([]);
     const [visits, setVisits] = useState([]);
     const [connectionStatus, setConnectionStatus] = useState(null); 
-
+    const isMobile = useMediaQuery('(max-width:600px)'); // Verifica se a tela é pequena
+    
     useEffect(() => {
       if (userId) {
           const fetchData = async () => {
@@ -271,31 +274,34 @@ const CompanyProfile = ({ user }) => {
 
     return (
         <Box width='100%' minHeight="100vh">
-            <Box position="relative">
-                <Box
-                    height={200}
-                    sx={{ backgroundColor: 'grey.200', overflow: 'hidden' }}
-                >
-                    {userData?.coverPhotoURL && (
-                        <img
-                            src={userData.coverPhotoURL}
-                            alt="Cover"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                    )}
-                </Box>
-                <Avatar
-                    src={userData?.photoURL}
-                    alt="Profile"
-                    sx={{
-                        width: 120,
-                        height: 120,
-                        position: 'absolute',
-                        top: 140,
-                        left: 24,
-                        border: '4px solid white',
-                    }}
-                />
+                <BackButton sx={{ mb: 2 }} />
+
+              <Box position="relative">
+              <Box
+                height={{ xs: 150, sm: 400 }} // Altura ajustada para telas pequenas e maiores
+                sx={{ backgroundColor: 'grey.200', overflow: 'hidden' }}
+              >
+                {userData?.coverPhotoURL && (
+                  <img
+                    src={userData.coverPhotoURL}
+                    alt="Cover"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                )}
+              </Box>
+              <Avatar
+                src={userData?.photoURL}
+                alt="Profile"
+                sx={{
+                  width: { xs: 80, sm: 120 }, // Tamanho ajustado para telas pequenas e maiores
+                  height: { xs: 80, sm: 120 }, // Tamanho ajustado para telas pequenas e maiores
+                  position: 'absolute',
+                  top: { xs: 100, sm: 140 }, // Posição ajustada para telas pequenas e maiores
+                  left: { xs: '50%', sm: 24 }, // Centralizado em telas pequenas, alinhado à esquerda em telas maiores
+                  transform: { xs: 'translateX(-50%)', sm: 'none' }, // Centralizado em telas pequenas
+                  border: '4px solid white',
+                }}
+              />
             </Box>
 
             <Box textAlign="center" mt={8}>
@@ -433,12 +439,13 @@ const CompanyProfile = ({ user }) => {
                     value={activeTab}
                     onChange={(_, value) => setActiveTab(value)}
                     centered
+                    variant={isMobile ? "scrollable" : "standard"}
+                    scrollButtons="auto"
                 >
                     <Tab label="Início" value="inicio" />
                     <Tab label="Sobre" value="sobre" />
                     <Tab label="Publicações" value="Publicados" />
                     <Tab label="Repositorio" value="Repositorio" />
-                    
                 </Tabs>
             </Box>
             <Box p={3}>{renderContent()}</Box>

@@ -1,24 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { get, ref, onValue } from 'firebase/database';
-import { db } from '../fb';
 import { useNavigate } from 'react-router-dom';
+import {
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Box,
+  CardActionArea,
+  Avatar,
+  useMediaQuery,
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import { db } from '../fb';
 
 const Explore = ({ user }) => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
+  const [selectedSubsector, setSelectedSubsector] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedTipoEntidade, setSelectedTipoEntidade] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [provincias, setProvincias] = useState([]);
   const [sectores, setSectores] = useState([]);
+  const [subsectores, setSubsectores] = useState([]);
+  const [distritos, setDistritos] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
-
-
-  const defaultLogoUrl = 'https://via.placeholder.com/150';
-
   const navigate = useNavigate();
+  const defaultLogoUrl = 'https://via.placeholder.com/150';
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -27,11 +50,15 @@ const Explore = ({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const companyList = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
-          setCompanies(companyList);
+          const companyList = Object.keys(data)
+            .map((key) => ({
+              id: key,
+              ...data[key],
+            }))
+            .filter((company) => company.id !== user.id);
+
+          const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
+          setCompanies(randomCompanies);
         }
       } catch (error) {
         console.error('Error fetching companies:', error);
@@ -40,7 +67,6 @@ const Explore = ({ user }) => {
       }
     };
 
-    // Fetching provincias, sectores, and tipos de entidades
     onValue(ref(db, 'provincias'), (snapshot) => {
       setProvincias(snapshot.val() || []);
     });
@@ -56,137 +82,231 @@ const Explore = ({ user }) => {
     fetchCompanies();
   }, []);
 
-  const filteredCompanies = companies
-  .filter((company) => {
-    const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSector = selectedSector ? company.sector === selectedSector : true;
-    const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
-    const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
-    return matchesSearch && matchesSector && matchesProvince && matchesTipoEntidade;
-  })
-  .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }));
+  const handleSectorChange = (e) => {
+    const selectedSector = e.target.value;
+    setSelectedSector(selectedSector);
+    const foundSector = sectores.find((s) => s.setor === selectedSector);
+    setSubsectores(foundSector ? foundSector.subsectores : []);
+    setSelectedSubsector('');
+  };
 
-const totalCompanies = filteredCompanies.length;
+  const handleProvinceChange = (e) => {
+    const selectedProvince = e.target.value;
+    setSelectedProvince(selectedProvince);
+    const foundProvince = provincias.find((p) => p.provincia === selectedProvince);
+    setDistritos(foundProvince ? foundProvince.distritos : []);
+    setSelectedDistrict('');
+  };
+
+  const filteredCompanies = companies
+    .filter((company) => {
+      const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSector = selectedSector ? company.sector === selectedSector : true;
+      const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
+      const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
+      const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
+      const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
+      return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }));
 
   const handleCompanyClick = (companyId) => {
-    navigate(`/vperfil/${companyId}`);
+    navigate(`/perfil/${companyId}`);
   };
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
-  const applyFilters = () => closeModal();
 
-  if (loading) return <div className="text-center py-6 text-gray-600">Carregando...</div>;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <div className="max-w-screen-xl mx-auto px-4 py-8">
-    <div className="flex justify-between items-center mb-6">
-      <h2 className="text-xl font-bold text-gray-700">Empresas Disponiveis</h2>
-      <p className="text-gray-600 text-sm">Encontradas ({totalCompanies})</p>
-    </div>
-      <div className="filters flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-white rounded-lg shadow-lg mb-8">
-        <input
-          type="text"
-          placeholder="Pesquisar empresas..."
+    <Box width="100%" minHeight="100vh" p={isMobile ? 2 : 4}>
+      <br />
+      <Typography variant="h4" gutterBottom textAlign="center" fontWeight="bold">
+        Empresas Disponíveis
+      </Typography>
+      <Box
+        display="flex"
+        flexDirection={isMobile ? 'column' : 'row'}
+        justifyContent="space-between"
+        alignItems="center"
+        gap={2}
+        mb={4}
+      >
+        <TextField
+          variant="outlined"
+          label="Pesquisar empresas"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full sm:w-1/3 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          InputProps={{
+            startAdornment: <SearchIcon />,
+          }}
+          fullWidth
+          sx={{ maxWidth: isMobile ? '100%' : 400 }}
         />
-        <button
+        <Button
+          variant="contained"
+          startIcon={<FilterListIcon />}
           onClick={openModal}
-          className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300"
+          fullWidth={isMobile}
+          sx={{ maxWidth: isMobile ? '100%' : 'auto' }}
         >
           Filtros
-        </button>
-      </div>
+        </Button>
+      </Box>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="modal-overlay fixed inset-0 bg-black opacity-50" onClick={closeModal}></div>
-          <div className="modal-content bg-white rounded-lg shadow-lg p-6 z-10 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Filtros</h2>
-            <div className="space-y-4">
-              <label className="block">
-                Setor
-                <select
-                  value={selectedSector}
-                  onChange={(e) => setSelectedSector(e.target.value)}
-                  className="block w-full mt-1 p-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Todos</option>
-                  {sectores.map((s) => (
-                    <option key={s.setor} value={s.setor}>
-                      {s.setor}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                Província
-                <select
-                  value={selectedProvince}
-                  onChange={(e) => setSelectedProvince(e.target.value)}
-                  className="block w-full mt-1 p-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Todas</option>
-                  {provincias.map((prov) => (
-                    <option key={prov.provincia} value={prov.provincia}>
-                      {prov.provincia}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                Tipo de Entidade
-                <select
-                  value={selectedTipoEntidade}
-                  onChange={(e) => setSelectedTipoEntidade(e.target.value)}
-                  className="block w-full mt-1 p-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Todos</option>
-                  {tiposEntidades.map((ent) => (
-                    <option key={ent.tipo} value={ent.tipo}>
-                      {ent.tipo}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={applyFilters}
-                className="bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600"
-              >
-                Aplicar
-              </button>
-              <button
-                onClick={closeModal}
-                className="ml-2 text-gray-500 rounded-lg px-4 py-2 hover:bg-gray-200"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal de Filtros */}
+      <Dialog open={isModalOpen} onClose={closeModal} maxWidth="sm" fullWidth>
+        <DialogTitle>Filtros</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2}>
+            <TextField
+              select
+              label="Setor"
+              value={selectedSector}
+              onChange={handleSectorChange}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {sectores.map((s) => (
+                <MenuItem key={s.setor} value={s.setor}>
+                  {s.setor}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Subsector"
+              value={selectedSubsector}
+              onChange={(e) => setSelectedSubsector(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {subsectores.map((sub, index) => (
+                <MenuItem key={index} value={sub}>
+                  {sub}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Província"
+              value={selectedProvince}
+              onChange={handleProvinceChange}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {provincias.map((prov) => (
+                <MenuItem key={prov.provincia} value={prov.provincia}>
+                  {prov.provincia}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Distrito"
+              value={selectedDistrict}
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {distritos.map((dist, index) => (
+                <MenuItem key={index} value={dist}>
+                  {dist}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Tipo de Entidade"
+              value={selectedTipoEntidade}
+              onChange={(e) => setSelectedTipoEntidade(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {tiposEntidades.map((ent) => (
+                <MenuItem key={ent.tipo} value={ent.tipo}>
+                  {ent.tipo}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeModal}>Cancelar</Button>
+          <Button variant="contained" onClick={closeModal}>
+            Aplicar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-    <div className="company-list grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-      {filteredCompanies.map((company) => (
-        <div
-          key={company.id}
-          className="company-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-          onClick={() => handleCompanyClick(company.id)}>
-          <img
-            src={company.logoUrl || defaultLogoUrl}
-            alt={`${company.nome} logo`}
-            className="h-16 w-16 object-cover mb-4 rounded-full mx-auto"
-          />
-          <h3 className="font-semibold text-center text-gray-800">{company.nome}</h3>
-          <p className="text-gray-600 text-center"><small>{company.sector}</small></p>
-        </div>
-      ))}
-      </div>
-    </div>
+      {/* Informação sobre o número de empresas encontradas */}
+      <Typography variant="subtitle1" gutterBottom>
+        {filteredCompanies.length === 0
+          ? 'Nenhuma empresa encontrada.'
+          : `Mostrando ${filteredCompanies.length} empresa(s) encontrada(s).`}
+      </Typography>
+
+      {/* Lista de Empresas */}
+      <Grid container spacing={isMobile ? 2 : 4}>
+        {filteredCompanies.map((store) => (
+          <Grid item key={store.id} xs={6} sm={4} md={3} lg={2} display="flex" justifyContent="center">
+            <Card
+              sx={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid #ccc',
+                p: 2,
+                textAlign: 'center',
+              }}
+            >
+              <CardActionArea onClick={() => handleCompanyClick(store.id)}>
+                <Avatar
+                  src={store.logoUrl || defaultLogoUrl}
+                  alt={`Logotipo de ${store.nome}`}
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    mb: 1,
+                    margin: '0 auto',
+                  }}
+                />
+                <CardContent sx={{ p: 0 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {store.sigla || store.nome}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      fontSize: 12,
+                    }}
+                  >
+                    {store.sector || 'Setor não especificado'}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
   );
 };
 

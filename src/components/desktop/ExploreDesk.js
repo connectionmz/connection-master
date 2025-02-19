@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { get, ref, onValue } from 'firebase/database';
-import { db } from '../../fb';
 import { useNavigate } from 'react-router-dom';
 import {
   Grid,
   Card,
   CardContent,
-  CardMedia,
   Typography,
   TextField,
   Select,
@@ -20,11 +18,13 @@ import {
   Box,
   CardActionArea,
   Avatar,
+  useMediaQuery,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import { db } from '../../fb';
 
-const ExploreDesk = ({ user }) => {
+const Explore = ({ user }) => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,6 +41,7 @@ const ExploreDesk = ({ user }) => {
   const [tiposEntidades, setTiposEntidades] = useState([]);
   const navigate = useNavigate();
   const defaultLogoUrl = 'https://via.placeholder.com/150';
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -125,12 +126,19 @@ const ExploreDesk = ({ user }) => {
   }
 
   return (
-    <Box width="100%" minHeight="100vh">
-      <br/>
-      <Typography variant="h4" gutterBottom textAlign={'center'} fontWeight={'bold'}>
-        Empresas Disponíveis
+    <Box width="100%" minHeight="100vh" p={isMobile ? 2 : 4}>
+      <br />
+      <Typography variant="h4" gutterBottom textAlign="center" fontWeight="bold">
+        Empresas
       </Typography>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+      <Box
+        display="flex"
+        flexDirection={isMobile ? 'column' : 'row'}
+        justifyContent="space-between"
+        alignItems="center"
+        gap={2}
+        mb={4}
+      >
         <TextField
           variant="outlined"
           label="Pesquisar empresas"
@@ -140,13 +148,14 @@ const ExploreDesk = ({ user }) => {
             startAdornment: <SearchIcon />,
           }}
           fullWidth
-          sx={{ maxWidth: 400 }}
+          sx={{ maxWidth: isMobile ? '100%' : 400 }}
         />
         <Button
           variant="contained"
           startIcon={<FilterListIcon />}
           onClick={openModal}
-        >
+          fullWidth={isMobile}
+          sx={{ maxWidth: isMobile ? '100%' : 'auto' }}>
           Filtros
         </Button>
       </Box>
@@ -238,67 +247,66 @@ const ExploreDesk = ({ user }) => {
           : `Mostrando ${filteredCompanies.length} empresa(s) encontrada(s).`}
       </Typography>
 
-     {/* Lista de Empresas */}
-<Grid container spacing={4}>
-  {filteredCompanies.map((store) => (
-    <Grid item key={store.id} xs={2} sm={1} md={2} display="flex" justifyContent="center">
-      <Card
-        sx={{
-          width: 160,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          border:'1px solid #ccc',
-          p: 2,
-          textAlign: "center",
-        }}
-      >
-        <CardActionArea onClick={() => handleCompanyClick(store.id)}>
-          <Avatar
-            src={store.logoUrl || defaultLogoUrl}
-            alt={`Logotipo de ${store.nome}`}
-            sx={{
-              width: 64,
-              height: 64,
-              mb: 1,
-              margin: "0 auto", 
-            }}
-          />
-          <CardContent sx={{ p: 0 }}>
-            <Typography
-              variant="subtitle2"
+      {/* Lista de Empresas */}
+      <Grid container spacing={isMobile ? 2 : 4}>
+        {filteredCompanies.map((store) => (
+          <Grid item key={store.id} xs={6} sm={4} md={3} lg={2} display="flex" justifyContent="center">
+            <Card
               sx={{
-                fontWeight: 600,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                textTransform: "capitalize",
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid #ccc',
+                p: 2,
+                textAlign: 'center',
               }}
             >
-              {store.sigla || store.nome}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                fontSize: 12,
-              }}
-            >
-              {store.sector || "Setor não especificado"}
-            </Typography>
-          </CardContent>
-        </CardActionArea>
-      </Card>
-    </Grid>
-  ))}
-</Grid>
-
+              <CardActionArea onClick={() => handleCompanyClick(store.id)}>
+                <Avatar
+                  src={store.logoUrl || defaultLogoUrl}
+                  alt={`Logotipo de ${store.nome}`}
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    mb: 1,
+                    margin: '0 auto',
+                  }}
+                />
+                <CardContent sx={{ p: 0 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {store.sigla || store.nome}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      fontSize: 12,
+                    }}
+                  >
+                    {store.sector || 'Setor não especificado'}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
     </Box>
   );
 };
 
-export default ExploreDesk;
+export default Explore;

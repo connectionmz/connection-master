@@ -2,30 +2,31 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ref, onValue, update } from 'firebase/database';
 import { db } from '../../fb';
-import { 
-  Button, 
-  Paper, 
-  Typography, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  TextField, 
-  Dialog, 
-  DialogActions, 
-  DialogContent, 
-  DialogTitle, 
-  Snackbar, 
-  Alert, 
-  Grid, 
-  Box
+import {
+  Button,
+  Paper,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Snackbar,
+  Alert,
+  Grid,
+  Box,
+  useMediaQuery,
 } from '@mui/material';
 import BackButton from '../BackButton';
 import { saveContentToInbox } from '../SaveToInbox';
 
-const DetalhesPropostaDesk = ({user}) => {
+const DetalhesPropostaDesk = ({ user }) => {
   const { id, propostaId } = useParams();
   const [proposta, setProposta] = useState(null);
   const [nota, setNota] = useState('');
@@ -33,36 +34,38 @@ const DetalhesPropostaDesk = ({user}) => {
   const [message, setMessage] = useState({ open: false, text: '', type: 'success' });
   const [notaEnviada, setNotaEnviada] = useState(false);
 
+  // Verificar se é um dispositivo móvel
+  const isMobile = useMediaQuery('(max-width:600px)');
+
   useEffect(() => {
     const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
-    
+
     onValue(propostaRef, (snapshot) => {
       setProposta(snapshot.val());
     });
   }, [id, propostaId]);
-  
-    // Função para editar a nota
-    const handleEditNota = () => {
-      setNotaEnviada(false); // Permite editar a nota
-    };
+
+  // Função para editar a nota
+  const handleEditNota = () => {
+    setNotaEnviada(false); // Permite editar a nota
+  };
 
   const handleStatusUpdate = (status) => {
     const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
     update(propostaRef, { status })
       .then(() => {
         setMessage({ open: true, text: `Proposta ${status} com sucesso!`, type: 'success' });
-        
-          const notification = {
-            type: "cotation_reply",
-            message: `${user.nome} Sua Proposta foi aceite`,
-            fromUserId: user.id,
-            fromUserName: user.nome,
-            timestamp: new Date().toISOString(),
-            status: "unread",
-            url: `/cotacao/${id}/proposta/${propostaId}`,
-          };
-            saveContentToInbox(proposta.from.id,notification)
 
+        const notification = {
+          type: 'cotation_reply',
+          message: `${user.nome} Sua Proposta foi aceite`,
+          fromUserId: user.id,
+          fromUserName: user.nome,
+          timestamp: new Date().toISOString(),
+          status: 'unread',
+          url: `/cotacao/${id}/proposta/${propostaId}`,
+        };
+        saveContentToInbox(proposta.from.id, notification);
       })
       .catch(() => {
         setMessage({ open: true, text: 'Erro ao atualizar status.', type: 'error' });
@@ -78,7 +81,7 @@ const DetalhesPropostaDesk = ({user}) => {
       setMessage({ open: true, text: 'A nota não pode estar vazia.', type: 'error' });
       return;
     }
-    
+
     const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
     update(propostaRef, { nota })
       .then(() => {
@@ -101,58 +104,84 @@ const DetalhesPropostaDesk = ({user}) => {
   };
 
   const handleCancelApproval = () => {
-    handleStatusUpdate('Pendente'); 
+    handleStatusUpdate('Pendente');
   };
 
   if (!proposta) return <Typography>Carregando detalhes da proposta...</Typography>;
 
   return (
-    <Paper sx={{ width: '100%', margin: 'auto', padding: 3 }}>
+    <Paper
+      sx={{
+        width: '100%',
+        margin: 'auto',
+        padding: isMobile ? 2 : 3,
+      }}
+    >
       <BackButton sx={{ mb: 2 }} />
-
       <Typography variant="h5" sx={{ marginBottom: 2 }}>
         Detalhes da Proposta
       </Typography>
-      
-      <Typography variant="h6" sx={{ marginBottom: 1 }}>Empresa: {proposta.from.nome}</Typography>
-      <Typography variant="body1" sx={{ marginBottom: 2 }}>Contacto: {proposta.from.contacto}</Typography>
-      
+
+      <Typography variant="h6" sx={{ marginBottom: 1 }}>
+        Empresa: {proposta.from.nome}
+      </Typography>
+      <Typography variant="body1" sx={{ marginBottom: 2 }}>
+        Contacto: {proposta.from.contacto}
+      </Typography>
+
       <div
         className="text-gray-600 mb-2"
         dangerouslySetInnerHTML={{ __html: proposta.proposal }}
       />
       {proposta.fileUrl && (
-        <Button 
-          href={proposta.fileUrl} 
-          target="_blank" 
-          sx={{ textDecoration: 'underline', color: 'blue', mb: 2 }}
+        <Button
+          href={proposta.fileUrl}
+          target="_blank"
+          sx={{
+            textDecoration: 'underline',
+            color: 'blue',
+            mb: 2,
+            display: 'block',
+          }}
         >
           Baixar Arquivo
         </Button>
       )}
 
-<Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
-  <Box 
-    sx={{ 
-      width: 12, 
-      height: 12, 
-      borderRadius: '50%', 
-      backgroundColor: proposta.status === 'Aceite' ? 'green' : 
-                        proposta.status === 'Recusada' ? 'red' : 
-                        'gray', 
-      marginRight: 1 
-    }}
-  />
-  <span>{proposta.status || 'Pendente'}</span>
-</Typography>
+      <Typography
+        variant="body2"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          marginTop: 2,
+        }}
+      >
+        <Box
+          sx={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            backgroundColor:
+              proposta.status === 'Aceite'
+                ? 'green'
+                : proposta.status === 'Recusada'
+                ? 'red'
+                : 'gray',
+            marginRight: 1,
+          }}
+        />
+        <span>{proposta.status || 'Pendente'}</span>
+      </Typography>
 
-
-      <Grid container spacing={3} sx={{ marginTop: 4 }}>
+      <Grid  spacing={3} sx={{ marginTop: 4 }}>
         <Grid item xs={12}>
           <Typography variant="h6">Produtos/Serviços:</Typography>
           {proposta.selectedProducts && proposta.selectedProducts.length > 0 ? (
-            <TableContainer component={Paper}>
-              <Table>
+            <TableContainer
+              component={Paper}
+              sx={{ maxHeight: isMobile ? 300 : 400, overflowY: 'auto' }}
+            >
+              <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell>Nome</TableCell>
@@ -166,10 +195,14 @@ const DetalhesPropostaDesk = ({user}) => {
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.price}</TableCell>
                       <TableCell>
-                        <Button 
-                          href={product.url} 
-                          target="_blank" 
-                          sx={{ textDecoration: 'underline', color: 'blue' }}
+                        <Button
+                          href={product.url}
+                          target="_blank"
+                          sx={{
+                            textDecoration: 'underline',
+                            color: 'blue',
+                            display: 'block',
+                          }}
                         >
                           Ver Detalhes
                         </Button>
@@ -185,41 +218,32 @@ const DetalhesPropostaDesk = ({user}) => {
             </Typography>
           )}
         </Grid>
-        
-        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div>
-            {proposta.status === 'Aceite' ? (
-              <Button
-                onClick={handleCancelApproval}
-                variant="contained"
-                color="warning"
-                sx={{ marginRight: 2 }}
-              >
-                Cancelar Aprovação
-              </Button>
-            ) : (
-              <Button
-                onClick={handleAccept}
-                variant="contained"
-                color="success"
-                sx={{ marginRight: 2 }}
-              >
-                Aprovar
-              </Button>
-            )}
-            <Button
-              onClick={() => handleStatusUpdate('Recusada')}
-              variant="contained"
-              color="error"
-            >
-              Recusar
-            </Button>
-          </div>
-        </Grid>
 
+        <Grid item xs={12} sm={6}>
+          <Button
+            onClick={handleAccept}
+            variant="contained"
+            color="success"
+            fullWidth
+            disabled={proposta.status === 'Aceite'}
+            sx={{ marginBottom: 2 }}
+          >
+            Aprovar
+          </Button>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Button
+            onClick={() => handleStatusUpdate('Recusada')}
+            variant="contained"
+            color="error"
+            fullWidth
+            sx={{ marginBottom: 2 }}
+          >
+            Recusar
+          </Button>
+        </Grid>
         <Grid item xs={12}>
           {notaEnviada ? (
-            // Se a nota já foi enviada, mostrar a nota e o botão de editar
             <>
               <Typography variant="body1" sx={{ marginBottom: 2 }}>
                 Nota enviada: {nota}
@@ -228,19 +252,19 @@ const DetalhesPropostaDesk = ({user}) => {
                 onClick={handleEditNota}
                 variant="outlined"
                 color="primary"
+                fullWidth
               >
                 Editar Nota
               </Button>
             </>
           ) : (
-            // Caso contrário, exibir o formulário para adicionar uma nova nota
             <>
               <TextField
                 value={nota}
                 onChange={handleNotaChange}
                 label="Adicionar uma nota"
                 multiline
-                rows={4}
+                rows={isMobile ? 3 : 4}
                 fullWidth
                 variant="outlined"
                 sx={{ marginBottom: 2 }}
@@ -249,22 +273,25 @@ const DetalhesPropostaDesk = ({user}) => {
                 onClick={handleNotaSubmit}
                 variant="contained"
                 color="primary"
+                fullWidth
               >
                 Enviar Nota
               </Button>
             </>
           )}
         </Grid>
-
       </Grid>
 
       {/* Snackbar para exibir mensagens */}
-      <Snackbar 
-        open={message.open} 
-        autoHideDuration={4000} 
+      <Snackbar
+        open={message.open}
+        autoHideDuration={4000}
         onClose={() => setMessage({ ...message, open: false })}
       >
-        <Alert onClose={() => setMessage({ ...message, open: false })} severity={message.type}>
+        <Alert
+          onClose={() => setMessage({ ...message, open: false })}
+          severity={message.type}
+        >
           {message.text}
         </Alert>
       </Snackbar>
@@ -277,11 +304,14 @@ const DetalhesPropostaDesk = ({user}) => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleConfirmAccept} color="success">Sim</Button>
-          <Button onClick={() => setConfirmAccept(false)} color="error">Não</Button>
+          <Button onClick={handleConfirmAccept} color="success">
+            Sim
+          </Button>
+          <Button onClick={() => setConfirmAccept(false)} color="error">
+            Não
+          </Button>
         </DialogActions>
       </Dialog>
-
     </Paper>
   );
 };

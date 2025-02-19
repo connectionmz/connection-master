@@ -22,37 +22,32 @@ const PostInputDesk = ({ user }) => {
   const [newPhotos, setNewPhotos] = useState([]);
   const [photoPreviews, setPhotoPreviews] = useState({});
   const [photoDescriptions, setPhotoDescriptions] = useState({});
-  const [uploadProgress, setUploadProgress] = useState({}); // Progresso do upload
+  const [uploadProgress, setUploadProgress] = useState({});
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [allUploadsComplete, setAllUploadsComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessages, setErrorMessages] = useState([]);
 
-  // Função para salvar fotos publicadas no Firebase
-  const handleSavePublishedPhotos = useCallback(() => {
+  // Função para validar os dados antes do upload
+  const validateData = () => {
     if (!user || !user.id) {
       setErrorMessages(["Usuário não definido ou ID do usuário ausente"]);
-      return;
+      return false;
     }
-
     if (newPhotos.length === 0) {
       setErrorMessages(["Nenhuma foto selecionada para upload."]);
-      return;
+      return false;
     }
-
-    // Verifica se todas as fotos têm descrições
     const missingDescriptions = newPhotos.filter(
       (photo) => !photoDescriptions[photo.name]
     );
-    if (missingDescriptions.length > 0) {
-      setErrorMessages([
-        `As seguintes fotos não possuem descrição: ${missingDescriptions
-          .map((photo) => photo.name)
-          .join(", ")}`,
-      ]);
-      return;
-    }
+
+    return true;
+  };
+
+  // Função para salvar fotos publicadas no Firebase
+  const handleSavePublishedPhotos = useCallback(() => {
+    if (!validateData()) return;
 
     setIsUploading(true);
     const storage = getStorage();
@@ -80,63 +75,56 @@ const PostInputDesk = ({ user }) => {
           ]);
           setIsUploading(false);
         },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref)
-            .then((url) => {
-              const description = photoDescriptions[photo.name];
-              const newPostRef = push(ref(db, "posts"));
-              const postId = newPostRef.key;
+        async () => {
+          try {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            const description = photoDescriptions[photo.name];
+            const newPostRef = push(ref(db, "posts"));
+            const postId = newPostRef.key;
 
-              const postData = {
-                id: postId,
-                company: {
-                  id: user.id,
-                  name: user.nome,
-                  logo: user.logoUrl,
-                  sector: user.sector,
-                  provincia: user.provincia,
-                },
-                description,
-                url,
-                timestamp: Date.now(),
-              };
-
-              set(newPostRef, postData)
-                .then(() => {
-                  completedUploads++;
-                  if (completedUploads === newPhotos.length) {
-                    setAllUploadsComplete(true);
-                    setIsUploading(false);
-                  }
-                })
-                .catch((error) => {
-                  setErrorMessages([
-                    ...errorMessages,
-                    `Erro ao salvar dados do post "${photo.name}" no Firebase: ${error.message}`,
-                  ]);
-                  setIsUploading(false);
-                });
-            })
-            .catch((error) => {
-              setErrorMessages([
-                ...errorMessages,
-                `Erro ao obter URL da foto "${photo.name}": ${error.message}`,
-              ]);
-              setIsUploading(false);
+            await set(newPostRef, {
+              id: postId,
+              company: {
+                id: user.id,
+                name: user.nome,
+                logo: user.logoUrl,
+                sector: user.sector,
+                provincia: user.provincia,
+              },
+              description,
+              url,
+              timestamp: Date.now(),
             });
+
+            completedUploads++;
+            if (completedUploads === newPhotos.length) {
+              setUploadSuccess(true);
+              setIsUploading(false);
+            }
+          } catch (error) {
+            setErrorMessages([
+              ...errorMessages,
+              `Erro ao salvar dados do post "${photo.name}" no Firebase: ${error.message}`,
+            ]);
+            setIsUploading(false);
+          }
         }
       );
     });
   }, [newPhotos, photoDescriptions, user]);
 
   useEffect(() => {
-    if (allUploadsComplete) {
+    if (uploadSuccess) {
       setSnackbarOpen(true);
       setTimeout(() => {
-        window.location.reload(); // Recarrega a página após o upload completo
+        setNewPhotos([]); // Limpa as fotos após o upload
+        setPhotoPreviews({});
+        setPhotoDescriptions({});
+        setUploadProgress({});
+        setUploadSuccess(false);
       }, 3000);
     }
-  }, [allUploadsComplete]);
+  }, [uploadSuccess]);
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
@@ -147,19 +135,15 @@ const PostInputDesk = ({ user }) => {
     setNewPhotos(files);
 
     const previews = {};
+    const descriptions = {};
+
     files.forEach((file) => {
       previews[file.name] = URL.createObjectURL(file);
+      descriptions[file.name] = ""; // Inicializa descrições vazias
     });
+
     setPhotoPreviews(previews);
-    setPhotoDescriptions((prevDescriptions) =>
-      files.reduce(
-        (acc, file) => ({
-          ...acc,
-          [file.name]: prevDescriptions[file.name] || "",
-        }),
-        {}
-      )
-    );
+    setPhotoDescriptions(descriptions);
   };
 
   const handleDescriptionChange = (value, photoName) => {
@@ -170,8 +154,9 @@ const PostInputDesk = ({ user }) => {
   };
 
   return (
-    <div className="p-4">
+    <Box sx={{ p: 4 }}>
       <Box sx={{ width: "100%" }} className="upload-photo space-y-4">
+        {/* Input de Arquivos */}
         <input
           type="file"
           multiple
@@ -180,6 +165,8 @@ const PostInputDesk = ({ user }) => {
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           aria-label="Selecionar fotos"
         />
+
+        {/* Mensagens de Erro */}
         {errorMessages.length > 0 && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {errorMessages.map((message, index) => (
@@ -189,8 +176,10 @@ const PostInputDesk = ({ user }) => {
             ))}
           </Alert>
         )}
+
+        {/* Lista de Fotos */}
         {newPhotos.length > 0 && (
-          <div className="photo-list space-y-6">
+          <Box className="photo-list space-y-6">
             {newPhotos.map((photo, index) => (
               <Box
                 key={index}
@@ -244,13 +233,15 @@ const PostInputDesk = ({ user }) => {
                 </Box>
               </Box>
             ))}
-          </div>
+          </Box>
         )}
+
+        {/* Botão de Upload */}
         <Button
           onClick={handleSavePublishedPhotos}
           variant="contained"
           color="primary"
-          disabled={isUploading || errorMessages.length > 0}
+          disabled={isUploading}
           sx={{
             padding: "10px 20px",
             borderRadius: "8px",
@@ -260,6 +251,8 @@ const PostInputDesk = ({ user }) => {
         >
           {isUploading ? "Carregando..." : "Upload Novas Fotos"}
         </Button>
+
+        {/* SnackBar de Sucesso */}
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={3000}
@@ -270,7 +263,7 @@ const PostInputDesk = ({ user }) => {
           </Alert>
         </Snackbar>
       </Box>
-    </div>
+    </Box>
   );
 };
 

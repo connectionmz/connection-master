@@ -9,6 +9,7 @@ import { db } from '../fb';
 import { ref, get, limitToFirst, query } from 'firebase/database';
 import MarqueeAnuncios from './MarqueeAnuncios';
 import MarqueeParceiros from './MarqueeParceiros';
+import BannerDesk from './desktop/BannerDesk';
 
 const Home = ({ user }) => {
   
@@ -17,7 +18,7 @@ const Home = ({ user }) => {
       <div className="content-container">
         <MarqueeParceiros/>
         <StorieList user={user.provincia}/> 
-        <Banner /> 
+        <BannerDesk /> 
         <ServicosExternos /> 
         <MarqueeAnuncios user={user.provincia}/>
       </div>

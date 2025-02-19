@@ -3,30 +3,31 @@ import {
   Box,
   Typography,
   List,
-  ListItemButton, 
+  ListItemButton,
   ListItemAvatar,
   Avatar,
   ListItemText,
   Divider,
-  Badge,
   Button,
   Tabs,
   Tab,
   Paper,
+  TextField,
+  useMediaQuery,
   ListItem,
-  TextField, // Importando TextField para o campo de pesquisa
 } from "@mui/material";
 import { Person, Check, Close } from "@mui/icons-material";
 import { ref, onValue, update } from "firebase/database";
 import { db } from "../../fb";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import { saveContentToInbox } from "../SaveToInbox";
 
 const ConnectionsDesk = ({ user }) => {
   const [connections, setConnections] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [selectedTab, setSelectedTab] = useState(0);
-  const [searchQuery, setSearchQuery] = useState(""); // Estado para o campo de pesquisa
+  const [searchQuery, setSearchQuery] = useState("");
+  const isMobile = useMediaQuery("(max-width:600px)"); // Verifica se a tela é pequena
 
   const userId = user.id;
 
@@ -67,10 +68,10 @@ const ConnectionsDesk = ({ user }) => {
     update(requestRef, { status: "accepted" })
       .then(() => {
         // Atualiza o estado sem precisar de uma nova requisição ao Firebase
-        setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
-        setConnections(prev => [
+        setPendingRequests(pendingRequests.filter((req) => req.id !== requestId));
+        setConnections((prev) => [
           ...prev,
-          pendingRequests.find(req => req.id === requestId)
+          pendingRequests.find((req) => req.id === requestId),
         ]);
         const notification = {
           type: "connection_request",
@@ -80,7 +81,7 @@ const ConnectionsDesk = ({ user }) => {
           timestamp: new Date().toISOString(),
           status: "unread",
         };
-          saveContentToInbox(requestId,notification)
+        saveContentToInbox(requestId, notification);
       })
       .catch((error) => console.error("Erro ao aceitar o pedido:", error));
   };
@@ -90,17 +91,17 @@ const ConnectionsDesk = ({ user }) => {
     update(requestRef, { status: "rejected" })
       .then(() => {
         // Atualiza o estado sem precisar de uma nova requisição ao Firebase
-        setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
-            
-      const notification = {
-        type: "connection_request",
-        message: `${user.nome} recusou seu pedido de conexao`,
-        fromUserId: user.id,
-        fromUserName: user.nome,
-        timestamp: new Date().toISOString(),
-        status: "unread",
-      };
-        saveContentToInbox(requestId,notification)
+        setPendingRequests(pendingRequests.filter((req) => req.id !== requestId));
+
+        const notification = {
+          type: "connection_request",
+          message: `${user.nome} recusou seu pedido de conexao`,
+          fromUserId: user.id,
+          fromUserName: user.nome,
+          timestamp: new Date().toISOString(),
+          status: "unread",
+        };
+        saveContentToInbox(requestId, notification);
       })
       .catch((error) => console.error("Erro ao rejeitar o pedido:", error));
   };
@@ -117,7 +118,7 @@ const ConnectionsDesk = ({ user }) => {
   };
 
   return (
-    <Box width="100%" minHeight="100vh">
+    <Box width="100%" minHeight="100vh" p={isMobile ? 2 : 4}>
       <Typography variant="h5" sx={{ marginBottom: 2, fontWeight: "bold" }}>
         Conexões
       </Typography>
@@ -139,7 +140,7 @@ const ConnectionsDesk = ({ user }) => {
           onChange={handleTabChange}
           aria-label="connection tabs"
           centered
-          variant="fullWidth"
+          variant={isMobile ? "scrollable" : "fullWidth"} // Rolável em telas pequenas
         >
           <Tab label="Pedidos Pendentes" />
           <Tab label="Minhas Conexões" />
@@ -168,12 +169,17 @@ const ConnectionsDesk = ({ user }) => {
                         </Avatar>
                       </ListItemAvatar>
                       <ListItemText primary={request.fromUserName} />
-                      <Box display="flex" gap={1}>
+                      <Box
+                        display="flex"
+                        gap={1}
+                        flexDirection={isMobile ? "column" : "row"} // Empilha os botões em telas pequenas
+                      >
                         <Button
                           variant="contained"
                           color="primary"
                           startIcon={<Check />}
                           onClick={() => handleAccept(request.id)}
+                          fullWidth={isMobile} // Botão ocupa a largura total em telas pequenas
                         >
                           Aceitar
                         </Button>
@@ -182,6 +188,7 @@ const ConnectionsDesk = ({ user }) => {
                           color="error"
                           startIcon={<Close />}
                           onClick={() => handleReject(request.id)}
+                          fullWidth={isMobile} // Botão ocupa a largura total em telas pequenas
                         >
                           Rejeitar
                         </Button>

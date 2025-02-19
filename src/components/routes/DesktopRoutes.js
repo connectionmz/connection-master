@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { createTheme, Fab, Menu, MenuItem, ThemeProvider } from '@mui/material';
+import { createTheme, Fab, Menu, MenuItem, ThemeProvider, useMediaQuery } from '@mui/material';
 import LanguageIcon from '@mui/icons-material/Language';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
@@ -81,6 +81,8 @@ const DesktopRoutes = ({ user }) => {
   const [language, setLanguage] = useState('pt'); 
   const [anchorEl, setAnchorEl] = useState(null);
 
+  const isMobile = useMediaQuery('(max-width:600px)');
+
   const handleLanguageChange = (lang) => {
     setLanguage(lang); 
 
@@ -97,7 +99,6 @@ const DesktopRoutes = ({ user }) => {
   };
 
   if (user?.subscriptions?.isverify==='false') {
-    console.log(user?.subscriptions?.isverify);
     // Use Navigate para redirecionar ou encapsule o Route em Routes
     return (
       <Routes>
@@ -112,8 +113,9 @@ const DesktopRoutes = ({ user }) => {
     <div
     style={{
       minHeight: '100vh',
-      backgroundColor:"#F1F1F1"
-
+      backgroundColor: "#F1F1F1",
+      display: 'flex',
+      flexDirection: 'column', // Garante que os elementos fiquem na vertical
     }}
   >
     <ThemeProvider theme={theme}>
@@ -123,9 +125,13 @@ const DesktopRoutes = ({ user }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          maxWidth: '80%', 
-          margin: '0 auto', 
-        }}>
+          maxWidth: isMobile ? '100%' : '80%', // Ajusta o maxWidth com base no tamanho da tela
+          width: '100%', // Sempre ocupa toda a largura disponível
+          margin: '0 auto', // Centraliza horizontalmente
+          boxSizing: 'border-box', // Evita problemas com padding e margin
+          padding: isMobile ? '16px' : '24px', // Ajusta o padding para mobile/desktop
+        }}
+      >
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />

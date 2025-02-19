@@ -8,7 +8,7 @@ import PostGallery from '../PostGallery';
 import { EditorText } from '../../utils/formUtils';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'; 
 import { AiFillSetting } from 'react-icons/ai';
-import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress } from "@mui/material";
+import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress, useMediaQuery } from "@mui/material";
 import {
   Button,
   CardMedia,
@@ -38,6 +38,8 @@ const ProfileDesk = ({userI}) => {
     });
     const [coverPhoto, setCoverPhoto] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const isMobile = useMediaQuery("(max-width:600px)");
+  
 
   const handleCoverPhotoChange = async (e) => {
     const file = e.target.files[0];
@@ -190,72 +192,54 @@ const handleDeletePost = (postToDelete) => {
       switch (activeTab) {
         case "inicio":
           return (
-            <Grid container spacing={3} mt={3} px={2}>
-              <Grid item xs={12} md={6}>
-                {userData?.missaoVisaoValores ? (
-                  <Box dangerouslySetInnerHTML={{ __html: userData.missaoVisaoValores }} />
-                ) : (
-                  <Typography variant="body1" color="text.secondary">
-                    Não informada
-                  </Typography>
-                )}
-              </Grid>
-            </Grid>
+            <Box mt={3} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="body1">
+              <strong>Endereço:</strong> {userData?.endereco || 'Não informado'}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Província:</strong> {userData?.provincia || 'Não informado'}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Distrito:</strong> {userData?.distrito || 'Não informado'}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Capacidade de Produção:</strong> {userData?.capacidadeDeProducao || 'Não informado'}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Email:</strong>{' '}
+              {userData?.email ? (
+                <a href={`mailto:${userData.email}`} style={{ textDecoration: 'none', color: '#1976D2' }}>
+                  {userData.email}
+                </a>
+              ) : (
+                'Não informado'
+              )}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Contacto:</strong>{' '}
+              {userData?.contacto ? (
+                <a href={`tel:${userData.contacto}`} style={{ textDecoration: 'none', color: '#1976D2' }}>
+                  {userData.contacto}
+                </a>
+              ) : (
+                'Não informado'
+              )}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Sector:</strong> {userData?.sector || 'Não informado'}
+            </Typography>
+            <Typography variant="body1">
+              <strong>Tipo de Entidade:</strong> {userData?.tipoEntidade || 'Não informado'}
+            </Typography>
+          </Box>
           );
         case "Publicados":
           return <PostGallery posts={posts} onDelete={handleDeletePost} onEdit={handleEditCaption} />;
-          case "Repositorio":
-            return <VetrineDesk id={user} userId={user} />;
+        case "Repositorio":
+          return <VetrineDesk id={userData.id} userId={userData.id} />;
         case "liked":
           return (
-            <Grid container spacing={3}>
-              {cotacoes.length > 0 ? (
-                cotacoes.map((cotacao, index) => (
-                  <Grid item xs={12} md={6} lg={4} key={index}>
-                    <Card sx={{ boxShadow: 3 }}>
-                      <Link href={`/detalhe-cotacao/${cotacao.id}`} underline="none">
-                        <CardContent>
-                          <Typography variant="h6" component="h2" fontWeight="bold">
-                            {cotacao.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" mt={1}>
-                            {cotacao.description}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" mt={1}>
-                            <strong>Data Limite:</strong> {new Date(cotacao.datalimite).toLocaleDateString()}
-                          </Typography>
-                          <Box mt={2}>
-                            {cotacao.items.map((item, idx) => (
-                              <Box key={idx} display="flex" alignItems="center" mb={2}>
-                                <img
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  style={{ width: 64, height: 64, borderRadius: 4, marginRight: 16 }}
-                                />
-                                <Box>
-                                  <Typography variant="subtitle1" fontWeight="bold">
-                                    {item.name}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {item.description}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            ))}
-                          </Box>
-                        </CardContent>
-                      </Link>
-                    </Card>
-                  </Grid>
-                ))
-              ) : (
-                <Grid item xs={12}>
-                  <Typography textAlign="center" color="text.secondary">
-                    Nenhuma cotação disponível.
-                  </Typography>
-                </Grid>
-              )}
-            </Grid>
+              <></>
           );
         default:
           return (
@@ -265,50 +249,58 @@ const handleDeletePost = (postToDelete) => {
           );
       }
     };
+  
     return (
-      <Box width='100%' minHeight="100vh">
+      <Box width="100%" minHeight="100vh">
+        {/* Capa do Perfil */}
         <Box position="relative">
-  <Box 
-    position="relative" 
-    height={{ xs: 150, sm: 400 }} // Altura menor em pixels para diferentes tamanhos de tela
-    bgcolor="grey.300"
-    overflow="hidden" // Garante que a imagem não ultrapasse o contêiner
-  >
-    <CardMedia
-      component="img"
-      image={coverPhoto || userData.coverPhotoURL}
-      alt="Cover"
-      sx={{ 
-        width: "100%", 
-        height: "100%", 
-        objectFit: "cover" // Garante que a imagem se ajuste ao contêiner sem distorcer
-      }}
-    />
-    <Box position="absolute" top={8} right={8}>
-      <input
-        accept="image/*"
-        type="file"
-        id="coverPhotoInput"
-        style={{ display: "none" }}
-        onChange={handleCoverPhotoChange}
-      />
-      <IconButton
-        color="primary"
-        aria-label="edit cover photo"
-        onClick={() => document.getElementById("coverPhotoInput").click()}
-      >
-        <CameraAlt />
-      </IconButton>
-    </Box>
-  </Box>
-
-          <Box position="absolute" top={140} left={16}>
+          <Box
+            position="relative"
+            height={{ xs: 150, sm: 400 }}
+            bgcolor="grey.300"
+            overflow="hidden"
+          >
+            <CardMedia
+              component="img"
+              image={coverPhoto || userData.coverPhotoURL}
+              alt="Cover"
+              sx={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+            <Box position="absolute" top={8} right={8}>
+              <input
+                accept="image/*"
+                type="file"
+                id="coverPhotoInput"
+                style={{ display: "none" }}
+                onChange={handleCoverPhotoChange}
+              />
+              <IconButton
+                color="primary"
+                aria-label="edit cover photo"
+                onClick={() => document.getElementById("coverPhotoInput").click()}
+              >
+                <CameraAlt />
+              </IconButton>
+            </Box>
+          </Box>
+  
+          {/* Avatar do Perfil */}
+          <Box
+            position="absolute"
+            top={{ xs: 100, sm: 140 }}
+            left={{ xs: "50%", sm: 16 }}
+            sx={{ transform: { xs: "translateX(-50%)", sm: "none" } }}
+          >
             <Avatar
               src={profilePhoto || userData.photoURL}
               alt="Profile"
               sx={{
-                width: 128,
-                height: 128,
+                width: { xs: 80, sm: 128 },
+                height: { xs: 80, sm: 128 },
                 border: "4px solid",
                 borderColor: "background.paper",
               }}
@@ -332,7 +324,8 @@ const handleDeletePost = (postToDelete) => {
           </Box>
         </Box>
   
-        <Box mt={10} textAlign="center">
+        {/* Informações do Perfil */}
+        <Box mt={{ xs: 8, sm: 10 }} textAlign="center">
           <Typography variant="h5" fontWeight="bold">
             {userData?.displayName}
           </Typography>
@@ -369,63 +362,86 @@ const handleDeletePost = (postToDelete) => {
             )}
           </Box>
   
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: 2 }}>
-      <Button
-        component="a"
-        href="editar-perfil"
-        variant="outlined"
-        color="primary"
-        startIcon={<AiFillSetting size={24} />}
-        sx={{ display: 'flex', alignItems: 'center', padding: '6px 16px', width: '20%' }}
-      >
-        <Typography variant="body1" sx={{ marginLeft: 1 }}>
-          Editar Perfil
-        </Typography>
-      </Button>
-    </Box>
+          {/* Botão de Editar Perfil */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+              marginTop: 2,
+            }}
+          >
+            <Button
+              component="a"
+              href="editar-perfil"
+              variant="outlined"
+              color="primary"
+              startIcon={<AiFillSetting size={24} />}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                padding: "6px 16px",
+                width: { xs: "100%", sm: "20%" },
+              }}
+            >
+              <Typography variant="body1" sx={{ marginLeft: 1 }}>
+                Editar Perfil
+              </Typography>
+            </Button>
+          </Box>
   
-    <Box display="flex" justifyContent="center" mt={3} gap={2}>
-      {social?.linkedin && (
-        <MuiLink href={social.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-          <LinkedIn sx={{ color: "#0077b5", fontSize: 32 }} /> {/* Cor do LinkedIn */}
-        </MuiLink>
-      )}
-      {social?.instagram && (
-        <MuiLink href={social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-          <Instagram sx={{ color: "#C13584", fontSize: 32 }} /> {/* Cor do Instagram */}
-        </MuiLink>
-      )}
-      {social?.x && (
-        <MuiLink href={social.x} target="_blank" rel="noopener noreferrer" aria-label="X">
-          <X sx={{ color: "#1DA1F2", fontSize: 32 }} /> {/* Cor do Twitter/X */}
-        </MuiLink>
-      )}
-      {social?.whatsapp && (
-        <MuiLink href={social.whatsapp} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
-          <WhatsApp sx={{ color: "#25D366", fontSize: 32 }} /> {/* Cor do WhatsApp */}
-        </MuiLink>
-      )}
-      {social?.website && (
-        <MuiLink href={social.website} target="_blank" rel="noopener noreferrer" aria-label="Website">
-          <Language sx={{ color: "#4285F4", fontSize: 32 }} /> {/* Cor do Website */}
-        </MuiLink>
-      )}
-    </Box>
+          {/* Redes Sociais */}
+          <Box display="flex" justifyContent="center" mt={3} gap={2}>
+            {social?.linkedin && (
+              <MuiLink href={social.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                <LinkedIn sx={{ color: "#0077b5", fontSize: 32 }} />
+              </MuiLink>
+            )}
+            {social?.instagram && (
+              <MuiLink href={social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <Instagram sx={{ color: "#C13584", fontSize: 32 }} />
+              </MuiLink>
+            )}
+            {social?.x && (
+              <MuiLink href={social.x} target="_blank" rel="noopener noreferrer" aria-label="X">
+                <X sx={{ color: "#1DA1F2", fontSize: 32 }} />
+              </MuiLink>
+            )}
+            {social?.whatsapp && (
+              <MuiLink href={social.whatsapp} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+                <WhatsApp sx={{ color: "#25D366", fontSize: 32 }} />
+              </MuiLink>
+            )}
+            {social?.website && (
+              <MuiLink href={social.website} target="_blank" rel="noopener noreferrer" aria-label="Website">
+                <Language sx={{ color: "#4285F4", fontSize: 32 }} />
+              </MuiLink>
+            )}
+          </Box>
         </Box>
   
+        {/* Abas */}
         <Box mt={6} borderBottom={1} borderColor="divider">
-          <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)} centered>
+          <Tabs
+            value={activeTab}
+            onChange={(_, value) => setActiveTab(value)}
+            centered
+            variant={isMobile ? "scrollable" : "standard"}
+            scrollButtons="auto"
+          >
             <Tab label="Início" value="inicio" />
             <Tab label="Publicados" value="Publicados" />
             <Tab label="Repositorio" value="Repositorio" />
           </Tabs>
         </Box>
   
+        {/* Conteúdo das Abas */}
         <Box mt={4} px={2}>
           {renderContent()}
         </Box>
       </Box>
     );
-};
+  };
 
 export default ProfileDesk;

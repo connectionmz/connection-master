@@ -4,11 +4,12 @@ import { db } from '../fb';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css"; 
 import "slick-carousel/slick/slick-theme.css";
-import CircularProgress from '@mui/material/CircularProgress'; // For loading spinner
+import CircularProgress from '@mui/material/CircularProgress'; 
+import anunciar from '../img/anunciar.gif'; // Importe a imagem anunciar.gif
 
 const Banner = () => {
   const [banners, setBanners] = useState([]);
-  const [loading, setLoading] = useState(true); // State for loading indicator
+  const [loading, setLoading] = useState(true); 
 
   useEffect(() => {
     const bannersRef = ref(db, 'banners');
@@ -18,8 +19,10 @@ const Banner = () => {
       if (bannersData) {
         const bannerList = Object.values(bannersData);
         setBanners(bannerList);
+      } else {
+        setBanners([]); // Define banners como um array vazio se não houver dados
       }
-      setLoading(false); // Stop loading after banners are fetched
+      setLoading(false); 
     });
   }, []);
 
@@ -70,8 +73,12 @@ const Banner = () => {
           ))}
         </Slider>
       ) : (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-gray-500">Nenhum banner disponível</p>
+        <div className="w-full h-[350px] md:h-[500px] flex justify-center items-center bg-gray-100 rounded-lg overflow-hidden shadow-md">
+          <img 
+            src={anunciar} 
+            alt="Anunciar" 
+            className="w-full h-full object-cover"
+          />
         </div>
       )}
     </div>

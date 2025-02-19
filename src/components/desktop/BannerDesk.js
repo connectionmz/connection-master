@@ -4,12 +4,13 @@ import { db } from '../../fb';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css"; 
 import "slick-carousel/slick/slick-theme.css";
-import CircularProgress from '@mui/material/CircularProgress'; // For loading spinner
+import CircularProgress from '@mui/material/CircularProgress'; // Para o spinner de carregamento
 import { Box, Typography } from "@mui/material";
+import anunciar from '../../img/anunciar.gif'; // Importe a imagem anunciar.gif
 
 const BannerDesk = () => {
   const [banners, setBanners] = useState([]);
-  const [loading, setLoading] = useState(true); // State for loading indicator
+  const [loading, setLoading] = useState(true); // Estado para o indicador de carregamento
 
   useEffect(() => {
     const bannersRef = ref(db, 'banners');
@@ -19,8 +20,10 @@ const BannerDesk = () => {
       if (bannersData) {
         const bannerList = Object.values(bannersData);
         setBanners(bannerList);
+      } else {
+        setBanners([]); // Define banners como um array vazio se não houver dados
       }
-      setLoading(false); // Stop loading after banners are fetched
+      setLoading(false); // Para o carregamento após os banners serem buscados
     });
   }, []);
 
@@ -51,7 +54,7 @@ const BannerDesk = () => {
           {banners.map((banner, index) => (
             <Box
               key={index}
-              className="w-full flex rounded-lg overflow-hidden shadow-md"
+              className="w-full flex overflow-hidden shadow-md"
               sx={{
                 height: { xs: '250px', sm: '400px', md: '600px' }, // Ajusta dinamicamente a altura
               }}
@@ -85,10 +88,20 @@ const BannerDesk = () => {
           ))}
         </Slider>
       ) : (
-        <Box className="flex justify-center items-center h-64">
-          <Typography variant="body2" color="textSecondary">
-            Nenhum banner disponível
-          </Typography>
+        <Box
+          className="w-full flex overflow-hidden shadow-md"
+          
+        >
+        <a href='/anunciar'>
+        <img 
+            src={anunciar} 
+            alt="Anunciar" 
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
+          /></a>
         </Box>
       )}
     </Box>

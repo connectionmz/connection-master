@@ -44,8 +44,6 @@ const NonSubscriberRoutes = ({ userDb }) => {
             <Route path="/" element={<CompanyDataForm />} />
           ) : (
             <>
-              <Route path="/" element={<Payment user={user} />} />
-              <Route path="/pricing" element={<Payment user={userDb} />} />
               <Route path="/Checkout/:plan" element={<Checkout user={userDb} />} />
             </>
           )}

@@ -14,6 +14,7 @@ import {
   CircularProgress,
   ListItemIcon,
   ListItem,
+  useMediaQuery,
 } from "@mui/material";
 import {
   LocalHospital, Business, AttachMoney, School, Receipt, Security, 
@@ -32,7 +33,6 @@ import { Link } from "react-router-dom";
 import { db } from "../fb";
 import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
-
 
 const getCategoryIcon = (categoryName) => {
   const icons = {
@@ -96,7 +96,6 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
   </Paper>
 );
 
-
 const useFirebaseData = (path, limit = 10) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,6 +135,7 @@ const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
   const [error, setError] = useState(null);
   const [campanhasAtivas, setCampanhasAtivas] = useState([]);
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
   const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
@@ -193,7 +193,6 @@ const Dashboard = ({ user }) => {
     fetchCampanhasAtivas();
     fetchRespondedInqueritos();
   }, []);
-
 
 
   const filteredInqueritos = useMemo(() => {

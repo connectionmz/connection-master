@@ -11,17 +11,22 @@ import {
   Button,
   Badge,
   Avatar,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu"; // Ícone do menu hambúrguer
 import SearchIcon from "@mui/icons-material/Search";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
 import GavelIcon from "@mui/icons-material/Gavel";
 import DomainIcon from "@mui/icons-material/Domain";
 import DescriptionIcon from "@mui/icons-material/Description";
-import ChatIcon from "@mui/icons-material/Chat";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import FeedIcon from "@mui/icons-material/Feed";
 import PeopleIcon from "@mui/icons-material/People";
-import NotificationsIcon from "@mui/icons-material/Notifications"; // Novo ícone para notificações
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { logo } from "../../utils/utils";
 import { db } from "../../fb";
 
@@ -29,7 +34,8 @@ const HeaderDesk = ({ user }) => {
   const [pendingConnections, setPendingConnections] = useState(0);
   const [pendingQuotes, setPendingQuotes] = useState(0);
   const [pendingContests, setPendingContests] = useState(0);
-  const [pendingNotifications, setPendingNotifications] = useState(0); // Estado para notificações
+  const [pendingNotifications, setPendingNotifications] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false); // Estado para controlar o drawer
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,7 +47,7 @@ const HeaderDesk = ({ user }) => {
       const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
       const targetUserQuotesRef = ref(db, `cotacoes/`);
       const targetUserContestsRef = ref(db, `contests/${user.id}/`);
-      const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`); // Referência para notificações
+      const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`);
 
       const unsubscribeConnections = onValue(targetUserConnectionRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -97,19 +103,19 @@ const HeaderDesk = ({ user }) => {
         unsubscribeConnections();
         unsubscribeQuotes();
         unsubscribeContests();
-        unsubscribeNotifications(); // Limpar o listener de notificações
+        unsubscribeNotifications();
       };
     }
   }, [user?.id, user?.sector]);
 
   const navItems = [
-    { to: "/empresas", icon: <DomainIcon fontSize="large" />, label: "Empresas" },
-    { to: "/lojas", icon: <StoreMallDirectoryIcon fontSize="large" />, label: "Lojas" },
+    { to: "/empresas", icon: <DomainIcon />, label: "Empresas" },
+    { to: "/lojas", icon: <StoreMallDirectoryIcon />, label: "Lojas" },
     {
       to: "/concursos",
       icon: (
         <Badge badgeContent={pendingContests || 0} color="error" overlap="circular">
-          <GavelIcon fontSize="large" />
+          <GavelIcon />
         </Badge>
       ),
       label: "Concursos",
@@ -118,17 +124,17 @@ const HeaderDesk = ({ user }) => {
       to: "/cotacoes",
       icon: (
         <Badge badgeContent={pendingQuotes || 0} color="error" overlap="circular">
-          <DescriptionIcon fontSize="large" />
+          <DescriptionIcon />
         </Badge>
       ),
       label: "Cotações",
     },
-    { to: "/feed", icon: <FeedIcon fontSize="large" />, label: "Feed" },
+    { to: "/feed", icon: <FeedIcon />, label: "Feed" },
     {
       to: "/inbox",
       icon: (
         <Badge badgeContent={pendingNotifications || 0} color="error" overlap="circular">
-          <NotificationsIcon fontSize="large" /> {/* Ícone de notificações */}
+          <NotificationsIcon />
         </Badge>
       ),
       label: "Notificações",
@@ -137,7 +143,7 @@ const HeaderDesk = ({ user }) => {
       to: "/conexoes",
       icon: (
         <Badge badgeContent={pendingConnections || 0} color="error" overlap="circular">
-          <PeopleIcon fontSize="large" />
+          <PeopleIcon />
         </Badge>
       ),
       label: "Conexões",
@@ -145,63 +151,116 @@ const HeaderDesk = ({ user }) => {
     {
       to: "/app",
       icon: (
-        <Avatar src={user.logoUrl || ""} alt="Perfil">
-          {!user.logoUrl && <AccountCircleIcon fontSize="large" />}
+        <Avatar src={user?.logoUrl || ""} alt="Perfil">
+          {!user?.logoUrl && <AccountCircleIcon />}
         </Avatar>
       ),
       label: "Perfil",
     },
   ];
 
+  const toggleDrawer = (open) => (event) => {
+    if (
+      event.type === "keydown" &&
+      (event.key === "Tab" || event.key === "Shift")
+    ) {
+      return;
+    }
+    setDrawerOpen(open);
+  };
+
+  const renderNavItems = () => (
+    <Box display="flex" alignItems="center" gap={isMobile ? 1 : 3}>
+      {navItems.map((item, index) => {
+        const isActive = location.pathname === item.to;
+        return (
+          <Link
+            to={item.to}
+            key={index}
+            title={item.label}
+            style={{
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textDecoration: "none",
+            }}
+          >
+            <IconButton
+              sx={{
+                color: isActive ? "#1976d2" : "#444",
+                backgroundColor: isActive ? "#e3f2fd" : "transparent",
+                "&:hover": {
+                  color: "#1976d2",
+                  transform: "scale(1.1)",
+                  transition: "transform 0.3s ease, color 0.3s",
+                },
+              }}
+            >
+              {item.icon}
+            </IconButton>
+            {!isMobile && (
+              <Typography variant="caption" sx={{ color: isActive ? "#1976d2" : "#444" }}>
+                {item.label}
+              </Typography>
+            )}
+          </Link>
+        );
+      })}
+    </Box>
+  );
+
   return (
-    <AppBar position="sticky" sx={{ backgroundColor: "#f1f1f1", boxShadow: 3 }}>
+    <AppBar position="sticky" sx={{ backgroundColor: "#FFF", boxShadow: 3 }}>
       <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
         <Box display="flex" alignItems="center" gap={2}>
           <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
             <Link to="/" className="flex items-center space-x-2">
-              <img src={logo} alt="Logo" style={{ width: "20%" }} />
+              <img src={logo} alt="Logo" style={{ width: isMobile ? "30%" : "20%" }} />
             </Link>
           </Typography>
         </Box>
-        <Box display="flex" alignItems="center" gap={3}>
-          {navItems.map((item, index) => {
-            const isActive = location.pathname === item.to;
-            return (
-              <Link to={item.to} key={index} title={item.label} style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <IconButton
-                  sx={{
-                    color: isActive ? "#1976d2" : "#444",
-                    backgroundColor: isActive ? "#e3f2fd" : "transparent",
-                    "&:hover": {
-                      color: "#1976d2",
-                      transform: "scale(1.1)",
-                      transition: "transform 0.3s ease, color 0.3s",
-                    },
-                  }}
-                >
-                  {item.icon}
-                </IconButton>
-                <Typography variant="caption" sx={{ color: isActive ? "#1976d2" : "#444" }}>
-                  {item.label}
-                </Typography>
-              </Link>
-            );
-          })}
-          {publicPanel && (
-            <Button
-              onClick={() => navigate("/painel")}
-              sx={{
-                backgroundColor: "#1976d2",
-                color: "#fff",
-                "&:hover": { backgroundColor: "#1565c0" },
-                padding: "6px 12px",
-                fontWeight: "bold",
-              }}
-            >
-              Ir para Painel Público
-            </Button>
-          )}
-        </Box>
+        {isMobile ? (
+          <>
+            <IconButton onClick={toggleDrawer(true)}>
+              <MenuIcon />
+            </IconButton>
+            <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+              <List>
+                {navItems.map((item, index) => (
+                  <ListItem
+                    button
+                    key={index}
+                    component={Link}
+                    to={item.to}
+                    onClick={toggleDrawer(false)}
+                  >
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.label} />
+                  </ListItem>
+                ))}
+              </List>
+            </Drawer>
+          </>
+        ) : (
+          <>
+            {renderNavItems()}
+            {publicPanel && (
+              <Button
+                onClick={() => navigate("/painel")}
+                sx={{
+                  backgroundColor: "#1976d2",
+                  color: "#fff",
+                  "&:hover": { backgroundColor: "#1565c0" },
+                  padding: "6px 12px",
+                  fontWeight: "bold",
+                }}
+              >
+                Ir para Painel Público
+              </Button>
+            )}
+          </>
+        )}
       </Toolbar>
     </AppBar>
   );
