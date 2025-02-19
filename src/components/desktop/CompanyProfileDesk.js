@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push, set, onValue, remove } from 'firebase/database'; 
 import { auth, db } from '../../fb'; 
 import PostGallery from '../PostGallery';
+import noPhoto from '../../img/noimage.jpg'
 import {
     Box,
     Button,
@@ -64,8 +65,8 @@ const CompanyProfile = ({ user }) => {
                       setmCompany(companyData);
                       setUserData({
                           ...companyData,
-                          photoURL: companyData.logoUrl || "https://via.placeholder.com/150",
-                          coverPhotoURL: companyData.coverUrl || "https://via.placeholder.com/600x200",
+                          photoURL: companyData?.logoUrl || "https://via.placeholder.com/150",
+                          coverPhotoURL: companyData?.coverUrl,
                           displayName: companyData.nome || 'A carregar',
                           username: companyData.id || 'A carregar',
                           endereco: companyData.endereco || 'A carregar'
@@ -275,20 +276,26 @@ const CompanyProfile = ({ user }) => {
     return (
         <Box width='100%' minHeight="100vh" sx={{backgroundColor:'white'}}>
                 <BackButton sx={{ mb: 2 }} />
-
               <Box position="relative">
-              <Box
-                height={{ xs: 150, sm: 400 }} // Altura ajustada para telas pequenas e maiores
-                sx={{  overflow: 'hidden' }}
-              >
-                {userData?.coverPhotoURL && (
+                <Box
+                  height={{ xs: 150, sm: 400 }} 
+                  sx={{ 
+                    overflow: 'hidden',
+                    backgroundColor: '#f0f0f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
                   <img
-                    src={userData.coverPhotoURL}
-                    alt="Cover"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    src={userData?.coverPhotoURL || {noPhoto}} 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'contain', 
+                    }}
                   />
-                )}
-              </Box>
+                </Box>
               <Avatar
                 src={userData?.photoURL}
                 alt="Profile"

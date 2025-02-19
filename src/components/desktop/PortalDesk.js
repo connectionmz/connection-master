@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { ref, push, get, set, remove } from 'firebase/database';
 import { db, storage } from '../../fb';
 import { uploadBytes, getDownloadURL, ref as storageRef } from 'firebase/storage';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css'; // Estilo do editor
 import {
   Box,
   Button,
   TextField,
   Typography,
-  Modal,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   DialogContentText,
   Paper,
-  Divider,
   IconButton,
   List,
   ListItem,
@@ -26,19 +26,41 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BackButton from '../BackButton';
 
-const PortalDesk = ({user}) => {
+const PortalDesk = ({ user }) => {
   const [activeTab, setActiveTab] = useState('publish');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [validity, setValidity] = useState('');
   const [file, setFile] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(false); // Para carregar anúncios
+  const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState({});
   const [openModal, setOpenModal] = useState(false);
   const [modalAction, setModalAction] = useState(null);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+
+  // Configuração do ReactQuill para desabilitar imagens e vídeos
+  const modules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link'], // Remova 'image' e 'video' da toolbar
+      ['clean'],
+    ],
+  };
+
+  const formats = [
+    'header',
+    'bold',
+    'italic',
+    'underline',
+    'strike',
+    'list',
+    'bullet',
+    'link', // Remova 'image' e 'video' dos formatos permitidos
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,23 +68,22 @@ const PortalDesk = ({user}) => {
     try {
       let fileUrl = '';
       let fileFormat = '';
-  
+
       if (file) {
-        // Extrai o formato do arquivo
         const fileNameParts = file.name.split('.');
         fileFormat = fileNameParts[fileNameParts.length - 1].toLowerCase();
-  
+
         const storageReference = storageRef(storage, `announcements/${file.name}`);
         await uploadBytes(storageReference, file);
         fileUrl = await getDownloadURL(storageReference);
       }
-  
+
       const newAnnouncement = {
         title,
         content,
-        validity, // Data de validade do anúncio
+        validity,
         fileUrl,
-        fileFormat, // Formato do arquivo
+        fileFormat,
         company: {
           nome: user.nome,
           logo: user.photoURL,
@@ -71,12 +92,12 @@ const PortalDesk = ({user}) => {
         },
         date: new Date().toISOString(),
       };
-  
+
       await push(ref(db, 'publicAnnouncements'), newAnnouncement);
       setTitle('');
       setContent('');
       setFile(null);
-      setValidity(''); // Reset do campo de validade
+      setValidity('');
       fetchAnnouncements();
     } catch (error) {
       console.error('Erro ao publicar anúncio:', error);
@@ -91,12 +112,9 @@ const PortalDesk = ({user}) => {
       const snapshot = await get(ref(db, 'publicAnnouncements'));
       if (snapshot.exists()) {
         const data = snapshot.val();
-  
-        // Filtra os anúncios para incluir apenas os que pertencem à empresa do usuário
         const filteredData = Object.entries(data)
-          .filter(([id, anuncio]) => anuncio.company.id === user.id) // Substitua 'companyId' pelo campo correto que referencia a empresa
+          .filter(([id, anuncio]) => anuncio.company.id === user.id)
           .map(([id, value]) => ({ id, ...value }));
-  
         setAnnouncements(filteredData);
       }
     } catch (error) {
@@ -105,16 +123,13 @@ const PortalDesk = ({user}) => {
       setLoading(false);
     }
   };
-  
 
-  // Função para abrir o modal de confirmação
   const confirmAction = (action, announcement) => {
     setModalAction(action);
     setSelectedAnnouncement(announcement);
     setOpenModal(true);
   };
 
-  // Função para excluir um anúncio
   const handleDelete = async () => {
     if (selectedAnnouncement) {
       try {
@@ -127,7 +142,6 @@ const PortalDesk = ({user}) => {
     }
   };
 
-  // Função para editar um anúncio
   const handleEdit = () => {
     if (selectedAnnouncement) {
       setEditingId(selectedAnnouncement.id);
@@ -142,7 +156,6 @@ const PortalDesk = ({user}) => {
     }
   };
 
-  // Função para atualizar um anúncio
   const handleUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -174,15 +187,13 @@ const PortalDesk = ({user}) => {
     }
   };
 
-  // Carregar anúncios ao iniciar
   useEffect(() => {
     fetchAnnouncements();
   }, []);
 
   return (
-    <Box className="container mx-auto p-6">
-                  <BackButton sx={{ mb: 2 }} />
-
+    <Box className="container mx-auto p-6" sx={{backgroundColor:'#FFF'}}>
+      <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom>
         Setor Público - Anúncios
       </Typography>
@@ -202,67 +213,66 @@ const PortalDesk = ({user}) => {
       {/* Aba para Publicar Anúncio */}
       {activeTab === 'publish' && (
         <form onSubmit={handleSubmit}>
-        <TextField
-          label="Título do Anúncio"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
-        <TextField
-          label="Conteúdo"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          multiline
-          rows={4}
-        />
-        <TextField
-          label="Data de Validade"
-          type="date"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={validity}
-          onChange={(e) => setValidity(e.target.value)}
-          InputLabelProps={{
-            shrink: true,
-          }}
-          required
-        />
-        <Button
-          variant="contained"
-          component="label"
-          sx={{ marginBottom: 2 }}
-        >
-          Carregar Arquivo
-          <input
-            type="file"
-            hidden
-            onChange={(e) => setFile(e.target.files[0])}
+          <TextField
+            label="Título do Anúncio"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
           />
-        </Button>
-        <Box>
-          {file && (
-            <Typography variant="body2" color="textSecondary">
-              {file.name}
-            </Typography>
-          )}
-        </Box>
-        <Button
-          variant="contained"
-          color="primary"
-          type="submit"
-          sx={{ marginTop: 2 }}
-          disabled={loading}
-        >
-          {loading ? <CircularProgress size={24} color="inherit" /> : 'Publicar Anúncio'}
-        </Button>
-      </form>
+          <Box sx={{ marginBottom: 2 }}>
+            <ReactQuill
+              value={content}
+              onChange={setContent}
+              modules={modules}
+              formats={formats}
+              placeholder="Escreva aqui..."
+            />
+          </Box>
+          <TextField
+              label="Validade"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              margin="normal"
+              value={validity}
+              onChange={(e) => setValidity(e.target.value)}
+              inputProps={{
+                min: new Date().toISOString().split("T")[0],
+              }}
+              required
+            />
+          <Button
+            variant="contained"
+            component="label"
+            sx={{ marginBottom: 2 }}
+          >
+            Carregar Arquivo
+            <input
+              type="file"
+              hidden
+              onChange={(e) => setFile(e.target.files[0])}
+            />
+          </Button>
+          <Box>
+            {file && (
+              <Typography variant="body2" color="textSecondary">
+                {file.name}
+              </Typography>
+            )}
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            type="submit"
+            sx={{ marginTop: 2 }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Publicar Anúncio'}
+          </Button>
+        </form>
       )}
 
       {/* Aba para Ver Anúncios */}
@@ -281,7 +291,7 @@ const PortalDesk = ({user}) => {
                       secondary={
                         <Box>
                           <Typography variant="body2" color="textSecondary">
-                            {announcement.content}
+                            <div dangerouslySetInnerHTML={{ __html: announcement.content }} />
                           </Typography>
                           <Typography variant="body2" color="textSecondary">
                             Empresa: {announcement.company.nome}

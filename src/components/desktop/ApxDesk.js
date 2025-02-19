@@ -23,9 +23,9 @@ import { CameraAlt, ExitToApp, Save } from "@mui/icons-material";
 const ApxDesk = ({ user }) => {
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [provinceTemp, setProvinceTemp] = useState(user.provincia);
+  const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user.provincia);
   const [editProvince, setEditProvince] = useState(true);
-  const isMobile = useMediaQuery('(max-width:600px)'); // Verifica se a tela é pequena
+  const isMobile = useMediaQuery('(max-width:600px)'); 
 
   const navigate = useNavigate();
 
