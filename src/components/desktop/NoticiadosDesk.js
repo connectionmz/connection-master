@@ -19,6 +19,7 @@ import {
 import { FaFileDownload, FaArrowRight } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { height, width } from '@mui/system';
+import BackButton from '../BackButton';
 
 const NoticiadosDesk = () => {
   const [anuncios, setAnuncios] = useState([]);
@@ -94,15 +95,9 @@ const NoticiadosDesk = () => {
   }
 
   return (
-    <Box style={{ width: '100%', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      <AppBar position="static" color="primary">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Notícias
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="lg" sx={{ paddingY: 4 }}>
+    <Box style={{ width: '100%', minHeight: '100vh'}}>
+      <BackButton sx={{ mb: 2 }} />
+      <Container >
         {anuncios.length === 0 ? (
           <Alert severity="info">Nenhuma noticia disponível no momento.</Alert>
         ) : (
@@ -141,10 +136,10 @@ const NoticiadosDesk = () => {
                         color="text.secondary"
                         paragraph
                       >
-                        {anuncio.content?.length > 100
-                          ? `${anuncio.content.substring(0, 100)}...`
-                          : anuncio.content || 'Sem descrição disponível.'}
                       </Typography>
+                      <div dangerouslySetInnerHTML={{ __html: anuncio.content?.length > 100
+                          ? `${anuncio.content.substring(0, 100)}...`
+                          : anuncio.content || 'Sem descrição disponível.' }} />
                       <Typography variant="caption" display="block" gutterBottom>
                         Publicado por: {anuncio.company?.nome || 'Desconhecido'}{' '}
                         ({anuncio.company?.provincia || 'N/A'})
@@ -161,18 +156,15 @@ const NoticiadosDesk = () => {
                         aria-label="download"
                         component="a"
                         href={anuncio.fileUrl}
-                        download
-                      >
+                        download>
                         <FaFileDownload />
-                      </IconButton>
-                    )}
+                      </IconButton>)}
                     <Button
                       variant="outlined"
                       color="primary"
                       endIcon={<FaArrowRight />}
                       component={Link}
-                      to={`/noticia/${anuncio.id}`}
-                    >
+                      to={`/noticia/${anuncio.id}`}>
                       Ver mais
                     </Button>
                   </Box>
