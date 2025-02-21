@@ -17,7 +17,7 @@ import {
   Grid,
   IconButton,
 } from "@mui/material";
-import { push, ref, set } from "firebase/database";
+import { push, ref, set, get } from "firebase/database";
 import { db } from "../../fb";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -41,10 +41,36 @@ const PostInputDesk = ({ user }) => {
     if (newPhotos.length === 0) {
       errors.push("Nenhuma foto selecionada para upload.");
     }
-
-
     setErrorMessages(errors);
     return errors.length === 0;
+  };
+
+  const sendNotificationToConnections = async (postId) => {
+    try {
+      const connectionsRef = ref(db, `connections/${user.id}`);
+      const connectionsSnapshot = await get(connectionsRef);
+
+      if (connectionsSnapshot.exists()) {
+        const connections = connectionsSnapshot.val();
+
+        Object.keys(connections).forEach(async (connectionId) => {
+          const notification = {
+            type: "new_post",
+            message: `${user.nome} publicou uma nova foto.`,
+            fromUserId: user.id,
+            fromUserName: user.nome,
+            postId: postId,
+            timestamp: new Date().toISOString(),
+            status: "unread",
+          };
+
+          const notificationRef = push(ref(db, `notifications/${connectionId}`));
+          await set(notificationRef, notification);
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao enviar notificações:", error);
+    }
   };
 
   const handleSavePublishedPhotos = useCallback(async () => {
@@ -93,6 +119,8 @@ const PostInputDesk = ({ user }) => {
                 url,
                 timestamp: Date.now(),
               });
+
+              await sendNotificationToConnections(postId);
 
               completedUploads++;
               if (completedUploads === newPhotos.length) {
@@ -227,7 +255,7 @@ const PostInputDesk = ({ user }) => {
                           [{ align: [] }],
                         ],
                       }}
-                      style={{ height: "120px",marginBottom:'12px' }}
+                      style={{ height: "120px", marginBottom: "12px" }}
                     />
                     <LinearProgress
                       variant="determinate"

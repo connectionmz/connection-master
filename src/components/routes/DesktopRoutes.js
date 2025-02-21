@@ -125,13 +125,12 @@ const DesktopRoutes = ({ user }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          maxWidth: isMobile ? '100%' : '80%', // Ajusta o maxWidth com base no tamanho da tela
-          width: '100%', // Sempre ocupa toda a largura disponível
-          margin: '0 auto', // Centraliza horizontalmente
-          boxSizing: 'border-box', // Evita problemas com padding e margin
-          padding: isMobile ? '16px' : '24px', // Ajusta o padding para mobile/desktop
-        }}
-      >
+          maxWidth: isMobile ? '100%' : '80%', 
+          width: '100%', 
+          margin: '0 auto', 
+          boxSizing: 'border-box', 
+          padding: isMobile ? '16px' : '24px', 
+        }}>
         <Routes>
         <Route path="/" element={<DashboardComponent user={user} />} />
         <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
@@ -159,10 +158,10 @@ const DesktopRoutes = ({ user }) => {
         <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
         <Route path="/noticiados" element={<NoticiadosDesk />} />
         <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
-      {/* Concursos */}
-      <Route path="/concursos" element={<ConcursoDesk user={user} />} />
-      <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
-      <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
+        {/* Concursos */}
+        <Route path="/concursos" element={<ConcursoDesk user={user} />} />
+        <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
+        <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
 
         {/* Faturação e Proforma */}
         <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />

@@ -14,18 +14,18 @@ import {
 } from "@mui/material";
 
 const StorieListDesk = ({ user }) => {
-  const [stories, setStories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const [stories, setStories] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
-  const defaultLogoUrl = "https://via.placeholder.com/150";
+  const defaultLogoUrl = "https://via.placeholder.com/150"
 
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
         const companiesRef = ref(db, "company");
-        const snapshot = await get(companiesRef);
+        const snapshot = await get(companiesRef)
         if (snapshot.exists()) {
           const data = snapshot.val();
           const companyList = Object.keys(data)
@@ -34,25 +34,23 @@ const StorieListDesk = ({ user }) => {
               ...data[key],
             }))
             .filter((company) =>
-              (company.provincia === user.provincia || company.provincia === user.provinciaTemp) &&
+              (company.provincia === user.provinciaTemp || company.provincia === user.provinciaTemp) &&
               company.id !== user.id
-            );
-            
-          const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
+            )
+          const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5)
           setStories(randomCompanies);
         }
       } catch (error) {
-        setError("Erro ao carregar empresas: " + error.message);
+        setError("Erro ao carregar empresas: " + error.message)
       } finally {
         setLoading(false);
       }
     };
-
     fetchCompanies();
   }, [user]);
 
   const handleCompanyClick = (companyId) => {
-    navigate(`/perfil/${companyId}`);
+    navigate(`/perfil/${companyId}`)
   };
 
   const handleExploreClick = () => {
@@ -64,9 +62,8 @@ const StorieListDesk = ({ user }) => {
       <Box display="flex" justifyContent="center" alignItems="center" height="200px">
         <CircularProgress />
       </Box>
-    );
+    )
   }
-
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="200px" color="error.main">

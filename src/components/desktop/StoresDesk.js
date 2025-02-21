@@ -145,7 +145,7 @@ const StoresDesk = ({ user }) => {
               cursor: "pointer",
             }}
             component={Link}
-            to={`/stores/${store.id}`}
+            to={`/loja/${store.id}`}
           >
             <Avatar
               src={store?.company?.logo || "https://via.placeholder.com/80"}

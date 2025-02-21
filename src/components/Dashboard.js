@@ -156,7 +156,6 @@ const Dashboard = ({ user }) => {
               Object.keys(campanhasInternas).forEach((subKey) => {
                 const campanha = campanhasInternas[subKey];
     
-                // Verifica se a campanha pertence ao componente "home" e se a província coincide
                 if (
                   campanha.component === "home" &&
                   (user.provinciaTemp || user.provincia) === campanha.company?.provincia
