@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { createTheme, Fab, Menu, MenuItem, ThemeProvider, useMediaQuery } from '@mui/material';
+import { Box, createTheme, Fab, Menu, MenuItem, ThemeProvider, useMediaQuery } from '@mui/material';
 import LanguageIcon from '@mui/icons-material/Language';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
@@ -64,7 +64,6 @@ import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
 import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
 import ContactForm from '../desktop/Mailer';
 
-
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -78,18 +77,17 @@ const theme = createTheme({
 });
 
 const DesktopRoutes = ({ user }) => {
-  const [language, setLanguage] = useState('pt'); 
+  const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const handleLanguageChange = (lang) => {
-    setLanguage(lang); 
-
-    localStorage.setItem('selectedLanguage', lang); 
+    setLanguage(lang);
+    localStorage.setItem('selectedLanguage', lang);
     console.log(`Language switched to: ${lang}`);
   };
-  
+
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -98,8 +96,7 @@ const DesktopRoutes = ({ user }) => {
     setAnchorEl(null);
   };
 
-  if (user?.subscriptions?.isverify==='false') {
-    // Use Navigate para redirecionar ou encapsule o Route em Routes
+  if (user?.subscriptions?.isverify === 'false') {
     return (
       <Routes>
         <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
@@ -110,114 +107,116 @@ const DesktopRoutes = ({ user }) => {
   }
 
   return (
-    <div
-    style={{
-      minHeight: '100vh',
-      backgroundColor: "#F1F1F1",
-      display: 'flex',
-      flexDirection: 'column', // Garante que os elementos fiquem na vertical
-    }}
-  >
     <ThemeProvider theme={theme}>
-      <HeaderDesk user={user} />
-      <div
-        style={{
+      <Box
+        sx={{
+          minHeight: '100vh',
+          backgroundColor: '#F1F1F1',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          maxWidth: isMobile ? '100%' : '80%', 
-          width: '100%', 
-          margin: '0 auto', 
-          boxSizing: 'border-box', 
-          padding: isMobile ? '16px' : '24px', 
-        }}>
-        <Routes>
-        <Route path="/" element={<DashboardComponent user={user} />} />
-        <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
-        <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
-        <Route path="/empresas" element={<ExploreDesk user={user} />} />
-        <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
-        <Route path="/app" element={<ApxDesk user={user} />} />
-        <Route path="/feed" element={<FeedDesk user={user} />} />
-        <Route path="/post/:postId" element={<PostDetailPageDesk user={user}/>} />
-        <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user}/>} />
-        <Route path="/profile" element={<ProfileDesk userI={user}/>} />
-        <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk user={user}/>} />
-        <Route path="/inbox" element={<InboxDesk user={user}/>} />
-        <Route path="/search" element={<ConnectionsSearchDesk />} />
-        <Route path="/sobre" element={<Sobre />} />
-        <Route path="/email-verification" element={<EmailVerification />} />
-        <Route path="/editar-perfil" element={<EditProfileDesk user={user} />} />
-        <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
-        <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
-        <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />
-        <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
-        <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
-        <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk  user={user}/>} />
-        <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk  user={user}/>} />
-        <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
-        <Route path="/noticiados" element={<NoticiadosDesk />} />
-        <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
-        {/* Concursos */}
-        <Route path="/concursos" element={<ConcursoDesk user={user} />} />
-        <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
-        <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
-
-        {/* Faturação e Proforma */}
-        <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
-        <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
-        <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
-        <Route path="/edit-proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
-        <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
-        {/* Mercado e Produtos */}
-        <Route path="/market" element={<MarketDesk user={user} />} />
-        <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
-        <Route path="/lojas" element={<StoresDesk user={user}/>} />
-        <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
-        <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
-        <Route path="/checkout" element={<CreditCardCheckoutDesk user={user}/>} />
-        {/* Campanha e Posts */}
-        <Route path="/post" element={<PostInputDesk user={user} />} />
-        <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
-        <Route path="/sms" element={<SmsDesk user={user}/>} /> 
-          {/* Módulos */}
-        <Route path="/callcenter" element={<CallCenterModuleDesk />} />
-        <Route path="/procurement" element={<LogisticaModuleDesk />} />
-        <Route path="/inqueritos" element={<InqueritosModuleDesk user={user}/>} />
-        <Route path="/inquerito/:surveyId" element={<SurveyPageDesk user={user}/>} />
-        <Route path="/painel" element={<PortalDesk user={user}/>} />
-        <Route path="/sendmail" element={<SendMail user={user}/>} />
-        <Route path="/destacar" element={<DestacarModule user={user}/>} />
-        <Route path="/analises" element={<AnalyticsDesk />} />  
-        <Route path="/website" element={<LandingPage />} />  
-        
-       <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </div>
-      <FooterDesk />
-      <Fab
-        color="primary"
-        aria-label="change language"
-        style={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
+          flexDirection: 'column',
         }}
-        onClick={handleMenuOpen}
       >
-        <LanguageIcon />
-      </Fab>
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
-        <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
-        <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>
-      </Menu>
+        {/* Header */}
+        <HeaderDesk user={user} />
+
+        {/* Conteúdo Principal */}
+        <Box
+          sx={{
+            flex: 1, // Ocupa o espaço restante
+            width: '100%',
+            maxWidth: isMobile ? '100%' : '1200px', // Limita a largura máxima em telas maiores
+            margin: '0 auto', // Centraliza o conteúdo
+            padding: isMobile ? '16px' : '24px', // Ajusta o padding para dispositivos móveis
+            boxSizing: 'border-box',
+          }}
+        >
+          <Routes>
+            <Route path="/" element={<DashboardComponent user={user} />} />
+            <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
+            <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
+            <Route path="/empresas" element={<ExploreDesk user={user} />} />
+            <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
+            <Route path="/app" element={<ApxDesk user={user} />} />
+            <Route path="/feed" element={<FeedDesk user={user} />} />
+            <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
+            <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
+            <Route path="/profile" element={<ProfileDesk userI={user} />} />
+            <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
+            <Route path="/inbox" element={<InboxDesk user={user} />} />
+            <Route path="/search" element={<ConnectionsSearchDesk />} />
+            <Route path="/sobre" element={<Sobre />} />
+            <Route path="/email-verification" element={<EmailVerification />} />
+            <Route path="/editar-perfil" element={<EditProfileDesk user={user} />} />
+            <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
+            <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
+            <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />
+            <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
+            <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
+            <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk user={user} />} />
+            <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk user={user} />} />
+            <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
+            <Route path="/noticiados" element={<NoticiadosDesk />} />
+            <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
+            <Route path="/concursos" element={<ConcursoDesk user={user} />} />
+            <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
+            <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
+            <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
+            <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
+            <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
+            <Route path="/edit-proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
+            <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
+            <Route path="/market" element={<MarketDesk user={user} />} />
+            <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
+            <Route path="/lojas" element={<StoresDesk user={user} />} />
+            <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
+            <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
+            <Route path="/checkout" element={<CreditCardCheckoutDesk user={user} />} />
+            <Route path="/post" element={<PostInputDesk user={user} />} />
+            <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
+            <Route path="/sms" element={<SmsDesk user={user} />} />
+            <Route path="/callcenter" element={<CallCenterModuleDesk />} />
+            <Route path="/procurement" element={<LogisticaModuleDesk />} />
+            <Route path="/inqueritos" element={<InqueritosModuleDesk user={user} />} />
+            <Route path="/inquerito/:surveyId" element={<SurveyPageDesk user={user} />} />
+            <Route path="/painel" element={<PortalDesk user={user} />} />
+            <Route path="/sendmail" element={<SendMail user={user} />} />
+            <Route path="/destacar" element={<DestacarModule user={user} />} />
+            <Route path="/analises" element={<AnalyticsDesk />} />
+            <Route path="/website" element={<LandingPage />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Box>
+
+        {/* Footer */}
+        <FooterDesk />
+
+        {/* Botão de Idioma */}
+        <Fab
+          color="primary"
+          aria-label="change language"
+          sx={{
+            position: 'fixed',
+            bottom: isMobile ? 8 : 16,
+            right: isMobile ? 8 : 16,
+            zIndex: 1000,
+          }}
+          onClick={handleMenuOpen}
+        >
+          <LanguageIcon />
+        </Fab>
+
+        {/* Menu de Idioma */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
+          <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
+          <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>
+        </Menu>
+      </Box>
     </ThemeProvider>
-  </div>
   );
 };
 
