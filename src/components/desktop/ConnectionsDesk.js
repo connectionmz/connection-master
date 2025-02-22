@@ -219,7 +219,7 @@ const ConnectionsDesk = ({ user }) => {
                 <React.Fragment key={index}>
                   <ListItemButton
                     component={Link}
-                    to={`/vperfil/${connection.requestedBy}`}
+                    to={`/perfil/${connection.requestedBy}`}
                     sx={{ textDecoration: "none" }}
                   >
                     <ListItemAvatar>

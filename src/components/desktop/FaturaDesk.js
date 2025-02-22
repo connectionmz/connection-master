@@ -163,11 +163,18 @@ const FaturaDesk = ({ user }) => {
               <Typography>
                 {fatura.cliente?.nome || "Cliente Desconhecido"}
               </Typography>
-              <Typography>{fatura.cliente?.enderecoEnvio}</Typography>
+              <Typography>{fatura.cliente?.morada}</Typography>
+              <Typography>{fatura.cliente?.nuit}</Typography>
+              <Typography>{fatura.cliente?.contacto}</Typography>
+              <Typography>{fatura.cliente?.email}</Typography>
             </Box>
             <Box textAlign="right">
               <Typography fontWeight="bold">De:</Typography>
               <Typography>{user.nome}</Typography>
+              <Typography>{user.nuit}</Typography>
+              <Typography>{user.contacto}</Typography>
+              <Typography>{user.email}</Typography>
+              <Typography>{user.endereco}</Typography>
               <Typography>Av. 25 de Setembro, Pemba</Typography>
             </Box>
           </Box>
