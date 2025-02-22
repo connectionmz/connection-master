@@ -1,59 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { FaUpload } from 'react-icons/fa';
-import { getDownloadURL, ref as createStorageRef, uploadBytes } from 'firebase/storage';
+import { ref as createStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../fb';
-import { ref, push, set, onValue, remove, update } from 'firebase/database';
-import { Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Tabs, Tab, Box, Typography, Paper, CircularProgress, Snackbar, Alert } from '@mui/material';
-import Checkout from '../checkout/Checkout';
-import BackButton from '../BackButton';
+import { ref, push, set, onValue } from 'firebase/database';
+import {
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Paper,
+  CircularProgress,
+  Snackbar,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
+} from '@mui/material';
 
 const AnunciarDesk = ({ user }) => {
   const [file, setFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState(''); // URL da imagem para preview
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState('Meus');
-  const [anuncios, setAnuncios] = useState([]);
-  const [selectedAnuncio, setSelectedAnuncio] = useState(null);
   const [days, setDays] = useState(1);
   const [totalCost, setTotalCost] = useState(30);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [provincias, setProvincias] = useState([]);
+  const [sectores, setSectores] = useState([]);
+  const [selectedProvincias, setSelectedProvincias] = useState([]);
+  const [selectedSectores, setSelectedSectores] = useState([]);
+  const [empresas, setEmpresas] = useState([]); // Lista de empresas cadastradas
+  const [empresasAtingidas, setEmpresasAtingidas] = useState(0); // Número de empresas atingidas
 
-  const MAX_DAYS = 30;
-  const COST_PER_DAY = 30;
+  const COST_PER_DAY = 30; // Custo base por dia
+  const ADDITIONAL_COST_PER_PROVINCIA = 50; // Custo adicional por província
+  const ADDITIONAL_COST_PER_SETOR = 50; // Custo adicional por setor
 
+  // Busca províncias, setores e empresas do Firebase
   useEffect(() => {
-    const anunciosRef = ref(db, 'banners');
-    onValue(anunciosRef, (snapshot) => {
-      const data = snapshot.val();
-      const anunciosList = Object.keys(data || {}).map((id) => ({
-        id,
-        ...data[id],
-      }));
-      setAnuncios(
-        anunciosList
-          .filter((anuncio) => anuncio.companyId === user.id)
-          .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
-      );
+    const provinciasRef = ref(db, 'provincias');
+    const sectoresRef = ref(db, 'sectores_de_atividade');
+    const empresasRef = ref(db, 'company'); // Referência para as empresas
+
+    onValue(provinciasRef, (snapshot) => setProvincias(snapshot.val() || []));
+    onValue(sectoresRef, (snapshot) => setSectores(snapshot.val() || []));
+    onValue(empresasRef, (snapshot) => {
+      const empresasData = snapshot.val();
+      if (empresasData) {
+        const empresasArray = Object.keys(empresasData).map((key) => ({
+          id: key,
+          ...empresasData[key],
+        }));
+        setEmpresas(empresasArray);
+      } else {
+        setEmpresas([]);
+      }
     });
-  }, [user.id]);
+  }, []);
 
+  // Calcula o custo total com base nos dias, províncias e setores selecionados
   useEffect(() => {
-    setTotalCost(days * COST_PER_DAY);
-  }, [days]);
+    const additionalCost =
+      selectedProvincias.length * ADDITIONAL_COST_PER_PROVINCIA +
+      selectedSectores.length * ADDITIONAL_COST_PER_SETOR;
+    setTotalCost(days * (COST_PER_DAY + additionalCost));
+  }, [days, selectedProvincias, selectedSectores]);
+
+  // Calcula o número de empresas atingidas com base nas províncias e setores selecionados
+  useEffect(() => {
+    if (empresas.length > 0 && (selectedProvincias.length > 0 || selectedSectores.length > 0)) {
+      const empresasFiltradas = empresas.filter((empresa) => {
+        const matchesProvincia = selectedProvincias.length === 0 || selectedProvincias.includes(empresa.provincia);
+        const matchesSetor = selectedSectores.length === 0 || selectedSectores.includes(empresa.sector);
+        return matchesProvincia && matchesSetor;
+      });
+      setEmpresasAtingidas(empresasFiltradas.length);
+    } else {
+      setEmpresasAtingidas(0);
+    }
+  }, [selectedProvincias, selectedSectores, empresas]);
 
   const handleFileChange = (e) => {
-    if (e.target.files[0]) setFile(e.target.files[0]);
-  };
-
-  const handlePaymentSuccess = (paymentDetails) => {
-    setIsCheckoutOpen(false);
-    handleUpload();
+    if (e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      // Cria uma URL temporária para o preview da imagem
+      setImageUrl(URL.createObjectURL(selectedFile));
+    }
   };
 
   const handleUpload = () => {
@@ -61,7 +99,7 @@ const AnunciarDesk = ({ user }) => {
       showSnackbar('Por favor, selecione uma imagem primeiro!', 'error');
       return;
     }
-    if (!title || !description || !phoneNumber) {
+    if (!title || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0) {
       showSnackbar('Por favor, preencha todos os campos obrigatórios!', 'error');
       return;
     }
@@ -70,16 +108,15 @@ const AnunciarDesk = ({ user }) => {
     uploadBytes(fileRef, file)
       .then((snapshot) => {
         getDownloadURL(fileRef).then((url) => {
-          setImageUrl(url);
           saveToDatabase(url);
           setUploading(false);
-          showSnackbar('Imagem carregada com sucesso!', 'success');
+          showSnackbar('Anúncio publicado com sucesso!', 'success');
         });
       })
       .catch((error) => {
         setUploading(false);
         console.error('Erro ao fazer upload da imagem:', error);
-        showSnackbar('Erro ao carregar a imagem. Tente novamente.', 'error');
+        showSnackbar('Erro ao publicar o anúncio. Tente novamente.', 'error');
       });
   };
 
@@ -94,6 +131,8 @@ const AnunciarDesk = ({ user }) => {
       companyId: user.id,
       days,
       totalCost,
+      provincias: selectedProvincias,
+      sectores: selectedSectores,
     });
     resetForm();
   };
@@ -103,35 +142,11 @@ const AnunciarDesk = ({ user }) => {
     setDescription('');
     setLink('');
     setFile(null);
+    setImageUrl(''); // Limpa o preview da imagem
     setDays(1);
     setPhoneNumber('');
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Tem certeza de que deseja eliminar este anúncio?')) {
-      remove(ref(db, `banners/${id}`))
-        .then(() => showSnackbar('Anúncio eliminado com sucesso!', 'success'))
-        .catch(() => showSnackbar('Erro ao eliminar o anúncio.', 'error'));
-    }
-  };
-
-  const handleEdit = (anuncio) => {
-    setSelectedAnuncio(anuncio);
-    setIsEditModalOpen(true);
-  };
-
-  const updateAnuncio = () => {
-    const anuncioRef = ref(db, `banners/${selectedAnuncio.id}`);
-    update(anuncioRef, {
-      title: selectedAnuncio.title,
-      description: selectedAnuncio.description,
-      link: selectedAnuncio.link,
-    })
-      .then(() => {
-        showSnackbar('Anúncio atualizado com sucesso!', 'success');
-        setIsEditModalOpen(false);
-      })
-      .catch(() => showSnackbar('Erro ao atualizar o anúncio.', 'error'));
+    setSelectedProvincias([]);
+    setSelectedSectores([]);
   };
 
   const showSnackbar = (message, severity) => {
@@ -145,167 +160,125 @@ const AnunciarDesk = ({ user }) => {
   return (
     <Box width="100%" minHeight="100vh">
       <Paper sx={{ width: '100%', padding: 3 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <BackButton sx={{ mb: 2 }} />
-          <Tabs value={activeTab} onChange={(e, newTab) => setActiveTab(newTab)} aria-label="tabs">
-            <Tab label="Meus Anúncios" value="Meus" />
-            <Tab label="Anunciar" value="Anunciar" />
-          </Tabs>
+        <Typography variant="h5" gutterBottom>
+          Anunciar
+        </Typography>
+        <TextField
+          label="Título do anúncio *"
+          variant="outlined"
+          fullWidth
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          label="Link externo (opcional)"
+          variant="outlined"
+          fullWidth
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          sx={{ mb: 2 }}
+        />
+        <input type="file" onChange={handleFileChange} className="mb-3" />
+
+        {/* Preview da Foto */}
+        {imageUrl && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+              Preview da Imagem:
+            </Typography>
+            <img
+              src={imageUrl}
+              alt="Preview da Imagem"
+              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+            />
+          </Box>
+        )}
+
+        {/* Seleção de Províncias */}
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel id="provincias-label">Províncias *</InputLabel>
+          <Select
+            labelId="provincias-label"
+            multiple
+            value={selectedProvincias}
+            onChange={(e) => setSelectedProvincias(e.target.value)}
+            renderValue={(selected) => selected.join(', ')}
+          >
+            {provincias.map((provincia) => (
+              <MenuItem key={provincia.provincia} value={provincia.provincia}>
+                <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                <ListItemText primary={provincia.provincia} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Seleção de Setores */}
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
+          <Select
+            labelId="sectores-label"
+            multiple
+            value={selectedSectores}
+            onChange={(e) => setSelectedSectores(e.target.value)}
+            renderValue={(selected) => selected.join(', ')}
+          >
+            {sectores.map((setor) => (
+              <MenuItem key={setor.setor} value={setor.setor}>
+                <Checkbox checked={selectedSectores.includes(setor.setor)} />
+                <ListItemText primary={setor.setor} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Seleção de Dias */}
+        <Box mb={2}>
+          <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
+          <TextField
+            type="number"
+            value={days}
+            onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
+            inputProps={{ min: 1, max: 30 }}
+            fullWidth
+          />
         </Box>
-        {activeTab === 'Meus' && (
-          <Box mt={4}>
-            <Typography variant="h6" gutterBottom>
-              Meus Anúncios
-            </Typography>
-            {anuncios.length === 0 ? (
-              <Typography>Nenhum anúncio encontrado.</Typography>
-            ) : (
-              anuncios.map((anuncio) => (
-                <Paper key={anuncio.id} sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="h6">{anuncio.title}</Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {new Date(anuncio.uploadedAt).toLocaleDateString()}
-                  </Typography>
-                  <Button onClick={() => handleEdit(anuncio)} color="primary" size="small">
-                    Editar
-                  </Button>
-                  <Button onClick={() => handleDelete(anuncio.id)} color="error" size="small">
-                    Eliminar
-                  </Button>
-                </Paper>
-              ))
-            )}
-          </Box>
-        )}
-        {activeTab === 'Anunciar' && (
-          <Box mt={4}>
-            <Typography variant="h5" gutterBottom>
-              Anunciar
-            </Typography>
-            <TextField
-              label="Título do anúncio *"
-              variant="outlined"
-              fullWidth
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Descrição do anúncio *"
-              variant="outlined"
-              fullWidth
-              multiline
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Link externo (opcional)"
-              variant="outlined"
-              fullWidth
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <input type="file" onChange={handleFileChange} className="mb-3" />
-            <Box mb={2}>
-              <Typography>Tempo do anúncio (1 a {MAX_DAYS} dias):</Typography>
-              <TextField
-                type="number"
-                value={days}
-                onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), MAX_DAYS))}
-                inputProps={{ min: 1, max: MAX_DAYS }}
-                fullWidth
-              />
-            </Box>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              Valor total: <strong>{totalCost} Mt</strong>
-            </Typography>
-            <TextField
-              label="Número de celular *"
-              variant="outlined"
-              fullWidth
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setIsCheckoutOpen(true)}
-              disabled={!title || !description || !file || !phoneNumber}
-              sx={{ mb: 2 }}
-            >
-              {uploading ? <CircularProgress size={24} /> : 'Avançar para Pagamento'}
-            </Button>
-          </Box>
-        )}
-        {isCheckoutOpen && (
-          <Dialog open={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Pagamento</DialogTitle>
-            <DialogContent>
-              <Checkout
-                user={user}
-                planPrice={totalCost}
-                phoneNumber={phoneNumber}
-                onPaymentSuccess={handlePaymentSuccess}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setIsCheckoutOpen(false)} color="secondary">
-                Cancelar
-              </Button>
-            </DialogActions>
-          </Dialog>
-        )}
-        {isEditModalOpen && (
-          <Dialog open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Editar Anúncio</DialogTitle>
-            <DialogContent>
-              <TextField
-                label="Título do anúncio"
-                variant="outlined"
-                fullWidth
-                value={selectedAnuncio?.title || ''}
-                onChange={(e) => setSelectedAnuncio({ ...selectedAnuncio, title: e.target.value })}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Descrição do anúncio"
-                variant="outlined"
-                fullWidth
-                multiline
-                rows={4}
-                value={selectedAnuncio?.description || ''}
-                onChange={(e) => setSelectedAnuncio({ ...selectedAnuncio, description: e.target.value })}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Link externo (opcional)"
-                variant="outlined"
-                fullWidth
-                value={selectedAnuncio?.link || ''}
-                onChange={(e) => setSelectedAnuncio({ ...selectedAnuncio, link: e.target.value })}
-                sx={{ mb: 2 }}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setIsEditModalOpen(false)} color="secondary">
-                Cancelar
-              </Button>
-              <Button onClick={updateAnuncio} color="primary">
-                Salvar
-              </Button>
-            </DialogActions>
-          </Dialog>
-        )}
+
+        {/* Valor Total */}
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          Valor total: <strong>{totalCost} MT</strong>
+        </Typography>
+
+        {/* Número de Empresas Atingidas */}
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
+        </Typography>
+
+        {/* Número de Celular */}
+        <TextField
+          label="Número de celular *"
+          variant="outlined"
+          fullWidth
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          sx={{ mb: 2 }}
+        />
+
+        {/* Botão de Enviar */}
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleUpload}
+          disabled={!title || !file || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0}
+          sx={{ mb: 2 }}
+        >
+          {uploading ? <CircularProgress size={24} /> : 'Pagar & Prosseguir'}
+        </Button>
       </Paper>
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
+
+      {/* Snackbar para feedback */}
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
           {snackbar.message}
         </Alert>

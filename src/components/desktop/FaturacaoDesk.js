@@ -140,8 +140,8 @@ const FaturacaoDesk = ({ user }) => {
     setSelectedProforma(null);
   };
 
-  const handleProformaClick = (proforma) => {
-    navigate(`/proforma/${proforma.numeroProforma}`);
+  const handleProformaClick = (profoma) => {
+    navigate(`/proforma/${profoma}`);
   };
 
   const handleShare = () => {
@@ -334,7 +334,7 @@ const FaturacaoDesk = ({ user }) => {
                 {filteredProformas.length > 0 ? (
                   filteredProformas.map((proforma, index) => (
                     <TableRow key={index} hover>
-                      <TableCell align="center">{proforma.numeroProforma}</TableCell>
+                      <TableCell align="center" onClick={handleProformaClick(proforma.numeroProforma)}>{proforma.numeroProforma}</TableCell>
                       <TableCell>{proforma.cliente.nome || "Indefinido"}</TableCell>
                       <TableCell align="center">{proforma.dataEmissao}</TableCell>
                       <Tooltip title="Opções">
