@@ -86,6 +86,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
 const EditProfileDesk = ({ user }) => {
   const initialData = {
     nome: user?.nome || '',
+    sigla: user?.sigla || '',
     bio: user?.bio || '',
     contacto: user?.contacto || '',
     endereco: user?.endereco || '',
@@ -124,6 +125,7 @@ const EditProfileDesk = ({ user }) => {
     e.preventDefault();
     const companyUpdate = {
       nome: formData.nome,
+      sigla: formData.sigla,
       bio: formData.bio,
       contacto: formData.contacto,
       endereco: formData.endereco,
@@ -171,6 +173,7 @@ const EditProfileDesk = ({ user }) => {
         {tabIndex === 0 && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <InputField label="Nome" name="nome" value={formData.nome} onChange={handleInputChange} />
+            <InputField label="sigla" name="sigla" value={formData.sigla} onChange={handleInputChange} />
             <InputField label="Bio" name="bio" value={formData.bio} onChange={handleInputChange} />
             <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
             <InputField label="Endereço" name="endereco" value={formData.endereco} onChange={handleInputChange} />

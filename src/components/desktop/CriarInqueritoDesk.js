@@ -17,6 +17,8 @@ import {
   IconButton,
   ListItemText,
   Checkbox,
+  Paper,
+  Box,
 } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
 
@@ -152,8 +154,8 @@ const CriarInqueritoDesk = ({ user }) => {
   };
 
   return (
-    <div className="border p-4 rounded">
-      <Typography variant="h5" gutterBottom>
+    <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 4 }}>
         Criar Novo Inquérito
       </Typography>
 
@@ -165,6 +167,7 @@ const CriarInqueritoDesk = ({ user }) => {
         fullWidth
         variant="outlined"
         margin="normal"
+        sx={{ mb: 3 }}
       />
 
       {/* Descrição */}
@@ -177,46 +180,47 @@ const CriarInqueritoDesk = ({ user }) => {
         margin="normal"
         multiline
         rows={4}
+        sx={{ mb: 3 }}
       />
 
-<FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="provincias-label">Províncias *</InputLabel>
-              <Select
-                labelId="provincias-label"
-                multiple
-                value={selectedProvincias}
-                onChange={(e) => setSelectedProvincias(e.target.value)}
-                renderValue={(selected) => selected.join(', ')}
-              >
-                {provincias.map((provincia) => (
-                  <MenuItem key={provincia.provincia} value={provincia.provincia}>
-                    <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
-                    <ListItemText primary={provincia.provincia} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel id="provincias-label">Províncias *</InputLabel>
+        <Select
+          labelId="provincias-label"
+          multiple
+          value={selectedProvincias}
+          onChange={(e) => setSelectedProvincias(e.target.value)}
+          renderValue={(selected) => selected.join(', ')}
+        >
+          {provincias.map((provincia) => (
+            <MenuItem key={provincia.provincia} value={provincia.provincia}>
+              <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+              <ListItemText primary={provincia.provincia} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
-              <Select
-                labelId="sectores-label"
-                multiple
-                value={selectedSectores}
-                onChange={(e) => setSelectedSectores(e.target.value)}
-                renderValue={(selected) => selected.join(', ')}
-              >
-                {sectores.map((setor) => (
-                  <MenuItem key={setor.setor} value={setor.setor}>
-                    <Checkbox checked={selectedSectores.includes(setor.setor)} />
-                    <ListItemText primary={setor.setor} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
+        <Select
+          labelId="sectores-label"
+          multiple
+          value={selectedSectores}
+          onChange={(e) => setSelectedSectores(e.target.value)}
+          renderValue={(selected) => selected.join(', ')}
+        >
+          {sectores.map((setor) => (
+            <MenuItem key={setor.setor} value={setor.setor}>
+              <Checkbox checked={selectedSectores.includes(setor.setor)} />
+              <ListItemText primary={setor.setor} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
       {/* Tipo de Inquérito */}
-      <FormControl fullWidth variant="outlined" margin="normal">
+      <FormControl fullWidth variant="outlined" margin="normal" sx={{ mb: 3 }}>
         <InputLabel>Tipo de Inquérito</InputLabel>
         <Select
           value={tipoInquerito}
@@ -232,11 +236,11 @@ const CriarInqueritoDesk = ({ user }) => {
       </FormControl>
 
       {/* Perguntas */}
-      <Typography variant="h6" gutterBottom>
+      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
         Perguntas
       </Typography>
       {perguntas.map((pergunta, index) => (
-        <div key={index} className="border p-2 mb-4 rounded">
+        <Box key={index} sx={{ border: '1px solid #ddd', p: 2, mb: 3, borderRadius: 1 }}>
           <TextField
             label={`Pergunta ${index + 1}`}
             value={pergunta.texto}
@@ -244,12 +248,13 @@ const CriarInqueritoDesk = ({ user }) => {
             fullWidth
             variant="outlined"
             margin="normal"
+            sx={{ mb: 2 }}
           />
           {pergunta.tipo === 'multipla_escolha' && (
-            <div className="mt-2">
-              <Typography variant="subtitle2">Opções:</Typography>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Opções:</Typography>
               {pergunta.opcoes.map((opcao, i) => (
-                <div key={i} className="flex items-center gap-2 mb-2">
+                <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                   <TextField
                     label={`Opção ${i + 1}`}
                     value={opcao}
@@ -260,7 +265,7 @@ const CriarInqueritoDesk = ({ user }) => {
                   <IconButton color="error" onClick={() => removerOpcao(index, i)}>
                     <Delete />
                   </IconButton>
-                </div>
+                </Box>
               ))}
               <Button
                 onClick={() => adicionarOpcao(index)}
@@ -270,22 +275,22 @@ const CriarInqueritoDesk = ({ user }) => {
               >
                 Adicionar Opção
               </Button>
-            </div>
+            </Box>
           )}
           <Button
             variant="outlined"
             color="error"
             onClick={() => removerPergunta(index)}
-            className="mt-2"
+            sx={{ mt: 2 }}
             startIcon={<Delete />}
           >
             Remover Pergunta
           </Button>
-        </div>
+        </Box>
       ))}
 
       {/* Botões para adicionar perguntas */}
-      <Grid container spacing={2} className="mt-4">
+      <Grid container spacing={2} sx={{ mt: 4 }}>
         <Grid item>
           <Button
             onClick={() => adicionarPergunta('aberta')}
@@ -312,7 +317,7 @@ const CriarInqueritoDesk = ({ user }) => {
         variant="contained"
         color="success"
         fullWidth
-        className="mt-4"
+        sx={{ mt: 4 }}
         disabled={loading}
       >
         {loading ? <CircularProgress size={24} color="inherit" /> : 'Salvar Inquérito'}
@@ -324,7 +329,7 @@ const CriarInqueritoDesk = ({ user }) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </div>
+    </Paper>
   );
 };
 

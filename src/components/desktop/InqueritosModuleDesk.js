@@ -88,8 +88,7 @@ const InqueritosModuleDesk = ({ user }) => {
 <Box
   sx={{
     padding: 4,
-   width:'100%',
-   height:'100vh'
+    width:'100%',
   }}
 >
   <Typography

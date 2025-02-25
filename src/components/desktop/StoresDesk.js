@@ -58,10 +58,12 @@ const StoresDesk = ({ user }) => {
         const snapshot = await get(storesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
+          const provinciaSelecionada = user.provinciaTemp || user.provincia;
+    
           const storesArray = Object.entries(data)
             .map(([id, store]) => ({ id, ...store }))
-            .filter((store) => store.company?.provincia === user.provincia);
-
+            .filter((store) => store.company?.provincia === provinciaSelecionada);
+    
           const shuffledStores = shuffleArray(storesArray);
           setStoresList(shuffledStores);
           setFilteredStores(shuffledStores);
@@ -75,6 +77,7 @@ const StoresDesk = ({ user }) => {
         setLoading(false);
       }
     };
+    
 
     fetchStores();
   }, [user?.provincia]);
