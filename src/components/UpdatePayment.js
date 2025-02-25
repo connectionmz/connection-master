@@ -25,7 +25,7 @@ export const UpdatePayment = (user, moduleKey, paymentDetails) => {
     paidAt: currentDate.toISOString(),
     moduleKey: moduleKey,
     status: 'active',
-    ...(moduleKey === 'moduloSMS' && { smsCount }), // Inclui smsCount somente para módulo SMS
+    ...(moduleKey === 'moduloSMS' && { smsCount }), 
   };
 
   const paymentData = {

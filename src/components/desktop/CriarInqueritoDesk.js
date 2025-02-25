@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ref, push } from 'firebase/database';
+import React, { useEffect, useState } from 'react';
+import { ref, push, onValue } from 'firebase/database';
 import { db } from '../../fb';
 import { Provincias, SectorDeActividades } from '../../utils/formUtils';
 import {
@@ -15,16 +15,20 @@ import {
   Snackbar,
   Alert,
   IconButton,
+  ListItemText,
+  Checkbox,
 } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
 
 const CriarInqueritoDesk = ({ user }) => {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [setor, setSector] = useState('');
   const [tipoInquerito, setTipoInquerito] = useState('');
   const [perguntas, setPerguntas] = useState([]);
-  const [provincias, setProvincias] = useState('');
+  const [provincias, setProvincias] = useState([]);
+  const [sectores, setSectores] = useState([]);
+  const [selectedProvincias, setSelectedProvincias] = useState([]);
+  const [selectedSectores, setSelectedSectores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: '' });
 
@@ -35,9 +39,18 @@ const CriarInqueritoDesk = ({ user }) => {
     'Outro',
   ];
 
+  useEffect(() => {
+    const provinciasRef = ref(db, 'provincias');
+    const sectoresRef = ref(db, 'sectores_de_atividade');
+
+    onValue(provinciasRef, (snapshot) => setProvincias(snapshot.val() || []));
+    onValue(sectoresRef, (snapshot) => setSectores(snapshot.val() || []));
+   
+  }, []);
+
   const adicionarPergunta = (tipo) => {
-    setPerguntas([...
-      perguntas,
+    setPerguntas([
+      ...perguntas,
       { tipo, texto: '', opcoes: tipo === 'multipla_escolha' ? [''] : [] },
     ]);
   };
@@ -66,7 +79,9 @@ const CriarInqueritoDesk = ({ user }) => {
 
   const removerOpcao = (indexPergunta, indexOpcao) => {
     const novasPerguntas = [...perguntas];
-    novasPerguntas[indexPergunta].opcoes = novasPerguntas[indexPergunta].opcoes.filter((_, i) => i !== indexOpcao);
+    novasPerguntas[indexPergunta].opcoes = novasPerguntas[indexPergunta].opcoes.filter(
+      (_, i) => i !== indexOpcao
+    );
     setPerguntas(novasPerguntas);
   };
 
@@ -75,26 +90,41 @@ const CriarInqueritoDesk = ({ user }) => {
   };
 
   const salvarInquerito = async () => {
+    if (
+      perguntas.some((p) => !p.texto || (p.tipo === 'multipla_escolha' && p.opcoes.some((o) => !o)))
+    ) {
+      setSnackbar({
+        open: true,
+        message: 'Certifique-se de que todas as perguntas e opções estão preenchidas.',
+        severity: 'warning',
+      });
+      return;
+    }
 
-    if (perguntas.some((p) => !p.texto || (p.tipo === 'multipla_escolha' && p.opcoes.some((o) => !o)))) {
-      setSnackbar({ open: true, message: 'Certifique-se de que todas as perguntas e opções estão preenchidas.', severity: 'warning' });
+    if (!sectores.length || !provincias.length) {
+      setSnackbar({
+        open: true,
+        message: 'Selecione pelo menos um setor e uma província.',
+        severity: 'warning',
+      });
       return;
     }
 
     setLoading(true);
+
     try {
       const inqueritoRef = ref(db, 'surveys');
       const novoInquerito = {
         title: titulo,
         description: descricao,
-        provincia: provincias,
+        provincia: provincias, // Array de províncias
         company: {
           nome: user.nome,
           logo: user.logoUrl,
           provincia: user.provincia,
           id: user.id,
         },
-        setor,
+        sectores, // Array de setores
         tipoInquerito,
         questions: perguntas,
         createdAt: Date.now(),
@@ -104,12 +134,18 @@ const CriarInqueritoDesk = ({ user }) => {
 
       setTitulo('');
       setDescricao('');
-      setSector('');
+      setSectores([]);
+      setProvincias([]);
       setTipoInquerito('');
       setPerguntas([]);
+
       setSnackbar({ open: true, message: 'Inquérito criado com sucesso!', severity: 'success' });
     } catch (error) {
-      setSnackbar({ open: true, message: 'Erro ao criar inquérito: ' + error.message, severity: 'error' });
+      setSnackbar({
+        open: true,
+        message: 'Erro ao criar inquérito: ' + error.message,
+        severity: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -121,6 +157,7 @@ const CriarInqueritoDesk = ({ user }) => {
         Criar Novo Inquérito
       </Typography>
 
+      {/* Título */}
       <TextField
         label="Título do Inquérito"
         value={titulo}
@@ -130,6 +167,7 @@ const CriarInqueritoDesk = ({ user }) => {
         margin="normal"
       />
 
+      {/* Descrição */}
       <TextField
         label="Descrição"
         value={descricao}
@@ -141,17 +179,43 @@ const CriarInqueritoDesk = ({ user }) => {
         rows={4}
       />
 
-      <SectorDeActividades
-        companyData={setor}
-        handleChange={(e) => setSector(e.target.value)}
-        inputStyles="border p-2 w-full mb-4"
-      />
-      <Provincias
-        companyData={provincias}
-        handleChange={(e) => setProvincias(e.target.value)}
-        inputStyles="border p-2 w-full mb-4"
-      />
+<FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="provincias-label">Províncias *</InputLabel>
+              <Select
+                labelId="provincias-label"
+                multiple
+                value={selectedProvincias}
+                onChange={(e) => setSelectedProvincias(e.target.value)}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {provincias.map((provincia) => (
+                  <MenuItem key={provincia.provincia} value={provincia.provincia}>
+                    <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                    <ListItemText primary={provincia.provincia} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
+              <Select
+                labelId="sectores-label"
+                multiple
+                value={selectedSectores}
+                onChange={(e) => setSelectedSectores(e.target.value)}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {sectores.map((setor) => (
+                  <MenuItem key={setor.setor} value={setor.setor}>
+                    <Checkbox checked={selectedSectores.includes(setor.setor)} />
+                    <ListItemText primary={setor.setor} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+      {/* Tipo de Inquérito */}
       <FormControl fullWidth variant="outlined" margin="normal">
         <InputLabel>Tipo de Inquérito</InputLabel>
         <Select
@@ -167,10 +231,10 @@ const CriarInqueritoDesk = ({ user }) => {
         </Select>
       </FormControl>
 
+      {/* Perguntas */}
       <Typography variant="h6" gutterBottom>
         Perguntas
       </Typography>
-
       {perguntas.map((pergunta, index) => (
         <div key={index} className="border p-2 mb-4 rounded">
           <TextField
@@ -220,6 +284,7 @@ const CriarInqueritoDesk = ({ user }) => {
         </div>
       ))}
 
+      {/* Botões para adicionar perguntas */}
       <Grid container spacing={2} className="mt-4">
         <Grid item>
           <Button
@@ -241,6 +306,7 @@ const CriarInqueritoDesk = ({ user }) => {
         </Grid>
       </Grid>
 
+      {/* Botão Salvar */}
       <Button
         onClick={salvarInquerito}
         variant="contained"
@@ -252,11 +318,8 @@ const CriarInqueritoDesk = ({ user }) => {
         {loading ? <CircularProgress size={24} color="inherit" /> : 'Salvar Inquérito'}
       </Button>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
+      {/* Snackbar para mensagens */}
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">
           {snackbar.message}
         </Alert>

@@ -99,6 +99,7 @@ const PagamentoModulo = ({ user }) => {
                 <PayModuleCheckout
                   user={user}
                   planPrice={cleanPrice(currentModule.price)}
+                  validade={currentModule?.validade || ''}
                   onPaymentSuccess={handlePaymentSuccess}
                 />
               )}

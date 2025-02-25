@@ -128,8 +128,7 @@ const DesktopRoutes = ({ user }) => {
             margin: '0 auto', // Centraliza o conteúdo
             padding: isMobile ? '16px' : '24px', // Ajusta o padding para dispositivos móveis
             boxSizing: 'border-box',
-          }}
-        >
+          }}>
           <Routes>
             <Route path="/" element={<DashboardComponent user={user} />} />
             <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />

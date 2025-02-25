@@ -265,7 +265,7 @@ const Dashboard = ({ user }) => {
           <Grid item xs={12} sm={6}>
             <MarqueeAnuncios user={user}/>
             <Box sx={{ padding: 2 }}>
-              <BannerDesk />
+              <BannerDesk user={user}/>
             </Box>
           </Grid>
 

@@ -20,7 +20,6 @@ import { ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
-import AnunciarDesk from './AnunciarDesk';
 import AnunciosDesk from './AnunciosDesk';
 
 const CotacoesDesk = ({ user, onModuleActivation }) => {

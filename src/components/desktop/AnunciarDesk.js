@@ -18,10 +18,13 @@ import {
   Checkbox,
   ListItemText,
 } from '@mui/material';
+import Checkout from '../checkout/Checkout';
+import { handlePayment } from '../../utils/handlePayment';
+import BackButton from '../BackButton';
 
 const AnunciarDesk = ({ user }) => {
   const [file, setFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState(''); // URL da imagem para preview
+  const [imageUrl, setImageUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
@@ -34,18 +37,18 @@ const AnunciarDesk = ({ user }) => {
   const [sectores, setSectores] = useState([]);
   const [selectedProvincias, setSelectedProvincias] = useState([]);
   const [selectedSectores, setSelectedSectores] = useState([]);
-  const [empresas, setEmpresas] = useState([]); // Lista de empresas cadastradas
-  const [empresasAtingidas, setEmpresasAtingidas] = useState(0); // Número de empresas atingidas
+  const [empresas, setEmpresas] = useState([]);
+  const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
+  const [showCheckout, setShowCheckout] = useState(false);
 
-  const COST_PER_DAY = 30; // Custo base por dia
-  const ADDITIONAL_COST_PER_PROVINCIA = 50; // Custo adicional por província
-  const ADDITIONAL_COST_PER_SETOR = 50; // Custo adicional por setor
+  const COST_PER_DAY = 30;
+  const ADDITIONAL_COST_PER_PROVINCIA = 50;
+  const ADDITIONAL_COST_PER_SETOR = 50;
 
-  // Busca províncias, setores e empresas do Firebase
   useEffect(() => {
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
-    const empresasRef = ref(db, 'company'); // Referência para as empresas
+    const empresasRef = ref(db, 'company');
 
     onValue(provinciasRef, (snapshot) => setProvincias(snapshot.val() || []));
     onValue(sectoresRef, (snapshot) => setSectores(snapshot.val() || []));
@@ -63,7 +66,6 @@ const AnunciarDesk = ({ user }) => {
     });
   }, []);
 
-  // Calcula o custo total com base nos dias, províncias e setores selecionados
   useEffect(() => {
     const additionalCost =
       selectedProvincias.length * ADDITIONAL_COST_PER_PROVINCIA +
@@ -71,7 +73,6 @@ const AnunciarDesk = ({ user }) => {
     setTotalCost(days * (COST_PER_DAY + additionalCost));
   }, [days, selectedProvincias, selectedSectores]);
 
-  // Calcula o número de empresas atingidas com base nas províncias e setores selecionados
   useEffect(() => {
     if (empresas.length > 0 && (selectedProvincias.length > 0 || selectedSectores.length > 0)) {
       const empresasFiltradas = empresas.filter((empresa) => {
@@ -89,7 +90,6 @@ const AnunciarDesk = ({ user }) => {
     if (e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
-      // Cria uma URL temporária para o preview da imagem
       setImageUrl(URL.createObjectURL(selectedFile));
     }
   };
@@ -103,37 +103,74 @@ const AnunciarDesk = ({ user }) => {
       showSnackbar('Por favor, preencha todos os campos obrigatórios!', 'error');
       return;
     }
+    setShowCheckout(true);
+  };
+
+  const calculateExpireDate = (days) => {
+    const currentDate = new Date();
+    const expireDate = new Date(currentDate);
+    expireDate.setDate(currentDate.getDate() + days);
+    return expireDate.toISOString();
+  };
+
+  const handleConfirmPayment = async (paymentMethod) => {
     setUploading(true);
-    const fileRef = createStorageRef(storage, `images/${file.name}`);
-    uploadBytes(fileRef, file)
-      .then((snapshot) => {
-        getDownloadURL(fileRef).then((url) => {
-          saveToDatabase(url);
-          setUploading(false);
-          showSnackbar('Anúncio publicado com sucesso!', 'success');
-        });
-      })
-      .catch((error) => {
-        setUploading(false);
-        console.error('Erro ao fazer upload da imagem:', error);
-        showSnackbar('Erro ao publicar o anúncio. Tente novamente.', 'error');
-      });
+
+    const paymentResult = await handlePayment({
+      phoneNumber,
+      paymentMethod,
+      user,
+      planPrice: totalCost,
+      smsCount: 1,
+      onPaymentSuccess: () => {
+        const fileRef = createStorageRef(storage, `images/${file.name}`);
+        uploadBytes(fileRef, file)
+          .then((snapshot) => {
+            getDownloadURL(fileRef).then((url) => {
+              saveToDatabase(url);
+              setUploading(false);
+              showSnackbar('Anúncio publicado com sucesso!', 'success');
+              setShowCheckout(false);
+            });
+          })
+          .catch((error) => {
+            setUploading(false);
+            console.error('Erro ao fazer upload da imagem:', error);
+            showSnackbar('Erro ao publicar o anúncio. Tente novamente.', 'error');
+          });
+      },
+      setError: (message) => showSnackbar(message, 'error'),
+      setIsLoading: setUploading,
+      setPendingTransaction: () => {},
+    });
+
+    if (!paymentResult.success) {
+      setUploading(false);
+      showSnackbar('Erro no pagamento. Tente novamente.', 'error');
+    }
   };
 
   const saveToDatabase = (url) => {
     const anuncioRef = push(ref(db, 'banners'));
+    const idAnuncio = anuncioRef.key;
+
+    const expireDate = calculateExpireDate(days);
+
     set(anuncioRef, {
+      id: idAnuncio,
       title,
       description,
       imageUrl: url,
       link,
       uploadedAt: new Date().toISOString(),
+      expireDate,
       companyId: user.id,
       days,
       totalCost,
       provincias: selectedProvincias,
       sectores: selectedSectores,
     });
+
     resetForm();
   };
 
@@ -142,7 +179,7 @@ const AnunciarDesk = ({ user }) => {
     setDescription('');
     setLink('');
     setFile(null);
-    setImageUrl(''); // Limpa o preview da imagem
+    setImageUrl('');
     setDays(1);
     setPhoneNumber('');
     setSelectedProvincias([]);
@@ -160,124 +197,126 @@ const AnunciarDesk = ({ user }) => {
   return (
     <Box width="100%" minHeight="100vh">
       <Paper sx={{ width: '100%', padding: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Anunciar
-        </Typography>
-        <TextField
-          label="Título do anúncio *"
-          variant="outlined"
-          fullWidth
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          label="Link externo (opcional)"
-          variant="outlined"
-          fullWidth
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-        <input type="file" onChange={handleFileChange} className="mb-3" />
-
-        {/* Preview da Foto */}
-        {imageUrl && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              Preview da Imagem:
-            </Typography>
-            <img
-              src={imageUrl}
-              alt="Preview da Imagem"
-              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
-            />
-          </Box>
-        )}
-
-        {/* Seleção de Províncias */}
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="provincias-label">Províncias *</InputLabel>
-          <Select
-            labelId="provincias-label"
-            multiple
-            value={selectedProvincias}
-            onChange={(e) => setSelectedProvincias(e.target.value)}
-            renderValue={(selected) => selected.join(', ')}
-          >
-            {provincias.map((provincia) => (
-              <MenuItem key={provincia.provincia} value={provincia.provincia}>
-                <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
-                <ListItemText primary={provincia.provincia} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Seleção de Setores */}
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
-          <Select
-            labelId="sectores-label"
-            multiple
-            value={selectedSectores}
-            onChange={(e) => setSelectedSectores(e.target.value)}
-            renderValue={(selected) => selected.join(', ')}
-          >
-            {sectores.map((setor) => (
-              <MenuItem key={setor.setor} value={setor.setor}>
-                <Checkbox checked={selectedSectores.includes(setor.setor)} />
-                <ListItemText primary={setor.setor} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Seleção de Dias */}
-        <Box mb={2}>
-          <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
-          <TextField
-            type="number"
-            value={days}
-            onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
-            inputProps={{ min: 1, max: 30 }}
-            fullWidth
+      <BackButton sx={{ mb: 2 }} />
+        {showCheckout ? (
+          <Checkout
+            totalCost={totalCost}
+            onConfirmPayment={handleConfirmPayment}
+            onCancel={() => setShowCheckout(false)}
           />
-        </Box>
+        ) : (
+          <>
+            <Typography variant="h5" gutterBottom>
+              Anunciar
+            </Typography>
+            <TextField
+              label="Título do anúncio *"
+              variant="outlined"
+              fullWidth
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              label="Link externo (opcional)"
+              variant="outlined"
+              fullWidth
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <input type="file" onChange={handleFileChange} className="mb-3" />
 
-        {/* Valor Total */}
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          Valor total: <strong>{totalCost} MT</strong>
-        </Typography>
+            {imageUrl && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  Preview da Imagem:
+                </Typography>
+                <img
+                  src={imageUrl}
+                  alt="Preview da Imagem"
+                  style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+                />
+              </Box>
+            )}
 
-        {/* Número de Empresas Atingidas */}
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
-        </Typography>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="provincias-label">Províncias *</InputLabel>
+              <Select
+                labelId="provincias-label"
+                multiple
+                value={selectedProvincias}
+                onChange={(e) => setSelectedProvincias(e.target.value)}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {provincias.map((provincia) => (
+                  <MenuItem key={provincia.provincia} value={provincia.provincia}>
+                    <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                    <ListItemText primary={provincia.provincia} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-        {/* Número de Celular */}
-        <TextField
-          label="Número de celular *"
-          variant="outlined"
-          fullWidth
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          sx={{ mb: 2 }}
-        />
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
+              <Select
+                labelId="sectores-label"
+                multiple
+                value={selectedSectores}
+                onChange={(e) => setSelectedSectores(e.target.value)}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {sectores.map((setor) => (
+                  <MenuItem key={setor.setor} value={setor.setor}>
+                    <Checkbox checked={selectedSectores.includes(setor.setor)} />
+                    <ListItemText primary={setor.setor} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-        {/* Botão de Enviar */}
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleUpload}
-          disabled={!title || !file || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0}
-          sx={{ mb: 2 }}
-        >
-          {uploading ? <CircularProgress size={24} /> : 'Pagar & Prosseguir'}
-        </Button>
+            <Box mb={2}>
+              <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
+              <TextField
+                type="number"
+                value={days}
+                onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
+                inputProps={{ min: 1, max: 30 }}
+                fullWidth
+              />
+            </Box>
+
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Valor total: <strong>{totalCost} MT</strong>
+            </Typography>
+
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
+            </Typography>
+
+            <TextField
+              label="Número de celular *"
+              variant="outlined"
+              fullWidth
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleUpload}
+              disabled={!title || !file || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0}
+              sx={{ mb: 2 }}
+            >
+              {uploading ? <CircularProgress size={24} /> : 'Pagar & Prosseguir'}
+            </Button>
+          </>
+        )}
       </Paper>
 
-      {/* Snackbar para feedback */}
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
           {snackbar.message}

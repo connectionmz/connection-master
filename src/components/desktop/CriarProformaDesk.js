@@ -28,6 +28,7 @@ import { db } from '../../fb';
 import BackButton from '../BackButton';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import sendEmail from '../sms/SendMail';
 
 const CriarProformaDesk = ({ user }) => {
   const [cliente, setCliente] = useState(null); // Armazenar o objeto completo do cliente
@@ -171,7 +172,6 @@ const CriarProformaDesk = ({ user }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Salva a proforma
   const handleSalvar = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -218,8 +218,44 @@ const CriarProformaDesk = ({ user }) => {
         status: 'POR PAGAR',
       });
   
-      setSnackbarMessage('Proforma criada com sucesso!');
-      setSnackbarSeverity('success');
+      // Notificar o cliente por e-mail, se houver um e-mail válido
+      if (clienteLimpo && clienteLimpo.email) {
+        const title = `Proforma ${numeroProforma}`;
+        const finalMessage = `
+          Olá ${clienteLimpo.nome},
+          
+          Uma nova proforma foi criada para você. Aqui estão os detalhes:
+          
+          - Número da Proforma: ${numeroProforma}
+          - Data de Emissão: ${dataEmissao}
+          - Data de Vencimento: ${dataVencimento}
+          - Total: ${total} MZN
+          
+          Itens:
+          ${itens.map((item) => `- ${item.descricao}: ${item.quantidade} x ${item.preco} MZN`).join('\n')}
+          
+          Por favor, entre em contato conosco se tiver alguma dúvida.
+          
+          Atenciosamente,
+          Equipe ${user.displayName || 'da Loja'}
+          Equipe ${user.displayName || 'da Loja'}
+          Equipe ${user.contacto || 'da Loja'}
+        `;
+  
+        const emailSent = await sendEmail(clienteLimpo.email, title, finalMessage);
+  
+        if (!emailSent) {
+          setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');
+          setSnackbarSeverity('warning');
+        } else {
+          setSnackbarMessage('Proforma criada e cliente notificado com sucesso!');
+          setSnackbarSeverity('success');
+        }
+      } else {
+        setSnackbarMessage('Proforma criada com sucesso!');
+        setSnackbarSeverity('success');
+      }
+  
       navigate('/faturacao');
     } catch (err) {
       console.error(err);

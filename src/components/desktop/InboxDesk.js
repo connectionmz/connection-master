@@ -13,6 +13,7 @@ import {
   Divider,
   Avatar,
   Tooltip,
+  Link,
 } from '@mui/material';
 import { ref, onValue, update, remove } from 'firebase/database';
 import { auth, db } from '../../fb';
@@ -47,11 +48,18 @@ const InboxDesk = ({ user }) => {
                 status: notification.status,
                 timestamp: notification.timestamp,
                 type: notification.type,
+                link: notification?.link || ''
               });
             }
           }
         }
       }
+      // Ordenar notificações por timestamp (mais recente primeiro)
+      userNotifications.sort((a, b) => {
+        const dateA = new Date(a.timestamp).getTime(); // Converte para timestamp
+        const dateB = new Date(b.timestamp).getTime(); // Converte para timestamp
+        return dateB - dateA; // Ordena em ordem decrescente
+      });
       setNotifications(userNotifications);
       setLoading(false);
     });
@@ -189,18 +197,30 @@ const InboxDesk = ({ user }) => {
                     padding: isMobile ? '8px 16px' : '12px 24px', 
                   }}
                 >
-          
                   <ListItemText
                     primary={
-                      <Typography
-                        variant="body1"
+                      <Link
+                        href={notification.link || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         sx={{
-                          fontSize: isMobile ? '0.875rem' : '1rem', 
-                          fontWeight: notification.status === 'unread' ? 'bold' : 'normal',
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
                         }}
                       >
-                        {`${notification.message}`}
-                      </Typography>
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            fontSize: isMobile ? '0.875rem' : '1rem', 
+                            fontWeight: notification.status === 'unread' ? 'bold' : 'normal',
+                          }}
+                        >
+                          {notification.message}
+                        </Typography>
+                      </Link>
                     }
                     secondary={
                       <Typography

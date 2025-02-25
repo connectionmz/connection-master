@@ -1,80 +1,45 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { Button, Typography, Box, TextField, Select, MenuItem } from '@mui/material';
 
-const Checkout = ({ user, planPrice, phoneNumber, onPaymentSuccess }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('mpesa'); 
+const Checkout = ({ totalCost, onConfirmPayment, onCancel }) => {
+  const [paymentMethod, setPaymentMethod] = useState('mpesa');
 
-  const handlePayment = async () => {
-    setIsLoading(true);
-
-    const paymentData = {
-      carteira: '1729146943643x948653281532969000',
-      numero: phoneNumber,
-      'quem comprou': user.displayName || 'Cliente Anônimo',
-      valor: planPrice.toString(),
-    };
-
-    const endpoint =
-      paymentMethod === 'mpesa'
-        ? 'https://mozpayment.co.mz/api/1.1/wf/pagamentorotativompesa'
-        : 'https://mozpayment.co.mz/api/1.1/wf/pagamentorotativoemola';
-
-    try {
-      const response = await axios.post(endpoint, paymentData);
-
-      if (response.data.status === 'success') {
-        alert(`Pagamento de ${planPrice} Mt via ${paymentMethod.toUpperCase()} confirmado com sucesso!`);
-        const paymentDetails = {
-          amount: planPrice,
-          method: paymentMethod.toUpperCase(),
-          transactionId: response.data.transactionId || null,
-        };
-
-        // Notificar sucesso e chamar o callback para continuar
-        onPaymentSuccess(paymentDetails);
-      } else {
-        throw new Error(response.data.message || 'Erro desconhecido.');
-      }
-    } catch (error) {
-      alert('A transação falhou. Por favor, tente novamente.');
-      console.error('Erro no pagamento:', error.message);
-    } finally {
-      setIsLoading(false);
-    }
+  const handlePayment = () => {
+    onConfirmPayment(paymentMethod);
   };
 
   return (
-    <div className="checkout-modal bg-white shadow-md rounded-md p-6">
-      <h2 className="text-xl font-bold mb-4">Confirmar Pagamento</h2>
-      <p>
-        Valor total do anúncio: <strong>{planPrice} Mt</strong>
-      </p>
-      <p>
-        Número para débito: <strong>{phoneNumber}</strong>
-      </p>
+    <Box sx={{ padding: 4, maxWidth: 400, margin: 'auto' }}>
+      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>
+        Confirmar Pagamento
+      </Typography>
 
-      <div className="mt-4">
-        <label className="block mb-2 font-semibold">Método de Pagamento:</label>
-        <select
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value)}
-          className="w-full border p-2 rounded"
-        >
-          <option value="mpesa">M-Pesa</option>
-          <option value="emola">e-Mola</option>
-        </select>
-      </div>
+      <Typography variant="body1" sx={{ mb: 3 }}>
+        Valor total: <strong>{totalCost} MT</strong>
+      </Typography>
 
-      <button
-        onClick={handlePayment}
-        disabled={isLoading}
-        className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
+      <TextField
+        select
+        label="Método de Pagamento"
+        value={paymentMethod}
+        onChange={(e) => setPaymentMethod(e.target.value)}
+        fullWidth
+        sx={{ mb: 3 }}
       >
-        {isLoading ? 'Processando...' : 'Pagar Agora'}
-      </button>
-    </div>
-  );
-};
+        <MenuItem value="mpesa">M-Pesa</MenuItem>
+        <MenuItem value="emola">e-Mola</MenuItem>
+      </TextField>
 
-export default Checkout;
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        <Button variant="outlined" onClick={onCancel} fullWidth>
+          Cancelar
+        </Button>
+        <Button variant="contained" onClick={handlePayment} fullWidth>
+          Confirmar Pagamento
+        </Button>
+      </Box>
+    </Box>
+  )
+}
+
+export default Checkout

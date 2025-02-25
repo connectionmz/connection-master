@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ref, get, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,7 +18,6 @@ import {
   Box,
   Tooltip,
   Select,
-  MenuItem as DropdownItem,
   FormControl,
   InputLabel,
   Dialog,
@@ -27,6 +26,9 @@ import {
   DialogActions,
   Tabs,
   Tab,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
@@ -46,42 +48,43 @@ const FaturacaoDesk = ({ user }) => {
   const [selectedProforma, setSelectedProforma] = useState(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [currentClient, setCurrentClient] = useState({ id: '', nome: '', nuit: '', morada: '', contacto: '' });
+  const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const navigate = useNavigate();
+
+  // Função para exibir mensagens no Snackbar
+  const showSnackbar = (message, severity = 'info') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  // Fechar Snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   // Busca as proformas e clientes
   useEffect(() => {
     if (!user) return;
 
-    const fetchInvoices = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const invoicesRef = ref(db, `invoices/${user.id}`);
-        const snapshot = await get(invoicesRef);
-        if (snapshot.exists()) {
-          setProformas(Object.values(snapshot.val()));
-        } else {
-          setProformas([]);
-        }
+        const [invoicesSnapshot, clientsSnapshot] = await Promise.all([
+          get(ref(db, `invoices/${user.id}`)),
+          get(ref(db, `clients/${user.id}`)),
+        ]);
+
+        setProformas(invoicesSnapshot.exists() ? Object.values(invoicesSnapshot.val()) : []);
+        setClients(clientsSnapshot.exists() ? Object.values(clientsSnapshot.val()) : []);
       } catch (err) {
-        setError('Erro ao carregar proformas.');
+        setError('Erro ao carregar dados.');
+        showSnackbar('Erro ao carregar dados.', 'error');
+      } finally {
+        setLoading(false);
       }
     };
 
-    const fetchClients = async () => {
-      try {
-        const clientsRef = ref(db, `clients/${user.id}`);
-        const snapshot = await get(clientsRef);
-        if (snapshot.exists()) {
-          setClients(Object.values(snapshot.val()));
-        } else {
-          setClients([]);
-        }
-      } catch (err) {
-        setError('Erro ao carregar clientes.');
-      }
-    };
-
-    fetchInvoices();
-    fetchClients();
+    fetchData();
   }, [user]);
 
   // Busca as conexões do usuário e adiciona as empresas à lista de clientes
@@ -96,40 +99,42 @@ const FaturacaoDesk = ({ user }) => {
           const connectionIds = Object.keys(snapshot.val());
 
           // Busca os detalhes de cada empresa conectada
-          const companies = [];
-          for (const companyId of connectionIds) {
-            const companyRef = ref(db, `company/${companyId}`);
-            const companySnapshot = await get(companyRef);
-            if (companySnapshot.exists()) {
-              const companyData = companySnapshot.val();
-              companies.push({
-                id: companyId,
-                nome: companyData.nome || 'Indefinido',
-                nuit: companyData.nuit || '',
-                contacto: companyData.contacto || '',
-                morada: companyData.endereco || '',
-                email: companyData.email || '',
-              });
-            }
-          }
+          const companies = await Promise.all(
+            connectionIds.map(async (companyId) => {
+              const companyRef = ref(db, `company/${companyId}`);
+              const companySnapshot = await get(companyRef);
+              return companySnapshot.exists()
+                ? {
+                    id: companyId,
+                    nome: companySnapshot.val().nome || 'Indefinido',
+                    nuit: companySnapshot.val().nuit || '',
+                    contacto: companySnapshot.val().contacto || '',
+                    morada: companySnapshot.val().endereco || '',
+                    email: companySnapshot.val().email || '',
+                  }
+                : null;
+            })
+          );
 
           // Adiciona as empresas à lista de clientes
           setClients((prevClients) => {
             const existingClientIds = prevClients.map((client) => client.id);
             const newClients = companies.filter(
-              (company) => !existingClientIds.includes(company.id)
+              (company) => company && !existingClientIds.includes(company.id)
             );
             return [...prevClients, ...newClients];
           });
         }
       } catch (err) {
         setError('Erro ao carregar conexões.');
+        showSnackbar('Erro ao carregar conexões.', 'error');
       }
     };
 
     fetchConnections();
   }, [user]);
 
+  // Funções para manipulação de proformas
   const handleMenuClick = (event, proforma) => {
     setAnchorEl(event.currentTarget);
     setSelectedProforma(proforma);
@@ -140,12 +145,12 @@ const FaturacaoDesk = ({ user }) => {
     setSelectedProforma(null);
   };
 
-  const handleProformaClick = (profoma) => {
-    navigate(`/proforma/${profoma}`);
-  };
+  const handleProformaClick = useCallback((proformaId) => {
+    navigate(`/proforma/${proformaId}`);
+  }, [navigate]);
 
   const handleShare = () => {
-    alert(`Compartilhar a proforma ${selectedProforma.numeroProforma}`);
+    showSnackbar(`Compartilhar a proforma ${selectedProforma.numeroProforma}`, 'info');
     handleCloseMenu();
   };
 
@@ -160,14 +165,15 @@ const FaturacaoDesk = ({ user }) => {
         const proformaRef = ref(db, `invoices/${user.id}/${selectedProforma.numeroProforma}`);
         await remove(proformaRef);
         setProformas(proformas.filter((p) => p.numeroProforma !== selectedProforma.numeroProforma));
-        alert('Proforma excluída com sucesso!');
+        showSnackbar('Proforma excluída com sucesso!', 'success');
       } catch (error) {
-        alert('Erro ao excluir a proforma.');
+        showSnackbar('Erro ao excluir a proforma.', 'error');
       }
       handleCloseMenu();
     }
   };
 
+  // Funções para manipulação de clientes
   const handleAddClient = () => {
     setCurrentClient({ id: '', nome: '', nuit: '', morada: '', contacto: '' });
     setIsClientModalOpen(true);
@@ -184,28 +190,16 @@ const FaturacaoDesk = ({ user }) => {
         const clientRef = ref(db, `clients/${user.id}/${clientId}`);
         await remove(clientRef);
         setClients(clients.filter((c) => c.id !== clientId));
-        alert('Cliente excluído com sucesso!');
+        showSnackbar('Cliente excluído com sucesso!', 'success');
       } catch (error) {
-        alert('Erro ao excluir o cliente.');
+        showSnackbar('Erro ao excluir o cliente.', 'error');
       }
     }
   };
 
   const handleSaveClient = async () => {
     if (!currentClient.nome) {
-      alert('O nome do cliente é obrigatório.');
-      return;
-    }
-
-    // Verifica se o cliente já existe
-    const duplicateField = await checkIfClientExists(
-      currentClient.nome,
-      currentClient.nuit,
-      currentClient.contacto
-    );
-
-    if (duplicateField) {
-      alert(`Já existe um cliente com o mesmo ${duplicateField}.`);
+      showSnackbar('O nome do cliente é obrigatório.', 'error');
       return;
     }
 
@@ -229,14 +223,14 @@ const FaturacaoDesk = ({ user }) => {
       if (snapshot.exists()) {
         setClients(Object.values(snapshot.val()));
       }
+      showSnackbar('Cliente salvo com sucesso!', 'success');
     } catch (error) {
-      alert('Erro ao salvar o cliente.');
+      showSnackbar('Erro ao salvar o cliente.', 'error');
     }
   };
 
-  const uniqueClients = [
-    ...new Set(clients.map((client) => client.nome || 'Indefinido')),
-  ];
+  // Filtros e renderização
+  const uniqueClients = [...new Set(clients.map((client) => client.nome || 'Indefinido'))];
 
   const filteredProformas = proformas.filter((proforma) => {
     const matchesSearchTerm = proforma.cliente.nome
@@ -246,33 +240,6 @@ const FaturacaoDesk = ({ user }) => {
       !selectedClient || proforma.cliente.nome === selectedClient;
     return matchesSearchTerm && matchesClientFilter;
   });
-
-  const checkIfClientExists = async (nome, nuit, contacto) => {
-    try {
-      const clientsRef = ref(db, `clients/${user.id}`);
-      const snapshot = await get(clientsRef);
-
-      if (snapshot.exists()) {
-        const clients = Object.values(snapshot.val());
-        const duplicateClient = clients.find(
-          (client) =>
-            client.nome === nome ||
-            client.nuit === nuit ||
-            client.contacto === contacto
-        );
-
-        if (duplicateClient) {
-          if (duplicateClient.nome === nome) return 'nome';
-          if (duplicateClient.nuit === nuit) return 'NUIT';
-          if (duplicateClient.contacto === contacto) return 'contacto';
-        }
-      }
-      return null;
-    } catch (error) {
-      console.error('Erro ao verificar cliente:', error);
-      return null;
-    }
-  };
 
   return (
     <Box width="100%" minHeight="100vh" p={3}>
@@ -303,11 +270,11 @@ const FaturacaoDesk = ({ user }) => {
                 value={selectedClient}
                 onChange={(e) => setSelectedClient(e.target.value)}
               >
-                <DropdownItem value="">Todos</DropdownItem>
+                <MenuItem value="">Todos</MenuItem>
                 {uniqueClients.map((client, index) => (
-                  <DropdownItem key={index} value={client}>
+                  <MenuItem key={index} value={client}>
                     {client}
-                  </DropdownItem>
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -331,31 +298,41 @@ const FaturacaoDesk = ({ user }) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredProformas.length > 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      <CircularProgress />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredProformas.length > 0 ? (
                   filteredProformas.map((proforma, index) => (
                     <TableRow key={index} hover>
-                      <TableCell align="center" onClick={handleProformaClick(proforma.numeroProforma)}>{proforma.numeroProforma}</TableCell>
+                      <TableCell align="center" onClick={() => handleProformaClick(proforma.numeroProforma)}>
+                        {proforma.numeroProforma}
+                      </TableCell>
                       <TableCell>{proforma.cliente.nome || "Indefinido"}</TableCell>
                       <TableCell align="center">{proforma.dataEmissao}</TableCell>
-                      <Tooltip title="Opções">
-                        <IconButton
-                          aria-controls="simple-menu"
-                          aria-haspopup="true"
-                          onClick={(event) => handleMenuClick(event, proforma)}
+                      <TableCell align="center">
+                        <Tooltip title="Opções">
+                          <IconButton
+                            aria-controls="simple-menu"
+                            aria-haspopup="true"
+                            onClick={(event) => handleMenuClick(event, proforma)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Menu
+                          anchorEl={anchorEl}
+                          keepMounted
+                          open={Boolean(anchorEl)}
+                          onClose={handleCloseMenu}
                         >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Menu
-                        anchorEl={anchorEl}
-                        keepMounted
-                        open={Boolean(anchorEl)}
-                        onClose={handleCloseMenu}
-                      >
-                        <MenuItem onClick={handleShare}>Compartilhar</MenuItem>
-                        <MenuItem onClick={handleEdit}>Editar</MenuItem>
-                        <MenuItem onClick={handleDelete}>Excluir</MenuItem>
-                      </Menu>
+                          <MenuItem onClick={handleShare}>Compartilhar</MenuItem>
+                          <MenuItem onClick={handleEdit}>Editar</MenuItem>
+                          <MenuItem onClick={handleDelete}>Excluir</MenuItem>
+                        </Menu>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -383,7 +360,13 @@ const FaturacaoDesk = ({ user }) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {clients.length > 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={2} align="center">
+                      <CircularProgress />
+                    </TableCell>
+                  </TableRow>
+                ) : clients.length > 0 ? (
                   clients.map((client, index) => (
                     <TableRow key={index} hover>
                       <TableCell>{client.nome}</TableCell>
@@ -463,6 +446,17 @@ const FaturacaoDesk = ({ user }) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

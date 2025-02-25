@@ -151,7 +151,7 @@ const PostDetailPageDesk = ({ user }) => {
         />
         <CardContent>
           <Typography variant="h5" gutterBottom component="div">
-            <div dangerouslySetInnerHTML={{ __html: post.description || '<p>Sem descrição</p>' }} />
+            <div dangerouslySetInnerHTML={{ __html: post.description || '<p></p>' }} />
           </Typography>
           <Typography variant="body2" color="textSecondary">
             Publicado por:{' '}

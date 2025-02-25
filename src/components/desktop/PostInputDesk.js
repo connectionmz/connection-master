@@ -49,29 +49,32 @@ const PostInputDesk = ({ user }) => {
     try {
       const connectionsRef = ref(db, `connections/${user.id}`);
       const connectionsSnapshot = await get(connectionsRef);
-
+  
       if (connectionsSnapshot.exists()) {
         const connections = connectionsSnapshot.val();
-
-        Object.keys(connections).forEach(async (connectionId) => {
+        const notificationsPromises = Object.keys(connections).map((connectionId) => {
           const notification = {
             type: "new_post",
             message: `${user.nome} publicou uma nova foto.`,
             fromUserId: user.id,
             fromUserName: user.nome,
             postId: postId,
+            link: `https://app.connectionmozambique.com/post/${postId}`,
             timestamp: new Date().toISOString(),
             status: "unread",
           };
-
+  
           const notificationRef = push(ref(db, `notifications/${connectionId}`));
-          await set(notificationRef, notification);
+          return set(notificationRef, notification); // Retorna a promessa
         });
+  
+        await Promise.all(notificationsPromises); // Espera todas as notificações serem enviadas
       }
     } catch (error) {
       console.error("Erro ao enviar notificações:", error);
     }
   };
+  
 
   const handleSavePublishedPhotos = useCallback(async () => {
     if (!validateData()) return;
