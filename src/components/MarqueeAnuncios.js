@@ -10,7 +10,7 @@ export const fetchAnuncios = async () => {
   try {
     const snapshot = await get(ref(db, 'publicAnnouncements'));
     if (snapshot.exists()) {
-      return Object.values(snapshot.val());
+      return Object.entries(snapshot.val()).map(([id, anuncio]) => ({ id, ...anuncio }));
     } else {
       return [];
     }
@@ -23,7 +23,6 @@ export const fetchAnuncios = async () => {
 const MarqueeAnuncios = ({ user }) => {
   const [anuncios, setAnuncios] = useState([]);
   const navigate = useNavigate();
-
 
   useEffect(() => {
     const loadAnuncios = async () => {
@@ -48,6 +47,10 @@ const MarqueeAnuncios = ({ user }) => {
     navigate('/noticiados');
   };
 
+  const handleAnuncioClick = (id) => {
+    navigate(`/anuncio/${id}`); // Redireciona para a página de detalhes do anúncio
+  };
+
   return (
     <Box
       sx={{
@@ -60,10 +63,8 @@ const MarqueeAnuncios = ({ user }) => {
         borderRadius: 2,
       }}
     >
-      {/* Componente Marquee */}
       <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
         <Marquee pauseOnHover gradient={false}>
-          {/* Mapeamento dos anúncios */}
           {anuncios.map((anuncio, index) => (
             <Box
               key={index}
@@ -73,6 +74,7 @@ const MarqueeAnuncios = ({ user }) => {
                 marginX: 4,
                 cursor: 'pointer',
               }}
+              onClick={() => handleAnuncioClick(anuncio.id)} 
             >
               <Avatar
                 src={anuncio.company?.logo || ''}
@@ -88,7 +90,6 @@ const MarqueeAnuncios = ({ user }) => {
             </Box>
           ))}
 
-          {/* Mensagem adicional após os anúncios */}
           <Box sx={{ marginX: 4 }}>
             <Typography variant="body1" component="span" fontWeight="bold">
               Saiba tudo sobre regulamentos e notícias essenciais para empresas e cidadãos
@@ -97,7 +98,6 @@ const MarqueeAnuncios = ({ user }) => {
         </Marquee>
       </Box>
 
-      {/* Botão "Ver Mais" */}
       <Box sx={{ flexShrink: 0, marginLeft: 2 }}>
         <Button
           onClick={handleVerMais}

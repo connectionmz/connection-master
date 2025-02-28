@@ -218,6 +218,9 @@ const CriarProformaDesk = ({ user }) => {
         status: 'POR PAGAR',
       });
   
+
+      const proformaLink = `https://app.connectionmozambique.com/proforma/${numeroProforma}`;
+
       // Notificar o cliente por e-mail, se houver um e-mail válido
       if (clienteLimpo && clienteLimpo.email) {
         const title = `Proforma ${numeroProforma}`;
@@ -233,13 +236,15 @@ const CriarProformaDesk = ({ user }) => {
           
           Itens:
           ${itens.map((item) => `- ${item.descricao}: ${item.quantidade} x ${item.preco} MZN`).join('\n')}
+
+          Clique em: ${proformaLink} para visualizar a proforma ${numeroProforma}
           
           Por favor, entre em contato conosco se tiver alguma dúvida.
           
           Atenciosamente,
-          Equipe ${user.displayName || 'da Loja'}
-          Equipe ${user.displayName || 'da Loja'}
-          Equipe ${user.contacto || 'da Loja'}
+          Equipe ${user.displayName || 'da '}
+          Email ${user.email || 'da '}
+          Contacto ${user.contacto || 'da '}
         `;
   
         const emailSent = await sendEmail(clienteLimpo.email, title, finalMessage);

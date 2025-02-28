@@ -21,6 +21,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const isMobile = window.innerWidth <= 768;
+  
   const fetchUserDataOnce = async (user) => {
     try {
       const userRef = ref(db, `company/${user.uid}`);
@@ -34,14 +35,12 @@ const App = () => {
           displayName: data.nome || 'Nome da Empresa',
           endereco: data.endereco || 'Endereço não informado',
         });
-        setSubscriptionActive(data.subscriptions?.status || false);
-        
+        setSubscriptionActive(data.subscriptions.isverify);
       } else {
         setSubscriptionActive(false);
       }
     } catch (error) {
       SaveLogError('app', error);
-      setSubscriptionActive(false);
     } finally {
       setLoading(false);
     }
@@ -66,6 +65,9 @@ const App = () => {
 
     return () => unsubscribe(); 
   }, [userData]);
+
+  
+
 
 
   if (loading) {
