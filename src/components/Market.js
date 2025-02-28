@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import ManageStore from './market/ManageStore';
 import CreateStoreForm from './market/CreateStoreForm';
 import { db, auth } from '../fb';
+import CreateStoreFormDesk from './market/CreateStoreFormDesk';
 
 const Market = ({user}) => {
 
@@ -76,7 +77,7 @@ const Market = ({user}) => {
             {storeExists ? (
                 <ManageStore storeId={storeId} />
             ) : (
-                <CreateStoreForm storeId={storeId} user={user}/>
+                <CreateStoreFormDesk storeId={storeId} user={user}/>
             )}
         </div>
     );

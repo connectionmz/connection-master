@@ -59,6 +59,7 @@ const Explore = ({ user }) => {
 
           const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
           setCompanies(randomCompanies);
+          console.log(randomCompanies)
         }
       } catch (error) {
         console.error('Error fetching companies:', error);

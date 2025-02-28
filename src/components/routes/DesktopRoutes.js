@@ -78,7 +78,7 @@ const theme = createTheme({
 
 const DesktopRoutes = ({ user }) => {
 
-  console.log(user.subscriptions.isverify)
+  
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -97,7 +97,15 @@ const DesktopRoutes = ({ user }) => {
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
-
+  if (user?.subscriptions?.isverify === 'false') {
+    return (
+      <Routes>
+        <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
+        <Route path="/auth" element={<AuthDesk user={user} />} />
+        <Route path="*" element={<Navigate to="/verify" />} />
+      </Routes>
+    );
+  }
   return (
     <ThemeProvider theme={theme}>
       <Box

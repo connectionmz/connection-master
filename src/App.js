@@ -1,26 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import './App.css';
-import Header from './components/Header';
-import Footer from './components/Footer';
 import ClipLoader from 'react-spinners/ClipLoader';
 import { LinearProgress, Box, Typography } from '@mui/material';
 import { auth, db } from './fb';
 import { ref, get } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
-import { UserProvider } from './context/UserProfileContext';
 import { SaveLogError } from './utils/SaveLogError';
-import UserRoutes from './components/routes/UserRoutes';
-import NonSubscriberRoutes from './components/routes/NonSubscriberRoutes';
 import DesktopRoutes from './components/routes/DesktopRoutes';
 import NonSubscriberRoutesDesktop from './components/routes/NonSubscriberRoutesDesktop';
-import HeaderDesk from './components/desktop/HeaderDesk';
 
 const App = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
-  const isMobile = window.innerWidth <= 768;
   
   const fetchUserDataOnce = async (user) => {
     try {
@@ -66,10 +59,6 @@ const App = () => {
     return () => unsubscribe(); 
   }, [userData]);
 
-  
-
-
-
   if (loading) {
     return (
       <Box className="loader-container" textAlign="center" padding={2}>
@@ -85,18 +74,18 @@ const App = () => {
   }
 
   return (
-<Router>
-  <div className="App">
-    <div className="content">
-      {subscriptionActive ? (
-        <DesktopRoutes user={userData} />
-      ) : (
-        <NonSubscriberRoutesDesktop />
-      )}
+  <Router>
+    <div className="App">
+      <div className="content">
+        {subscriptionActive ? (
+          <DesktopRoutes user={userData} />
+        ) : (
+          <NonSubscriberRoutesDesktop />
+        )}
+      </div>
     </div>
-  </div>
-</Router>
-  );
+  </Router>
+);
 };
 
 export default App;
