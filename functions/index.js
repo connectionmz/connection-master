@@ -1,33 +1,73 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-const twilio = require('twilio');
+const admin = require("firebase-admin");
+const serviceAccount = require("./serviceAccountKey.json"); // Certifica-te que o caminho está correto
 
-// Inicialize o Firebase Admin SDK
-admin.initializeApp();
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://connections-d1be1-default-rtdb.firebaseio.com",
+});
 
-// Defina as credenciais da Twilio
-const accountSid = 'ACf76472290af52e54e814946eeab76ddf'; 
-const authToken = 'bc3c31c2315793e1084c408504021c48'; 
-const client = twilio(accountSid, authToken);
-const twilioPhoneNumber = '+18148133628';
+const db = admin.database();
+const auth = admin.auth();
 
-// Função para monitorar novos pedidos de cotação
-exports.sendSMSOnNewCotacao = functions.database.ref('/cotacoes/{cotacaoId}')
-    .onCreate((snapshot, context) => {
-        const cotacao = snapshot.val();
-        const { descricao, data, empresa, contactoEmpresa } = cotacao;
+async function migrarEmpresas() {
+  try {
+    // Passo 1: Obter todos os usuários do Firebase Authentication
+    const users = await auth.listUsers();
+    const userMap = {};
 
-        // Defina a mensagem a ser enviada
-        const message = `Novo pedido de cotação de ${empresa}: ${descricao}. Data: ${data}`;
-
-        // Enviar SMS usando Twilio
-        return client.messages.create({
-            body: message,
-            to: contactoEmpresa, // Número de telefone do cliente
-            from: twilioPhoneNumber, // Seu número Twilio
-        }).then(message => {
-            console.log(`SMS enviado com sucesso: ${message.sid}`);
-        }).catch(error => {
-            console.error('Erro ao enviar SMS:', error);
-        });
+    users.users.forEach((user) => {
+      userMap[user.uid] = true; // Mapeia os IDs existentes no Authentication
     });
+
+    // Passo 2: Buscar todas as empresas na Realtime Database
+    const empresasRef = db.ref("company");
+    const snapshot = await empresasRef.once("value");
+
+    if (snapshot.exists()) {
+      const updates = {};
+      const deleteKeys = [];
+
+      snapshot.forEach((childSnapshot) => {
+        const empresa = childSnapshot.val();
+        const empresaId = empresa.id;
+
+        // Verifica se o ID da empresa existe no Authentication
+        if (!userMap[empresaId]) {
+          // Se o ID não existir, marca para exclusão
+          deleteKeys.push(childSnapshot.key);
+        } else if (!empresa.subscriptions) {
+          // Se a empresa não tiver o campo subscriptions, adiciona com valores padrão
+          updates[`company/${empresaId}/subscriptions`] = {
+            isverify: "false",
+            status: "active",
+          };
+        }
+      });
+
+      // Passo 3: Atualizar a base de dados
+      if (Object.keys(updates).length > 0) {
+        await db.ref().update(updates);
+        console.log("Subscriptions adicionadas com sucesso!");
+      } else {
+        console.log("Nenhuma empresa necessitou de atualização de subscriptions.");
+      }
+
+      // Passo 4: Remover as empresas cujos IDs não existem no Authentication
+      if (deleteKeys.length > 0) {
+        for (const oldKey of deleteKeys) {
+          await db.ref(`company/${oldKey}`).remove();
+        }
+        console.log(`${deleteKeys.length} empresas removidas.`);
+      } else {
+        console.log("Nenhuma empresa foi removida.");
+      }
+    } else {
+      console.log("Nenhuma empresa encontrada.");
+    }
+  } catch (error) {
+    console.error("Erro ao migrar empresas:", error);
+  }
+}
+
+// Executar a função
+migrarEmpresas();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
@@ -63,6 +63,7 @@ import LandingPage from '../LandingPage';
 import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
 import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
 import ContactForm from '../desktop/Mailer';
+import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 
 const theme = createTheme({
   palette: {
@@ -81,8 +82,18 @@ const DesktopRoutes = ({ user }) => {
   
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
+  const [showTerms, setShowTerms] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:600px)');
+
+
+    useEffect(() => {
+    // Verifica se o usuário já aceitou os termos
+    const acceptedTerms = localStorage.getItem('acceptedTerms');
+    if (!acceptedTerms && user) {
+      setShowTerms(true); // Exibe os termos se o usuário não os aceitou
+    }
+  }, [user]);
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
@@ -97,15 +108,11 @@ const DesktopRoutes = ({ user }) => {
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
-  if (user?.subscriptions?.isverify === 'false') {
-    return (
-      <Routes>
-        <Route path="/verify" element={<CompanyVerificationNotice user={user} />} />
-        <Route path="/auth" element={<AuthDesk user={user} />} />
-        <Route path="*" element={<Navigate to="/verify" />} />
-      </Routes>
-    );
-  }
+
+  const handleAcceptTerms = () => {
+    setShowTerms(false); // Oculta os termos após a aceitação
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Box
@@ -129,6 +136,8 @@ const DesktopRoutes = ({ user }) => {
             padding: isMobile ? '16px' : '24px', // Ajusta o padding para dispositivos móveis
             boxSizing: 'border-box',
           }}>
+
+          {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
             <Route path="/" element={<DashboardComponent user={user} />} />
             <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
@@ -144,7 +153,6 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/inbox" element={<InboxDesk user={user} />} />
             <Route path="/search" element={<ConnectionsSearchDesk />} />
             <Route path="/sobre" element={<Sobre />} />
-            <Route path="/email-verification" element={<EmailVerification />} />
             <Route path="/editar-perfil" element={<EditProfileDesk user={user} />} />
             <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
             <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
