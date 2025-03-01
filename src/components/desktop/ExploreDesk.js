@@ -39,6 +39,7 @@ const Explore = ({ user }) => {
   const [subsectores, setSubsectores] = useState([]);
   const [distritos, setDistritos] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
+  const [sortOrder, setSortOrder] = useState('asc'); // Estado para ordenação
   const navigate = useNavigate();
   const defaultLogoUrl = 'https://via.placeholder.com/150';
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -50,16 +51,11 @@ const Explore = ({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const companyList = Object.keys(data)
-            .map((key) => ({
-              id: key,
-              ...data[key],
-            }))
-            .filter((company) => company.id !== user.id);
-
-          const randomCompanies = companyList.sort(() => Math.random() - 0.5).slice(0, 5);
-          setCompanies(randomCompanies);
-          console.log(randomCompanies)
+          const empresasList = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+          setCompanies(empresasList);
         }
       } catch (error) {
         console.error('Error fetching companies:', error);
@@ -99,6 +95,10 @@ const Explore = ({ user }) => {
     setSelectedDistrict('');
   };
 
+  const handleSortOrderChange = (e) => {
+    setSortOrder(e.target.value); // Atualiza o estado da ordenação
+  };
+
   const filteredCompanies = companies
     .filter((company) => {
       const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -109,7 +109,13 @@ const Explore = ({ user }) => {
       const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
       return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
     })
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }));
+    .sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
+      } else {
+        return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
+      }
+    });
 
   const handleCompanyClick = (companyId) => {
     navigate(`/perfil/${companyId}`);
@@ -127,7 +133,7 @@ const Explore = ({ user }) => {
   }
 
   return (
-    <Box width="100%" minHeight="100vh" sx={{backgroundColor:'white'}} p={isMobile ? 2 : 4}>
+    <Box width="100%" minHeight="100vh" sx={{ backgroundColor: 'white' }} p={isMobile ? 2 : 4}>
       <br />
       <Typography variant="h4" gutterBottom textAlign="center" fontWeight="bold">
         Empresas
@@ -151,15 +157,29 @@ const Explore = ({ user }) => {
           fullWidth
           sx={{ maxWidth: isMobile ? '100%' : 400 }}
         />
+         {/* Seletor de Ordenação */}
+      <Box  justifyContent="flex-end" mb={2}>
+        <Select
+          value={sortOrder}
+          onChange={handleSortOrderChange}
+          sx={{ minWidth: 120 }}
+        >
+          <MenuItem value="asc">A-Z</MenuItem>
+          <MenuItem value="desc">Z-A</MenuItem>
+        </Select>
+      </Box>
         <Button
           variant="contained"
           startIcon={<FilterListIcon />}
           onClick={openModal}
           fullWidth={isMobile}
-          sx={{ maxWidth: isMobile ? '100%' : 'auto' }}>
+          sx={{ maxWidth: isMobile ? '100%' : 'auto' }}
+        >
           Filtros
         </Button>
       </Box>
+
+     
 
       {/* Modal de Filtros */}
       <Dialog open={isModalOpen} onClose={closeModal} maxWidth="sm" fullWidth>

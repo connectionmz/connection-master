@@ -121,31 +121,38 @@ const NovaCotacao = ({ user }) => {
           }
   
           // Mensagem para SMS e e-mail
-          const message = `
-            Título: ${title}
-            Descrição: ${description}
-            Data Limite: ${deadline}
-            Setor de Atividade: ${sector}
-            Acesse: ${linkDoPedido}
-          `.trim();
-  
+            const message = (
+              "Título: " + title + "\n" +
+              "Descrição: " + description + "\n" +
+              "Data Limite: " + deadline + "\n" +
+              "Setor de Atividade: " + sector + "\n" +
+              "Acesse: " + linkDoPedido
+            ).trim();
+
+            const messageHTML = `
+              Título: ${title}<br>
+              Descrição: ${description}<br>
+              Data Limite: ${deadline}<br>
+              Setor de Atividade: ${sector}<br>
+              Acesse: <a href="${linkDoPedido}">${linkDoPedido}</a>
+            `.trim();
+                      
           const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
           const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
   
           // Enviar SMS (se houver contato)
-          if (empresa.contacto) {
-            const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-            await sendMessage(contatos, finalMessage).catch((error) => {
-              console.error(`Erro ao enviar SMS para ${contatos}:`, error);
-            });
-          }
-  
-          if (empresa.email) {
-            const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
-            const emailPromises = emails.map((email) =>
-              sendEmail(email, `Nova Cotação - ${title}`, finalMessage)
-            );
-  
+            if (empresa.contacto) {
+              const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+              await sendMessage(contatos, finalMessage).catch((error) => {
+                console.error(`Erro ao enviar SMS para ${contatos}:`, error);
+              })
+            }
+            if (empresa.email) {
+              const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
+              const emailPromises = emails.map((email) =>
+                //sendEmail(email, `Nova Cotação - ${title}`, finalMessage)
+                sendEmail('mohammadvicentesaide@gmail.com', `Nova Cotação - ${title}`, messageHTML)
+            )
             const results = await Promise.all(emailPromises);
             const allEmailsSent = results.every((success) => success);
   
@@ -158,28 +165,28 @@ const NovaCotacao = ({ user }) => {
         }
   
         // Limpar os estados após o processamento completo
-        setTitle('');
-        setDescription('');
-        setDeadline('');
-        setItems([]);
-        setMaxProposals('');
+        setTitle('')
+        setDescription('')
+        setDeadline('')
+        setItems([])
+        setMaxProposals('')
       } else {
-        console.log('Nenhuma empresa encontrada para este setor.');
+        console.log('Nenhuma empresa encontrada para este setor.')
       }
     } catch (error) {
       // Tratamento de erros
-      console.error('Erro ao publicar a cotação:', error.message);
-      setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
+      console.error('Erro ao publicar a cotação:', error.message)
+      setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.')
+      setSnackbarSeverity('error')
+      setOpenSnackbar(true)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   };
 
 
   const handleSnackbarClose = () => {
-    setOpenSnackbar(false);
+    setOpenSnackbar(false)
   };
 
   return (
@@ -201,8 +208,7 @@ const NovaCotacao = ({ user }) => {
         <Box sx={{ mb: 2 }}>
           <EditorText
             description={description}
-            setDescription={setDescription}
-          />
+            setDescription={setDescription}/>
         </Box>
         <Box sx={{ mb: 2 }}>
           <SectorDeActividades

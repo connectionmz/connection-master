@@ -42,9 +42,7 @@ const CompanyVerificationNotice = () => {
             textAlign="center"
             sx={{ mb: 4 }}
           >
-            Os dados da sua empresa estão sendo verificados. Você será notificado dentro de 10 minutos.
-            Caso haja alguma demora, entre em contato conosco pelo telefone{' '}
-            <strong>840237100</strong>.
+            Os dados da sua empresa estão sendo verificados. Você será notificado
           </Typography>
         </Alert>
 
