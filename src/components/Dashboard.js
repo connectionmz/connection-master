@@ -135,12 +135,27 @@ const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
   const [error, setError] = useState(null);
   const [campanhasAtivas, setCampanhasAtivas] = useState([]);
+  const [blogs, setBlogs] = useState([]); // Estado para armazenar os blogs
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
   const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
 
-  
+  // Buscar blogs
+  useEffect(() => {
+    const blogsRef = ref(db, "blogPost");
+    onValue(blogsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const blogsArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setBlogs(blogsArray);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     const fetchCampanhasAtivas = async () => {
       try {
@@ -222,44 +237,41 @@ const Dashboard = ({ user }) => {
         <Grid container spacing={2}>
           {/* Sidebar Esquerda */}
           <Grid item xs={12} sm={3}>
-          <Paper sx={{ padding: 2 }}>
+            <Paper sx={{ padding: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Empresas Destacadas
+                Blog Destacado
               </Typography>
-              <List>
-                {campanhasAtivas.length === 0 ? (
-                  <Typography variant="body2" color="textSecondary">
-                    Nenhuma campanha disponível no momento.
-                  </Typography>
-                ) : (
-                  campanhasAtivas.map((campanha) => (
-                    <div key={campanha.id} style={{ marginBottom: "16px", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                      <Link
-                        to={`/perfil/${campanha.company.id}`}
-                        style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center" }}
-                      >
-                        {/* Logo da empresa */}
-                        {campanha.company?.logo && (
-                          <img 
-                            src={campanha.company.logo} 
-                            alt="Logo da empresa"
-                            style={{ width: 40, height: 40, borderRadius: "50%", marginRight: 10 }} 
-                          />
-                        )}
-
-                        {/* Nome da empresa */}
-                        <ListItemText
-                          primary={
-                            <span>{campanha.company?.nome || "Nome da Empresa Não Disponível"}</span>
-                          }
-                        />
-                      </Link>
-                    </div>
-                  ))
-                )}
-              </List>
+              {blogs.length > 0 ? (
+                <Box>
+                  <Link to={`/blog/${blogs[0].id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <img 
+                      src={blogs[0].imageURL} 
+                      alt={blogs[0].title}
+                      style={{ width: "100%", height: "150px", objectFit: "cover", borderRadius: "8px" }}
+                    />
+                    <Typography variant="subtitle1" sx={{ fontWeight: "bold", mt: 1 }}>
+                      {blogs[0].title}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {blogs[0].content.substring(0, 100)}...
+                    </Typography>
+                  </Link>
+                  <Button
+                    component={Link}
+                    to="/blogs"
+                    variant="outlined"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                  >
+                    Ver todos os blogs
+                  </Button>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="textSecondary">
+                  Nenhum blog disponível no momento.
+                </Typography>
+              )}
             </Paper>
-
           </Grid>
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
