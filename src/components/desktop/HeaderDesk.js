@@ -27,7 +27,7 @@ import FeedIcon from "@mui/icons-material/Feed";
 import PeopleIcon from "@mui/icons-material/People";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import { logo } from "../../utils/utils";
+import logo  from "../../img/bg2.png";
 import { db } from "../../fb";
 
 const HeaderDesk = ({ user }) => {

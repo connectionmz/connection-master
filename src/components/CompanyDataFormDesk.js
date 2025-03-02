@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { get, onValue, push, ref, set, update } from 'firebase/database';
 import { auth, db } from '../fb';
 import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { signOut } from 'firebase/auth';
 
 const steps = ['Informações Básicas', 'Endereço & Contacto', 'Setor & Capacidade', 'Upload de Logotipo'];
 
@@ -61,6 +62,7 @@ const CompanyDataFormDesk = () => {
     const user = auth.currentUser;
     if (!user) {
       navigate('/auth'); 
+      await signOut(auth);
     }
   }, [navigate]);
 

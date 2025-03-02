@@ -129,29 +129,33 @@ const NovaCotacao = ({ user }) => {
               "Acesse: " + linkDoPedido
             ).trim();
 
-            const messageHTML = `
-              Título: ${title}<br>
-              Descrição: ${description}<br>
-              Data Limite: ${deadline}<br>
-              Setor de Atividade: ${sector}<br>
-              Acesse: <a href="${linkDoPedido}">${linkDoPedido}</a>
-            `.trim();
-                      
+            const stripHtml = (html) => html.replace(/<\/?[^>]+(>|$)/g, "");
+
+            const mailMessage = {
+              title: title,
+              description: stripHtml(description),
+              deadline: deadline,
+              sector: sector,
+              link: linkDoPedido
+            };
+            
           const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
           const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
   
           // Enviar SMS (se houver contato)
-            if (empresa.contacto) {
+            {/*
+              if (empresa.contacto) {
               const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
               await sendMessage(contatos, finalMessage).catch((error) => {
                 console.error(`Erro ao enviar SMS para ${contatos}:`, error);
               })
             }
+              */}
             if (empresa.email) {
               const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
               const emailPromises = emails.map((email) =>
                 //sendEmail(email, `Nova Cotação - ${title}`, finalMessage)
-                sendEmail('mohammadvicentesaide@gmail.com', `Nova Cotação - ${title}`, messageHTML)
+                sendEmail('connectionmozambique@gmail.com', mailMessage)
             )
             const results = await Promise.all(emailPromises);
             const allEmailsSent = results.every((success) => success);
