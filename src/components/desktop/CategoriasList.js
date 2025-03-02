@@ -64,7 +64,7 @@ const CategoriaList = () => {
       {categorias.map((categoria) => (
         <Link
           key={categoria.id}
-          to={`/categoria/${categoria.id}`} // Passa o id como parâmetro na URL
+          to={`/categoria/${categoria.name}`} // Passa o id como parâmetro na URL
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           <Box

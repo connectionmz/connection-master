@@ -79,13 +79,11 @@ const theme = createTheme({
 
 const DesktopRoutes = ({ user }) => {
 
-  
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:600px)');
-
 
     useEffect(() => {
     // Verifica se o usuário já aceitou os termos
@@ -149,7 +147,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
             <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
             <Route path="/profile" element={<ProfileDesk userI={user} />} />
-            <Route path="/servicos/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
+            <Route path="/categoria/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
             <Route path="/inbox" element={<InboxDesk user={user} />} />
             <Route path="/search" element={<ConnectionsSearchDesk />} />
             <Route path="/sobre" element={<Sobre />} />
