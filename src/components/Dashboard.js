@@ -33,6 +33,7 @@ import { Link } from "react-router-dom";
 import { db } from "../fb";
 import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
+import CategoriaList from "./desktop/CategoriasList";
 
 const getCategoryIcon = (categoryName) => {
   const icons = {
@@ -135,7 +136,7 @@ const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
   const [error, setError] = useState(null);
   const [campanhasAtivas, setCampanhasAtivas] = useState([]);
-  const [blogs, setBlogs] = useState([]); // Estado para armazenar os blogs
+  const [blogs, setBlogs] = useState([]); 
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
@@ -152,6 +153,7 @@ const Dashboard = ({ user }) => {
           ...data[key],
         }));
         setBlogs(blogsArray);
+        console.log(blogsArray)
       }
     });
   }, []);
@@ -232,6 +234,7 @@ const Dashboard = ({ user }) => {
   return (
     <Box>
       <Container sx={{ marginTop: 10 }}>
+        <CategoriaList/>
         <MarqueeParceiros />
         <StorieListDesk user={user} />
         <Grid container spacing={2}>
@@ -239,7 +242,7 @@ const Dashboard = ({ user }) => {
           <Grid item xs={12} sm={3}>
             <Paper sx={{ padding: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Blog Destacado
+                Destacado
               </Typography>
               {blogs.length > 0 ? (
                 <Box>
@@ -276,7 +279,7 @@ const Dashboard = ({ user }) => {
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
             <MarqueeAnuncios user={user}/>
-            <Box sx={{ padding: 2 }}>
+            <Box>
               <BannerDesk user={user}/>
             </Box>
           </Grid>

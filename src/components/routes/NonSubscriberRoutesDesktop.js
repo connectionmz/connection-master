@@ -17,29 +17,27 @@ const NonSubscriberRoutesDesktop = ({ userDb }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user); // Atualiza o estado do usuário
-      setLoading(false); // Finaliza o carregamento
+      setLoading(false); 
     });
 
-    return () => unsubscribe(); // Limpa o listener ao desmontar
+    return () => unsubscribe(); 
   }, []);
-
   useEffect(() => {
     if (!loading) {
+
+
       if (!userDb && user) {
-        // Se userDb não existe e o usuário está logado, redirecione para /setup
         navigate('/setup', { replace: true });
       } else if (!user) {
-        // Se o usuário não está logado, redirecione para /auth
         navigate('/auth', { replace: true });
       } else if (userDb?.subscriptions?.isverify === 'false') {
-        // Se a assinatura não está verificada, redirecione para /email-verification
         navigate('/email-verification', { replace: true });
       }
     }
   }, [loading, userDb, user, navigate]);
-
+  
   if (loading) {
-    return <div>Carregando...</div>; // Exibe um indicador de carregamento
+    return <div>Carregando...</div>; 
   }
 
   return (
