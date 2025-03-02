@@ -64,6 +64,7 @@ import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
 import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
 import ContactForm from '../desktop/Mailer';
 import TermsAndPrivacy from '../modal/TermsAndPrivacy';
+import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 
 const theme = createTheme({
   palette: {
@@ -121,10 +122,8 @@ const DesktopRoutes = ({ user }) => {
           flexDirection: 'column',
         }}
       >
-        {/* Header */}
         <HeaderDesk user={user} />
 
-        {/* Conteúdo Principal */}
         <Box
           sx={{
             flex: 1, // Ocupa o espaço restante
@@ -160,8 +159,9 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk user={user} />} />
             <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk user={user} />} />
             <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
-            <Route path="/noticiados" element={<NoticiadosDesk />} />
+            <Route path="/noticias" element={<NoticiadosDesk />} />
             <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
+            <Route path="/blog/:id" element={<BlogDetalheDesk />} />
             <Route path="/concursos" element={<ConcursoDesk user={user} />} />
             <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
             <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />

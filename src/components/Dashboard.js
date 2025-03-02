@@ -33,21 +33,7 @@ import { Link } from "react-router-dom";
 import { db } from "../fb";
 import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
-import CategoriaList from "./desktop/CategoriasList";
-
-const getCategoryIcon = (categoryName) => {
-  const icons = {
-    "Emergência": <MedicalServices />,
-    "Registo": <AppRegistration />,
-    "Financiamentos PMEs": <BusinessCenterRounded />,
-    "Formações": <School />,
-    "Impostos e Licenças": <Receipt />,
-    "Segurança Social": <PeopleAltTwoTone />,
-    "Saúde Pública": <MedicalServices />,
-    "Entidades Reguladoras": <Gavel />,
-  };
-  return icons[categoryName] || <Business />; // Ícone padrão caso não esteja na lista
-};
+import CategoriaList from "./desktop/CategoriasList"; // Componente importado
 
 const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
@@ -86,7 +72,7 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
                 },
               }}
             >
-              <ListItemIcon>{getCategoryIcon(item.name)}</ListItemIcon>
+              <ListItemIcon>{/* Ícone removido */}</ListItemIcon>
               <ListItemText primary={item.name} sx={{ fontWeight: "bold" }} />
             </Box>
           </ListItem>
@@ -139,7 +125,6 @@ const Dashboard = ({ user }) => {
   const [blogs, setBlogs] = useState([]); 
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  const { data: categorias, loading: categoriasLoading, error: categoriasError } = useFirebaseData("categoriasExternas");
   const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
 
   // Buscar blogs
@@ -215,7 +200,7 @@ const Dashboard = ({ user }) => {
     return inqueritos.filter((inquerito) => !hasRespondedIds.has(inquerito.id));
   }, [inqueritos, hasRespondedIds]);
 
-  if (categoriasLoading || inqueritosLoading) {
+  if (inqueritosLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />
@@ -223,10 +208,10 @@ const Dashboard = ({ user }) => {
     );
   }
 
-  if (error || categoriasError || inqueritosError) {
+  if (error || inqueritosError) {
     return (
       <Typography color="error" align="center">
-        {error || categoriasError || inqueritosError}
+        {error || inqueritosError}
       </Typography>
     );
   }
@@ -234,7 +219,7 @@ const Dashboard = ({ user }) => {
   return (
     <Box>
       <Container sx={{ marginTop: 10 }}>
-        <CategoriaList/>
+        <CategoriaList /> {/* Componente importado */}
         <MarqueeParceiros />
         <StorieListDesk user={user} />
         <Grid container spacing={2}>
@@ -286,7 +271,6 @@ const Dashboard = ({ user }) => {
 
           {/* Sidebar Direita */}
           <Grid item xs={12} sm={3}>
-            <InfoBlock title="Categorias" items={categorias} linkBase="/servicos" isCategory={true} />
             <InfoBlock title="Inquéritos" items={filteredInqueritos} linkBase="/inquerito" />
           </Grid>
         </Grid>

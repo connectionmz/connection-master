@@ -48,16 +48,16 @@ const CategoriaList = () => {
         overflowX: 'auto', // Permite scroll horizontal
         gap: 2, // Espaçamento entre os itens
         padding: 2,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#f3f6f8', // Fundo cinza claro (similar ao LinkedIn)
         '&::-webkit-scrollbar': {
           height: '8px', // Altura da barra de scroll
         },
         '&::-webkit-scrollbar-thumb': {
-          backgroundColor: '#888', // Cor do indicador de scroll
+          backgroundColor: '#0073b1', // Azul do LinkedIn para o indicador de scroll
           borderRadius: '4px', // Borda arredondada
         },
         '&::-webkit-scrollbar-track': {
-          backgroundColor: '#f1f1f1', // Cor de fundo da barra de scroll
+          backgroundColor: '#e1e9ee', // Cor de fundo da barra de scroll
         },
       }}
     >
@@ -73,18 +73,20 @@ const CategoriaList = () => {
               alignItems: 'center', // Alinha ícone e texto verticalmente
               minWidth: '200px', // Largura mínima para cada item
               padding: 2,
-              backgroundColor: '#fff',
+              backgroundColor: '#ffffff', // Fundo branco
               borderRadius: 2,
-              boxShadow: 1,
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // Sombra sutil
+              transition: 'all 0.3s ease',
               '&:hover': {
                 backgroundColor: '#f0f0f0', // Efeito hover
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)', // Sombra mais pronunciada no hover
               },
             }}
           >
-            <IconButton sx={{ color: 'primary.main', marginRight: 1 }}>
+            <IconButton sx={{ color: '#0073b1', marginRight: 1 }}> {/* Azul do LinkedIn */}
               {getCategoryIcon(categoria.name)}
             </IconButton>
-            <Typography variant="body2" align="center">
+            <Typography variant="body2" align="center" sx={{ fontWeight: 500, color: '#000000' }}>
               {categoria.name}
             </Typography>
           </Box>
