@@ -79,18 +79,16 @@ const theme = createTheme({
 });
 
 const DesktopRoutes = ({ user }) => {
-
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
-    useEffect(() => {
-    // Verifica se o usuário já aceitou os termos
+  useEffect(() => {
     const acceptedTerms = localStorage.getItem('acceptedTerms');
     if (!acceptedTerms && user) {
-      setShowTerms(true); // Exibe os termos se o usuário não os aceitou
+      setShowTerms(true);
     }
   }, [user]);
 
@@ -109,7 +107,7 @@ const DesktopRoutes = ({ user }) => {
   };
 
   const handleAcceptTerms = () => {
-    setShowTerms(false); // Oculta os termos após a aceitação
+    setShowTerms(false);
   };
 
   return (
@@ -126,14 +124,14 @@ const DesktopRoutes = ({ user }) => {
 
         <Box
           sx={{
-            flex: 1, // Ocupa o espaço restante
+            flex: 1,
             width: '100%',
-            maxWidth: isMobile ? '100%' : '1200px', // Limita a largura máxima em telas maiores
-            margin: '0 auto', // Centraliza o conteúdo
-            padding: isMobile ? '16px' : '24px', // Ajusta o padding para dispositivos móveis
+            maxWidth: isMobile ? '100%' : '1200px',
+            margin: '0 auto',
+            padding: isMobile ? '8px' : '24px',
             boxSizing: 'border-box',
-          }}>
-
+          }}
+        >
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
             <Route path="/" element={<DashboardComponent user={user} />} />
@@ -145,7 +143,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/feed" element={<FeedDesk user={user} />} />
             <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
             <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
-            <Route path="/profile" element={<ProfileDesk userI={user} />} />
+            <Route path="/profile" element={<ProfileDesk user={user} />} />
             <Route path="/categoria/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
             <Route path="/inbox" element={<InboxDesk user={user} />} />
             <Route path="/search" element={<ConnectionsSearchDesk />} />
@@ -192,25 +190,24 @@ const DesktopRoutes = ({ user }) => {
           </Routes>
         </Box>
 
-        {/* Footer */}
         <FooterDesk />
 
-        {/* Botão de Idioma */}
         <Fab
           color="primary"
           aria-label="change language"
           sx={{
             position: 'fixed',
-            bottom: isMobile ? 8 : 16,
-            right: isMobile ? 8 : 16,
+            bottom: isMobile ? 16 : 24,
+            right: isMobile ? 16 : 24,
             zIndex: 1000,
+            width: isMobile ? 40 : 56,
+            height: isMobile ? 40 : 56,
           }}
           onClick={handleMenuOpen}
         >
           <LanguageIcon />
         </Fab>
 
-        {/* Menu de Idioma */}
         <Menu
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}

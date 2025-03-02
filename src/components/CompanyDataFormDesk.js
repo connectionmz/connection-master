@@ -62,7 +62,7 @@ const CompanyDataFormDesk = () => {
     const user = auth.currentUser;
     if (!user) {
       navigate('/auth'); 
-      await signOut(auth);
+     
     }
   }, [navigate]);
 
@@ -532,8 +532,10 @@ const CompanyDataFormDesk = () => {
     }
   };
 
-  const handleLoginRedirect = () => {
+  const handleLoginRedirect = async () => {
+    await signOut(auth);
     navigate('/auth'); 
+
   };
 
   return (
