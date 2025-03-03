@@ -20,6 +20,8 @@ import {
     useMediaQuery,
     Paper,
     Skeleton,
+    Snackbar,
+    Alert,
 } from '@mui/material';
 import { saveContentToInbox } from '../SaveToInbox';
 import PostDetailPageDesk from './PostDetailPageDesk';
@@ -42,6 +44,13 @@ const CompanyProfile = ({ user }) => {
     const [visits, setVisits] = useState([]);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const isMobile = useMediaQuery('(max-width:600px)');
+    const [error, setError] = useState(null); // Estado para armazenar erros
+    const [openSnackbar, setOpenSnackbar] = useState(false); // Estado para controlar a exibição do Snackbar
+
+    // Função para fechar o Snackbar
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false);
+    };
 
     useEffect(() => {
         if (userId) {
@@ -52,7 +61,7 @@ const CompanyProfile = ({ user }) => {
                     const postsRef = ref(db, `posts`);
                     const cotacoesRef = ref(db, `cotacoes`);
                     const visitasRef = ref(db, `company/${userId}/visitas`);
-
+    
                     const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot, visitasSnapshot] = await Promise.all([
                         get(companyRef),
                         get(socialRef),
@@ -60,28 +69,36 @@ const CompanyProfile = ({ user }) => {
                         get(postsRef),
                         get(visitasRef)
                     ]);
-
-                    if (companySnapshot.exists()) {
-                        const companyData = companySnapshot.val();
-                        setmCompany(companyData);
-                        setUserData({
-                            ...companyData,
-                            photoURL: companyData?.logoUrl || "https://via.placeholder.com/150",
-                            coverPhotoURL: companyData?.coverUrl,
-                            displayName: companyData.nome || 'A carregar',
-                            username: companyData.id || 'A carregar',
-                            endereco: companyData.endereco || 'A carregar'
-                        });
-                        setModules(companyData.activeModules || {});
-                        setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
-
-                        const newVisitRef = push(visitasRef);
-                        await update(newVisitRef, {
-                            visitorId: user.id,
-                            visitorName: user.nome || 'Visitante Anônimo',
-                            timestamp: new Date().toISOString()
-                        });
+    
+                    // Verifica se a empresa existe
+                    if (!companySnapshot.exists()) {
+                        setError('Empresa não encontrada.');
+                        setOpenSnackbar(true);
+                        navigate('/empresa-nao-encontrada'); // Redireciona para uma página de erro ou outra rota
+                        return; // Interrompe a execução do código
                     }
+    
+                    // Se a empresa existir, continua o processamento
+                    const companyData = companySnapshot.val();
+                    setmCompany(companyData);
+                    setUserData({
+                        ...companyData,
+                        photoURL: companyData?.logoUrl || "https://via.placeholder.com/150",
+                        coverPhotoURL: companyData?.coverUrl,
+                        displayName: companyData.nome || 'A carregar',
+                        username: companyData.id || 'A carregar',
+                        endereco: companyData.endereco || 'A carregar'
+                    });
+                    setModules(companyData.activeModules || {});
+                    setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
+    
+                    const newVisitRef = push(visitasRef);
+                    await update(newVisitRef, {
+                        visitorId: user.id,
+                        visitorName: user.nome || 'Visitante Anônimo',
+                        timestamp: new Date().toISOString()
+                    });
+    
                     if (socialSnapshot.exists()) {
                         setSocial(socialSnapshot.val());
                     }
@@ -102,15 +119,15 @@ const CompanyProfile = ({ user }) => {
                     }
                 } catch (error) {
                     console.error('Error fetching data: ', error);
+                    setError('Erro ao carregar dados. Tente novamente mais tarde.');
+                    setOpenSnackbar(true);
                     navigate('/auth');
                 } finally {
                     setLoading(false);
                 }
             };
             fetchData();
-        } else {
-            navigate('/auth');
-        }
+        } 
     }, [userId, navigate, user]);
 
     useEffect(() => {
@@ -131,9 +148,10 @@ const CompanyProfile = ({ user }) => {
         console.log(companyId);
     };
 
-    const handleConectar = () => {
+    const handleConectar = async () => {
         if (!userId) {
-            alert("Usuário inválido. Não é possível conectar.");
+            setError("Usuário inválido. Não é possível conectar.");
+            setOpenSnackbar(true);
             return;
         }
 
@@ -158,27 +176,29 @@ const CompanyProfile = ({ user }) => {
             status: "unread",
         };
 
-        set(targetUserConnectionRef, connectionRequest)
-            .then(() => {
-                alert("Solicitação de conexão enviada!");
-                saveContentToInbox(userId, notification);
-            })
-            .catch((error) => {
-                console.error("Erro ao enviar solicitação:", error);
-                alert("Erro ao tentar enviar a solicitação. Tente novamente.");
-            });
+        try {
+            await set(targetUserConnectionRef, connectionRequest);
+            await saveContentToInbox(userId, notification);
+            setError("Solicitação de conexão enviada!");
+            setOpenSnackbar(true);
+        } catch (error) {
+            console.error("Erro ao enviar solicitação:", error);
+            setError("Erro ao tentar enviar a solicitação. Tente novamente.");
+            setOpenSnackbar(true);
+        }
     };
 
-    const handleCancelarConexao = () => {
+    const handleCancelarConexao = async () => {
         const targetUserConnectionRef = ref(db, `connections/${userId}/${user.id}`);
-        remove(targetUserConnectionRef)
-            .then(() => {
-                alert("Solicitação de conexão cancelada!");
-            })
-            .catch((error) => {
-                console.error("Erro ao cancelar a solicitação:", error);
-                alert("Erro ao tentar cancelar a solicitação. Tente novamente.");
-            });
+        try {
+            await remove(targetUserConnectionRef);
+            setError("Solicitação de conexão cancelada!");
+            setOpenSnackbar(true);
+        } catch (error) {
+            console.error("Erro ao cancelar a solicitação:", error);
+            setError("Erro ao tentar cancelar a solicitação. Tente novamente.");
+            setOpenSnackbar(true);
+        }
     };
 
     if (loading) {
@@ -488,6 +508,18 @@ const CompanyProfile = ({ user }) => {
 
             {/* Conteúdo das Tabs */}
             <Box p={3}>{renderContent()}</Box>
+
+            {/* Snackbar para exibir erros */}
+            <Snackbar
+                open={openSnackbar}
+                autoHideDuration={6000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+                    {error}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

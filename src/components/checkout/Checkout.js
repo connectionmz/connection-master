@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { Button, Typography, Box, TextField, Select, MenuItem } from '@mui/material';
+import { Button, Typography, Box, TextField, Select, MenuItem, CircularProgress } from '@mui/material';
 
 const Checkout = ({ totalCost, onConfirmPayment, onCancel }) => {
   const [paymentMethod, setPaymentMethod] = useState('mpesa');
+  const [isLoading, setIsLoading] = useState(false); // Estado para controlar o loader
 
-  const handlePayment = () => {
-    onConfirmPayment(paymentMethod);
+  const handlePayment = async () => {
+    setIsLoading(true); // Ativa o loader
+    try {
+      await onConfirmPayment(paymentMethod); // Chama a função de confirmação de pagamento
+    } catch (error) {
+      console.error('Erro ao confirmar pagamento:', error);
+    } finally {
+      setIsLoading(false); // Desativa o loader, independentemente do resultado
+    }
   };
 
   return (
@@ -31,15 +39,21 @@ const Checkout = ({ totalCost, onConfirmPayment, onCancel }) => {
       </TextField>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <Button variant="outlined" onClick={onCancel} fullWidth>
-          Cancelar
-        </Button>
-        <Button variant="contained" onClick={handlePayment} fullWidth>
-          Confirmar Pagamento
+        <Button
+          variant="contained"
+          onClick={handlePayment}
+          fullWidth
+          disabled={isLoading} // Desabilita o botão durante o carregamento
+        >
+          {isLoading ? (
+            <CircularProgress size={24} sx={{ color: 'white' }} /> // Exibe o loader
+          ) : (
+            'Confirmar Pagamento'
+          )}
         </Button>
       </Box>
     </Box>
-  )
-}
+  );
+};
 
-export default Checkout
+export default Checkout;

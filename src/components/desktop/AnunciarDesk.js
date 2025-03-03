@@ -197,7 +197,7 @@ const AnunciarDesk = ({ user }) => {
   return (
     <Box width="100%" minHeight="100vh">
       <Paper sx={{ width: '100%', padding: 3 }}>
-      <BackButton sx={{ mb: 2 }} />
+        <BackButton sx={{ mb: 2 }} />
         {showCheckout ? (
           <Checkout
             totalCost={totalCost}
@@ -311,7 +311,7 @@ const AnunciarDesk = ({ user }) => {
               disabled={!title || !file || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0}
               sx={{ mb: 2 }}
             >
-              {uploading ? <CircularProgress size={24} /> : 'Pagar & Prosseguir'}
+              {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
             </Button>
           </>
         )}

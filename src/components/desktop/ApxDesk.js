@@ -133,8 +133,7 @@ const ApxDesk = ({ user }) => {
             color="error"
             startIcon={<ExitToApp />}
             onClick={handleLogout}
-            sx={{ minWidth: isMobile ? '100%' : 200 }}
-          >
+            sx={{ minWidth: isMobile ? '100%' : 200 }}>
             Desconectar
           </Button>
         </Grid>

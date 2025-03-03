@@ -48,7 +48,6 @@ const CategoriaList = () => {
         overflowX: 'auto', // Permite scroll horizontal
         gap: 2, // Espaçamento entre os itens
         padding: 2,
-        backgroundColor: '#f3f6f8', // Fundo cinza claro (similar ao LinkedIn)
         '&::-webkit-scrollbar': {
           height: '8px', // Altura da barra de scroll
         },
@@ -73,7 +72,6 @@ const CategoriaList = () => {
               alignItems: 'center', // Alinha ícone e texto verticalmente
               minWidth: '200px', // Largura mínima para cada item
               padding: 2,
-              backgroundColor: '#ffffff', // Fundo branco
               borderRadius: 2,
               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // Sombra sutil
               transition: 'all 0.3s ease',

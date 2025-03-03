@@ -161,7 +161,7 @@ const PayModuleCheckout = ({ user, planPrice, onPaymentSuccess, validade }) => {
       <TextField
         fullWidth
         label="Número de Celular"
-        placeholder="Insira o número (ex: 841234567)"
+        placeholder="XXXXXXXXX"
         value={phoneNumber}
         onChange={(e) => setPhoneNumber(e.target.value)}
         sx={{ mb: 3 }}

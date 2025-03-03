@@ -65,6 +65,7 @@ import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
 import ContactForm from '../desktop/Mailer';
 import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
+import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
 
 const theme = createTheme({
   palette: {
@@ -184,6 +185,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/painel" element={<PortalDesk user={user} />} />
             <Route path="/sendmail" element={<SendMail user={user} />} />
             <Route path="/destacar" element={<DestacarModule user={user} />} />
+              <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
             <Route path="/analises" element={<AnalyticsDesk />} />
             <Route path="/website" element={<LandingPage />} />
             <Route path="*" element={<Navigate to="/" />} />

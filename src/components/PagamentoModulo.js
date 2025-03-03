@@ -15,6 +15,7 @@ import {
   Alert,
 } from '@mui/material';
 import PaySMSCheckout from './PaySMSCheckout';
+import BackButton from './BackButton';
 
 const PagamentoModulo = ({ user }) => {
   const { moduleKey } = useParams();
@@ -72,10 +73,12 @@ const PagamentoModulo = ({ user }) => {
 
   return (
     <Box sx={{ p: 6, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', width:'100%' }}>
-      <Typography variant="h3" fontWeight="bold" gutterBottom>
+       <BackButton sx={{ mb: 2 }} />
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
         Pagamento do Módulo
       </Typography>
       <Card sx={{ width: '100%', boxShadow: 3 }}>
+    
         <CardContent>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             {currentModule.name}
