@@ -145,10 +145,12 @@ const AuthDesk = ({ data }) => {
           </form>
 
           <div className="text-center mt-6">
+           {/*
             <p className="text-gray-600">
               Ainda não tem uma conta?{' '}
               <a href="/create" className="text-blue-500 hover:underline">Cadastre-se</a>
             </p>
+            */}
             <p className="mt-2">
               <a href="/forget-password" className="text-blue-500 hover:underline">Esqueceu sua senha?</a>
             </p>
