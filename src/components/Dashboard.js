@@ -33,7 +33,7 @@ import { Link } from "react-router-dom";
 import { db } from "../fb";
 import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
-import CategoriaList from "./desktop/CategoriasList"; // Componente importado
+import CategoriaList from "./desktop/CategoriasList"; 
 
 const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
   <Paper sx={{ padding: 2, marginBottom: 2 }}>
@@ -53,12 +53,11 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
               marginBottom: "8px",
               borderRadius: "8px",
               transition: "all 0.3s ease-in-out",
-              "&:hover": { backgroundColor: "#f5f5f5" }, // Efeito hover no item inteiro
-            }}
-          >
+              "&:hover": { backgroundColor: "#f5f5f5" }, 
+            }}>
           <Box
-              component={Link} // Usa Box para permitir sx
-              to={`${linkBase}/${isCategory ? item.name : item.id}`}
+              component={Link} 
+              to={`${linkBase}/${item.id}`}
               sx={{
                 textDecoration: "none",
                 color: "black",
@@ -73,7 +72,7 @@ const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
               }}
             >
               <ListItemIcon>{/* Ícone removido */}</ListItemIcon>
-              <ListItemText primary={item.name} sx={{ fontWeight: "bold" }} />
+              <ListItemText primary={item.title} sx={{ fontWeight: "bold" }} />
             </Box>
           </ListItem>
         ))
@@ -269,7 +268,6 @@ const Dashboard = ({ user }) => {
             </Box>
           </Grid>
 
-          {/* Sidebar Direita */}
           <Grid item xs={12} sm={3}>
             <InfoBlock title="Inquéritos" items={filteredInqueritos} linkBase="/inquerito" />
           </Grid>

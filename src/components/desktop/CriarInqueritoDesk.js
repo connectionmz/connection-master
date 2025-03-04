@@ -134,6 +134,8 @@ const CriarInqueritoDesk = ({ user }) => {
 
       await push(inqueritoRef, novoInquerito);
 
+      //Notificar empresas do sector/ provincia do inquerito disponivel
+
       setTitulo('');
       setDescricao('');
       setSectores([]);

@@ -147,7 +147,8 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
     <BackButton sx={{ mb: 2 }} />
 
         <Typography variant="h5" sx={{ marginBottom: 2 }}>
-          {surveyData.title}
+        <a href={`/perfil/${surveyData.company.id}`}>{surveyData.company.nome}</a><br/>
+        {surveyData.title}
         </Typography>
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
           {surveyData.description}
