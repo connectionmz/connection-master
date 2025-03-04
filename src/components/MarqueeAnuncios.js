@@ -44,7 +44,7 @@ const MarqueeAnuncios = ({ user }) => {
   }, [user]);
 
   const handleVerMais = () => {
-    navigate('/noticiados');
+    navigate('/noticias');
   };
 
   const handleAnuncioClick = (id) => {

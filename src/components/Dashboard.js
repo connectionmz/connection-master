@@ -246,7 +246,7 @@ const Dashboard = ({ user }) => {
                   </Link>
                   <Button
                     component={Link}
-                    to="/blogs"
+                    to="/blog"
                     variant="outlined"
                     fullWidth
                     sx={{ mt: 2 }}

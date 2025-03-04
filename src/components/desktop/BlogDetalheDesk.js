@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import BackButton from '../BackButton';
 
-const BlogDetalheDesk = () => {
+const BlogDetalheDesk = ({ user }) => {
   const { id } = useParams();
   const [noticia, setNoticia] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,10 @@ const BlogDetalheDesk = () => {
       try {
         const snapshot = await get(ref(db, `blogPost/${id}/comments`));
         if (snapshot.exists()) {
-          setComments(Object.values(snapshot.val()));
+          const commentsData = snapshot.val();
+          // Transforma os comentários em um array
+          const commentsArray = Object.values(commentsData);
+          setComments(commentsArray);
         }
       } catch (err) {
         console.error('Erro ao buscar comentários:', err);
@@ -66,8 +69,18 @@ const BlogDetalheDesk = () => {
       setSending(true);
       try {
         const newCommentRef = ref(db, `blogPost/${id}/comments`);
-        await push(newCommentRef, comment);
-        setComments((prev) => [...prev, comment]);
+
+        const newComment = {
+          comment: comment,
+          user: {
+            nome: user.nome,
+            logo: user.logoUrl,
+            id: user.id,
+          },
+        };
+
+        await push(newCommentRef, newComment);
+        setComments((prev) => [...prev, newComment]); // Adiciona o novo comentário à lista
         setComment('');
       } catch (err) {
         console.error('Erro ao enviar comentário:', err);
@@ -94,14 +107,12 @@ const BlogDetalheDesk = () => {
   }
 
   return (
-    <Container maxWidth="md" sx={{ paddingY: 4, backgroundColor:'#FFF' }}>
-    <BackButton sx={{ mb: 2 }} />
-      {/* Título da Notícia */}
+    <Container maxWidth="md" sx={{ paddingY: 4, backgroundColor: '#FFF' }}>
+      <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#333' }}>
         {noticia.title || 'Sem título'}
       </Typography>
 
-      {/* Imagem da Notícia */}
       {noticia.imageURL && (
         <Box sx={{ marginBottom: 3 }}>
           <img
@@ -112,12 +123,10 @@ const BlogDetalheDesk = () => {
         </Box>
       )}
 
-      {/* Conteúdo da Notícia */}
       <Typography variant="body1" paragraph sx={{ color: '#555', lineHeight: 1.6 }}>
         {noticia.content || 'Sem conteúdo disponível.'}
       </Typography>
 
-      {/* Informações Adicionais */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
         <Typography variant="caption" sx={{ color: '#777' }}>
           Publicado por: {noticia.company?.nome || 'Desconhecido'}
@@ -129,7 +138,6 @@ const BlogDetalheDesk = () => {
 
       <Divider sx={{ my: 3 }} />
 
-      {/* Seção de Comentários */}
       <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: '#333' }}>
         Comentários
       </Typography>
@@ -163,11 +171,24 @@ const BlogDetalheDesk = () => {
             <Paper key={index} sx={{ marginBottom: 2, padding: 2, borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
               <ListItem alignItems="flex-start">
                 <ListItemAvatar>
-                  <Avatar sx={{ backgroundColor: '#0073b1' }}>U</Avatar>
+                  <Avatar
+                    src={typeof c === 'object' ? c.user?.logo : null}
+                    sx={{ backgroundColor: '#0073b1' }}
+                  >
+                    {typeof c === 'object' ? c.user?.nome?.charAt(0) : 'U'}
+                  </Avatar>
                 </ListItemAvatar>
                 <ListItemText
-                  primary={<Typography sx={{ fontWeight: 'bold' }}>Usuário Anônimo</Typography>}
-                  secondary={<Typography sx={{ color: '#555' }}>{c}</Typography>}
+                  primary={
+                    <Typography sx={{ fontWeight: 'bold' }}>
+                      {typeof c === 'object' ? c.user?.nome : 'Usuário Anônimo'}
+                    </Typography>
+                  }
+                  secondary={
+                    <Typography sx={{ color: '#555' }}>
+                      {typeof c === 'object' ? c.comment : c}
+                    </Typography>
+                  }
                 />
               </ListItem>
             </Paper>

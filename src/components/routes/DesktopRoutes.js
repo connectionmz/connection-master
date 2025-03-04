@@ -66,6 +66,7 @@ import ContactForm from '../desktop/Mailer';
 import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
+import Blogs from '../desktop/Blogs';
 
 const theme = createTheme({
   palette: {
@@ -160,7 +161,8 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
             <Route path="/noticias" element={<NoticiadosDesk />} />
             <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
-            <Route path="/blog/:id" element={<BlogDetalheDesk />} />
+            <Route path="/blog" element={<Blogs />} />
+            <Route path="/blog/:id" element={<BlogDetalheDesk user={user}/>} />
             <Route path="/concursos" element={<ConcursoDesk user={user} />} />
             <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
             <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
