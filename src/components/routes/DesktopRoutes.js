@@ -188,7 +188,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/sendmail" element={<SendMail user={user} />} />
             <Route path="/destacar" element={<DestacarModule user={user} />} />
               <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
-            <Route path="/analises" element={<AnalyticsDesk />} />
+            <Route path="/analises" element={<AnalyticsDesk user={user} />} />
             <Route path="/website" element={<LandingPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Line, Bar, Pie } from 'react-chartjs-2';
 import { Box, Grid, Typography, Paper, Tab, Tabs } from '@mui/material';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../../fb'; // Ajuste o caminho conforme necessário
 
 ChartJS.register(
   CategoryScale,
@@ -15,20 +17,54 @@ ChartJS.register(
   ArcElement
 );
 
-const AnalyticsDesk = () => {
+const AnalyticsDesk = ({ user }) => {
   const [tabValue, setTabValue] = useState(0);
+  const [cotacoesData, setCotacoesData] = useState([]);
+  const [concursosData, setConcursosData] = useState([]);
+  const [perfilData, setPerfilData] = useState(null);
+
+  // Carregar dados do Firebase
+  useEffect(() => {
+    // Carregar cotações
+    const cotacoesRef = ref(db, 'cotacoes');
+    onValue(cotacoesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setCotacoesData(Object.values(data));
+      }
+    });
+
+    // Carregar concursos
+    const concursosRef = ref(db, 'concursos');
+    onValue(concursosRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setConcursosData(Object.values(data));
+      }
+    });
+
+    // Carregar perfil da empresa
+    const companyRef = ref(db, `company/${user.id}`);
+    onValue(companyRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setPerfilData(data);
+        console.log(data.visitas)
+      }
+    });
+  }, [user]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
 
-  // Dados para os gráficos
+  // Transformar dados de cotações em formato de gráfico
   const lineData = {
-    labels: ['January', 'February', 'March', 'April', 'May'],
+    labels: cotacoesData.map((_, index) => `Mês ${index + 1}`), // Exemplo de rótulos
     datasets: [
       {
-        label: 'Sales Growth',
-        data: [12, 19, 3, 5, 2],
+        label: 'Cotações Realizadas',
+        data: cotacoesData.map((cotacao) => cotacao.valor), // Ajuste conforme a estrutura dos dados
         borderColor: '#4CAF50',
         backgroundColor: 'rgba(76, 175, 80, 0.2)',
         fill: true,
@@ -36,22 +72,29 @@ const AnalyticsDesk = () => {
     ],
   };
 
+  // Transformar dados de concursos em formato de gráfico
   const barData = {
-    labels: ['Product A', 'Product B', 'Product C', 'Product D'],
+    labels: concursosData.map((concurso) => concurso.nome), // Ajuste conforme a estrutura dos dados
     datasets: [
       {
-        label: 'Sales',
-        data: [65, 59, 80, 81],
+        label: 'Participações em Concursos',
+        data: concursosData.map((concurso) => concurso.participacoes), // Ajuste conforme a estrutura dos dados
         backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
       },
     ],
   };
 
+  // Transformar dados do perfil em formato de gráfico
   const pieData = {
-    labels: ['Direct', 'Referral', 'Social', 'Organic'],
+    labels: ['Setor', 'Subsector', 'Província', 'Distrito'], // Exemplo de rótulos
     datasets: [
       {
-        data: [50, 30, 15, 5],
+        data: [
+          perfilData?.sector ? 1 : 0,
+          perfilData?.subsector ? 1 : 0,
+          perfilData?.provincia ? 1 : 0,
+          perfilData?.distrito ? 1 : 0,
+        ], // Exemplo de dados
         backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
       },
     ],
@@ -78,7 +121,7 @@ const AnalyticsDesk = () => {
             <Grid item xs={12} sm={6} md={4}>
               <Paper sx={{ padding: 2 }}>
                 <Typography variant="h6" gutterBottom>
-                  Crescimento de Vendas (Line)
+                  Cotações Realizadas (Line)
                 </Typography>
                 <Line data={lineData} options={{ responsive: true }} />
               </Paper>
@@ -91,7 +134,7 @@ const AnalyticsDesk = () => {
             <Grid item xs={12} sm={6} md={4}>
               <Paper sx={{ padding: 2 }}>
                 <Typography variant="h6" gutterBottom>
-                  Vendas por Produto (Bar)
+                  Participações em Concursos (Bar)
                 </Typography>
                 <Bar data={barData} options={{ responsive: true }} />
               </Paper>
@@ -104,7 +147,7 @@ const AnalyticsDesk = () => {
             <Grid item xs={12} sm={6} md={4}>
               <Paper sx={{ padding: 2 }}>
                 <Typography variant="h6" gutterBottom>
-                  Fontes de Tráfego (Pie)
+                  Informações do Perfil (Pie)
                 </Typography>
                 <Pie data={pieData} options={{ responsive: true }} />
               </Paper>

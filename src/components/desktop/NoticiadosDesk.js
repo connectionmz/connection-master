@@ -85,8 +85,7 @@ const NoticiadosDesk = () => {
           alignItems: 'center',
           minHeight: '100vh',
           padding: '20px',
-        }}
-      >
+        }}>
         <Alert severity="error">
           Ocorreu um erro ao carregar os anúncios. Tente novamente mais tarde.
         </Alert>

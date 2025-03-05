@@ -39,7 +39,7 @@ const Explore = ({ user }) => {
   const [subsectores, setSubsectores] = useState([]);
   const [distritos, setDistritos] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
-  const [sortOrder, setSortOrder] = useState('asc'); // Estado para ordenação
+  const [sortOrder, setSortOrder] = useState('asc'); 
   const navigate = useNavigate();
   const defaultLogoUrl = 'https://via.placeholder.com/150';
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -56,6 +56,7 @@ const Explore = ({ user }) => {
             ...data[key],
           }));
           setCompanies(empresasList);
+          console.log(empresasList)
         }
       } catch (error) {
         console.error('Error fetching companies:', error);
@@ -100,22 +101,22 @@ const Explore = ({ user }) => {
   };
 
   const filteredCompanies = companies
-    .filter((company) => {
-      const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSector = selectedSector ? company.sector === selectedSector : true;
-      const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
-      const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
-      const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
-      const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
-      return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
-    })
-    .sort((a, b) => {
-      if (sortOrder === 'asc') {
-        return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
-      } else {
-        return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
-      }
-    });
+  .filter((company) => {
+    const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSector = selectedSector ? company.sector === selectedSector : true;
+    const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
+    const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
+    const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
+    const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
+    return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
+  })
+  .sort((a, b) => {
+    if (sortOrder === 'asc') {
+      return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
+    } else {
+      return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
+    }
+  });
 
   const handleCompanyClick = (companyId) => {
     navigate(`/perfil/${companyId}`);
