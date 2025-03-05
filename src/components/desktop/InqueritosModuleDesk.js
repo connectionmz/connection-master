@@ -89,6 +89,7 @@ const InqueritosModuleDesk = ({ user }) => {
   sx={{
     padding: 4,
     width:'100%',
+    backgroundColor:'#FFF'
   }}
 >
   <Typography

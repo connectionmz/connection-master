@@ -1,205 +1,334 @@
 import React, { useState, useEffect } from 'react';
+import { ref as createStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../fb';
+import { ref, push, set, onValue } from 'firebase/database';
 import {
-  Paper,
-  Typography,
   Button,
-  Tabs,
-  Tab,
+  TextField,
   Box,
-  MenuItem,
-  Select,
+  Typography,
+  Paper,
+  CircularProgress,
+  Snackbar,
+  Alert,
   FormControl,
   InputLabel,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
-import { ref, push, set, onValue, remove } from 'firebase/database';
-import { db } from '../../fb';
+import Checkout from '../checkout/Checkout';
+import { handlePayment } from '../../utils/handlePayment';
+import BackButton from '../BackButton';
 
 const DestacarModule = ({ user }) => {
-  const [activeTab, setActiveTab] = useState(0);
-  const [selectedOption, setSelectedOption] = useState('');
-  const [campaigns, setCampaigns] = useState([]);
-  
+  const [file, setFile] = useState(null);
+  const [imageUrl, setImageUrl] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [link, setLink] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [days, setDays] = useState(1);
+  const [totalCost, setTotalCost] = useState(30);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [provincias, setProvincias] = useState([]);
+  const [sectores, setSectores] = useState([]);
+  const [selectedProvincias, setSelectedProvincias] = useState([]);
+  const [selectedSectores, setSelectedSectores] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
+  const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
+  const [showCheckout, setShowCheckout] = useState(false);
+
+
   const prices = {
-    cotacoes: 2500,
-    empresas: 2500,
-    concursos: 2500,
-    home: 4000,
+    cotacoes: 54,
+    empresas: 54,
+    concursos: 76,
+    home: 120,
   };
+
+  const COST_PER_DAY = 30;
+  const ADDITIONAL_COST_PER_PROVINCIA = 50;
+  const ADDITIONAL_COST_PER_SETOR = 50;
 
   useEffect(() => {
-    if (!user?.id) return;
+    const provinciasRef = ref(db, 'provincias');
+    const sectoresRef = ref(db, 'sectores_de_atividade');
+    const empresasRef = ref(db, 'company');
 
-    const campaignsRef = ref(db, `campanhas/${user.id}`);
-    onValue(campaignsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const loadedCampaigns = Object.values(data).map(campaign => ({
-          ...campaign,
-          remainingDays: calculateRemainingDays(campaign.expireDate)
+    onValue(provinciasRef, (snapshot) => setProvincias(snapshot.val() || []));
+    onValue(sectoresRef, (snapshot) => setSectores(snapshot.val() || []));
+    onValue(empresasRef, (snapshot) => {
+      const empresasData = snapshot.val();
+      if (empresasData) {
+        const empresasArray = Object.keys(empresasData).map((key) => ({
+          id: key,
+          ...empresasData[key],
         }));
-        setCampaigns(loadedCampaigns);
+        setEmpresas(empresasArray);
       } else {
-        setCampaigns([]);
+        setEmpresas([]);
       }
     });
-  }, [user?.id]);
+  }, []);
 
-  const calculateRemainingDays = (expireDate) => {
-    const expiration = new Date(expireDate);
-    const now = new Date();
-    const difference = expiration - now;
-    return Math.max(0, Math.ceil(difference / (1000 * 60 * 60 * 24))); 
-  };
+  useEffect(() => {
+    const additionalCost =
+      selectedProvincias.length * ADDITIONAL_COST_PER_PROVINCIA +
+      selectedSectores.length * ADDITIONAL_COST_PER_SETOR;
+    setTotalCost(days * (COST_PER_DAY + additionalCost));
+  }, [days, selectedProvincias, selectedSectores]);
 
-  const handleChangeTab = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
-  const handleSelectChange = (event) => {
-    setSelectedOption(event.target.value);
-  };
-
-  const handleCreateCampaign = async () => {
-    if (!selectedOption) return;
-
-    const startDate = new Date();
-    const expireDate = new Date(startDate);
-    expireDate.setMonth(startDate.getMonth() + 1);
-  
-    if (expireDate.getDate() !== startDate.getDate()) {
-      expireDate.setDate(0);
+  useEffect(() => {
+    if (empresas.length > 0 && (selectedProvincias.length > 0 || selectedSectores.length > 0)) {
+      const empresasFiltradas = empresas.filter((empresa) => {
+        const matchesProvincia = selectedProvincias.length === 0 || selectedProvincias.includes(empresa.provincia);
+        const matchesSetor = selectedSectores.length === 0 || selectedSectores.includes(empresa.sector);
+        return matchesProvincia && matchesSetor;
+      });
+      setEmpresasAtingidas(empresasFiltradas.length);
+    } else {
+      setEmpresasAtingidas(0);
     }
+  }, [selectedProvincias, selectedSectores, empresas]);
 
-    const campaignRef = push(ref(db, `campanhas/${user.id}`));
-    const campaignId = campaignRef.key;
-    
-    const toSave = {
-      id: campaignId,
-      company: {
-        id: user.id,
-        nome: user.nome,
-        logo: user.logoUrl,
-        provincia:user.provincia,
-        sector:user.sector,
-        distrito:user.distrito
+  const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setImageUrl(URL.createObjectURL(selectedFile));
+    }
+  };
+
+  const handleUpload = () => {
+    if (!file) {
+      showSnackbar('Por favor, selecione uma imagem primeiro!', 'error');
+      return;
+    }
+    if (!title || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0) {
+      showSnackbar('Por favor, preencha todos os campos obrigatórios!', 'error');
+      return;
+    }
+    setShowCheckout(true);
+  };
+
+  const calculateExpireDate = (days) => {
+    const currentDate = new Date();
+    const expireDate = new Date(currentDate);
+    expireDate.setDate(currentDate.getDate() + days);
+    return expireDate.toISOString();
+  };
+
+  const handleConfirmPayment = async (paymentMethod) => {
+    setUploading(true);
+
+    const paymentResult = await handlePayment({
+      phoneNumber,
+      paymentMethod,
+      user,
+      planPrice: totalCost,
+      smsCount: 1,
+      onPaymentSuccess: () => {
+        const fileRef = createStorageRef(storage, `images/${file.name}`);
+        uploadBytes(fileRef, file)
+          .then((snapshot) => {
+            getDownloadURL(fileRef).then((url) => {
+              saveToDatabase(url);
+              setUploading(false);
+              showSnackbar('Anúncio publicado com sucesso!', 'success');
+              setShowCheckout(false);
+            });
+          })
+          .catch((error) => {
+            setUploading(false);
+            console.error('Erro ao fazer upload da imagem:', error);
+            showSnackbar('Erro ao publicar o anúncio. Tente novamente.', 'error');
+          });
       },
-      component: selectedOption,
-      preco: prices[selectedOption],
-      status: 'ativo',
-      startDate: startDate.toISOString(),
-      expireDate: expireDate.toISOString(),
-    };
+      setError: (message) => showSnackbar(message, 'error'),
+      setIsLoading: setUploading,
+      setPendingTransaction: () => {},
+    });
 
-    try {
-      await set(campaignRef, toSave);
-      alert('Campanha criada com sucesso!');
-    } catch (error) {
-      console.error('Erro ao salvar campanha:', error);
-      alert('Erro ao criar campanha.');
+    if (!paymentResult.success) {
+      setUploading(false);
+      showSnackbar('Erro no pagamento. Tente novamente.', 'error');
     }
   };
 
-  const handleRemoveCampaign = async (id) => {
-    try {
-      await remove(ref(db, `campanhas/${user.id}/${id}`));
-      alert('Campanha removida com sucesso!');
-    } catch (error) {
-      console.error('Erro ao remover campanha:', error);
-      alert('Erro ao remover campanha.');
-    }
+  const saveToDatabase = (url) => {
+    const anuncioRef = push(ref(db, 'banners'));
+    const idAnuncio = anuncioRef.key;
+
+    const expireDate = calculateExpireDate(days);
+
+    set(anuncioRef, {
+      id: idAnuncio,
+      title,
+      description,
+      imageUrl: url,
+      link,
+      uploadedAt: new Date().toISOString(),
+      expireDate,
+      companyId: user.id,
+      days,
+      totalCost,
+      provincias: selectedProvincias,
+      sectores: selectedSectores,
+    });
+
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setLink('');
+    setFile(null);
+    setImageUrl('');
+    setDays(1);
+    setPhoneNumber('');
+    setSelectedProvincias([]);
+    setSelectedSectores([]);
+  };
+
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   return (
-    <Box width="100%" height="100vh">
-      <Paper elevation={3} sx={{ p: 4, margin: '0 auto' }}>
-        <Typography variant="h5" gutterBottom>
-          Destacar Empresa
-        </Typography>
-        <Typography variant="body1" gutterBottom>
-          Gerencie o destaque da sua empresa na plataforma.
-        </Typography>
-
-        <Tabs value={activeTab} onChange={handleChangeTab} sx={{ mb: 4 }}>
-          <Tab label="Criar Campanha" />
-          <Tab label="Destaques" />
-        </Tabs>
-
-        {activeTab === 0 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Criar Campanha
+    <Box width="100%" minHeight="100vh">
+      <Paper sx={{ width: '100%', padding: 3 }}>
+        <BackButton sx={{ mb: 2 }} />
+        {showCheckout ? (
+          <Checkout
+            totalCost={totalCost}
+            onConfirmPayment={handleConfirmPayment}
+            onCancel={() => setShowCheckout(false)}
+          />
+        ) : (
+          <>
+            <Typography variant="h5" gutterBottom>
+              Destacar
             </Typography>
+            <TextField
+              label="Título do anúncio *"
+              variant="outlined"
+              fullWidth
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              label="Link externo (opcional)"
+              variant="outlined"
+              fullWidth
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <input type="file" onChange={handleFileChange} className="mb-3" />
+
+            {imageUrl && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  Preview da Imagem:
+                </Typography>
+                <img
+                  src={imageUrl}
+                  alt="Preview da Imagem"
+                  style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+                />
+              </Box>
+            )}
+
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Opção</InputLabel>
-              <Select value={selectedOption} onChange={handleSelectChange}>
-                {Object.keys(prices).map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {option.charAt(0).toUpperCase() + option.slice(1)} - {prices[option]}
+              <InputLabel id="provincias-label">Províncias *</InputLabel>
+              <Select
+                labelId="provincias-label"
+                multiple
+                value={selectedProvincias}
+                onChange={(e) => setSelectedProvincias(e.target.value)}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {provincias.map((provincia) => (
+                  <MenuItem key={provincia.provincia} value={provincia.provincia}>
+                    <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                    <ListItemText primary={provincia.provincia} />
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
-            <Button variant="contained" color="primary" onClick={handleCreateCampaign}>
-              Criar Campanha
-            </Button>
-          </Box>
-        )}
 
-        {activeTab === 1 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Destaques Atuais
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
+              <Select
+                labelId="sectores-label"
+                multiple
+                value={selectedSectores}
+                onChange={(e) => setSelectedSectores(e.target.value)}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {sectores.map((setor) => (
+                  <MenuItem key={setor.setor} value={setor.setor}>
+                    <Checkbox checked={selectedSectores.includes(setor.setor)} />
+                    <ListItemText primary={setor.setor} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Box mb={2}>
+              <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
+              <TextField
+                type="number"
+                value={days}
+                onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
+                inputProps={{ min: 1, max: 30 }}
+                fullWidth
+              />
+            </Box>
+
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Valor total: <strong>{totalCost} MT</strong>
             </Typography>
-            {campaigns.length > 0 ? (
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Nome</TableCell>
-                      <TableCell>Componente</TableCell>
-                      <TableCell>Preço</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Tempo Restante</TableCell>
-                      <TableCell>Ações</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {campaigns.map((campaign) => (
-                      <TableRow key={campaign.id} onClick={() => alert(`Detalhes da campanha: ${JSON.stringify(campaign, null, 2)}`)} style={{ cursor: 'pointer' }}>
-                        <TableCell>{campaign.company.nome}</TableCell>
-                        <TableCell>{campaign.component}</TableCell>
-                        <TableCell>{campaign.preco}</TableCell>
-                        <TableCell>{campaign.status}</TableCell>
-                        <TableCell>{campaign.remainingDays} dias</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="contained"
-                            color="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Evita acionar o clique na linha
-                              handleRemoveCampaign(campaign.id);
-                            }}
-                          >
-                            Remover
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography variant="body1">Nenhuma campanha ativa.</Typography>
-            )}
-          </Box>
+
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
+            </Typography>
+
+            <TextField
+              label="Número de celular *"
+              variant="outlined"
+              fullWidth
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleUpload}
+              disabled={!title || !file || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0}
+              sx={{ mb: 2 }}
+            >
+              {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
+            </Button>
+          </>
         )}
       </Paper>
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

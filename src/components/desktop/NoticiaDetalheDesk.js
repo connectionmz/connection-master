@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ref, get, push } from 'firebase/database';
 import { db } from '../../fb';
-import { Container, Typography, TextField, Button, CircularProgress, Alert, Divider } from '@mui/material';
+import { Container, Typography, TextField, Button, CircularProgress, Alert, Divider, Box } from '@mui/material';
+import BackButton from '../BackButton';
 
 const NoticiaDetalheDesk = () => {
   const { id } = useParams();
@@ -19,6 +20,9 @@ const NoticiaDetalheDesk = () => {
         const snapshot = await get(ref(db, `publicAnnouncements/${id}`));
         if (snapshot.exists()) {
           setNoticia(snapshot.val());
+
+          console.log(snapshot.val())
+
         } else {
           setError(true);
         }
@@ -78,15 +82,25 @@ const NoticiaDetalheDesk = () => {
   }
 
   return (
-    <Container maxWidth="md" sx={{ paddingY: 4 }}>
+    <Container maxWidth="md" sx={{ paddingY: 4, backgroundColor: '#FFF' }}>
+      <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom>
         {noticia.title || 'Sem título'}
       </Typography>
+        {noticia.imageURL && (
+          <Box sx={{ marginBottom: 3 }}>
+            <img
+              src={noticia.imageURL}
+              alt={noticia.title}
+              style={{ width: '100%', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}
+            />
+          </Box>
+        )}
       <Typography variant="body1" paragraph>
-        {noticia.content || 'Sem conteúdo disponível.'}
+        <div dangerouslySetInnerHTML={{ __html: noticia.content || 'Sem conteúdo disponível.' }} />
       </Typography>
       <Typography variant="caption" display="block" gutterBottom>
-        Publicado por: {noticia.company?.nome || 'Desconhecido'}
+        Publicado por: <a href={`/perfil/${noticia.company?.id}`}>{noticia.company?.nome || 'Desconhecido'}</a>
       </Typography>
       <Typography variant="caption" display="block" gutterBottom>
         Data: {noticia.date ? new Date(noticia.date).toLocaleDateString('pt-PT') : 'Data indisponível'}

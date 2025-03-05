@@ -95,7 +95,7 @@ const NoticiadosDesk = () => {
   }
 
   return (
-    <Box style={{ width: '100%', minHeight: '100vh'}}>
+    <Box style={{ padding:'2%',width: '100%', minHeight: '100vh', backgroundColor: '#FFF'}}>
       <BackButton sx={{ mb: 2 }} />
       <Container >
         {anuncios.length === 0 ? (
@@ -114,19 +114,20 @@ const NoticiadosDesk = () => {
                       transform: 'scale(1.03)',
                       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                     },
-                  }}
-                >
+                  }}>
                   <Link
                     to={`/noticia/${anuncio.id}`}
                     style={{ textDecoration: 'none', color: 'inherit' }}
                   >
+                  {anuncio.fileUrl && (
                     <CardMedia
                       component="img"
                       height="160"
-                      image={anuncio.fileUrl || '/images/default-placeholder.png'}
+                      image={anuncio.fileUrl}
                       alt={anuncio.company?.nome || 'Imagem do anúncio'}
                       sx={{ objectFit: 'cover' }}
                     />
+                  )}
                     <CardContent sx={{ flexGrow: 1 }}>
                       <Typography variant="h6" gutterBottom>
                         {anuncio.title || 'Sem título'}

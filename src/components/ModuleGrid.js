@@ -12,8 +12,8 @@ const ModuleGrid = ({ activeModules }) => {
     { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter', alwaysEnabled: true },
     { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement', alwaysEnabled: true },
     { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
-    { name: 'Destacar', link: '/destacar', icon: <FaStar size={40} />, key: 'moduloDestacar' ,alwaysEnabled: true},
     { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' }
+    //{ name: 'Destacar', link: '/destacar', icon: <FaStar size={40} />, key: 'moduloDestacar' ,alwaysEnabled: true},
   ];
   
   const handleAcquireModule = (module) => {
