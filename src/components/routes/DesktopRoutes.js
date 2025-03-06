@@ -3,8 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { Box, createTheme, Fab, Menu, MenuItem, ThemeProvider, useMediaQuery } from '@mui/material';
+import { Box, Button, createTheme, Fab, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery } from '@mui/material';
 import LanguageIcon from '@mui/icons-material/Language';
+import FeedbackIcon from '@mui/icons-material/Feedback'; // Ícone de feedback
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
@@ -67,6 +68,8 @@ import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
 import Blogs from '../desktop/Blogs';
+import { onValue, ref, set } from 'firebase/database';
+import { db } from '../../fb';
 
 const theme = createTheme({
   palette: {
@@ -84,6 +87,10 @@ const DesktopRoutes = ({ user }) => {
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false); // Estado para controlar o modal de feedback
+  const [hasFeedback, setHasFeedback] = useState(false); // Estado para verificar se o usuário já enviou feedback
+  const [feedbackText, setFeedbackText] = useState(''); // Estado para armazenar o texto do feedback
+  const [isLoading, setIsLoading] = useState(false); // Estado para carregamento
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -91,6 +98,19 @@ const DesktopRoutes = ({ user }) => {
     const acceptedTerms = localStorage.getItem('acceptedTerms');
     if (!acceptedTerms && user) {
       setShowTerms(true);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.id) {
+      const feedbackRef = ref(db, `feedback/${user.id}`);
+      onValue(feedbackRef, (snapshot) => {
+        if (snapshot.exists()) {
+          setHasFeedback(true); // Já enviou feedback
+        } else {
+          setHasFeedback(false); // Ainda não enviou feedback
+        }
+      });
     }
   }, [user]);
 
@@ -112,6 +132,46 @@ const DesktopRoutes = ({ user }) => {
     setShowTerms(false);
   };
 
+  // Função para abrir o modal de feedback
+  const handleOpenFeedbackModal = () => {
+    setShowFeedbackModal(true);
+  };
+
+  // Função para fechar o modal de feedback
+  const handleCloseFeedbackModal = () => {
+    setShowFeedbackModal(false);
+  };
+
+
+    // Função para salvar o feedback no banco de dados
+    const handleSubmitFeedback = async () => {
+      if (!feedbackText.trim()) {
+        alert('Por favor, insira seu feedback.');
+        return;
+      }
+  
+      setIsLoading(true);
+  
+      try {
+        const feedbackRef = ref(db, `feedback/${user.id}`);
+        await set(feedbackRef, {
+          nome: user.displayName || 'Usuário Anônimo',
+          email: user.email || 'anonimo@exemplo.com',
+          userId: user.id,
+          feedback: feedbackText,
+          timestamp: new Date().toISOString(),
+        });
+  
+        setHasFeedback(true); // Atualiza o estado para indicar que o feedback foi enviado
+        setFeedbackText(''); // Limpa o campo de feedback
+        handleCloseFeedbackModal(); // Fecha o modal
+      } catch (error) {
+        console.error('Erro ao salvar feedback:', error);
+        alert('Erro ao enviar feedback. Tente novamente.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
   return (
     <ThemeProvider theme={theme}>
       <Box
@@ -136,21 +196,36 @@ const DesktopRoutes = ({ user }) => {
         >
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
+            {/* Rotas públicas */}
             <Route path="/" element={<DashboardComponent user={user} />} />
-            <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
+            <Route path="/feed" element={<FeedDesk user={user} />} />
             <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
             <Route path="/empresas" element={<ExploreDesk user={user} />} />
-            <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
-            <Route path="/app" element={<ApxDesk user={user} />} />
-            <Route path="/feed" element={<FeedDesk user={user} />} />
             <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
-            <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
-            <Route path="/profile" element={<ProfileDesk user={user} />} />
-            <Route path="/categoria/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
-            <Route path="/inbox" element={<InboxDesk user={user} />} />
-            <Route path="/search" element={<ConnectionsSearchDesk />} />
             <Route path="/sobre" element={<Sobre />} />
+            <Route path="/noticias" element={<NoticiadosDesk />} />
+            <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user} />} />
+            <Route path="/blog" element={<Blogs />} />
+            <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
+            <Route path="/market" element={<MarketDesk user={user} />} />
+            <Route path="/lojas" element={<StoresDesk user={user} />} />
+            <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
+            <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
+            <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
+            <Route path="/website" element={<LandingPage />} />
+
+            {/* Rotas relacionadas a conexões e interações */}
+            <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
+            <Route path="/search" element={<ConnectionsSearchDesk />} />
+            <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
+            <Route path="/app" element={<ApxDesk user={user} />} />
+            <Route path="/inbox" element={<InboxDesk user={user} />} />
+
+            {/* Rotas de perfil e configurações */}
+            <Route path="/profile" element={<ProfileDesk user={user} />} />
             <Route path="/editar-perfil" element={<EditProfileDesk user={user} />} />
+
+            {/* Rotas de cotações e propostas */}
             <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
             <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
             <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />
@@ -159,26 +234,27 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk user={user} />} />
             <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk user={user} />} />
             <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
-            <Route path="/noticias" element={<NoticiadosDesk />} />
-            <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user}/>} />
-            <Route path="/blog" element={<Blogs />} />
-            <Route path="/blog/:id" element={<BlogDetalheDesk user={user}/>} />
+
+            {/* Rotas de concursos e serviços */}
             <Route path="/concursos" element={<ConcursoDesk user={user} />} />
             <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
             <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
+            <Route path="/categoria/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
+
+            {/* Rotas de faturação e pagamentos */}
             <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
             <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
             <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
             <Route path="/edit-proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
             <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
-            <Route path="/market" element={<MarketDesk user={user} />} />
-            <Route path="/addProduct/:storeId" element={<ProductFormDesk user={user} />} />
-            <Route path="/lojas" element={<StoresDesk user={user} />} />
-            <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
-            <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
             <Route path="/checkout" element={<CreditCardCheckoutDesk user={user} />} />
+            <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
+
+            {/* Rotas de anúncios e postagens */}
             <Route path="/post" element={<PostInputDesk user={user} />} />
             <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
+
+            {/* Outras funcionalidades */}
             <Route path="/sms" element={<SmsDesk user={user} />} />
             <Route path="/callcenter" element={<CallCenterModuleDesk />} />
             <Route path="/procurement" element={<LogisticaModuleDesk />} />
@@ -187,18 +263,19 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/painel" element={<PortalDesk user={user} />} />
             <Route path="/sendmail" element={<SendMail user={user} />} />
             <Route path="/destacar" element={<DestacarModule user={user} />} />
-              <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
             <Route path="/analises" element={<AnalyticsDesk user={user} />} />
-            <Route path="/website" element={<LandingPage />} />
+
+            {/* Rota de fallback para redirecionamento */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Box>
 
         <FooterDesk />
-        {/*
-        <Fab
+
+             {/* Botão flutuante de feedback */}
+             <Fab
           color="primary"
-          aria-label="change language"
+          aria-label="feedback"
           sx={{
             position: 'fixed',
             bottom: isMobile ? 16 : 24,
@@ -206,21 +283,51 @@ const DesktopRoutes = ({ user }) => {
             zIndex: 1000,
             width: isMobile ? 40 : 56,
             height: isMobile ? 40 : 56,
+            animation: !hasFeedback ? 'pulse 2s infinite' : 'none', // Animação de piscar
           }}
-          onClick={handleMenuOpen}
+          onClick={handleOpenFeedbackModal}
         >
-          <LanguageIcon />
+          <FeedbackIcon />
         </Fab>
-
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
-          <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
-          <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>
-        </Menu>*/}
+          {/* Modal de feedback */}
+          {showFeedbackModal && (
+                    <Box
+                      sx={{
+                        position: 'fixed',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        backgroundColor: '#fff',
+                        padding: '24px',
+                        borderRadius: '8px',
+                        boxShadow: 3,
+                        zIndex: 1001,
+                        width: isMobile ? '90%' : '400px',
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ mb: 2 }}>
+                        Enviar Feedback
+                      </Typography>
+                      <TextField
+                        label="Seu feedback"
+                        multiline
+                        rows={4}
+                        fullWidth
+                        value={feedbackText}
+                        onChange={(e) => setFeedbackText(e.target.value)}
+                        sx={{ mb: 2 }}
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        fullWidth
+                        onClick={handleSubmitFeedback}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Enviando...' : 'Enviar'}
+                      </Button>
+                    </Box>
+                  )}
       </Box>
     </ThemeProvider>
   );

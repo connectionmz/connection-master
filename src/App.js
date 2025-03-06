@@ -9,6 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
 import NonSubscriberRoutesDesktop from './components/routes/NonSubscriberRoutesDesktop';
+import PublicRoutes from './components/routes/PublicRoutes'; // Importe as rotas públicas
 
 const App = () => {
   const [userData, setUserData] = useState(null);
@@ -29,6 +30,7 @@ const App = () => {
             photoURL: data.logoUrl || 'https://via.placeholder.com/150',
             displayName: data.nome || 'Nome da Empresa',
             endereco: data.endereco || 'Endereço não informado',
+            isAnonymous: user.isAnonymous, // Adiciona a propriedade isAnonymous ao userData
           });
         } else {
           setUserData(null); // Caso o usuário não exista no banco de dados
@@ -87,14 +89,18 @@ const App = () => {
       </Box>
     );
   }
+
   return (
     <Router>
       <div className="App">
         <div className="content">
-          {userData?.subscriptions?.isverify === 'true' ? (
-            <DesktopRoutes user={userData} />
+          {/* Verifica se o usuário é anônimo */}
+          {userData?.isAnonymous ? (
+            <PublicRoutes /> // Rotas públicas para usuários anônimos
+          ) : userData?.subscriptions?.isverify === 'true' ? (
+            <DesktopRoutes user={userData} /> // Rotas para usuários autenticados e verificados
           ) : (
-            <NonSubscriberRoutesDesktop userDb={userData} />
+            <NonSubscriberRoutesDesktop userDb={userData} /> // Rotas para usuários não verificados
           )}
         </div>
       </div>

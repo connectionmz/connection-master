@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Email, Visibility, VisibilityOff } from '@mui/icons-material';
 import { auth, db } from '../fb';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth'; // Adicionado signInAnonymously
 import { ref, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import logo from '../img/bg.png';
@@ -22,11 +22,11 @@ const AuthDesk = ({ data }) => {
   const saveUserData = async (user) => {
     const userRef = ref(db, 'users/' + user.uid);
     const userData = {
-      displayName: user.displayName,
+      displayName: user.displayName || 'Usuário Anônimo', // Nome padrão para usuários anônimos
       uid: user.uid,
-      email: user.email,
-      profilepic: user.photoURL,
-      provider: user.providerData[0]?.providerId,
+      email: user.email || 'anonimo@exemplo.com', // Email padrão para usuários anônimos
+      profilepic: user.photoURL || '', // Foto de perfil vazia para anônimos
+      provider: user.providerData[0]?.providerId || 'anonymous', // Provedor anônimo
       country: 'Unknown',
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
@@ -51,29 +51,47 @@ const AuthDesk = ({ data }) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
-  
+
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-  
+
       if (!result.user.emailVerified) {
         setErrorMessage('Por favor, verifique seu e-mail antes de fazer login.');
-        navigate('/email-verification')
+        navigate('/email-verification');
         setShowSnackbar(true);
         setIsLoading(false);
         return;
       }
-  
+
       await saveUserData(result.user);
-  
+
       if (data) {
         if (data.status) {
           navigate('/');
-        } else {
-          navigate('/pricing');
-        }
+        } 
       } else {
         navigate('/setup');
       }
+    } catch (error) {
+      console.log(error.code);
+      const userFriendlyMessage = getFirebaseErrorMessage(error.code);
+      setErrorMessage(userFriendlyMessage);
+      setShowSnackbar(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Função para login anônimo
+  const handleAnonymousSignIn = async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      const result = await signInAnonymously(auth); // Autenticação anônima
+      await saveUserData(result.user); // Salva os dados do usuário anônimo
+      navigate('/');
+
     } catch (error) {
       console.log(error.code);
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);
@@ -144,13 +162,19 @@ const AuthDesk = ({ data }) => {
             </div>
           </form>
 
+          {/* Botão para login anônimo */}
+          <Button
+            variant="outlined"
+            color="secondary"
+            fullWidth
+            disabled={isLoading}
+            onClick={handleAnonymousSignIn}
+            sx={{ mt: 2 }}
+          >
+            {isLoading ? 'Carregando...' : 'Entrar como Visitante'}
+          </Button>
+
           <div className="text-center mt-6">
-           {/*
-            <p className="text-gray-600">
-              Ainda não tem uma conta?{' '}
-              <a href="/create" className="text-blue-500 hover:underline">Cadastre-se</a>
-            </p>
-            */}
             <p className="mt-2">
               <a href="/forget-password" className="text-blue-500 hover:underline">Esqueceu sua senha?</a>
             </p>

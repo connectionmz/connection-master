@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ref, get, remove, update, set } from 'firebase/database';
-import { db } from '../../fb';
+import { db, storage } from '../../fb';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -25,6 +25,7 @@ import {
   Switch,
 } from '@mui/material';
 import { Search, Edit, Delete, Settings } from '@mui/icons-material';
+import { getDownloadURL, uploadBytes } from 'firebase/storage';
 
 const ManageStoreDesk = ({ storeId }) => {
   const [products, setProducts] = useState([]);
@@ -41,10 +42,21 @@ const ManageStoreDesk = ({ storeId }) => {
   const [openModal, setOpenModal] = useState(false);
   const [paypalCode, setPaypalCode] = useState(''); 
   const [showPrices, setShowPrices] = useState(true); 
-
+  const [storeName, setStoreName] = useState('');
+  const [storeDescription, setStoreDescription] = useState('');
+  const [storeLogo, setStoreLogo] = useState('');
+  const [logoFile, setLogoFile] = useState(null); // Para armazenar o arquivo de logo
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setLogoFile(file);
+      setStoreLogo(URL.createObjectURL(file)); // Atualiza a visualização do logo
+    }
+  };
 
 
   useEffect(() => {
@@ -76,23 +88,42 @@ const ManageStoreDesk = ({ storeId }) => {
     setFeedback({ open: true, message: 'Produto adicionado com sucesso!', severity: 'success' });
   };
 
-  const handleSaveSettings = () => {
-    // Função para salvar as configurações
-    const settings = {
-      paypalCode,
-      showPrices,
-    };
-    
-    // Salve as configurações no banco de dados (Firebase, por exemplo)
-    const settingsRef = ref(db, `stores/${storeId}/settings`);
-    set(settingsRef, settings)
-      .then(() => {
-        console.log('Configurações salvas com sucesso');
-        handleCloseModal(); // Fechar o modal após salvar
-      })
-      .catch((error) => {
-        console.error('Erro ao salvar configurações:', error);
+  const handleSaveSettings = async () => {
+    try {
+      let logoUrl = storeLogo; // Mantém a URL atual do logo
+  
+      // Faz o upload da nova foto, se houver um arquivo selecionado
+      if (logoFile) {
+        const logoStorageRef = logoStorageRef(storage, `store-logos/${storeId}/${logoFile.name}`);
+        await uploadBytes(logoStorageRef, logoFile);
+        logoUrl = await getDownloadURL(logoStorageRef); // Obtém a URL do Firebase Storage
+  
+        // Atualiza o logo da loja em `stores/${storeId}/company/logo` (opcional)
+        const companyLogoRef = ref(db, `stores/${storeId}/company/logo`);
+        await set(companyLogoRef, logoUrl);
+      }
+  
+      // Atualiza o nome e a descrição da loja em `stores/${storeId}`
+      const storeRef = ref(db, `stores/${storeId}`);
+      await update(storeRef, {
+        name: storeName,
+        description: storeDescription,
       });
+  
+      // Atualiza as configurações em `stores/${storeId}/settings`
+      const settingsRef = ref(db, `stores/${storeId}/settings`);
+      await set(settingsRef, {
+        paypalCode,
+        showPrices,
+      });
+  
+      // Feedback de sucesso
+      setFeedback({ open: true, message: 'Configurações salvas com sucesso!', severity: 'success' });
+      handleCloseModal(); // Fecha o modal após salvar
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error);
+      setFeedback({ open: true, message: 'Erro ao salvar configurações.', severity: 'error' });
+    }
   };
 
   const handleRemoveProduct = async (productId) => {
@@ -315,8 +346,7 @@ const ManageStoreDesk = ({ storeId }) => {
       </Snackbar>
 
 
-     {/* Modal para configurações */}
-<Modal
+      <Modal
   open={openModal}
   onClose={handleCloseModal}
   aria-labelledby="settings-modal-title"
@@ -336,11 +366,59 @@ const ManageStoreDesk = ({ storeId }) => {
     }}
   >
     <Typography id="settings-modal-title" variant="h6" sx={{ mb: 2 }}>
-      Configurações da Loja
+      Alterações & Configurações da Loja
     </Typography>
-    <Typography id="settings-modal-description" variant="body1" sx={{ mb: 3 }}>
-      Configure as preferências da sua loja abaixo.
-    </Typography>
+    
+
+    {/* Campo para editar o nome da loja */}
+    <TextField
+      fullWidth
+      label="Nome da Loja"
+      placeholder="Insira o nome da loja"
+      value={storeName} // Estado associado ao nome da loja
+      onChange={(e) => setStoreName(e.target.value)}
+      sx={{ mb: 3 }}
+    />
+
+    {/* Campo para editar a descrição da loja */}
+    <TextField
+      fullWidth
+      label="Descrição da Loja"
+      placeholder="Insira a descrição da loja"
+      value={storeDescription} // Estado associado à descrição da loja
+      onChange={(e) => setStoreDescription(e.target.value)}
+      multiline
+      rows={3}
+      sx={{ mb: 3 }}
+    />
+
+    {/* Campo para editar a foto da loja */}
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="body1" sx={{ mb: 1 }}>
+        Foto da Loja
+      </Typography>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleLogoChange} // Função para lidar com a mudança de arquivo
+        style={{ display: 'none' }}
+        id="logo-upload"
+      />
+      <label htmlFor="logo-upload">
+        <Button variant="contained" component="span">
+          Carregar Nova Foto
+        </Button>
+      </label>
+      {storeLogo && (
+        <Box sx={{ mt: 2 }}>
+          <img
+            src={storeLogo}
+            alt="Logo da Loja"
+            style={{ width: '100%', height: 'auto', borderRadius: 8 }}
+          />
+        </Box>
+      )}
+    </Box>
 
     {/* Campo para inserir código PayPal */}
     <TextField

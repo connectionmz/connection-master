@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ref, get } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../../fb';
-import ManageStore from '../market/ManageStore';
-import CreateStoreForm from '../market/CreateStoreForm';
-import { CircularProgress, Typography, Box, Paper } from '@mui/material';
+import { CircularProgress, Typography, Box, Paper, Alert } from '@mui/material';
 import CreateStoreFormDesk from '../market/CreateStoreFormDesk';
 import ManageStoreDesk from '../market/ManageStoreDesk';
 import BackButton from '../BackButton';
@@ -14,6 +12,7 @@ const MarketDesk = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [storeId, setStoreId] = useState(null);
   const [error, setError] = useState(null);
+  const [storeData, setStoreData] = useState(null); // Dados da loja (se existir)
 
   useEffect(() => {
     const checkStoreExists = async (userId) => {
@@ -23,6 +22,7 @@ const MarketDesk = ({ user }) => {
 
         if (storeSnapshot.exists()) {
           setStoreExists(true);
+          setStoreData(storeSnapshot.val()); // Armazena os dados da loja
         } else {
           setStoreExists(false);
         }
@@ -73,9 +73,9 @@ const MarketDesk = ({ user }) => {
         height="100vh"
         textAlign="center"
       >
-        <Typography variant="h6" color="error">
+        <Alert severity="error" sx={{ width: '80%', maxWidth: 600 }}>
           {error}
-        </Typography>
+        </Alert>
       </Box>
     );
   }
@@ -97,12 +97,11 @@ const MarketDesk = ({ user }) => {
   }
 
   return (
-    <Box sx={{  width: '100%'}} display="flex" justifyContent="center" alignItems="center" padding={2}>
-        
-      <Paper  sx={{  width: '100%', padding: 3 }}>
-      <BackButton sx={{ mb: 2 }} />
+    <Box sx={{ width: '100%' }} display="flex" justifyContent="center" alignItems="center" padding={2}>
+      <Paper sx={{ width: '100%', maxWidth: 800, padding: 3 }}>
+        <BackButton sx={{ mb: 2 }} />
         {storeExists ? (
-          <ManageStoreDesk storeId={storeId} />
+          <ManageStoreDesk storeId={storeId} storeData={storeData} />
         ) : (
           <CreateStoreFormDesk storeId={storeId} user={user} />
         )}
