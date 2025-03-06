@@ -56,7 +56,6 @@ const Explore = ({ user }) => {
             ...data[key],
           }));
           setCompanies(empresasList);
-          console.log(empresasList)
         }
       } catch (error) {
         console.error('Error fetching companies:', error);
