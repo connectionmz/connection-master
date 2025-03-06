@@ -160,7 +160,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk user={user} />} />
             <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
             <Route path="/noticias" element={<NoticiadosDesk />} />
-            <Route path="/noticia/:id" element={<NoticiaDetalheDesk />} />
+            <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user}/>} />
             <Route path="/blog" element={<Blogs />} />
             <Route path="/blog/:id" element={<BlogDetalheDesk user={user}/>} />
             <Route path="/concursos" element={<ConcursoDesk user={user} />} />
@@ -195,7 +195,7 @@ const DesktopRoutes = ({ user }) => {
         </Box>
 
         <FooterDesk />
-
+        {/*
         <Fab
           color="primary"
           aria-label="change language"
@@ -220,7 +220,7 @@ const DesktopRoutes = ({ user }) => {
           <MenuItem onClick={() => handleLanguageChange('en')}>English</MenuItem>
           <MenuItem onClick={() => handleLanguageChange('pt')}>Português</MenuItem>
           <MenuItem onClick={() => handleLanguageChange('fr')}>Français</MenuItem>
-        </Menu>
+        </Menu>*/}
       </Box>
     </ThemeProvider>
   );

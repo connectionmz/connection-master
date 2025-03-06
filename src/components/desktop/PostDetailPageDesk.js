@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { db } from '../../fb';
-import { ref, onValue, push, set, remove } from 'firebase/database';
+import { ref, onValue, push, set, remove, update } from 'firebase/database';
 import {
   Box,
   Button,
@@ -24,6 +24,7 @@ import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import SendIcon from '@mui/icons-material/Send';
+import EditIcon from '@mui/icons-material/Edit';
 import BackButton from '../BackButton';
 
 const PostDetailPageDesk = ({ user }) => {
@@ -33,6 +34,8 @@ const PostDetailPageDesk = ({ user }) => {
   const [commentText, setCommentText] = useState('');
   const [post, setPost] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [editingCommentId, setEditingCommentId] = useState(null); // ID do comentário sendo editado
+  const [editedCommentText, setEditedCommentText] = useState(''); // Texto do comentário sendo editado
   const isMobile = useMediaQuery('(max-width:600px)'); // Detecta dispositivos móveis
 
   useEffect(() => {
@@ -117,6 +120,26 @@ const PostDetailPageDesk = ({ user }) => {
         setSnackbar({ open: true, message: 'Erro ao excluir comentário.', severity: 'error' });
         console.error('Erro ao excluir comentário: ', error);
       });
+  };
+
+  const handleEditComment = (commentId, currentText) => {
+    setEditingCommentId(commentId); // Define o comentário sendo editado
+    setEditedCommentText(currentText); // Preenche o campo de edição com o texto atual
+  };
+
+  const handleSaveEdit = async (commentId) => {
+    if (editedCommentText.trim()) {
+      try {
+        const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
+        await update(commentRef, { comment: editedCommentText }); // Atualiza o texto do comentário
+        setEditingCommentId(null); // Sai do modo de edição
+        setEditedCommentText(''); // Limpa o campo de edição
+        setSnackbar({ open: true, message: 'Comentário atualizado!', severity: 'success' });
+      } catch (error) {
+        setSnackbar({ open: true, message: 'Erro ao atualizar comentário.', severity: 'error' });
+        console.error('Erro ao atualizar comentário: ', error);
+      }
+    }
   };
 
   const handleCloseSnackbar = () => {
@@ -240,18 +263,46 @@ const PostDetailPageDesk = ({ user }) => {
                   wordBreak: 'break-word', // Evita texto muito longo sem quebra
                 }}
               >
-                <Typography variant="body1">{comment.comment}</Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                  Por: {comment.userName}
-                </Typography>
-                {(comment.userId === user.id || post.companyId === user.id) && (
-                  <IconButton
-                    onClick={() => handleDeleteComment(comment.id)}
-                    color="error"
-                    sx={{ mt: 1 }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                {editingCommentId === comment.id ? (
+                  <div>
+                    <TextField
+                      fullWidth
+                      value={editedCommentText}
+                      onChange={(e) => setEditedCommentText(e.target.value)}
+                      sx={{ marginBottom: 2 }}
+                    />
+                    <Button variant="contained" onClick={() => handleSaveEdit(comment.id)}>
+                      Salvar
+                    </Button>
+                    <Button variant="outlined" onClick={() => setEditingCommentId(null)} sx={{ marginLeft: 2 }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <Typography variant="body1">{comment.comment}</Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                      Por: {comment.userName}
+                    </Typography>
+                    {(comment.userId === user.id || post.companyId === user.id) && (
+                      <Box>
+                        <IconButton
+                          onClick={() => handleEditComment(comment.id, comment.comment)}
+                          color="primary"
+                          sx={{ mt: 1 }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => handleDeleteComment(comment.id)}
+                          color="error"
+                          sx={{ mt: 1 }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    )}
+                  </div>
                 )}
               </Box>
             ))

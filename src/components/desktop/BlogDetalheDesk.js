@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ref, get, push } from 'firebase/database';
+import { ref, get, push, update, remove } from 'firebase/database';
 import { db } from '../../fb';
 import {
   Container,
@@ -17,8 +17,11 @@ import {
   ListItemAvatar,
   ListItemText,
   Paper,
+  IconButton,
 } from '@mui/material';
 import BackButton from '../BackButton';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const BlogDetalheDesk = ({ user }) => {
   const { id } = useParams();
@@ -28,6 +31,8 @@ const BlogDetalheDesk = ({ user }) => {
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
   const [sending, setSending] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null); // ID do comentário sendo editado
+  const [editedCommentText, setEditedCommentText] = useState(''); // Texto do comentário sendo editado
 
   useEffect(() => {
     const fetchNoticia = async () => {
@@ -51,8 +56,11 @@ const BlogDetalheDesk = ({ user }) => {
         const snapshot = await get(ref(db, `blogPost/${id}/comments`));
         if (snapshot.exists()) {
           const commentsData = snapshot.val();
-          // Transforma os comentários em um array
-          const commentsArray = Object.values(commentsData);
+          // Transforma os comentários em um array com IDs
+          const commentsArray = Object.keys(commentsData).map((key) => ({
+            id: key,
+            ...commentsData[key],
+          }));
           setComments(commentsArray);
         }
       } catch (err) {
@@ -69,7 +77,6 @@ const BlogDetalheDesk = ({ user }) => {
       setSending(true);
       try {
         const newCommentRef = ref(db, `blogPost/${id}/comments`);
-
         const newComment = {
           comment: comment,
           user: {
@@ -78,15 +85,70 @@ const BlogDetalheDesk = ({ user }) => {
             id: user.id,
           },
         };
-
         await push(newCommentRef, newComment);
-        setComments((prev) => [...prev, newComment]); // Adiciona o novo comentário à lista
         setComment('');
+        // Recarrega os comentários após adicionar um novo
+        const snapshot = await get(ref(db, `blogPost/${id}/comments`));
+        if (snapshot.exists()) {
+          const commentsData = snapshot.val();
+          const commentsArray = Object.keys(commentsData).map((key) => ({
+            id: key,
+            ...commentsData[key],
+          }));
+          setComments(commentsArray);
+        }
       } catch (err) {
         console.error('Erro ao enviar comentário:', err);
       } finally {
         setSending(false);
       }
+    }
+  };
+
+  const handleEditComment = (commentId, currentText) => {
+    setEditingCommentId(commentId); // Define o comentário sendo editado
+    setEditedCommentText(currentText); // Preenche o campo de edição com o texto atual
+  };
+
+  const handleSaveEdit = async (commentId) => {
+    if (editedCommentText.trim()) {
+      try {
+        const commentRef = ref(db, `blogPost/${id}/comments/${commentId}`);
+        await update(commentRef, { comment: editedCommentText }); // Atualiza o texto do comentário
+        setEditingCommentId(null); // Sai do modo de edição
+        setEditedCommentText(''); // Limpa o campo de edição
+        // Recarrega os comentários após a edição
+        const snapshot = await get(ref(db, `blogPost/${id}/comments`));
+        if (snapshot.exists()) {
+          const commentsData = snapshot.val();
+          const commentsArray = Object.keys(commentsData).map((key) => ({
+            id: key,
+            ...commentsData[key],
+          }));
+          setComments(commentsArray);
+        }
+      } catch (err) {
+        console.error('Erro ao editar comentário:', err);
+      }
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      const commentRef = ref(db, `blogPost/${id}/comments/${commentId}`);
+      await remove(commentRef); // Remove o comentário do banco de dados
+      // Recarrega os comentários após a exclusão
+      const snapshot = await get(ref(db, `blogPost/${id}/comments`));
+      if (snapshot.exists()) {
+        const commentsData = snapshot.val();
+        const commentsArray = Object.keys(commentsData).map((key) => ({
+          id: key,
+          ...commentsData[key],
+        }));
+        setComments(commentsArray);
+      }
+    } catch (err) {
+      console.error('Erro ao eliminar comentário:', err);
     }
   };
 
@@ -167,29 +229,53 @@ const BlogDetalheDesk = ({ user }) => {
       {/* Lista de Comentários */}
       {comments.length > 0 ? (
         <List>
-          {comments.map((c, index) => (
-            <Paper key={index} sx={{ marginBottom: 2, padding: 2, borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+          {comments.map((c) => (
+            <Paper key={c.id} sx={{ marginBottom: 2, padding: 2, borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
               <ListItem alignItems="flex-start">
                 <ListItemAvatar>
-                  <Avatar
-                    src={typeof c === 'object' ? c.user?.logo : null}
-                    sx={{ backgroundColor: '#0073b1' }}
-                  >
-                    {typeof c === 'object' ? c.user?.nome?.charAt(0) : 'U'}
+                  <Avatar src={c.user?.logo} sx={{ backgroundColor: '#0073b1' }}>
+                    {c.user?.nome?.charAt(0)}
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
                   primary={
                     <Typography sx={{ fontWeight: 'bold' }}>
-                      {typeof c === 'object' ? c.user?.nome : 'Usuário Anônimo'}
+                      {c.user?.nome || 'Usuário Anônimo'}
                     </Typography>
                   }
                   secondary={
-                    <Typography sx={{ color: '#555' }}>
-                      {typeof c === 'object' ? c.comment : c}
-                    </Typography>
+                    editingCommentId === c.id ? (
+                      <div>
+                        <TextField
+                          fullWidth
+                          value={editedCommentText}
+                          onChange={(e) => setEditedCommentText(e.target.value)}
+                          sx={{ marginBottom: 2 }}
+                        />
+                        <Button variant="contained" onClick={() => handleSaveEdit(c.id)}>
+                          Salvar
+                        </Button>
+                        <Button variant="outlined" onClick={() => setEditingCommentId(null)} sx={{ marginLeft: 2 }}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Typography sx={{ color: '#555' }}>
+                        {c.comment}
+                      </Typography>
+                    )
                   }
                 />
+                {c.user?.id === user.id && editingCommentId !== c.id && (
+                  <Box>
+                    <IconButton onClick={() => handleEditComment(c.id, c.comment)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton onClick={() => handleDeleteComment(c.id)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
               </ListItem>
             </Paper>
           ))}
@@ -200,7 +286,7 @@ const BlogDetalheDesk = ({ user }) => {
         </Typography>
       )}
     </Container>
-  );
-};
+  )
+}
 
 export default BlogDetalheDesk;
