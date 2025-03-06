@@ -29,7 +29,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    const [isPaying, setIsPaying] = useState(false);
+    const [isPaying, setIsPaying] = useState(false);   
     const [loading, setLoading] = useState(true);
     const [campanhasAtivas, setCampanhasAtivas] = useState([]);
 
@@ -37,6 +37,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const isMobile = useMediaQuery('(max-width:600px)');
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
+    const hasBalance = user?.activeModules?.moduloSMS?.smsCount > 0; // Verifica se o saldo de SMS é maior que 0
 
     useEffect(() => {
         if (!hasModuleSMS) {
@@ -99,7 +100,11 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
-            setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir cotações.', severity: 'warning' });
+            setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir concursos.', severity: 'warning' });
+            return;
+        }
+        if (!hasBalance) {
+            setSnackbar({ open: true, message: 'Recarregue seu saldo de SMS para emitir concursos.', severity: 'warning' });
             return;
         }
         navigate('/cotacao');
@@ -139,6 +144,108 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     const handleCotacaoClick = (id) => {
         navigate(`/cotacao/${id}`);
+    };
+
+    const handleRecarregarSaldo = () => {
+        navigate('/sms');
+    };
+
+    // Renderização condicional da lista de concursos
+    const renderCotacoes = () => {
+        if (!hasModuleSMS) {
+            return (
+                <Alert
+                    severity="warning"
+                    action={
+                        <Button color="inherit" size="small" onClick={() => setIsPaying(true)}>
+                            Ativar Módulo SMS
+                        </Button>
+                    }
+                    sx={{ mb: 2 }}
+                >
+                    O módulo SMS está inativo. Para usar este serviço, ative o módulo SMS.
+                </Alert>
+            );
+        }
+
+        if (!hasBalance) {
+            return (
+                <Alert
+                    severity="warning"
+                    action={
+                        <Button color="inherit" size="small" onClick={handleRecarregarSaldo}>
+                            Recarregar Saldo de SMS
+                        </Button>
+                    }
+                    sx={{ mb: 2 }}
+                >
+                    Você não possui saldo de SMS. Clique para recarregar.
+                </Alert>
+            );
+        }
+
+        
+        {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                <CircularProgress />
+            </Box>
+        ) : filteredCotacoes().length > 0 ? (
+            <List>
+                {filteredCotacoes().map((cotacao) => (
+                    <React.Fragment key={cotacao.id}>
+                        <ListItem
+                            alignItems="flex-start"
+                            sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#fafafa' } }}
+                            onClick={() => handleCotacaoClick(cotacao.id)}
+                        >
+                            <ListItemAvatar>
+                                <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" />
+                            </ListItemAvatar>
+                            <ListItemText
+                                primary={cotacao.title}
+                                secondary={
+                                    <>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
+                                        </Typography>
+                                        <Typography variant="body2" color="error">
+                                            Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            Sector: {cotacao.sector}
+                                        </Typography>
+                                    </>
+                                }
+                            />
+                            {cotacao?.company?.id === user?.id && (
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <IconButton
+                                        color="error"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteCotacao(cotacao.id);
+                                        }}>
+                                        <Delete />
+                                    </IconButton>
+                                    <IconButton
+                                        color="primary"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/editar-cotacao/${cotacao.id}`);
+                                        }}
+                                    >
+                                        <Edit />
+                                    </IconButton>
+                                </Box>
+                            )}
+                        </ListItem>
+                        <Divider variant="inset" component="li" />
+                    </React.Fragment>
+                ))}
+            </List>
+        ) : (
+            <Typography textAlign="center" sx={{ p: 2 }}>Nenhum pedido de cotação disponível.</Typography>
+        )}
     };
 
     return (
@@ -181,8 +288,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                 variant="contained"
                                 color="primary"
                                 onClick={handlePublishQuotation}
-                                disabled={!hasModuleSMS}
-                            >
+                                disabled={!hasModuleSMS || !hasBalance}>
                                 Fazer pedido
                             </Button>
                         </Box>
@@ -205,68 +311,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     </Paper>
 
                     <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
-                        {loading ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-                                <CircularProgress />
-                            </Box>
-                        ) : filteredCotacoes().length > 0 ? (
-                            <List>
-                                {filteredCotacoes().map((cotacao) => (
-                                    <React.Fragment key={cotacao.id}>
-                                        <ListItem
-                                            alignItems="flex-start"
-                                            sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#fafafa' } }}
-                                            onClick={() => handleCotacaoClick(cotacao.id)}
-                                        >
-                                            <ListItemAvatar>
-                                                <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" />
-                                            </ListItemAvatar>
-                                            <ListItemText
-                                                primary={cotacao.title}
-                                                secondary={
-                                                    <>
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
-                                                        </Typography>
-                                                        <Typography variant="body2" color="error">
-                                                            Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
-                                                        </Typography>
-                                                        <Typography variant="body2">
-                                                            Sector: {cotacao.sector}
-                                                        </Typography>
-                                                    </>
-                                                }
-                                            />
-                                            {cotacao?.company?.id === user?.id && (
-                                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                                    <IconButton
-                                                        color="error"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            deleteCotacao(cotacao.id);
-                                                        }}
-                                                    >
-                                                        <Delete />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        color="primary"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            navigate(`/editar-cotacao/${cotacao.id}`);
-                                                        }}
-                                                    >
-                                                        <Edit />
-                                                    </IconButton>
-                                                </Box>
-                                            )}
-                                        </ListItem>
-                                        <Divider variant="inset" component="li" />
-                                    </React.Fragment>
-                                ))}
-                            </List>
-                        ) : (
-                            <Typography textAlign="center" sx={{ p: 2 }}>Nenhum pedido de cotação disponível.</Typography>
-                        )}
+                    {renderCotacoes()}
                     </Paper>
                 </>
             )}

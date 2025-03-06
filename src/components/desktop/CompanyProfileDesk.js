@@ -200,7 +200,27 @@ const CompanyProfile = ({ user }) => {
             setOpenSnackbar(true);
         }
     };
-
+    const handleDesconectar = async () => {
+        if (!userId) {
+            setError("Usuário inválido. Não é possível desconectar.");
+            setOpenSnackbar(true);
+            return;
+        }
+    
+        const currentUserId = user.id;
+        const targetUserConnectionRef = ref(db, `connections/${userId}/${currentUserId}`);
+    
+        try {
+            await remove(targetUserConnectionRef);
+            setConnectionStatus(null); // Atualiza o estado para refletir que não há mais conexão
+            setError("Conexão removida com sucesso!");
+            setOpenSnackbar(true);
+        } catch (error) {
+            console.error("Erro ao desconectar:", error);
+            setError("Erro ao tentar desconectar. Tente novamente.");
+            setOpenSnackbar(true);
+        }
+    };
     if (loading) {
         return (
             <Box width="100%" minHeight="100vh" sx={{ backgroundColor: 'white' }}>
@@ -231,29 +251,6 @@ const CompanyProfile = ({ user }) => {
                 return <PostGallery posts={posts} />;
             case 'Repositorio':
                 return <VetrineDesk id={userId} />;
-            case 'liked':
-                return (
-                    <Grid container spacing={2}>
-                        {cotacoes.length > 0 ? (
-                            cotacoes.map((cotacao) => (
-                                <Grid item xs={12} sm={6} md={4} key={cotacao.id}>
-                                    <Card
-                                        onClick={() => handleCotacaoClick(cotacao.id, cotacao.company.id)}
-                                        sx={{ cursor: 'pointer', boxShadow: 3 }}
-                                    >
-                                        <CardContent>
-                                            <Typography variant="h6" component="h3">
-                                                {cotacao.title}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            ))
-                        ) : (
-                            <Typography color="text.secondary">Nenhuma cotação publicada.</Typography>
-                        )}
-                    </Grid>
-                );
             case 'sobre':
                 return (
                     <Box mt={3} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -363,28 +360,29 @@ const CompanyProfile = ({ user }) => {
             <Box textAlign="center" mt={8}>
                 <Typography variant="h5" fontWeight="bold">{userData?.displayName}</Typography>
                 <Typography color="text.secondary" mt={1}>{userData?.bio}</Typography>
-
-                {/* Botão de Conexão */}
-                <Button
-                    variant={
-                        connectionStatus === "accepted"
-                            ? "contained"
-                            : connectionStatus === "pending"
-                            ? "outlined"
-                            : "outlined"
-                    }
-                    disabled={connectionStatus === "accepted"}
-                    onClick={
-                        connectionStatus === "pending" ? handleCancelarConexao : handleConectar
-                    }
-                    sx={{ mt: 2 }}
-                >
-                    {connectionStatus === "pending"
-                        ? "Cancelar Solicitação"
-                        : connectionStatus === "accepted"
-                        ? "Conectado"
-                        : "Conectar"}
-                </Button>
+                    <Button
+                        variant={
+                            connectionStatus === "accepted"
+                                ? "contained"
+                                : connectionStatus === "pending"
+                                ? "outlined"
+                                : "outlined"
+                        }
+                        onClick={
+                            connectionStatus === "pending"
+                                ? handleCancelarConexao
+                                : connectionStatus === "accepted"
+                                ? handleDesconectar
+                                : handleConectar
+                        }
+                        sx={{ mt: 2 }}
+                    >
+                        {connectionStatus === "pending"
+                            ? "Cancelar Solicitação"
+                            : connectionStatus === "accepted"
+                            ? "Desconectar"
+                            : "Conectar"}
+                    </Button>
 
                 {/* Ícones de Contato e Redes Sociais */}
                 <Box
