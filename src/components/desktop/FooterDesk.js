@@ -12,7 +12,7 @@ const FooterDesk = () => {
               Sobre
             </Link>
             |
-            <Link href="/cookies" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
+            <Link href="/termos" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
               Políticas & Termos
             </Link>
             |

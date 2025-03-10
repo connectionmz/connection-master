@@ -17,6 +17,9 @@ import {
   MenuItem,
   Checkbox,
   ListItemText,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from '@mui/material';
 import Checkout from '../checkout/Checkout';
 import { handlePayment } from '../../utils/handlePayment';
@@ -40,8 +43,16 @@ const AnunciarDesk = ({ user }) => {
   const [empresas, setEmpresas] = useState([]);
   const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [tipoAnuncio, setTipoAnuncio] = useState('home'); // Estado para o tipo de anúncio
 
-  const COST_PER_DAY = 30;
+  // Preços base para cada tipo de anúncio
+  const prices = {
+    home: 30,
+    concurso: 50,
+    cotacoes: 40,
+    destacar_perfil: 120,
+  };
+
   const ADDITIONAL_COST_PER_PROVINCIA = 50;
   const ADDITIONAL_COST_PER_SETOR = 50;
 
@@ -70,8 +81,11 @@ const AnunciarDesk = ({ user }) => {
     const additionalCost =
       selectedProvincias.length * ADDITIONAL_COST_PER_PROVINCIA +
       selectedSectores.length * ADDITIONAL_COST_PER_SETOR;
-    setTotalCost(days * (COST_PER_DAY + additionalCost));
-  }, [days, selectedProvincias, selectedSectores]);
+
+    // Define o custo base com base no tipo de anúncio
+    const baseCost = prices[tipoAnuncio] || prices.home;
+    setTotalCost(days * (baseCost + additionalCost));
+  }, [days, selectedProvincias, selectedSectores, tipoAnuncio]);
 
   useEffect(() => {
     if (empresas.length > 0 && (selectedProvincias.length > 0 || selectedSectores.length > 0)) {
@@ -169,6 +183,7 @@ const AnunciarDesk = ({ user }) => {
       totalCost,
       provincias: selectedProvincias,
       sectores: selectedSectores,
+      tipoAnuncio, // Adiciona o tipo de anúncio ao salvar no banco de dados
     });
 
     resetForm();
@@ -184,6 +199,7 @@ const AnunciarDesk = ({ user }) => {
     setPhoneNumber('');
     setSelectedProvincias([]);
     setSelectedSectores([]);
+    setTipoAnuncio('home'); // Reseta para o tipo padrão
   };
 
   const showSnackbar = (message, severity) => {
@@ -209,6 +225,23 @@ const AnunciarDesk = ({ user }) => {
             <Typography variant="h5" gutterBottom>
               Anunciar
             </Typography>
+
+            {/* Seletor de tipo de anúncio */}
+            <FormControl component="fieldset" sx={{ mb: 2 }}>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                Escolha o tipo de anúncio:
+              </Typography>
+              <RadioGroup
+                value={tipoAnuncio}
+                onChange={(e) => setTipoAnuncio(e.target.value)}
+              >
+                <FormControlLabel value="home" control={<Radio />} label="Pagina Inicial (30 MT/dia)" />
+                <FormControlLabel value="concurso" control={<Radio />} label="Concurso (50 MT/dia)" />
+                <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações (40 MT/dia)" />
+                <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil (100 MT/dia)" />
+              </RadioGroup>
+            </FormControl>
+
             <TextField
               label="Título do anúncio *"
               variant="outlined"

@@ -70,6 +70,10 @@ import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
 import Blogs from '../desktop/Blogs';
 import { onValue, ref, set } from 'firebase/database';
 import { db } from '../../fb';
+import ForgetPassword from '../password/ForgetPassword';
+import ChangePassword from '../password/ChangePassword';
+import Terms from '../Termos';
+import Politicas from '../desktop/Politicas';
 
 const theme = createTheme({
   palette: {
@@ -264,7 +268,11 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/sendmail" element={<SendMail user={user} />} />
             <Route path="/destacar" element={<DestacarModule user={user} />} />
             <Route path="/analises" element={<AnalyticsDesk user={user} />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/politicas" element={<Politicas />} />
 
+          <Route path="/forget-password" element={<ForgetPassword />} />
+          <Route path="/change-password" element={<ChangePassword user={user} />} />
             {/* Rota de fallback para redirecionamento */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

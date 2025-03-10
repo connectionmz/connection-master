@@ -22,6 +22,9 @@ import {
   Alert,
 } from "@mui/material";
 import VetrineDesk from './VetrineDesk';
+import { PinturaEditor } from '@pqina/react-pintura';
+import { getEditorDefaults } from '@pqina/pintura';
+import '@pqina/pintura/pintura.css';
 
 const ProfileDesk = ({ userI }) => {
   const navigate = useNavigate();
@@ -39,48 +42,72 @@ const ProfileDesk = ({ userI }) => {
   });
   const [coverPhoto, setCoverPhoto] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
-  const [isUploadingCover, setIsUploadingCover] = useState(false); // Estado para upload da capa
-  const [isUploadingProfile, setIsUploadingProfile] = useState(false); // Estado para upload do perfil
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' }); // Snackbar para feedback
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState(null);
+  const [editedImage, setEditedImage] = useState(null);
+  const [isEditingCover, setIsEditingCover] = useState(false); // Novo estado para distinguir entre capa e perfil
   const isMobile = useMediaQuery("(max-width:600px)");
 
-  const handleCoverPhotoChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setIsUploadingCover(true); // Inicia o feedback de upload
-      try {
-        const coverPhotoStorageRef = storageRef(storage, `company/${user}/coverPhoto/${file.name}`);
-        await uploadBytes(coverPhotoStorageRef, file);
-        const coverPhotoURL = await getDownloadURL(coverPhotoStorageRef);
-        await update(ref(db, `company/${user}`), { coverUrl: coverPhotoURL });
-        setCoverPhoto(coverPhotoURL);
-        setSnackbar({ open: true, message: 'Foto de capa atualizada com sucesso!', severity: 'success' });
-      } catch (error) {
-        console.error("Erro ao fazer upload da foto de capa: ", error);
-        setSnackbar({ open: true, message: 'Erro ao atualizar a foto de capa.', severity: 'error' });
-      } finally {
-        setIsUploadingCover(false); // Finaliza o feedback de upload
+  // Função para abrir o editor de imagem
+  const openImageEditor = (file, isCover) => {
+    setImageToEdit(file);
+    setIsEditingCover(isCover); // Define se estamos editando a capa ou o perfil
+    setShowImageEditor(true);
+  };
+
+  // Função para lidar com a conclusão da edição da imagem
+  const handleImageEditComplete = (res) => {
+    setEditedImage(URL.createObjectURL(res.dest));
+    setShowImageEditor(false);
+    uploadEditedImage(res.dest, isEditingCover);
+  };
+
+  // Função para fazer upload da imagem editada
+  const uploadEditedImage = async (imageFile, isCover) => {
+    const uploadState = isCover ? setIsUploadingCover : setIsUploadingProfile;
+    uploadState(true);
+
+    try {
+      const storagePath = isCover
+        ? `company/${user}/coverPhoto/${imageFile.name}`
+        : `company/${user}/profilePhoto/${imageFile.name}`;
+      const imageRef = storageRef(storage, storagePath);
+      await uploadBytes(imageRef, imageFile);
+      const imageURL = await getDownloadURL(imageRef);
+
+      if (isCover) {
+        await update(ref(db, `company/${user}`), { coverUrl: imageURL });
+        setCoverPhoto(imageURL);
+      } else {
+        await update(ref(db, `company/${user}`), { logoUrl: imageURL });
+        setProfilePhoto(imageURL);
       }
+
+      setSnackbar({ open: true, message: 'Foto atualizada com sucesso!', severity: 'success' });
+    } catch (error) {
+      console.error("Erro ao fazer upload da foto: ", error);
+      setSnackbar({ open: true, message: 'Erro ao atualizar a foto.', severity: 'error' });
+    } finally {
+      uploadState(false);
     }
   };
 
+  // Função para lidar com a mudança da foto de capa
+  const handleCoverPhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      openImageEditor(file, true); // Abre o editor para a capa
+    }
+  };
+
+  // Função para lidar com a mudança da foto de perfil
   const handleProfilePhotoChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setIsUploadingProfile(true); // Inicia o feedback de upload
-      try {
-        const profilePhotoStorageRef = storageRef(storage, `company/${user}/profilePhoto/${file.name}`);
-        await uploadBytes(profilePhotoStorageRef, file);
-        const profilePhotoURL = await getDownloadURL(profilePhotoStorageRef);
-        await update(ref(db, `company/${user}`), { logoUrl: profilePhotoURL });
-        setProfilePhoto(profilePhotoURL);
-        setSnackbar({ open: true, message: 'Foto de perfil atualizada com sucesso!', severity: 'success' });
-      } catch (error) {
-        console.error("Erro ao fazer upload da foto de perfil: ", error);
-        setSnackbar({ open: true, message: 'Erro ao atualizar a foto de perfil.', severity: 'error' });
-      } finally {
-        setIsUploadingProfile(false); // Finaliza o feedback de upload
-      }
+      openImageEditor(file, false); // Abre o editor para o perfil
     }
   };
 
@@ -303,13 +330,13 @@ const ProfileDesk = ({ userI }) => {
               id="coverPhotoInput"
               style={{ display: "none" }}
               onChange={handleCoverPhotoChange}
-              disabled={isUploadingCover} // Desabilita o input durante o upload
+              disabled={isUploadingCover}
             />
             <IconButton
               color="primary"
               aria-label="edit cover photo"
               onClick={() => document.getElementById("coverPhotoInput").click()}
-              disabled={isUploadingCover} // Desabilita o botão durante o upload
+              disabled={isUploadingCover}
             >
               {isUploadingCover ? <CircularProgress size={24} /> : <CameraAlt />}
             </IconButton>
@@ -340,19 +367,44 @@ const ProfileDesk = ({ userI }) => {
               id="profilePhotoInput"
               style={{ display: "none" }}
               onChange={handleProfilePhotoChange}
-              disabled={isUploadingProfile} // Desabilita o input durante o upload
+              disabled={isUploadingProfile}
             />
             <IconButton
               color="primary"
               aria-label="edit profile photo"
               onClick={() => document.getElementById("profilePhotoInput").click()}
-              disabled={isUploadingProfile} // Desabilita o botão durante o upload
+              disabled={isUploadingProfile}
             >
               {isUploadingProfile ? <CircularProgress size={24} /> : <CameraAlt />}
             </IconButton>
           </Box>
         </Box>
       </Box>
+
+      {/* Editor de Imagem */}
+      {showImageEditor && (
+        <Box
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bgcolor="rgba(0, 0, 0, 0.8)"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          zIndex={9999}
+        >
+          <Box width="90%" maxWidth={800} height="90%" maxHeight={600}>
+            <PinturaEditor
+              {...getEditorDefaults()}
+              src={URL.createObjectURL(imageToEdit)}
+              onProcess={handleImageEditComplete}
+              onClose={() => setShowImageEditor(false)}
+            />
+          </Box>
+        </Box>
+      )}
 
       {/* Informações do Perfil */}
       <Box mt={{ xs: 8, sm: 10 }} textAlign="center">

@@ -1,61 +1,112 @@
-import React from 'react';
+import React from "react";
+import {
+  Box,
+  Typography,
+  Paper,
+  Container,
+  useMediaQuery,
+} from "@mui/material";
 
 const Sobre = () => {
+  const isMobile = useMediaQuery("(max-width:600px)");
+
   return (
-    <div className="bg-gray-100 py-10">
-      <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg p-8">
-        {/* Título */}
-        <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Sobre a Plataforma</h2>
+    <Box
+      sx={{
+        backgroundColor: "#f5f7fa", // Fundo claro e suave
+        padding: isMobile ? "20px 0" : "40px 0", // Padding responsivo
+      }}
+    >
+      <Container>
+        <Paper
+          sx={{
+            padding: isMobile ? "20px" : "40px",
+            backgroundColor: "#ffffff", // Fundo branco
+            borderRadius: "8px",
+            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)", // Sombra suave
+          }}
+        >
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: "bold",
+              color: "#003366", // Azul escuro
+              marginBottom: "20px",
+              textAlign: "center",
+            }}
+          >
+            Sobre Nós
+          </Typography>
 
-        {/* Histórico */}
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Histórico</h3>
-          <p className="text-gray-700 leading-relaxed">
-            A plataforma foi criada em [ano de fundação] com o objetivo de [objetivo principal]. Desde então, temos
-            trabalhado continuamente para oferecer [soluções/serviços específicos] que atendam às necessidades dos
-            nossos usuários. Nossa trajetória reflete um compromisso com a inovação, qualidade e satisfação do cliente.
-          </p>
-        </div>
+          {/* Seção 1: Introdução */}
+          <Typography
+            variant="body1"
+            sx={{
+              color: "#333333", // Cinza escuro
+              lineHeight: "1.8",
+              marginBottom: "20px",
+            }}
+          >
+            A <strong>Connection Mozambique, Lda.</strong>A Connection Mozambique, Lda. é uma empresa privada moçambicana que actua no sector das 
+Tecnologias de Informação, sedeada na cidade de Pemba, no Bairro cimento na rua do banco de 
+Moçambique, sendo pioneira no desenvolvimento de soluções tecnológicas inovadoras adaptadas à 
+realidade do mercado moçambicano. O nosso objectivo é gerar um impacto positivo no sector, 
+oferecendo serviços que integram inovação, qualidade e eficiência, contribuindo para o crescimento 
+e modernização das empresas nacionais. 
+          </Typography>
 
-        {/* Missão */}
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Missão</h3>
-          <p className="text-gray-700 leading-relaxed">
-            Nossa missão é [descreva a missão da plataforma]. Buscamos [resultado esperado], impactando positivamente
-            [beneficiários ou comunidades].
-          </p>
-        </div>
+          {/* Seção 2: Nossa História */}
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: "bold",
+              color: "#00509e", // Azul médio
+              marginBottom: "16px",
+            }}
+          >
+            Nossa História
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "#333333", // Cinza escuro
+              lineHeight: "1.8",
+              marginBottom: "20px",
+            }}
+          >
+            A <strong>Connection Mozambique</strong> foi fundada em 2022, resultado de um sonho partilhado por jovens
+            moçambicanos determinados a transformar desafios em oportunidades. Criada com o propósito de
+            combater o desemprego juvenil e promover o empreendedorismo, a empresa conta atualmente com
+            12 colaboradores e é reconhecida como símbolo de resiliência, inovação e compromisso com o
+            desenvolvimento económico e tecnológico na província.
+          </Typography>
 
-        {/* Visão */}
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Visão</h3>
-          <p className="text-gray-700 leading-relaxed">
-            Ser reconhecidos como [descrição do objetivo futuro ou posição de mercado], promovendo [benefício ou
-            impacto esperado] para nossos usuários.
-          </p>
-        </div>
-
-        {/* Valores */}
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Valores</h3>
-          <ul className="list-disc list-inside text-gray-700 leading-relaxed">
-            <li><strong>Inovação:</strong> Buscamos constantemente novas formas de resolver problemas e oferecer
-              soluções criativas.</li>
-            <li><strong>Compromisso:</strong> Estamos comprometidos com a excelência e a satisfação do usuário.</li>
-            <li><strong>Transparência:</strong> Valorizamos a confiança e mantemos uma comunicação aberta e honesta.</li>
-            <li><strong>Inclusão:</strong> Acreditamos que a diversidade fortalece nossa comunidade.</li>
-          </ul>
-        </div>
-
-        {/* Conclusão */}
-        <div className="mt-6 text-center">
-          <p className="text-gray-700">
-            Estamos constantemente evoluindo para oferecer a melhor experiência possível. Obrigado por fazer parte da
-            nossa jornada!
-          </p>
-        </div>
-      </div>
-    </div>
+          {/* Seção 3: Foco e Missão */}
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: "bold",
+              color: "#00509e", // Azul médio
+              marginBottom: "16px",
+            }}
+          >
+            Foco e Missão
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "#333333", // Cinza escuro
+              lineHeight: "1.8",
+              marginBottom: "20px",
+            }}
+          >
+            Desde a sua fundação, a <strong>Connection Mozambique</strong> tem focado os seus esforços no desenvolvimento
+            de soluções tecnológicas capazes de responder às necessidades específicas das empresas
+            moçambicanas, através da prestação de serviços de consultoria e assistência técnica.
+          </Typography>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
