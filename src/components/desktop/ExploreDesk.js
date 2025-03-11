@@ -19,6 +19,7 @@ import {
   CardActionArea,
   Avatar,
   useMediaQuery,
+  Pagination,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -39,7 +40,9 @@ const Explore = ({ user }) => {
   const [subsectores, setSubsectores] = useState([]);
   const [distritos, setDistritos] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
-  const [sortOrder, setSortOrder] = useState('asc'); 
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(24); 
   const navigate = useNavigate();
   const defaultLogoUrl = 'https://via.placeholder.com/150';
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -96,26 +99,35 @@ const Explore = ({ user }) => {
   };
 
   const handleSortOrderChange = (e) => {
-    setSortOrder(e.target.value); // Atualiza o estado da ordenação
+    setSortOrder(e.target.value);
+  };
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
   };
 
   const filteredCompanies = companies
-  .filter((company) => {
-    const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSector = selectedSector ? company.sector === selectedSector : true;
-    const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
-    const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
-    const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
-    const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
-    return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
-  })
-  .sort((a, b) => {
-    if (sortOrder === 'asc') {
-      return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
-    } else {
-      return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
-    }
-  });
+    .filter((company) => {
+      const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSector = selectedSector ? company.sector === selectedSector : true;
+      const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
+      const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
+      const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
+      const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
+      return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
+    })
+    .sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
+      } else {
+        return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
+      }
+    });
+
+  // Calcular as empresas a serem exibidas na página atual
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentCompanies = filteredCompanies.slice(indexOfFirstItem, indexOfLastItem);
 
   const handleCompanyClick = (companyId) => {
     navigate(`/perfil/${companyId}`);
@@ -157,17 +169,16 @@ const Explore = ({ user }) => {
           fullWidth
           sx={{ maxWidth: isMobile ? '100%' : 400 }}
         />
-         {/* Seletor de Ordenação */}
-      <Box  justifyContent="flex-end" mb={2}>
-        <Select
-          value={sortOrder}
-          onChange={handleSortOrderChange}
-          sx={{ minWidth: 120 }}
-        >
-          <MenuItem value="asc">A-Z</MenuItem>
-          <MenuItem value="desc">Z-A</MenuItem>
-        </Select>
-      </Box>
+        <Box justifyContent="flex-end" mb={2}>
+          <Select
+            value={sortOrder}
+            onChange={handleSortOrderChange}
+            sx={{ minWidth: 120 }}
+          >
+            <MenuItem value="asc">A-Z</MenuItem>
+            <MenuItem value="desc">Z-A</MenuItem>
+          </Select>
+        </Box>
         <Button
           variant="contained"
           startIcon={<FilterListIcon />}
@@ -179,9 +190,6 @@ const Explore = ({ user }) => {
         </Button>
       </Box>
 
-     
-
-      {/* Modal de Filtros */}
       <Dialog open={isModalOpen} onClose={closeModal} maxWidth="sm" fullWidth>
         <DialogTitle>Filtros</DialogTitle>
         <DialogContent>
@@ -261,16 +269,14 @@ const Explore = ({ user }) => {
         </DialogActions>
       </Dialog>
 
-      {/* Informação sobre o número de empresas encontradas */}
       <Typography variant="subtitle1" gutterBottom>
         {filteredCompanies.length === 0
           ? 'Nenhuma empresa encontrada.'
           : `Mostrando ${filteredCompanies.length} empresa(s) encontrada(s).`}
       </Typography>
 
-      {/* Lista de Empresas */}
       <Grid container spacing={isMobile ? 2 : 4}>
-        {filteredCompanies.map((store) => (
+        {currentCompanies.map((store) => (
           <Grid item key={store.id} xs={6} sm={4} md={3} lg={2} display="flex" justifyContent="center">
             <Card
               sx={{
@@ -326,6 +332,16 @@ const Explore = ({ user }) => {
           </Grid>
         ))}
       </Grid>
+
+      {/* Paginação */}
+      <Box display="flex" justifyContent="center" mt={4}>
+        <Pagination
+          count={Math.ceil(filteredCompanies.length / itemsPerPage)}
+          page={currentPage}
+          onChange={handlePageChange}
+          color="primary"
+        />
+      </Box>
     </Box>
   );
 };

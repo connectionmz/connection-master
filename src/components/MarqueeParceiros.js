@@ -1,31 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { db } from '../fb';
-import { ref, get } from 'firebase/database';
-import '../styles/main.css';
-import { useNavigate } from 'react-router-dom';
-import { Avatar } from '@mui/material';
+import React, { useEffect, useState } from "react";
+import { db } from "../fb";
+import { ref, get } from "firebase/database";
+import { useNavigate } from "react-router-dom";
+import { Avatar, Box, Button, Typography } from "@mui/material";
 
 const MarqueeParceiros = () => {
   const [parceiros, setParceiros] = useState([]);
   const navigate = useNavigate();
 
-  const fetchParceiros = async () => {
-    try {
-      const snapshot = await get(ref(db, 'parceiros'));
-      if (snapshot.exists()) {
-        setParceiros(Object.values(snapshot.val()));
-      }
-    } catch (error) {
-      console.error('Erro ao buscar parceiros:', error);
-    }
-  };
-
   useEffect(() => {
+    const fetchParceiros = async () => {
+      try {
+        const snapshot = await get(ref(db, "parceiros"));
+        if (snapshot.exists()) {
+          setParceiros(Object.values(snapshot.val()));
+        }
+      } catch (error) {
+        console.error("Erro ao buscar parceiros:", error);
+      }
+    };
+
     fetchParceiros();
   }, []);
 
   const handleNavigateToTabs = () => {
-    navigate('/parceiros-investidores'); // Redireciona para o componente com tabs
+    navigate("/parceiros-investidores");
   };
 
   const handleCompanyClick = (companyId) => {
@@ -33,39 +32,55 @@ const MarqueeParceiros = () => {
   };
 
   return (
-    <>
-      <div className="flex items-center bg-blue-600 text-white p-4 mb-6">
-        <div className="ml-4 flex-shrink-0">
-          <button
-            className="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-gray-200 transition"
-            onClick={handleNavigateToTabs} // Navega para o novo componente
-          >
-            Parceiros / Investidores
-          </button>
-        </div>
-        <div className="flex-grow overflow-hidden">
-          <div className="whitespace-nowrap animate-marquee">
-          {parceiros.map((parceiro, index) => (
-  <a
-    key={index}
-    className="mx-8 cursor-pointer flex items-center space-x-2"
-    onClick={() => handleCompanyClick(parceiro.companyId)}
-  >
-    <Avatar
-      src={parceiro.logo}
-      alt={parceiro.nome || 'Logo da Empresa'}
-      sx={{ width: 40, height: 40, marginRight: 2 }}
-    />
-    <span className="flex items-center">
-      <strong>{parceiro.nome || 'Empresa Desconhecida'}:</strong>
-    </span>
-  </a>
-))}
+    <Box
+      display="flex"
+      alignItems="center"
+      bgcolor="white"
+      p={2}
+      mb={3}
+      borderRadius={2}
+      boxShadow={1}
+    >
+      {/* Botão para Parceiros / Investidores */}
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleNavigateToTabs}
+        sx={{ mr: 2 }}
+      >
+        Parceiros / Investidores
+      </Button>
 
-          </div>
-        </div>
-      </div>
-    </>
+      {/* Marquee de Parceiros */}
+      <Box
+        flexGrow={1}
+        sx={{
+          display: "flex",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          animation: "marquee 20s linear infinite",
+        }}
+      >
+        {parceiros.map((parceiro, index) => (
+          <Box
+            key={index}
+            display="flex"
+            alignItems="center"
+            sx={{ mx: 3, cursor: "pointer" }}
+            onClick={() => handleCompanyClick(parceiro.companyId)}
+          >
+            <Avatar
+              src={parceiro.logo}
+              alt={parceiro.nome || "Logo da Empresa"}
+              sx={{ width: 40, height: 40, mr: 1 }}
+            />
+            <Typography fontWeight="bold">
+              {parceiro.nome || "Empresa Desconhecida"}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </Box>
   );
 };
 

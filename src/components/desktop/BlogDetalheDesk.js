@@ -184,16 +184,11 @@ const BlogDetalheDesk = ({ user }) => {
           />
         </Box>
       )}
-
       <Typography variant="body1" paragraph sx={{ color: '#555', lineHeight: 1.6 }}>
         {noticia.content || 'Sem conteúdo disponível.'}
       </Typography>
-
       <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-        <Typography variant="caption" sx={{ color: '#777' }}>
-          Publicado por: {noticia.company?.nome || 'Desconhecido'}
-        </Typography>
-        <Typography variant="caption" sx={{ color: '#777' }}>
+        <Typography variant="caption" >
           Data: {noticia.date ? new Date(noticia.date).toLocaleDateString('pt-PT') : 'Data indisponível'}
         </Typography>
       </Box>

@@ -116,7 +116,7 @@ const Blogs = () => {
                   }}
                 >
                   <Link
-                    to={`/noticia/${post.id}`}
+                    to={`/blog/${post.id}`}
                     style={{ textDecoration: 'none', color: 'inherit' }}
                   >
                     <CardMedia
@@ -145,17 +145,6 @@ const Blogs = () => {
                     </CardContent>
                   </Link>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: 2 }}>
-                    {post.imageURL && (
-                      <IconButton
-                        color="primary"
-                        aria-label="download"
-                        component="a"
-                        href={post.imageURL}
-                        download
-                      >
-                        <FaFileDownload />
-                      </IconButton>
-                    )}
                     <Button
                       variant="outlined"
                       color="primary"

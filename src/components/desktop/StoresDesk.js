@@ -17,6 +17,8 @@ import {
   Badge,
   IconButton,
   useMediaQuery,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 
@@ -33,7 +35,21 @@ const StoresDesk = ({ user }) => {
   const [filteredStores, setFilteredStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState([]);
-  const isMobile = useMediaQuery('(max-width:600px)'); // Verifica se a tela é pequena
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const isMobile = useMediaQuery('(max-width:600px)');
+
+  // Carregar carrinho do localStorage ao inicializar
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
+  }, []);
+
+  // Salvar carrinho no localStorage sempre que ele for alterado
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
 
   const addToCart = (product) => {
     setCart((prevCart) => {
@@ -47,6 +63,15 @@ const StoresDesk = ({ user }) => {
       }
       return [...prevCart, { ...product, quantity: 1 }];
     });
+    setOpenSnackbar(true); // Mostrar Snackbar ao adicionar ao carrinho
+  };
+
+  const removeFromCart = (productId) => {
+    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+  };
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
   };
 
   useEffect(() => {
@@ -303,6 +328,16 @@ const StoresDesk = ({ user }) => {
           )}
         </Grid>
       )}
+
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+          Produto adicionado ao carrinho!
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

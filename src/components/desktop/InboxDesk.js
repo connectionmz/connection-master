@@ -145,7 +145,7 @@ const InboxDesk = ({ user }) => {
                 {isMobile ? 'Marcar todas' : 'Marcar todas como lidas'}
               </Button>
             </Tooltip>
-            <Tooltip title="Eliminar todas as notificações">
+            <Tooltip title="Eliminar todas">
               <Button
                 variant="outlined"
                 color="error"
@@ -155,7 +155,7 @@ const InboxDesk = ({ user }) => {
                   fontSize: isMobile ? '0.75rem' : '0.875rem',
                 }}
               >
-                {isMobile ? 'Eliminar todas' : 'Eliminar todas as notificações'}
+                {isMobile ? 'Eliminar todas' : 'Eliminar todas'}
               </Button>
             </Tooltip>
           </Box>
@@ -238,7 +238,7 @@ const InboxDesk = ({ user }) => {
                   />
                   <ListItemSecondaryAction>
                     <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Tooltip title="Marcar como lida">
+                      <Tooltip title="lida">
                         <Button
                           variant="outlined"
                           color="primary"
@@ -253,7 +253,7 @@ const InboxDesk = ({ user }) => {
                           {notification.status === 'read' ? 'Lida' : 'Marcar como lida'}
                         </Button>
                       </Tooltip>
-                      <Tooltip title="Eliminar notificação">
+                      <Tooltip title="Eliminar">
                         <IconButton
                           edge="end"
                           aria-label="delete"

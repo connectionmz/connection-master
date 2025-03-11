@@ -111,10 +111,8 @@ const AuthDesk = ({ data }) => {
       <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 2 : 0 }}>
         <Box sx={{ maxWidth: 400, width: '100%', p: isMobile ? 2 : 0 }}>
           <div className="text-center mb-6">
-            <img src={logo} alt="Logo" className="w-32 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold">Connections</h2>
+            <img src={logo} alt="Logo" className="w-36 mx-auto mb-4" />
           </div>
-
           <form onSubmit={handleEmailSignIn}>
             <div className="space-y-4">
               <TextField
@@ -179,26 +177,23 @@ const AuthDesk = ({ data }) => {
               <a href="/forget-password" className="text-blue-500 hover:underline">Esqueceu sua senha?</a>
             </p>
             <p className="mt-2 text-xs">
-              Ao continuar, você aceita nossos Termos de Uso e confirma que leu nossa
-              <a href="/terms" className="text-blue-500 hover:underline"> Termos & Políticas.</a>
+              Ao continuar, você aceita nossos Termos de Uso e confirma que leu nossos
+              <a href="/termos" className="text-blue-500 hover:underline"> Termos & Políticas.</a>
             </p>
           </div>
         </Box>
       </Grid>
-
       <Grid item xs={12} md={6} sx={{
         backgroundImage: `url(${marketing})`, 
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         height: isMobile ? '50vh' : '100vh',
       }}></Grid>
-
       <Snackbar
         open={showSnackbar}
         autoHideDuration={6000}
         onClose={() => setShowSnackbar(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert onClose={() => setShowSnackbar(false)} severity="error" sx={{ width: '100%' }}>
           {errorMessage}
         </Alert>
@@ -206,5 +201,4 @@ const AuthDesk = ({ data }) => {
     </Grid>
   );
 };
-
 export default AuthDesk;

@@ -53,8 +53,8 @@ const AnunciarDesk = ({ user }) => {
     destacar_perfil: 120,
   };
 
-  const ADDITIONAL_COST_PER_PROVINCIA = 50;
-  const ADDITIONAL_COST_PER_SETOR = 50;
+  const ADDITIONAL_COST_PER_PROVINCIA = 30;
+  const ADDITIONAL_COST_PER_SETOR = 30;
 
   useEffect(() => {
     const provinciasRef = ref(db, 'provincias');
