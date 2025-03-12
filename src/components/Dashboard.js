@@ -139,9 +139,7 @@ const Dashboard = ({ user }) => {
             // Converte para objetos Date e compara
             return new Date(dateTimeB) - new Date(dateTimeA);
           });
-  
           setBlogs(blogsArray);
-          console.log(blogsArray);
         }
       },
       (error) => {
@@ -281,44 +279,55 @@ const Dashboard = ({ user }) => {
         <CategoriaList />
         <StorieListDesk user={user} />
         <Grid container spacing={2}>
-          {/* Sidebar Esquerda */}
-          <Grid item xs={12} sm={3}>
-                  <Paper sx={{ padding: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                      Último Blog
-                    </Typography>
-                    {blogs.length > 0 ? (
-                      <Box>
-                        <Link to={`/blog/${blogs[0].id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                          <img
-                            src={blogs[0].imageURL}
-                            alt={blogs[0].title}
-                            style={{ width: "100%", height: "150px", objectFit: "cover", borderRadius: "8px" }}
-                          />
-                          <Typography variant="subtitle1" sx={{ fontWeight: "bold", mt: 1 }}>
-                            {blogs[0].title}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            {blogs[0].content.substring(0, 100)}...
-                          </Typography>
-                        </Link>
-                        <Button
-                          component={Link}
-                          to="/blog"
-                          variant="outlined"
-                          fullWidth
-                          sx={{ mt: 2 }}
-                        >
-                          Ver todos os blogs
-                        </Button>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="textSecondary">
-                        Nenhum blog disponível no momento.
-                      </Typography>
-                    )}
-                  </Paper>
-                </Grid>
+  <Grid item xs={12} sm={3}>
+      <Paper sx={{ padding: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
+          Último Blog
+        </Typography>
+        {blogs.length > 0 ? (
+          <Box>
+            <Link to={`/blog/${blogs[0].id}`} style={{ textDecoration: "none", color: "inherit" }}>
+              <img
+                src={blogs[0].imageURL}
+                alt={blogs[0].title}
+                style={{
+                  width: "100%",
+                  height: { xs: "100px", sm: "150px" }, // Altura responsiva
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                }}
+                />
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: "bold", mt: 1, fontSize: { xs: "0.9rem", sm: "1rem" } }} // Fonte responsiva
+              >
+                {blogs[0].title}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }} // Fonte responsiva
+              >
+                {blogs[0].content.substring(0, 100)}...
+              </Typography>
+            </Link>
+            <Button
+              component={Link}
+              to="/blog"
+              variant="outlined"
+              fullWidth
+              sx={{ mt: 2, fontSize: { xs: "0.8rem", sm: "0.875rem" } }} // Fonte responsiva
+            >
+              Ver todos os blogs
+            </Button>
+          </Box>
+        ) : (
+          <Typography variant="body2" color="textSecondary">
+            Nenhum blog disponível no momento.
+          </Typography>
+        )}
+      </Paper>
+    </Grid>
 
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
@@ -391,5 +400,4 @@ const Dashboard = ({ user }) => {
     </Box>
   );
 };
-
 export default Dashboard;

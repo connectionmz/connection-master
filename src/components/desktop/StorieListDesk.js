@@ -21,7 +21,7 @@ const StorieListDesk = ({ user }) => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm")); // Detecta se a tela é pequena
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const defaultLogoUrl = "https://via.placeholder.com/150";
 
@@ -45,7 +45,7 @@ const StorieListDesk = ({ user }) => {
             );
           const randomCompanies = companyList
             .sort(() => Math.random() - 0.5)
-            .slice(0, 5);
+            .slice(0, 7); // Alterado para exibir 6 itens
           setStories(randomCompanies);
         }
       } catch (error) {
@@ -91,23 +91,27 @@ const StorieListDesk = ({ user }) => {
       sx={{
         display: "flex",
         flexDirection: "row",
-        gap: isMobile ? 1 : 3, // Reduz o espaçamento em dispositivos móveis
-        p: isMobile ? 1 : 2, // Reduz o padding em dispositivos móveis
+        gap: isMobile ? 1 : 2, // Espaçamento menor em mobile
+        p: isMobile ? 1 : 2, // Padding menor em mobile
         overflowX: "auto",
+        "&::-webkit-scrollbar": {
+          display: "none", // Esconde a barra de rolagem
+        }
       }}
     >
       {stories.map((store) => (
         <Card
           key={store.id}
           sx={{
-            width: isMobile ? 120 : 160, // Reduz a largura em dispositivos móveis
+            minWidth: isMobile ? 100 : 140, // Largura mínima menor em mobile
+            width: isMobile ? 100 : 140, // Largura fixa menor em mobile
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 2,
             boxShadow: 1,
-            p: isMobile ? 1 : 2, // Reduz o padding em dispositivos móveis
+            p: isMobile ? 0.5 : 1, // Padding menor em mobile
             textAlign: "center",
           }}
         >
@@ -116,8 +120,8 @@ const StorieListDesk = ({ user }) => {
               src={store.logoUrl || defaultLogoUrl}
               alt={`Logotipo de ${store.nome}`}
               sx={{
-                width: isMobile ? 48 : 64, // Reduz o tamanho do avatar em dispositivos móveis
-                height: isMobile ? 48 : 64,
+                width: isMobile ? 40 : 56, // Tamanho menor em mobile
+                height: isMobile ? 40 : 56,
                 mb: 1,
                 margin: "0 auto",
               }}
@@ -131,7 +135,7 @@ const StorieListDesk = ({ user }) => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   textTransform: "capitalize",
-                  fontSize: isMobile ? 12 : 14, // Reduz o tamanho da fonte em dispositivos móveis
+                  fontSize: isMobile ? 11 : 13, // Fonte menor em mobile
                 }}
               >
                 {store.sigla || store.nome}
@@ -143,7 +147,7 @@ const StorieListDesk = ({ user }) => {
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  fontSize: isMobile ? 10 : 12, // Reduz o tamanho da fonte em dispositivos móveis
+                  fontSize: isMobile ? 9 : 11, // Fonte menor em mobile
                 }}
               >
                 {store.sector || "Setor não especificado"}
@@ -154,14 +158,15 @@ const StorieListDesk = ({ user }) => {
       ))}
       <Card
         sx={{
-          width: isMobile ? 120 : 160, // Reduz a largura em dispositivos móveis
+          minWidth: isMobile ? 100 : 140, // Largura mínima menor em mobile
+          width: isMobile ? 100 : 140, // Largura fixa menor em mobile
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 2,
           boxShadow: 1,
-          p: isMobile ? 1 : 2, // Reduz o padding em dispositivos móveis
+          p: isMobile ? 0.5 : 1, // Padding menor em mobile
           textAlign: "center",
           cursor: "pointer",
         }}
@@ -179,8 +184,8 @@ const StorieListDesk = ({ user }) => {
         >
           <Avatar
             sx={{
-              width: isMobile ? 48 : 64, // Reduz o tamanho do avatar em dispositivos móveis
-              height: isMobile ? 48 : 64,
+              width: isMobile ? 40 : 56, // Tamanho menor em mobile
+              height: isMobile ? 40 : 56,
               bgcolor: "grey.200",
               mb: 1,
               display: "flex",
@@ -188,7 +193,7 @@ const StorieListDesk = ({ user }) => {
               justifyContent: "center",
             }}
           >
-            <Add sx={{ fontSize: isMobile ? 24 : 32, color: "text.secondary" }} />
+            <Add sx={{ fontSize: isMobile ? 20 : 28, color: "text.secondary" }} />
           </Avatar>
           <Typography
             variant="body2"
@@ -196,7 +201,7 @@ const StorieListDesk = ({ user }) => {
             sx={{
               textTransform: "uppercase",
               fontWeight: 500,
-              fontSize: isMobile ? 12 : 14, // Reduz o tamanho da fonte em dispositivos móveis
+              fontSize: isMobile ? 11 : 13, // Fonte menor em mobile
             }}
           >
             Ver mais

@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { Box, Button, createTheme, Fab, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery } from '@mui/material';
+import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery } from '@mui/material';
 import LanguageIcon from '@mui/icons-material/Language';
 import FeedbackIcon from '@mui/icons-material/Feedback'; // Ícone de feedback
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
@@ -74,6 +74,7 @@ import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
 import Terms from '../Termos';
 import Politicas from '../desktop/Politicas';
+import { Close } from '@mui/icons-material';
 
 const theme = createTheme({
   palette: {
@@ -299,43 +300,57 @@ const DesktopRoutes = ({ user }) => {
         </Fab>
           {/* Modal de feedback */}
           {showFeedbackModal && (
-                    <Box
-                      sx={{
-                        position: 'fixed',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        backgroundColor: '#fff',
-                        padding: '24px',
-                        borderRadius: '8px',
-                        boxShadow: 3,
-                        zIndex: 1001,
-                        width: isMobile ? '90%' : '400px',
-                      }}
-                    >
-                      <Typography variant="h6" sx={{ mb: 2 }}>
-                        Enviar Feedback
-                      </Typography>
-                      <TextField
-                        label="Seu feedback"
-                        multiline
-                        rows={4}
-                        fullWidth
-                        value={feedbackText}
-                        onChange={(e) => setFeedbackText(e.target.value)}
-                        sx={{ mb: 2 }}
-                      />
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        onClick={handleSubmitFeedback}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 'Enviando...' : 'Enviar'}
-                      </Button>
-                    </Box>
-                  )}
+            <Box
+              sx={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: '#fff',
+                padding: '24px',
+                borderRadius: '8px',
+                boxShadow: 3,
+                zIndex: 1001,
+                width: isMobile ? '90%' : '400px',
+              }}
+            >
+              {/* Botão de fechar */}
+              <IconButton
+                aria-label="fechar"
+                onClick={() => setShowFeedbackModal(false)}
+                sx={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '8px',
+                  color: 'text.secondary',
+                }}
+              >
+                <Close />
+              </IconButton>
+
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Enviar Feedback
+              </Typography>
+              <TextField
+                label="Seu feedback"
+                multiline
+                rows={4}
+                fullWidth
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={handleSubmitFeedback}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Enviando...' : 'Enviar'}
+              </Button>
+            </Box>
+          )}
       </Box>
     </ThemeProvider>
   );

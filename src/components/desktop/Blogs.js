@@ -150,7 +150,7 @@ const Blogs = () => {
                       color="primary"
                       endIcon={<FaArrowRight />}
                       component={Link}
-                      to={`/noticia/${post.id}`}>
+                      to={`/blog/${post.id}`}>
                       Ver mais
                     </Button>
                   </Box>
