@@ -32,6 +32,7 @@ const App = () => {
             endereco: data.endereco || 'Endereço não informado',
             isAnonymous: user.isAnonymous, // Adiciona a propriedade isAnonymous ao userData
           });
+          console.log(data)
         } else {
           setUserData(null); // Caso o usuário não exista no banco de dados
         }
@@ -97,7 +98,7 @@ const App = () => {
           {/* Verifica se o usuário é anônimo */}
           {userData?.isAnonymous ? (
             <PublicRoutes /> // Rotas públicas para usuários anônimos
-          ) : userData?.subscriptions?.isverify === 'true' ? (
+          ) : userData?.subscriptions?.status === 'active' ? (
             <DesktopRoutes user={userData} /> // Rotas para usuários autenticados e verificados
           ) : (
             <NonSubscriberRoutesDesktop userDb={userData} /> // Rotas para usuários não verificados

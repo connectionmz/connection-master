@@ -62,30 +62,72 @@ const FaturaDesk = ({ user }) => {
   }, [numeroProforma]);
 
   const gerarPDF = () => {
-    if (!faturaRef.current) {
-      console.error("Elemento de referência da fatura não encontrado.");
-      return;
-    }
-
-    html2canvas(faturaRef.current, { 
-      scale: 2,
-      useCORS: true, }).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-
-      const ratio = Math.min(pdfWidth / canvasWidth, pdfHeight / canvasHeight);
-      const imgWidth = canvasWidth * ratio;
-      const imgHeight = canvasHeight * ratio;
-
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      pdf.save(`Proforma_${numeroProforma}.pdf`);
+    // Cria um novo documento PDF
+    const pdf = new jsPDF("p", "mm", "a4");
+  
+    // Configurações de fonte e cor
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(0, 0, 0); // Cor preta
+  
+    // Adiciona o título "PROFORMA"
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("PROFORMA", 105, 20, { align: "center" });
+  
+    // Número da proforma e data
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("PF28022501", 20, 30);
+    pdf.text("Data: 2025-03-07", 160, 30);
+  
+    // Informações da empresa
+    pdf.setFontSize(12);
+    pdf.text("Mohvi Comercial", 20, 40);
+    pdf.text("Av. 25 de Setembro, Pemba", 20, 50);
+  
+    // Informações do cliente
+    pdf.text("Para:", 20, 70);
+    pdf.text("Connection Mozambique, LDA", 20, 80);
+    pdf.text("Bairro Cimento - Rua do banco de Moçambique", 20, 90);
+    pdf.text("Nuit: 401532847", 20, 100);
+    pdf.text("+258 848939777", 20, 110);
+    pdf.text("connectionmozambique@gmail.com", 20, 120);
+  
+    // Informações do remetente
+    pdf.text("De:", 20, 140);
+    pdf.text("Mohvi Comercial", 20, 150);
+    pdf.text("Nuit: 450008311", 20, 160);
+    pdf.text("840237100", 20, 170);
+    pdf.text("mohammadvicentesaide@gmail.com", 20, 180);
+    pdf.text("Av. 25 de Setembro, Pemba", 20, 190);
+  
+    // Adiciona uma tabela para os itens da proforma
+    const headers = [["Quantidade", "Descrição", "Preço Unitário (MT)", "Total (MT)"]];
+    const data = [
+      ["1", "ddd", "50.00", "50.00"],
+      // Adicione mais itens conforme necessário
+    ];
+  
+    pdf.autoTable({
+      startY: 200, // Posição inicial da tabela
+      head: headers,
+      body: data,
+      theme: "grid", // Estilo da tabela
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [200, 200, 200] }, // Cor do cabeçalho
     });
+  
+    // Adiciona os valores totais
+    pdf.setFontSize(12);
+    pdf.text("Subtotal: 50.00 MT", 140, pdf.autoTable.previous.finalY + 10);
+    pdf.text("IVA: 8.00 MT", 140, pdf.autoTable.previous.finalY + 20);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Total: 58.00 MT", 140, pdf.autoTable.previous.finalY + 30);
+  
+    // Salva o PDF
+    pdf.save(`Proforma_PF28022501.pdf`);
   };
-
   const subtotal =
     fatura?.itens?.reduce(
       (acc, item) => acc + Number(item.quantidade) * Number(item.preco),

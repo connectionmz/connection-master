@@ -3,9 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery } from '@mui/material';
+import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery, Modal } from '@mui/material';
 import LanguageIcon from '@mui/icons-material/Language';
-import FeedbackIcon from '@mui/icons-material/Feedback'; // Ícone de feedback
+import FeedbackIcon from '@mui/icons-material/Feedback';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
@@ -68,13 +68,14 @@ import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
 import Blogs from '../desktop/Blogs';
-import { onValue, ref, set } from 'firebase/database';
+import { onValue, ref, set, update } from 'firebase/database';
 import { db } from '../../fb';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
 import Terms from '../Termos';
 import Politicas from '../desktop/Politicas';
 import { Close } from '@mui/icons-material';
+import CompanyUpdateDesk from '../CompanyUpdateDesk';
 
 const theme = createTheme({
   palette: {
@@ -92,10 +93,12 @@ const DesktopRoutes = ({ user }) => {
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false); // Estado para controlar o modal de feedback
-  const [hasFeedback, setHasFeedback] = useState(false); // Estado para verificar se o usuário já enviou feedback
-  const [feedbackText, setFeedbackText] = useState(''); // Estado para armazenar o texto do feedback
-  const [isLoading, setIsLoading] = useState(false); // Estado para carregamento
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [hasFeedback, setHasFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showReferrerModal, setShowReferrerModal] = useState(false); // Estado para controlar o modal de referrer
+  const [referrerData, setReferrerData] = useState(null); // Estado para armazenar os dados do referrer
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -111,11 +114,15 @@ const DesktopRoutes = ({ user }) => {
       const feedbackRef = ref(db, `feedback/${user.id}`);
       onValue(feedbackRef, (snapshot) => {
         if (snapshot.exists()) {
-          setHasFeedback(true); // Já enviou feedback
+          setHasFeedback(true);
         } else {
-          setHasFeedback(false); // Ainda não enviou feedback
+          setHasFeedback(false);
         }
       });
+
+      if(user.referer){
+        setShowReferrerModal(true); // Abre o modal de verificação
+      }
     }
   }, [user]);
 
@@ -137,46 +144,59 @@ const DesktopRoutes = ({ user }) => {
     setShowTerms(false);
   };
 
-  // Função para abrir o modal de feedback
   const handleOpenFeedbackModal = () => {
     setShowFeedbackModal(true);
   };
 
-  // Função para fechar o modal de feedback
   const handleCloseFeedbackModal = () => {
     setShowFeedbackModal(false);
   };
 
+  const handleSubmitFeedback = async () => {
+    if (!feedbackText.trim()) {
+      alert('Por favor, insira seu feedback.');
+      return;
+    }
 
-    // Função para salvar o feedback no banco de dados
-    const handleSubmitFeedback = async () => {
-      if (!feedbackText.trim()) {
-        alert('Por favor, insira seu feedback.');
-        return;
-      }
-  
-      setIsLoading(true);
-  
-      try {
-        const feedbackRef = ref(db, `feedback/${user.id}`);
-        await set(feedbackRef, {
-          nome: user.displayName || 'Usuário Anônimo',
-          email: user.email || 'anonimo@exemplo.com',
-          userId: user.id,
-          feedback: feedbackText,
-          timestamp: new Date().toISOString(),
-        });
-  
-        setHasFeedback(true); // Atualiza o estado para indicar que o feedback foi enviado
-        setFeedbackText(''); // Limpa o campo de feedback
-        handleCloseFeedbackModal(); // Fecha o modal
-      } catch (error) {
-        console.error('Erro ao salvar feedback:', error);
-        alert('Erro ao enviar feedback. Tente novamente.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    setIsLoading(true);
+
+    try {
+      const feedbackRef = ref(db, `feedback/${user.id}`);
+      await set(feedbackRef, {
+        nome: user.displayName || 'Usuário Anônimo',
+        email: user.email || 'anonimo@exemplo.com',
+        userId: user.id,
+        feedback: feedbackText,
+        timestamp: new Date().toISOString(),
+      });
+
+      setHasFeedback(true);
+      setFeedbackText('');
+      handleCloseFeedbackModal();
+    } catch (error) {
+      console.error('Erro ao salvar feedback:', error);
+      alert('Erro ao enviar feedback. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCloseReferrerModal = () => {
+    setShowReferrerModal(false);
+  };
+
+  const handleConfirmReferrerData = async () => {
+    // Lógica para confirmar os dados do referrer
+    try {
+      const referrerRef = ref(db, `users/${user.id}`);
+      await update(referrerRef, { isComplete: true });
+      setShowReferrerModal(false); // Fecha o modal
+    } catch (error) {
+      console.error('Erro ao confirmar dados do referrer:', error);
+      alert('Erro ao confirmar dados. Tente novamente.');
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Box
@@ -272,8 +292,8 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/termos" element={<Terms />} />
             <Route path="/politicas" element={<Politicas />} />
 
-          <Route path="/forget-password" element={<ForgetPassword />} />
-          <Route path="/change-password" element={<ChangePassword user={user} />} />
+            <Route path="/forget-password" element={<ForgetPassword />} />
+            <Route path="/change-password" element={<ChangePassword user={user} />} />
             {/* Rota de fallback para redirecionamento */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
@@ -281,8 +301,8 @@ const DesktopRoutes = ({ user }) => {
 
         <FooterDesk />
 
-             {/* Botão flutuante de feedback */}
-             <Fab
+        {/* Botão flutuante de feedback */}
+        <Fab
           color="primary"
           aria-label="feedback"
           sx={{
@@ -292,17 +312,77 @@ const DesktopRoutes = ({ user }) => {
             zIndex: 1000,
             width: isMobile ? 40 : 56,
             height: isMobile ? 40 : 56,
-            animation: !hasFeedback ? 'pulse 2s infinite' : 'none', // Animação de piscar
+            animation: !hasFeedback ? 'pulse 2s infinite' : 'none',
           }}
           onClick={handleOpenFeedbackModal}
         >
           <FeedbackIcon />
         </Fab>
-          {/* Modal de feedback */}
-          {showFeedbackModal && (
+
+        {/* Modal de feedback */}
+        {showFeedbackModal && (
+          <Box
+            sx={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: '#fff',
+              padding: '24px',
+              borderRadius: '8px',
+              boxShadow: 3,
+              zIndex: 1001,
+              width: isMobile ? '90%' : '400px',
+            }}
+          >
+            <IconButton
+              aria-label="fechar"
+              onClick={() => setShowFeedbackModal(false)}
+              sx={{
+                position: 'absolute',
+                right: '8px',
+                top: '8px',
+                color: 'text.secondary',
+              }}
+            >
+              <Close />
+            </IconButton>
+
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Enviar Feedback
+            </Typography>
+            <TextField
+              label="Seu feedback"
+              multiline
+              rows={4}
+              fullWidth
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              onClick={handleSubmitFeedback}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Enviando...' : 'Enviar'}
+            </Button>
+          </Box>
+        )}
+
+        {/* Modal de verificação de referrer */}
+        {showReferrerModal && (
+          <Modal
+            open={showReferrerModal}
+            onClose={handleCloseReferrerModal}
+            aria-labelledby="referrer-modal-title"
+            aria-describedby="referrer-modal-description"
+          >
             <Box
               sx={{
-                position: 'fixed',
+                position: 'absolute',
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
@@ -310,47 +390,12 @@ const DesktopRoutes = ({ user }) => {
                 padding: '24px',
                 borderRadius: '8px',
                 boxShadow: 3,
-                zIndex: 1001,
-                width: isMobile ? '90%' : '400px',
-              }}
-            >
-              {/* Botão de fechar */}
-              <IconButton
-                aria-label="fechar"
-                onClick={() => setShowFeedbackModal(false)}
-                sx={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '8px',
-                  color: 'text.secondary',
-                }}
-              >
-                <Close />
-              </IconButton>
-
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Enviar Feedback
-              </Typography>
-              <TextField
-                label="Seu feedback"
-                multiline
-                rows={4}
-                fullWidth
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                onClick={handleSubmitFeedback}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Enviando...' : 'Enviar'}
-              </Button>
+                width: isMobile ? '90%' : '80%',
+              }}>
+                 <CompanyUpdateDesk/>
             </Box>
-          )}
+          </Modal>
+        )}
       </Box>
     </ThemeProvider>
   );
