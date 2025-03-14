@@ -97,8 +97,8 @@ const DesktopRoutes = ({ user }) => {
   const [hasFeedback, setHasFeedback] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showReferrerModal, setShowReferrerModal] = useState(false); // Estado para controlar o modal de referrer
-  const [referrerData, setReferrerData] = useState(null); // Estado para armazenar os dados do referrer
+  const [showReferrerModal, setShowReferrerModal] = useState(false); 
+  const [referrerData, setReferrerData] = useState(null);
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -319,7 +319,6 @@ const DesktopRoutes = ({ user }) => {
           <FeedbackIcon />
         </Fab>
 
-        {/* Modal de feedback */}
         {showFeedbackModal && (
           <Box
             sx={{
@@ -372,7 +371,6 @@ const DesktopRoutes = ({ user }) => {
           </Box>
         )}
 
-        {/* Modal de verificação de referrer */}
         {showReferrerModal && (
           <Modal
             open={showReferrerModal}

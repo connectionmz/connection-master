@@ -113,7 +113,7 @@ const Dashboard = ({ user }) => {
   const [blogs, setBlogs] = useState([]);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [hasRequestedDemo, setHasRequestedDemo] = useState(false); // Estado para controlar se a demo já foi solicitada
+  const [hasRequestedDemo, setHasRequestedDemo] = useState(false); 
   const isMobile = useMediaQuery("(max-width:600px)");
 
   const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");

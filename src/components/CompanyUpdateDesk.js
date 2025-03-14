@@ -16,6 +16,7 @@ import { auth, db } from '../fb';
 import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 
 const steps = ['Informações Básicas', 'Endereço & Contacto', 'Setor & Capacidade', 'Upload de Logotipo'];
+const steps2 = ['Setor & Capacidade', 'Endereço & Contacto', 'Informações Básicas', 'Upload de Logotipo'];
 
 const CompanyUpdateDesk = () => {
   const navigate = useNavigate();
@@ -61,13 +62,10 @@ const CompanyUpdateDesk = () => {
     const user = auth.currentUser;
     if (!user) {
       navigate('/auth'); 
-     
     }
   }, [navigate]);
 
-
   useEffect(() => {
-
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
     const tipoEntidadeRef = ref(db, 'tipos_entidades');

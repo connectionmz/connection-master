@@ -25,6 +25,8 @@ const StorieListDesk = ({ user }) => {
 
   const defaultLogoUrl = "https://via.placeholder.com/150";
 
+  console.log(user)
+
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
