@@ -76,6 +76,7 @@ import Terms from '../Termos';
 import Politicas from '../desktop/Politicas';
 import { Close } from '@mui/icons-material';
 import CompanyUpdateDesk from '../CompanyUpdateDesk';
+import ProductForm from '../market/ProductForm';
 
 const theme = createTheme({
   palette: {
@@ -222,6 +223,8 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/blog" element={<Blogs />} />
             <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
             <Route path="/market" element={<MarketDesk user={user} />} />
+            <Route path="/addProduct/:id" element={<ProductForm user={user} />} />
+            
             <Route path="/lojas" element={<StoresDesk user={user} />} />
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
             <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
