@@ -32,7 +32,6 @@ const App = () => {
             endereco: data.endereco || 'Endereço não informado',
             isAnonymous: user.isAnonymous, // Adiciona a propriedade isAnonymous ao userData
           });
-          console.log(data)
         } else {
           setUserData(null); // Caso o usuário não exista no banco de dados
         }

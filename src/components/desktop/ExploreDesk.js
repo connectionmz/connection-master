@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { get, ref, onValue } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -25,7 +25,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { db } from '../../fb';
 
-const Explore = ({ user }) => {
+const Explore = React.memo(({ user }) => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +42,7 @@ const Explore = ({ user }) => {
   const [tiposEntidades, setTiposEntidades] = useState([]);
   const [sortOrder, setSortOrder] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(24); 
+  const [itemsPerPage, setItemsPerPage] = useState(24);
   const navigate = useNavigate();
   const defaultLogoUrl = 'https://via.placeholder.com/150';
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -82,59 +82,62 @@ const Explore = ({ user }) => {
     fetchCompanies();
   }, []);
 
-  const handleSectorChange = (e) => {
+  const handleSectorChange = useCallback((e) => {
     const selectedSector = e.target.value;
     setSelectedSector(selectedSector);
     const foundSector = sectores.find((s) => s.setor === selectedSector);
     setSubsectores(foundSector ? foundSector.subsectores : []);
     setSelectedSubsector('');
-  };
+  }, [sectores]);
 
-  const handleProvinceChange = (e) => {
+  const handleProvinceChange = useCallback((e) => {
     const selectedProvince = e.target.value;
     setSelectedProvince(selectedProvince);
     const foundProvince = provincias.find((p) => p.provincia === selectedProvince);
     setDistritos(foundProvince ? foundProvince.distritos : []);
     setSelectedDistrict('');
-  };
+  }, [provincias]);
 
-  const handleSortOrderChange = (e) => {
+  const handleSortOrderChange = useCallback((e) => {
     setSortOrder(e.target.value);
-  };
+  }, []);
 
-  const handlePageChange = (event, value) => {
+  const handlePageChange = useCallback((event, value) => {
     setCurrentPage(value);
-  };
+  }, []);
 
-  const filteredCompanies = companies
-    .filter((company) => {
-      const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSector = selectedSector ? company.sector === selectedSector : true;
-      const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
-      const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
-      const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
-      const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
-      return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
-    })
-    .sort((a, b) => {
-      if (sortOrder === 'asc') {
-        return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
-      } else {
-        return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
-      }
-    });
+  const filteredCompanies = useMemo(() => {
+    return companies
+      .filter((company) => {
+        const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSector = selectedSector ? company.sector === selectedSector : true;
+        const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
+        const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
+        const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
+        const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
+        return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
+      })
+      .sort((a, b) => {
+        if (sortOrder === 'asc') {
+          return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
+        } else {
+          return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
+        }
+      });
+  }, [companies, searchTerm, selectedSector, selectedSubsector, selectedProvince, selectedDistrict, selectedTipoEntidade, sortOrder]);
 
-  // Calcular as empresas a serem exibidas na página atual
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentCompanies = filteredCompanies.slice(indexOfFirstItem, indexOfLastItem);
+  const currentCompanies = useMemo(() => {
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    return filteredCompanies.slice(indexOfFirstItem, indexOfLastItem);
+  }, [filteredCompanies, currentPage, itemsPerPage]);
 
-  const handleCompanyClick = (companyId) => {
+  const handleCompanyClick = useCallback((companyId) => {
     navigate(`/perfil/${companyId}`);
-  };
+  }, [navigate]);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = useCallback(() => setIsModalOpen(true), []);
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
 
   if (loading) {
     return (
@@ -344,6 +347,6 @@ const Explore = ({ user }) => {
       </Box>
     </Box>
   );
-};
+});
 
 export default Explore;

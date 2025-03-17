@@ -120,8 +120,8 @@ const DesktopRoutes = ({ user }) => {
         }
       });
 
-      if(user.referer){
-        setShowReferrerModal(true); // Abre o modal de verificação
+      if(user.referer && !user.isComplete){
+        setShowReferrerModal(true); 
       }
     }
   }, [user]);
@@ -129,7 +129,6 @@ const DesktopRoutes = ({ user }) => {
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     localStorage.setItem('selectedLanguage', lang);
-    console.log(`Language switched to: ${lang}`);
   };
 
   const handleMenuOpen = (event) => {
@@ -185,17 +184,7 @@ const DesktopRoutes = ({ user }) => {
     setShowReferrerModal(false);
   };
 
-  const handleConfirmReferrerData = async () => {
-    // Lógica para confirmar os dados do referrer
-    try {
-      const referrerRef = ref(db, `users/${user.id}`);
-      await update(referrerRef, { isComplete: true });
-      setShowReferrerModal(false); // Fecha o modal
-    } catch (error) {
-      console.error('Erro ao confirmar dados do referrer:', error);
-      alert('Erro ao confirmar dados. Tente novamente.');
-    }
-  };
+
 
   return (
     <ThemeProvider theme={theme}>

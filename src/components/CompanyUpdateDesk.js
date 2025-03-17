@@ -214,6 +214,7 @@ const handleSectorChange = (e) => {
           ...companyData,
           logoUrl,
           updatedAt: new Date().toISOString(),
+          isComplete:true
         };
   
         await update(companyRef, dataToUpdate);
