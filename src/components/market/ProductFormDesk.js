@@ -28,8 +28,12 @@ import { db } from '../../fb';
 import { useParams, useNavigate } from 'react-router-dom';
 import BackButton from '../BackButton';
 
-const ProductFormDesk = () => {
-  const { storeId } = useParams();
+const ProductFormDesk = ({user}) => {
+  const  storeId  = user.id
+
+
+  console.log(storeId)
+
   const navigate = useNavigate(); 
 
   const [products, setProducts] = useState([]);

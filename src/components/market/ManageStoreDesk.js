@@ -228,7 +228,7 @@ const ManageStoreDesk = ({ storeId }) => {
         variant="contained"
         color="primary"
         component={Link}
-        to={`/addProduct/${storeId}`}
+        to={`/addProduct`}
         sx={{ ml: 2 }}
       >
         Adicionar Produto
