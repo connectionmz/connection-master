@@ -25,7 +25,7 @@ const StorieListDesk = ({ user }) => {
 
   const defaultLogoUrl = "https://via.placeholder.com/150";
 
-  console.log(user)
+
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -42,7 +42,7 @@ const StorieListDesk = ({ user }) => {
             .filter(
               (company) =>
                 (company.provincia === user.provinciaTemp ||
-                  company.provincia === user.provinciaTemp) &&
+                  company.provincia === user.provincia) &&
                 company.id !== user.id
             );
           const randomCompanies = companyList
