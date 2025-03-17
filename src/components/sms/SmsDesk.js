@@ -20,6 +20,7 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  Checkbox,
 } from '@mui/material';
 import BackButton from '../BackButton';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -28,7 +29,6 @@ import axios from 'axios';
 
 const SmsDesk = ({ user }) => {
   const [smsBalance, setSmsBalance] = useState(0);
-  const [smsHistory, setSmsHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -37,6 +37,8 @@ const SmsDesk = ({ user }) => {
   const [paymentMethod, setPaymentMethod] = useState('mpesa');
   const [smsCount, setSmsCount] = useState(25);
   const [pendingTransaction, setPendingTransaction] = useState(false);
+  const [subsectores, setSubsectores] = useState([]);
+  const [selectedSubsectores, setSelectedSubsectores] = useState([]);
 
   // Função para buscar o saldo de SMS
   const fetchSmsBalance = () => {
@@ -45,14 +47,45 @@ const SmsDesk = ({ user }) => {
     onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       setSmsBalance(data?.smsCount || 0);
+      setSelectedSubsectores(data?.subsectores || []); // Carrega subsectores salvos
       setLoading(false);
     });
   };
 
-  // Busca o saldo ao carregar o componente
+// Função para carregar os subsectores do setor do usuário
+const fetchSubsectores = async () => {
+  if (!user?.sector) return;
+
+  const sectorRef = ref(db, `sectores_de_atividade`);
+  onValue(sectorRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      const sectorData = data.find((s) => s.setor === user.sector);
+      if (sectorData) {
+        setSubsectores(sectorData.subsectores || []);
+      }
+    }
+  });
+};
+
+  // Busca o saldo e subsectores ao carregar o componente
   useEffect(() => {
     fetchSmsBalance();
-  }, [user.id]);
+    fetchSubsectores();
+  }, [user.id, user.sector]);
+
+  // Função para salvar as preferências de subsectores no Firebase
+  const saveSubsectoresPreference = async () => {
+    if (!user?.id) return;
+
+    const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS`);
+    try {
+      await update(userRef, { subsectores: selectedSubsectores });
+      alert('Preferências salvas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar preferências de subsectores:', error);
+    }
+  };
 
   // Função para abrir o modal de pagamento
   const handleOpenPaymentModal = () => {
@@ -88,7 +121,6 @@ const updateSmsBalanceInFirebase = async (newBalance, valorPago, metodoDePagamen
   try {
     // Atualiza o saldo de SMS no caminho "company/${user.id}/activeModules/moduloSMS"
     await update(userRef, { smsCount: newBalance });
-    console.log('Saldo de SMS atualizado no Firebase com sucesso!');
 
     // Cria um objeto com os detalhes do pagamento
     const paymentData = {
@@ -102,7 +134,6 @@ const updateSmsBalanceInFirebase = async (newBalance, valorPago, metodoDePagamen
     // Adiciona os detalhes do pagamento em "subscriptions/${user.id}/${year}/${month}"
     const newPaymentRef = push(subscriptionsRef); // Gera uma chave única para o pagamento
     await set(newPaymentRef, paymentData); // Salva os dados do pagamento
-    console.log('Detalhes do pagamento salvos no nó subscriptions com sucesso!');
   } catch (error) {
     console.error('Erro ao atualizar o saldo de SMS ou salvar os detalhes do pagamento:', error);
     throw error; // Lança o erro para ser tratado no handlePayment
@@ -141,7 +172,6 @@ const updateSmsBalanceInFirebase = async (newBalance, valorPago, metodoDePagamen
 
     try {
       const response = await axios.post(endpoint, paymentData);
-      console.log(response); // Verifique a estrutura da resposta aqui
 
       const { data } = response;
       const { status, response: apiResponse, message, transactionId } = data;
@@ -218,6 +248,38 @@ const updateSmsBalanceInFirebase = async (newBalance, valorPago, metodoDePagamen
           Comprar mais SMS
         </Button>
       </Paper>
+
+       {/* Seleção de Subsectores */}
+       <Paper sx={{ backgroundColor: '#fff', padding: 3, borderRadius: 2, marginBottom: 4, boxShadow: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#333', mb: 2 }}>
+          Subsectores para Receber SMS
+        </Typography>
+        <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Subsectores para Receber SMS</InputLabel>
+            <Select
+              multiple
+              value={selectedSubsectores}
+              onChange={(e) => setSelectedSubsectores(e.target.value)}
+              label="Subsectores para Receber SMS"
+              renderValue={(selected) => selected.join(', ')}
+            >
+              {subsectores.map((subsector) => (
+                <MenuItem key={subsector} value={subsector}>
+                  <Checkbox checked={selectedSubsectores.includes(subsector)} />
+                  <ListItemText primary={subsector} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        <Button
+          variant="contained"
+          onClick={saveSubsectoresPreference}
+          sx={{ mt: 2, backgroundColor: '#1976d2', '&:hover': { backgroundColor: '#1565c0' } }}
+        >
+          Salvar Preferências
+        </Button>
+      </Paper>
+
 
       {/* Modal de Pagamento */}
       <Dialog open={paymentModalOpen} onClose={handleClosePaymentModal}>
