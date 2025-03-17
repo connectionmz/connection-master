@@ -128,21 +128,11 @@ const StoresDesk = ({ user }) => {
           alignItems: "center",
           mb: 4,
           gap: isMobile ? 2 : 0,
-        }}
-      >
+        }}>
         <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
           Lojas e Produtos
         </Typography>
-        <IconButton component={Link} to="/cart" color="primary">
-          <Badge
-            badgeContent={cart.reduce((sum, item) => sum + item.quantity, 0)}
-            color="secondary"
-          >
-            <ShoppingCartIcon fontSize="large" />
-          </Badge>
-        </IconButton>
       </Box>
-
       <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
         <TextField
           label="Pesquisar loja por nome..."

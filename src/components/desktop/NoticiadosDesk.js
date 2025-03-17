@@ -127,6 +127,8 @@ const NoticiadosDesk = () => {
                       sx={{ objectFit: 'cover' }}
                     />
                   )}
+
+                  
                     <CardContent sx={{ flexGrow: 1 }}>
                       <Typography variant="h6" gutterBottom>
                         {anuncio.title || 'Sem título'}

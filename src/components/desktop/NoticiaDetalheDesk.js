@@ -28,7 +28,6 @@ const NoticiaDetalheDesk = ({user}) => {
   const [editingCommentId, setEditingCommentId] = useState(null); // ID do comentário sendo editado
   const [editedCommentText, setEditedCommentText] = useState(''); // Texto do comentário sendo editado
 
-  // Suponha que o ID do usuário logado esteja armazenado em uma variável (substitua pelo seu método de autenticação)
   const userId = user.id
 
   useEffect(() => {
