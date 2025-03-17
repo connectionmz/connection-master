@@ -15,7 +15,6 @@ const Checkout = ({ totalCost, onConfirmPayment, onCancel }) => {
       setIsLoading(false); // Desativa o loader, independentemente do resultado
     }
   };
-
   return (
     <Box sx={{ padding: 4, maxWidth: 400, margin: 'auto' }}>
       <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>
@@ -50,6 +49,16 @@ const Checkout = ({ totalCost, onConfirmPayment, onCancel }) => {
           ) : (
             'Confirmar Pagamento'
           )}
+        </Button>
+
+        {/* Botão de Cancelar */}
+        <Button
+          variant="outlined"
+          onClick={onCancel} // Chama a função onCancel ao clicar
+          fullWidth
+          disabled={isLoading} // Desabilita o botão durante o carregamento
+        >
+          Cancelar
         </Button>
       </Box>
     </Box>

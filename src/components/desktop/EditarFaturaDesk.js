@@ -34,8 +34,6 @@ const EditarFaturaDesk = ({ user }) => {
 
   const { numeroProforma } = useParams();
 
-  console.log(numeroProforma)
-
   const [cliente, setCliente] = useState(null); // Armazenar o objeto completo do cliente
   const [dataEmissao, setDataEmissao] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');

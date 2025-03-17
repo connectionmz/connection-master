@@ -28,7 +28,6 @@ import BackButton from '../BackButton';
 const AnunciarDesk = ({ user }) => {
   const [file, setFile] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
-  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -43,7 +42,7 @@ const AnunciarDesk = ({ user }) => {
   const [empresas, setEmpresas] = useState([]);
   const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [tipoAnuncio, setTipoAnuncio] = useState('home'); // Estado para o tipo de anúncio
+  const [tipoAnuncio, setTipoAnuncio] = useState('home');
 
   // Preços base para cada tipo de anúncio
   const prices = {
@@ -56,6 +55,7 @@ const AnunciarDesk = ({ user }) => {
   const ADDITIONAL_COST_PER_PROVINCIA = 30;
   const ADDITIONAL_COST_PER_SETOR = 30;
 
+  // Carregar dados iniciais
   useEffect(() => {
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
@@ -75,18 +75,31 @@ const AnunciarDesk = ({ user }) => {
         setEmpresas([]);
       }
     });
-  }, []);
 
+    // Definir setor e província padrão com base no perfil do usuário
+    if (user) {
+      setSelectedSectores(user.sector ? [user.sector] : []);
+      setSelectedProvincias(user.provincia ? [user.provincia] : []);
+    }
+  }, [user]);
+
+  // Calcular custo total
   useEffect(() => {
-    const additionalCost =
-      selectedProvincias.length * ADDITIONAL_COST_PER_PROVINCIA +
-      selectedSectores.length * ADDITIONAL_COST_PER_SETOR;
-
-    // Define o custo base com base no tipo de anúncio
     const baseCost = prices[tipoAnuncio] || prices.home;
+
+    // Verificar se há setores ou províncias adicionais selecionados
+    const hasAdditionalSectors = selectedSectores.length > 1;
+    const hasAdditionalProvincias = selectedProvincias.length > 1;
+
+    // Aplicar custo adicional apenas para setores ou províncias adicionais
+    const additionalCost =
+      (hasAdditionalProvincias ? (selectedProvincias.length - 1) * ADDITIONAL_COST_PER_PROVINCIA : 0) +
+      (hasAdditionalSectors ? (selectedSectores.length - 1) * ADDITIONAL_COST_PER_SETOR : 0);
+
     setTotalCost(days * (baseCost + additionalCost));
   }, [days, selectedProvincias, selectedSectores, tipoAnuncio]);
 
+  // Calcular empresas atingidas
   useEffect(() => {
     if (empresas.length > 0 && (selectedProvincias.length > 0 || selectedSectores.length > 0)) {
       const empresasFiltradas = empresas.filter((empresa) => {
@@ -100,6 +113,27 @@ const AnunciarDesk = ({ user }) => {
     }
   }, [selectedProvincias, selectedSectores, empresas]);
 
+  // Função para manipular a seleção de províncias
+  const handleProvinciaChange = (e) => {
+    const newSelectedProvincias = e.target.value;
+    // Garantir que a província padrão do usuário esteja sempre selecionada
+    if (user.provincia && !newSelectedProvincias.includes(user.provincia)) {
+      newSelectedProvincias.push(user.provincia);
+    }
+    setSelectedProvincias(newSelectedProvincias);
+  };
+
+  // Função para manipular a seleção de setores
+  const handleSetorChange = (e) => {
+    const newSelectedSectores = e.target.value;
+    // Garantir que o setor padrão do usuário esteja sempre selecionado
+    if (user.sector && !newSelectedSectores.includes(user.sector)) {
+      newSelectedSectores.push(user.sector);
+    }
+    setSelectedSectores(newSelectedSectores);
+  };
+
+  // Funções de manipulação de arquivo
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -108,25 +142,27 @@ const AnunciarDesk = ({ user }) => {
     }
   };
 
-  const handleUpload = () => {
+  // Função para validar o formulário
+  const validateForm = () => {
+ 
     if (!file) {
-      showSnackbar('Por favor, selecione uma imagem primeiro!', 'error');
-      return;
+      showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
+      return false;
     }
-    if (!title || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0) {
-      showSnackbar('Por favor, preencha todos os campos obrigatórios!', 'error');
-      return;
+    if (!phoneNumber) {
+      showSnackbar('Por favor, insira um número de telefone.', 'error');
+      return false;
     }
+    return true;
+  };
+
+  // Função para iniciar o processo de upload
+  const handleUpload = () => {
+    if (!validateForm()) return;
     setShowCheckout(true);
   };
 
-  const calculateExpireDate = (days) => {
-    const currentDate = new Date();
-    const expireDate = new Date(currentDate);
-    expireDate.setDate(currentDate.getDate() + days);
-    return expireDate.toISOString();
-  };
-
+  // Função para confirmar o pagamento
   const handleConfirmPayment = async (paymentMethod) => {
     setUploading(true);
 
@@ -164,6 +200,7 @@ const AnunciarDesk = ({ user }) => {
     }
   };
 
+  // Função para salvar no banco de dados
   const saveToDatabase = (url) => {
     const anuncioRef = push(ref(db, 'banners'));
     const idAnuncio = anuncioRef.key;
@@ -172,7 +209,6 @@ const AnunciarDesk = ({ user }) => {
 
     set(anuncioRef, {
       id: idAnuncio,
-      title,
       description,
       imageUrl: url,
       link,
@@ -183,29 +219,39 @@ const AnunciarDesk = ({ user }) => {
       totalCost,
       provincias: selectedProvincias,
       sectores: selectedSectores,
-      tipoAnuncio, // Adiciona o tipo de anúncio ao salvar no banco de dados
+      tipoAnuncio,
     });
 
     resetForm();
   };
 
+  // Função para calcular a data de expiração
+  const calculateExpireDate = (days) => {
+    const currentDate = new Date();
+    const expireDate = new Date(currentDate);
+    expireDate.setDate(currentDate.getDate() + days);
+    return expireDate.toISOString();
+  };
+
+  // Função para resetar o formulário
   const resetForm = () => {
-    setTitle('');
     setDescription('');
     setLink('');
     setFile(null);
     setImageUrl('');
     setDays(1);
     setPhoneNumber('');
-    setSelectedProvincias([]);
-    setSelectedSectores([]);
-    setTipoAnuncio('home'); // Reseta para o tipo padrão
+    setSelectedProvincias(user.provincia ? [user.provincia] : []);
+    setSelectedSectores(user.sector ? [user.sector] : []);
+    setTipoAnuncio('home');
   };
 
+  // Função para exibir mensagens no Snackbar
   const showSnackbar = (message, severity) => {
     setSnackbar({ open: true, message, severity });
   };
 
+  // Função para fechar o Snackbar
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
@@ -243,14 +289,6 @@ const AnunciarDesk = ({ user }) => {
             </FormControl>
 
             <TextField
-              label="Título do anúncio *"
-              variant="outlined"
-              fullWidth
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
               label="Link externo (opcional)"
               variant="outlined"
               fullWidth
@@ -279,12 +317,15 @@ const AnunciarDesk = ({ user }) => {
                 labelId="provincias-label"
                 multiple
                 value={selectedProvincias}
-                onChange={(e) => setSelectedProvincias(e.target.value)}
+                onChange={handleProvinciaChange}
                 renderValue={(selected) => selected.join(', ')}
               >
                 {provincias.map((provincia) => (
                   <MenuItem key={provincia.provincia} value={provincia.provincia}>
-                    <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                    <Checkbox
+                      checked={selectedProvincias.includes(provincia.provincia)}
+                      disabled={user.provincia === provincia.provincia} // Desabilita a desmarcação da província padrão
+                    />
                     <ListItemText primary={provincia.provincia} />
                   </MenuItem>
                 ))}
@@ -297,12 +338,15 @@ const AnunciarDesk = ({ user }) => {
                 labelId="sectores-label"
                 multiple
                 value={selectedSectores}
-                onChange={(e) => setSelectedSectores(e.target.value)}
+                onChange={handleSetorChange}
                 renderValue={(selected) => selected.join(', ')}
               >
                 {sectores.map((setor) => (
                   <MenuItem key={setor.setor} value={setor.setor}>
-                    <Checkbox checked={selectedSectores.includes(setor.setor)} />
+                    <Checkbox
+                      checked={selectedSectores.includes(setor.setor)}
+                      disabled={user.sector === setor.setor} // Desabilita a desmarcação do setor padrão
+                    />
                     <ListItemText primary={setor.setor} />
                   </MenuItem>
                 ))}
@@ -341,10 +385,10 @@ const AnunciarDesk = ({ user }) => {
               variant="contained"
               color="primary"
               onClick={handleUpload}
-              disabled={!title || !file || !phoneNumber || selectedProvincias.length === 0 || selectedSectores.length === 0}
+              disabled={!file || !phoneNumber}
               sx={{ mb: 2 }}
             >
-              {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
+              {uploading ? <CircularProgress size={24} /> : 'Continuar'}
             </Button>
           </>
         )}
