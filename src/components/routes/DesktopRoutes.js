@@ -77,6 +77,7 @@ import Politicas from '../desktop/Politicas';
 import { Close } from '@mui/icons-material';
 import CompanyUpdateDesk from '../CompanyUpdateDesk';
 import ProductForm from '../market/ProductForm';
+import EditarFaturaDesk from '../desktop/EditarFaturaDesk';
 
 const theme = createTheme({
   palette: {
@@ -262,7 +263,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
             <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
             <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
-            <Route path="/edit-proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
+            <Route path="/edit-proforma/:numeroProforma" element={<EditarFaturaDesk user={user} />} />
             <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
             <Route path="/checkout" element={<CreditCardCheckoutDesk user={user} />} />
             <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />

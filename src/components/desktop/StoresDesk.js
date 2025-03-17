@@ -63,7 +63,7 @@ const StoresDesk = ({ user }) => {
       }
       return [...prevCart, { ...product, quantity: 1 }];
     });
-    setOpenSnackbar(true); // Mostrar Snackbar ao adicionar ao carrinho
+    setOpenSnackbar(true); 
   };
 
   const removeFromCart = (productId) => {

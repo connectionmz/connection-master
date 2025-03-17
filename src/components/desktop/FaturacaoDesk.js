@@ -232,15 +232,20 @@ const FaturacaoDesk = ({ user }) => {
   // Filtros e renderização
   const uniqueClients = [...new Set(clients.map((client) => client.nome || 'Indefinido'))];
 
-  const filteredProformas = proformas.filter((proforma) => {
-    const matchesSearchTerm = proforma.cliente.nome
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesClientFilter =
-      !selectedClient || proforma.cliente.nome === selectedClient;
-    return matchesSearchTerm && matchesClientFilter;
-  });
+const filteredProformas = proformas.filter((proforma) => {
+  if (!proforma.cliente) {
+    console.warn("Undefined cliente in proforma:", proforma);
+    return false;
+  }
 
+  const matchesSearchTerm = proforma.cliente.nome
+    .toLowerCase()
+    .includes(searchTerm.toLowerCase());
+  const matchesClientFilter =
+    !selectedClient || proforma.cliente.nome === selectedClient;
+
+  return matchesSearchTerm && matchesClientFilter;
+});
   return (
     <Box width="100%" minHeight="100vh" p={3}>
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
