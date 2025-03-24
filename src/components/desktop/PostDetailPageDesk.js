@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { db } from '../../fb';
-import { ref, onValue, push, set, remove, update } from 'firebase/database';
+import { ref, onValue, push, set, remove, update, get } from 'firebase/database';
 import {
   Box,
   Button,
@@ -15,6 +15,10 @@ import {
   Alert,
   IconButton,
   useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShareIcon from '@mui/icons-material/Share';
@@ -34,9 +38,11 @@ const PostDetailPageDesk = ({ user }) => {
   const [commentText, setCommentText] = useState('');
   const [post, setPost] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [editingCommentId, setEditingCommentId] = useState(null); // ID do comentário sendo editado
-  const [editedCommentText, setEditedCommentText] = useState(''); // Texto do comentário sendo editado
-  const isMobile = useMediaQuery('(max-width:600px)'); // Detecta dispositivos móveis
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editedCommentText, setEditedCommentText] = useState('');
+  const [denunciaModalOpen, setDenunciaModalOpen] = useState(false); // Estado para o modal de denúncia
+  const [motivoDenuncia, setMotivoDenuncia] = useState(''); // Estado para o motivo da denúncia
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
     const postsRef = ref(db, `posts/${postId}`);
@@ -99,15 +105,47 @@ const PostDetailPageDesk = ({ user }) => {
   };
 
   const handleReport = () => {
-    const postRef = ref(db, `posts/${postId}/reports/${user.id}`);
-    set(postRef, true)
-      .then(() => {
-        setSnackbar({ open: true, message: 'Denúncia registrada!', severity: 'success' });
-      })
-      .catch((error) => {
-        setSnackbar({ open: true, message: 'Erro ao denunciar.', severity: 'error' });
-        console.error('Erro ao denunciar: ', error);
-      });
+    setDenunciaModalOpen(true); // Abre o modal de denúncia
+  };
+
+  const handleDenunciar = () => {
+    if (!motivoDenuncia.trim()) {
+      setSnackbar({ open: true, message: 'Por favor, insira um motivo para a denúncia.', severity: 'error' });
+      return;
+    }
+  
+    // Verifica se o usuário já denunciou este post
+    const denunciaUsuarioRef = ref(db, `denuncias/posts/${postId}/${user.id}`);
+  
+    get(denunciaUsuarioRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        // Se já existe uma denúncia, exibe uma mensagem e bloqueia o envio
+        setSnackbar({ open: true, message: 'Você já denunciou este post. Não é possível denunciar novamente.', severity: 'error' });
+        setDenunciaModalOpen(false); // Fecha o modal
+      } else {
+        // Se não existe, permite o envio da denúncia
+        const novaDenunciaRef = push(denunciaUsuarioRef); // Gera um novo ID único para a denúncia
+  
+        set(novaDenunciaRef, {
+          motivo: motivoDenuncia,
+          timestamp: new Date().toISOString(),
+          userId: user.id,
+          postId: postId,
+        })
+          .then(() => {
+            setSnackbar({ open: true, message: 'Denúncia enviada com sucesso!', severity: 'success' });
+            setDenunciaModalOpen(false); // Fecha o modal
+            setMotivoDenuncia(''); // Limpa o campo de motivo
+          })
+          .catch((error) => {
+            setSnackbar({ open: true, message: 'Erro ao enviar denúncia.', severity: 'error' });
+            console.error('Erro ao enviar denúncia: ', error);
+          });
+      }
+    }).catch((error) => {
+      setSnackbar({ open: true, message: 'Erro ao verificar denúncia existente.', severity: 'error' });
+      console.error('Erro ao verificar denúncia existente: ', error);
+    });
   };
 
   const handleDeleteComment = (commentId) => {
@@ -123,17 +161,17 @@ const PostDetailPageDesk = ({ user }) => {
   };
 
   const handleEditComment = (commentId, currentText) => {
-    setEditingCommentId(commentId); // Define o comentário sendo editado
-    setEditedCommentText(currentText); // Preenche o campo de edição com o texto atual
+    setEditingCommentId(commentId);
+    setEditedCommentText(currentText);
   };
 
   const handleSaveEdit = async (commentId) => {
     if (editedCommentText.trim()) {
       try {
         const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
-        await update(commentRef, { comment: editedCommentText }); // Atualiza o texto do comentário
-        setEditingCommentId(null); // Sai do modo de edição
-        setEditedCommentText(''); // Limpa o campo de edição
+        await update(commentRef, { comment: editedCommentText });
+        setEditingCommentId(null);
+        setEditedCommentText('');
         setSnackbar({ open: true, message: 'Comentário atualizado!', severity: 'success' });
       } catch (error) {
         setSnackbar({ open: true, message: 'Erro ao atualizar comentário.', severity: 'error' });
@@ -157,9 +195,9 @@ const PostDetailPageDesk = ({ user }) => {
   return (
     <Box
       sx={{
-        width: isMobile ? '100%' : '60%', // Ajusta a largura para dispositivos móveis
+        width: isMobile ? '100%' : '60%',
         margin: '0 auto',
-        p: isMobile ? 1 : 2, // Ajusta o padding para mobile
+        p: isMobile ? 1 : 2,
       }}
     >
       <BackButton sx={{ mb: 2 }} />
@@ -167,7 +205,7 @@ const PostDetailPageDesk = ({ user }) => {
       <Card sx={{ boxShadow: 3, mb: 2 }}>
         <CardMedia
           component="img"
-          height={isMobile ? 250 : 400} // Ajusta a altura da imagem para mobile
+          height={isMobile ? 250 : 400}
           image={post.url}
           alt={`Post ${post.id}`}
           sx={{ objectFit: 'cover' }}
@@ -189,8 +227,8 @@ const PostDetailPageDesk = ({ user }) => {
             p: 2,
             display: 'flex',
             gap: 1,
-            justifyContent: isMobile ? 'space-between' : 'center', // Ajusta o layout para mobile
-            flexWrap: 'wrap', // Permite que os botões quebrem linha em mobile
+            justifyContent: isMobile ? 'space-between' : 'center',
+            flexWrap: 'wrap',
           }}
         >
           <Button
@@ -232,7 +270,7 @@ const PostDetailPageDesk = ({ user }) => {
           <TextField
             label="Escreva um comentário..."
             multiline
-            rows={isMobile ? 2 : 3} // Ajusta o número de linhas para mobile
+            rows={isMobile ? 2 : 3}
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             fullWidth
@@ -260,7 +298,7 @@ const PostDetailPageDesk = ({ user }) => {
                   p: 1,
                   border: '1px solid #ddd',
                   borderRadius: 1,
-                  wordBreak: 'break-word', // Evita texto muito longo sem quebra
+                  wordBreak: 'break-word',
                 }}
               >
                 {editingCommentId === comment.id ? (
@@ -309,6 +347,28 @@ const PostDetailPageDesk = ({ user }) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Denúncia */}
+      <Dialog open={denunciaModalOpen} onClose={() => setDenunciaModalOpen(false)}>
+        <DialogTitle>Denunciar Post</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Motivo da Denúncia"
+            value={motivoDenuncia}
+            onChange={(e) => setMotivoDenuncia(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDenunciaModalOpen(false)}>Cancelar</Button>
+          <Button onClick={handleDenunciar} color="error">
+            Denunciar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for Feedback */}
       <Snackbar

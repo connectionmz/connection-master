@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
+import React, { useEffect, useState } from 'react';
+import { ref, push, set, get, query, orderByChild, equalTo, onValue } from 'firebase/database';
 import { db } from '../../fb';
 import {
   TextField,
@@ -12,189 +12,193 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import { Add, Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUtils';
 import BackButton from '../BackButton';
 import sendMessage from '../sms/sendMessage';
-import { FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import sendEmail from '../sms/SendMail';
 
 const NovaCotacao = ({ user }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [items, setItems] = useState([]);
-  const [deadline, setDeadline] = useState('');
-  const [maxProposals, setMaxProposals] = useState('');
-  const [sector, setSector] = useState('');
-  const [provincia, setProvincia] = useState([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    items: [],
+    deadline: '',
+    maxProposals: '',
+    sector: '',
+    provincia: [],
+    selectedSubsector: [],
+  });
+  const [subsectores, setSubsectores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
-
   const provinciasList = [
     'Maputo', 'Gaza', 'Inhambane', 'Sofala', 'Manica', 'Tete', 'Zambézia', 'Nampula', 'Cabo Delgado', 'Niassa'
   ];
 
+  useEffect(() => {
+    const fetchSubsectores = async () => {
+      if (!formData.sector) {
+        setSubsectores([]); // Limpa os subsetores se não houver setor selecionado
+        setFormData(prev => ({ ...prev, selectedSubsector: [] })); // Reseta os subsetores selecionados
+        return;
+      }
+  
+      const sectorRef = ref(db, `sectores_de_atividade`);
+      onValue(sectorRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const sectorData = Object.values(data).find((s) => s.setor === formData.sector);
+          setSubsectores(sectorData?.subsectores || []);
+          setFormData(prev => ({ ...prev, selectedSubsector: [] })); // Reseta os subsetores selecionados
+        } else {
+          setSubsectores([]); // Limpa os subsetores se não houver dados
+          setFormData(prev => ({ ...prev, selectedSubsector: [] })); // Reseta os subsetores selecionados
+        }
+      });
+    };
+  
+    fetchSubsectores();
+  }, [formData.sector]); // Executa sempre que o setor mudar
+
   const handleAddItem = () => {
-    setItems([...items, { name: '', description: '', qtd: '', imageUrl: '' }]);
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { name: '', description: '', qtd: '', imageUrl: '' }]
+    }));
   };
 
   const handleRemoveItem = (index) => {
-    setItems(items.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
   };
 
   const handleItemChange = (index, field, value) => {
-    const newItems = [...items];
+    const newItems = [...formData.items];
     newItems[index][field] = value;
-    setItems(newItems);
+    setFormData(prev => ({ ...prev, items: newItems }));
   };
 
   const handleImageUpload = (index, file) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      const newItems = [...items];
+      const newItems = [...formData.items];
       newItems[index].imageUrl = reader.result;
-      setItems(newItems);
+      setFormData(prev => ({ ...prev, items: newItems }));
     };
     if (file) {
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSnackbarMessage('');
-  
-    if (!user) {
-      setSnackbarMessage('Por favor, recarregue a página e tente novamente.');
+  const validateForm = () => {
+    if (!formData.title || !formData.description || !formData.sector || !formData.deadline) {
+      setSnackbarMessage('Preencha todos os campos obrigatórios.');
       setSnackbarSeverity('error');
       setOpenSnackbar(true);
-      setLoading(false);
-      return;
+      return false;
     }
-  
+    if (new Date(formData.deadline) <= new Date()) {
+      setSnackbarMessage('A data deve ser superior à data atual.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setLoading(true);
+    setSnackbarMessage('');
+
     try {
       const cotacoesRef = ref(db, 'cotacoes');
       const newCotacaoRef = push(cotacoesRef);
       const cotacaoId = newCotacaoRef.key;
       const linkDoPedido = `https://app.connectionmozambique.com/cotacao/${cotacaoId}`;
-  
-      // Publicar a cotação no banco de dados
+
       await set(ref(db, `cotacoes/${cotacaoId}`), {
-        title: title.trim(),
-        description: description.trim(),
+        ...formData,
         id: cotacaoId,
-        items,
         company: user,
-        sector: sector.trim(),
-        provincia: provincia,
         timestamp: new Date().toISOString(),
-        datalimite: new Date(deadline).toISOString(),
+        datalimite: new Date(formData.deadline).toISOString(),
         status: 'open',
         link: linkDoPedido,
       });
-  
-      // Exibir mensagem de sucesso
+
       setSnackbarMessage('Cotação publicada com sucesso!');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
-  
-      // Buscar empresas do setor
+
       const empresasRef = ref(db, 'company');
-      const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(sector.trim()));
+      const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.sector.trim()));
       const empresasSnapshot = await get(setorQuery);
-  
+
       if (empresasSnapshot.exists()) {
         const empresas = empresasSnapshot.val();
-  
+
         for (const key in empresas) {
           const empresa = empresas[key];
-  
-          // Verificar se a empresa possui contato ou e-mail
-          if (!empresa.contacto && !empresa.email) {
-            console.warn(`Empresa ${key} não possui contato nem e-mail. Ignorando...`);
-            continue;
-          }
-  
-          // Mensagem para SMS e e-mail
-            const message = (
-              "Título: " + title + "\n" +
-              "Descrição: " + description + "\n" +
-              "Data Limite: " + deadline + "\n" +
-              "Setor de Atividade: " + sector + "\n" +
-              "Acesse: " + linkDoPedido
-            ).trim();
+          if (!empresa.contacto && !empresa.email) continue;
 
-            const stripHtml = (html) => html.replace(/<\/?[^>]+(>|$)/g, "");
+          const message = `Título: ${formData.title}\nDescrição: ${formData.description}\nData Limite: ${formData.deadline}\nSetor de Atividade: ${formData.sector}\nAcesse: ${linkDoPedido}`;
+          const mailMessage = {
+            title: formData.title,
+            description: formData.description.replace(/<\/?[^>]+(>|$)/g, ""),
+            deadline: formData.deadline,
+            sector: formData.sector,
+            link: linkDoPedido
+          };
 
-            const mailMessage = {
-              title: title,
-              description: stripHtml(description),
-              deadline: deadline,
-              sector: sector,
-              link: linkDoPedido
-            };
-            
-          const cleanMessage = message.replace(/<\/?[^>]+(>|$)/g, "");
-          const finalMessage = cleanMessage.replace(/\n/g, ' ').replace(/\t/g, ' ');
-  
-          // Enviar SMS (se houver contato)
-            {/*
-              if (empresa.contacto) {
-              const contatos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-              await sendMessage(contatos, finalMessage).catch((error) => {
-                console.error(`Erro ao enviar SMS para ${contatos}:`, error);
-              })
-            }
-              */}
-            if (empresa.email) {
-              const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
-              const emailPromises = emails.map((email) =>
-                //sendEmail(email, `Nova Cotação - ${title}`, finalMessage)
-                sendEmail('connectionmozambique@gmail.com', mailMessage)
-            )
-            const results = await Promise.all(emailPromises);
-            const allEmailsSent = results.every((success) => success);
-  
-            if (allEmailsSent) {
-              console.log(`Todos os e-mails enviados com sucesso para a empresa ${key}.`);
-            } else {
-              console.error(`Alguns e-mails falharam para a empresa ${key}.`);
-            }
+          if (empresa.email) {
+            const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
+            await Promise.all(emails.map(email => sendEmail('connectionmozambique@gmail.com', mailMessage)));
           }
         }
-  
-        // Limpar os estados após o processamento completo
-        setTitle('')
-        setDescription('')
-        setDeadline('')
-        setItems([])
-        setMaxProposals('')
-      } else {
-        console.log('Nenhuma empresa encontrada para este setor.')
       }
+
+      setFormData({
+        title: '',
+        description: '',
+        items: [],
+        deadline: '',
+        maxProposals: '',
+        sector: '',
+        provincia: [],
+        selectedSubsector: [],
+      });
     } catch (error) {
-      // Tratamento de erros
-      console.error('Erro ao publicar a cotação:', error.message)
-      setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.')
-      setSnackbarSeverity('error')
-      setOpenSnackbar(true)
+      console.error('Erro ao publicar a cotação:', error);
+      setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
-
   const handleSnackbarClose = () => {
-    setOpenSnackbar(false)
+    setOpenSnackbar(false);
   };
 
   return (
-    <Box sx={{ p: 3, backgroundColor:'white' }}>
+    <Box sx={{ p: 3, backgroundColor: 'white' }}>
       <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom>
         Novo Pedido de Cotação
@@ -203,59 +207,73 @@ const NovaCotacao = ({ user }) => {
         <Box sx={{ mb: 2 }}>
           <TextField
             label="Título"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={formData.title}
+            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
             fullWidth
             required
           />
         </Box>
         <Box sx={{ mb: 2 }}>
           <EditorText
-            description={description}
-            setDescription={setDescription}/>
+            description={formData.description}
+            setDescription={(value) => setFormData(prev => ({ ...prev, description: value }))}
+          />
         </Box>
         <Box sx={{ mb: 2 }}>
           <SectorDeActividades
-            companyData={{ sector }}
-            handleChange={(e) => setSector(e.target.value)}
+            companyData={{ sector: formData.sector }}
+            handleChange={(e) => setFormData(prev => ({ ...prev, sector: e.target.value }))}
             inputStyles="w-full px-3 py-2 border rounded"
           />
         </Box>
         <Box sx={{ mb: 2 }}>
-        <FormControl fullWidth>
-  <InputLabel>Províncias</InputLabel>
-  <Select
-    multiple
-    value={provincia}
-    onChange={(e) => setProvincia(e.target.value)}
-    renderValue={(selected) => selected.join(', ')}
-  >
-    {provinciasList.map((prov) => (
-      <MenuItem key={prov} value={prov}>
-        <Checkbox checked={provincia.includes(prov)} />
-        <ListItemText primary={prov} />
-      </MenuItem>
-    ))}
-  </Select>
-</FormControl>
-
+        <FormControl fullWidth sx={{ mt: 2 }}>
+          <InputLabel>Subsectores para Receber SMS</InputLabel>
+          <Select
+            multiple
+            value={formData.selectedSubsector}
+            onChange={(e) => setFormData(prev => ({ ...prev, selectedSubsector: e.target.value }))}
+            label="Subsectores"
+            renderValue={(selected) => selected.join(', ')}
+          >
+            {subsectores.map((subsector) => (
+              <MenuItem key={subsector} value={subsector}>
+                <Checkbox checked={formData.selectedSubsector.includes(subsector)} />
+                <ListItemText primary={subsector} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        </Box>
+       
+        <Box sx={{ mb: 2 }}>
+          <FormControl fullWidth>
+            <InputLabel>Províncias</InputLabel>
+            <Select
+              multiple
+              value={formData.provincia}
+              onChange={(e) => setFormData(prev => ({ ...prev, provincia: e.target.value }))}
+              renderValue={(selected) => selected.join(', ')}
+            >
+              {provinciasList.map((prov) => (
+                <MenuItem key={prov} value={prov}>
+                  <Checkbox checked={formData.provincia.includes(prov)} />
+                  <ListItemText primary={prov} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
         <Box sx={{ mb: 2 }}>
           <TextField
             label="Data Limite"
             type="date"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
+            value={formData.deadline}
+            onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
             fullWidth
-            InputLabelProps={{
-              shrink: true,
-            }}
-            error={deadline && new Date(deadline) <= new Date()}
-            helperText={
-              deadline && new Date(deadline) <= new Date()
-                ? 'A data deve ser superior à data atual.'
-                : ''
-            }
+            InputLabelProps={{ shrink: true }}
+            error={formData.deadline && new Date(formData.deadline) <= new Date()}
+            helperText={formData.deadline && new Date(formData.deadline) <= new Date() ? 'A data deve ser superior à data atual.' : ''}
             required
           />
         </Box>
@@ -263,8 +281,8 @@ const NovaCotacao = ({ user }) => {
           <TextField
             label="Valor Máximo de Propostas"
             type="number"
-            value={maxProposals}
-            onChange={(e) => setMaxProposals(e.target.value)}
+            value={formData.maxProposals}
+            onChange={(e) => setFormData(prev => ({ ...prev, maxProposals: e.target.value }))}
             fullWidth
             inputProps={{ min: 1 }}
             helperText="Defina o número máximo de propostas que podem ser recebidas."
@@ -273,16 +291,14 @@ const NovaCotacao = ({ user }) => {
         <Typography variant="h6" gutterBottom>
           Itens
         </Typography>
-        {items.map((item, index) => (
+        {formData.items.map((item, index) => (
           <Paper key={index} sx={{ p: 2, mb: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
                 <TextField
                   label="Nome do Item"
                   value={item.name}
-                  onChange={(e) =>
-                    handleItemChange(index, 'name', e.target.value)
-                  }
+                  onChange={(e) => handleItemChange(index, 'name', e.target.value)}
                   fullWidth
                   required
                 />
@@ -292,20 +308,15 @@ const NovaCotacao = ({ user }) => {
                   label="Qtd do Item"
                   type="number"
                   value={item.qtd}
-                  onChange={(e) =>
-                    handleItemChange(index, 'qtd', e.target.value.replace(/\D/g, ''))
-                  }
+                  onChange={(e) => handleItemChange(index, 'qtd', e.target.value.replace(/\D/g, ''))}
                   fullWidth
                 />
               </Grid>
-
               <Grid item xs={12} sm={4}>
                 <TextField
                   label="Descrição do Item"
                   value={item.description}
-                  onChange={(e) =>
-                    handleItemChange(index, 'description', e.target.value)
-                  }
+                  onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                   fullWidth
                   multiline
                   rows={2}
@@ -323,28 +334,19 @@ const NovaCotacao = ({ user }) => {
                     type="file"
                     hidden
                     accept="image/*"
-                    onChange={(e) =>
-                      handleImageUpload(index, e.target.files[0])
-                    }
+                    onChange={(e) => handleImageUpload(index, e.target.files[0])}
                   />
                 </Button>
                 {item.imageUrl && (
                   <img
                     src={item.imageUrl}
                     alt="Pré-visualização"
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      borderRadius: 5,
-                    }}
+                    style={{ width: '100%', marginTop: 10, borderRadius: 5 }}
                   />
                 )}
               </Grid>
               <Grid item xs={12} sm={2}>
-                <IconButton
-                  color="error"
-                  onClick={() => handleRemoveItem(index)}
-                >
+                <IconButton color="error" onClick={() => handleRemoveItem(index)}>
                   <Delete />
                 </IconButton>
               </Grid>
@@ -394,8 +396,7 @@ const NovaCotacao = ({ user }) => {
           severity={snackbarSeverity}
           sx={{
             width: '100%',
-            backgroundColor:
-              snackbarSeverity === 'error' ? '#f44336' : '#4caf50',
+            backgroundColor: snackbarSeverity === 'error' ? '#f44336' : '#4caf50',
             color: '#fff',
           }}
         >

@@ -78,6 +78,7 @@ import { Close } from '@mui/icons-material';
 import CompanyUpdateDesk from '../CompanyUpdateDesk';
 import ProductForm from '../market/ProductForm';
 import EditarFaturaDesk from '../desktop/EditarFaturaDesk';
+import ReceiptsPage from '../desktop/ReceiptsPage';
 
 const theme = createTheme({
   palette: {
@@ -92,6 +93,8 @@ const theme = createTheme({
 });
 
 const DesktopRoutes = ({ user }) => {
+
+  console.log(user)
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
@@ -225,6 +228,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
             <Route path="/market" element={<MarketDesk user={user} />} />
             <Route path="/addProduct" element={<ProductFormDesk user={user} />} />
+            <Route path="/recibos" element={<ReceiptsPage user={user} />} />
             
             <Route path="/lojas" element={<StoresDesk user={user} />} />
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
@@ -251,7 +255,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
             <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk user={user} />} />
             <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk user={user} />} />
-            <Route path="/cotacaoPdf/:id" element={<CotacoesPDF />} />
+            <Route path="/cotacaoPdf/:id" element={<CotacoesPDF user={user}/>} />
 
             {/* Rotas de concursos e serviços */}
             <Route path="/concursos" element={<ConcursoDesk user={user} />} />

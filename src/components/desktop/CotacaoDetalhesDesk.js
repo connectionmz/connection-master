@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { db, auth } from '../../fb';
-import { ref, onValue, increment, update } from 'firebase/database';
-import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload, Timelapse, CalendarToday, AccessTime } from '@mui/icons-material';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { db } from '../../fb';
+import { ref, onValue, increment, update, push, set, get } from 'firebase/database';
+import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload, Timelapse, CalendarToday, AccessTime, Report } from '@mui/icons-material';
 import {
   Card,
   CardContent,
@@ -14,28 +14,32 @@ import {
   Box,
   Modal,
   Dialog, DialogActions, DialogContent, DialogTitle,
+  Chip,
+  Divider,
+  TextField,
 } from '@mui/material';
 import BackButton from '../BackButton';
 
-const CotacaoDetalhesDesk = ({user}) => {
+const CotacaoDetalhesDesk = ({ user }) => {
   const { id } = useParams();
   const [cotacao, setCotacao] = useState(null);
-  const [isCompanyOwner, setIsCompanyOwner] = useState(false);
   const [propostas, setPropostas] = useState([]);
   const [viewsModalOpen, setViewsModalOpen] = useState(false);
   const [empresasQueVisualizaram, setEmpresasQueVisualizaram] = useState([]);
   const [hasProposal, setHasProposal] = useState(false);
   const [openModal, setOpenModal] = useState(false);
-  const [proposalDetails, setProposalDetails] = useState(null); // Detalhes da proposta
+  const [proposalDetails, setProposalDetails] = useState(null);
+  const [denunciaModalOpen, setDenunciaModalOpen] = useState(false); // Estado para o modal de denúncia
+  const [motivoDenuncia, setMotivoDenuncia] = useState(''); // Estado para o motivo da denúncia
 
   const navigate = useNavigate();
+
   useEffect(() => {
     const cotacaoRef = ref(db, `cotacoes/${id}`);
     const viewsRef = ref(db, `cotacoes/${id}/views/${user.id}`);
     const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
-  
+
     const fetchCotacao = () => {
-      // Verifica se o usuário já visualizou
       onValue(viewsRef, async (snapshot) => {
         if (!snapshot.exists()) {
           try {
@@ -48,43 +52,58 @@ const CotacaoDetalhesDesk = ({user}) => {
           }
         }
       }, { onlyOnce: true });
-      
-  
-      // Obtém os dados da cotação
-      const unsubscribeCotacao = onValue(cotacaoRef, (snapshot) => {
+
+      const unsubscribeCotacao = onValue(cotacaoRef, async (snapshot) => {
         const data = snapshot.val();
         if (!data) return;
-  
+
         setCotacao(data);
-        console.log(data); // Depuração correta
-  
+
         if (data?.proposals) {
           const propostasIds = Object.keys(data.proposals);
           const prop = propostasIds.map((propostaId) => ({
             id: propostaId,
-            ...data.proposals[propostaId], 
+            ...data.proposals[propostaId],
           }));
           setPropostas(prop);
         }
-  
+
         if (data?.views) {
           const empresasIds = Object.keys(data.views);
-          const empresas = empresasIds.map((empresaId) => ({
-            id: empresaId,
-            ...data.views[empresaId], 
-          }));
+        
+          // Busca os detalhes de cada empresa que visualizou a cotação
+          const empresasPromises = empresasIds.map(async (empresaId) => {
+
+            if (empresaId === user.id) {
+              return null;
+            }
+            const companyRef = ref(db, `company/${empresaId}`);
+            const companySnapshot = await get(companyRef);
+        
+            if (companySnapshot.exists()) {
+              return {
+                id: empresaId,
+                ...companySnapshot.val(), // Adiciona os detalhes da empresa
+              };
+            } else {
+              return null; // Se a empresa não for encontrada, retorna null
+            }
+          });
+        
+          // Resolve todas as promessas e filtra empresas válidas
+          const empresas = (await Promise.all(empresasPromises)).filter(Boolean);
+        
+          // Atualiza o estado com as empresas que visualizaram
           setEmpresasQueVisualizaram(empresas);
         }
       });
-  
+
       return unsubscribeCotacao;
     };
-  
+
     const checkProposal = () => {
       const unsubscribeProposal = onValue(proposalsRef, (snapshot) => {
         const proposals = snapshot.val();
-        console.log(proposals); // Depuração correta
-        
         if (proposals) {
           setProposalDetails(proposals);
           setHasProposal(true);
@@ -92,21 +111,18 @@ const CotacaoDetalhesDesk = ({user}) => {
           setHasProposal(false);
         }
       });
-  
+
       return unsubscribeProposal;
     };
-  
-    // Executa as funções
+
     const unsubscribeCotacao = fetchCotacao();
     const unsubscribeProposal = checkProposal();
-  
-    // Cleanup para remover listeners quando o componente desmontar
+
     return () => {
       unsubscribeCotacao();
       unsubscribeProposal();
     };
   }, [id, user.id, db]);
-  
 
   const handleEnviarProposta = (companyId) => navigate(`/enviar-proposta/${id}/${companyId}`);
   const handleBaixarPedido = () => navigate(`/cotacaoPDF/${id}`);
@@ -127,15 +143,9 @@ const CotacaoDetalhesDesk = ({user}) => {
 
   const handleOpenModal = () => setViewsModalOpen(true);
   const handleCloseModal = () => setViewsModalOpen(false);
- // Função para abrir o modal
- const handleOpen = () => {
-  setOpenModal(true);
-};
+  const handleOpen = () => setOpenModal(true);
+  const handleClose = () => setOpenModal(false);
 
-// Função para fechar o modal
-const handleClose = () => {
-  setOpenModal(false);
-};
   const handleFecharCotacao = () => {
     if (window.confirm("Tem certeza que deseja fechar esta cotação?")) {
       update(ref(db, `cotacoes/${id}`), {
@@ -148,14 +158,64 @@ const handleClose = () => {
     }
   };
 
-  if (!cotacao) {
-    return <Typography align="center" color="textSecondary">Carregando...</Typography>
+  // Função para abrir o modal de denúncia
+  const handleAbrirDenunciaModal = () => {
+    setDenunciaModalOpen(true);
+  };
+
+  // Função para fechar o modal de denúncia
+  const handleFecharDenunciaModal = () => {
+    setDenunciaModalOpen(false);
+    setMotivoDenuncia(''); // Limpa o motivo ao fechar
+  };
+
+  // Função para salvar a denúncia no Firebase
+// Função para salvar a denúncia no Firebase
+const handleDenunciar = () => {
+  if (!motivoDenuncia.trim()) {
+    alert("Por favor, insira um motivo para a denúncia.");
+    return;
   }
 
+  // Verifica se o usuário já denunciou esta cotação
+  const denunciaUsuarioRef = ref(db, `denuncias/cotacao/${id}/${user.id}`);
+  
+  get(denunciaUsuarioRef).then((snapshot) => {
+    if (snapshot.exists()) {
+      // Se já existe uma denúncia, exibe uma mensagem e bloqueia o envio
+      alert("Você já denunciou esta cotação. Não é possível denunciar novamente.");
+      handleFecharDenunciaModal();
+    } else {
+      // Se não existe, permite o envio da denúncia
+      const novaDenunciaRef = push(denunciaUsuarioRef); // Gera um novo ID único para a denúncia
+
+      set(novaDenunciaRef, {
+        motivo: motivoDenuncia,
+        timestamp: new Date().toISOString(),
+        userId: user.id,
+        cotacaoId: id,
+      })
+        .then(() => {
+          alert("Denúncia enviada com sucesso!");
+          handleFecharDenunciaModal();
+        })
+        .catch((error) => {
+          console.error("Erro ao enviar denúncia:", error);
+          alert("Erro ao enviar denúncia. Tente novamente.");
+        });
+    }
+  }).catch((error) => {
+    console.error("Erro ao verificar denúncia existente:", error);
+    alert("Erro ao verificar denúncia existente. Tente novamente.");
+  });
+};
+  if (!cotacao) {
+    return <Typography align="center" color="textSecondary">Carregando...</Typography>;
+  }
   return (
-    <Box width='100%' mx="auto" p={3}>
-    <BackButton sx={{ mb: 2 }} />
-      <Card sx={{ mb: 4 }}>
+    <Box width="100%" mx="auto" p={3}>
+      <BackButton sx={{ mb: 2 }} />
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
           <Grid container spacing={3} alignItems="center">
             <Grid item>
@@ -166,115 +226,145 @@ const handleClose = () => {
               />
             </Grid>
             <Grid item xs>
-              <Typography variant="h5" gutterBottom>{cotacao.company.nome}</Typography>
-              <Typography variant="body2" sx={{  marginTop: 2 }}>
-              Estado: <strong>{cotacao.status === 'open' ? 'Aberto' : cotacao.status}</strong>
-            </Typography>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                {cotacao.company.nome}
+              </Typography>
+              <Chip
+                label={cotacao.status === 'open' ? 'Aberto' : 'Fechada'}
+                color={cotacao.status === 'open' ? 'success' : 'error'}
+                size="small"
+                sx={{ mb: 1 }}
+              />
               <Box mt={1}>
-                <Grid container spacing={2}>
-                <Typography
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item>
+                    <Typography
                       color="primary"
                       sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                      onClick={handleOpenModal}>
-                      <RemoveRedEye color="primary" /> {cotacao.viewCount || 0} visualizações
+                      onClick={handleOpenModal}
+                    >
+                      <RemoveRedEye color="primary" sx={{ mr: 1 }} /> {cotacao.viewCount || 0} visualizações
                     </Typography>
-                    <Grid item><Inbox color="warning" /> {propostas.length} propostas</Grid>
+                  </Grid>
+                  <Grid item>
+                    <Typography sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Inbox color="warning" sx={{ mr: 1 }} /> {propostas.length} propostas
+                    </Typography>
+                  </Grid>
                 </Grid>
               </Box>
-              <Box mt={1}>
+              <Box mt={2}>
                 <Grid container spacing={2}>
-                    <Grid item>
-                      <Typography color="primary" style={{ verticalAlign: 'middle', marginRight: 4 }} >Publicado</Typography>
-                      <Typography variant="body2" component="span">
-                        {new Date(cotacao.timestamp).toLocaleDateString('pt-PT', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
-                      </Typography>
-                    </Grid>
-                    <Grid item>
-                      <Typography color="red" style={{ verticalAlign: 'middle', marginRight: 4 }} >Limite</Typography>
-                      <Typography variant="body2" component="span">
-                        {new Date(cotacao.datalimite).toLocaleString('pt-PT', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Typography>
+                  <Grid item>
+                    <Typography color="textSecondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <CalendarToday sx={{ mr: 1 }} /> Publicado em{' '}
+                      {new Date(cotacao.timestamp).toLocaleDateString('pt-PT', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })}
+                    </Typography>
+                  </Grid>
+                  <Grid item>
+                    <Typography color="error" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <AccessTime sx={{ mr: 1 }} /> Limite em{' '}
+                      {new Date(cotacao.datalimite).toLocaleString('pt-PT', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Typography>
                   </Grid>
                 </Grid>
               </Box>
             </Grid>
           </Grid>
         </CardContent>
-        <CardActions>
+        <CardActions sx={{ p: 2 }}>
           <Button variant="contained" color="primary" onClick={handleBaixarPedido} startIcon={<FileDownload />}>
             Baixar Pedido
           </Button>
-          <Button variant="contained" onClick={handlePartilhar} startIcon={<Share />}>
+          <Button variant="outlined" onClick={handlePartilhar} startIcon={<Share />}>
             Partilhar
           </Button>
+          <Button variant="outlined" color="error" onClick={handleAbrirDenunciaModal} startIcon={<Report />}>
+            Denunciar
+          </Button>
           {user.id === cotacao.company.id ? (
-  <>
-    <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
-      Ver Propostas
-    </Button>
-    {cotacao.status !== "Fechada" && (
-      <Button variant="contained" color="error" onClick={handleFecharCotacao}>
-        Fechar Cotação
-      </Button>
-    )}
-  </>
-) : (
- <>
- {hasProposal ? (
-      <Button
-      variant="contained"
-      color="error" 
-      onClick={handleOpen} 
-      >Ver Minha Proposta
-    </Button>
-    ) : (
-      <div>
-      {cotacao.status === "Fechada" ? (
-        <Typography variant="body1" color="error">
-          A cotação está fechada. Não é possível enviar propostas.
-        </Typography>
-      ) : (
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleEnviarProposta(cotacao.company.id)}
-          disabled={hasProposal || cotacao.status === "Fechada"} // Desabilita o botão se a proposta já foi enviada ou cotação está fechada
-        >
-          Enviar Proposta
-        </Button>
-      )}
-    </div>
-    )}</>
-)}
-</CardActions>
-</Card>
-  <Card sx={{ mb: 4 }}>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>Descrição</Typography>
-        <Typography dangerouslySetInnerHTML={{ __html: cotacao.description }} />
+            <>
+              <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
+                Ver Propostas
+              </Button>
+              {cotacao.status !== "Fechada" && (
+                <Button variant="contained" color="error" onClick={handleFecharCotacao}>
+                  Fechar Cotação
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              {hasProposal ? (
+                <Button variant="contained" color="info" onClick={handleOpen}>
+                  Ver Minha Proposta
+                </Button>
+              ) : (
+                <div>
+                  {cotacao.status === "Fechada" ? (
+                    <Typography variant="body1" color="error">
+                      A cotação está fechada. Não é possível enviar propostas.
+                    </Typography>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleEnviarProposta(cotacao.company.id)}
+                      disabled={hasProposal || cotacao.status === "Fechada"}
+                    >
+                      Enviar Proposta
+                    </Button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </CardActions>
+      </Card>
+
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
+            Descrição
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Typography dangerouslySetInnerHTML={{ __html: cotacao.description }} />
         </CardContent>
       </Card>
-      <Card>
-      <Typography variant="h6" gutterBottom>Itens Solicitados</Typography>
+
+      <Card sx={{ borderRadius: 2, boxShadow: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
+            Itens Solicitados
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
           {cotacao.items && cotacao.items.length > 0 ? (
             <Grid container spacing={2}>
               {cotacao.items.map((item, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card>
+                  <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
                     <CardContent>
-                      <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
-                      <Typography variant="body1">{item.name}</Typography>
-                      <Typography variant="body2" color="textSecondary">{item.description}</Typography>
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: 8 }}
+                      />
+                      <Typography variant="body1" fontWeight="bold" sx={{ mt: 1 }}>
+                        {item.name}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {item.description}
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -283,16 +373,11 @@ const handleClose = () => {
           ) : (
             <Typography color="textSecondary">Nenhum item disponível.</Typography>
           )}
+        </CardContent>
       </Card>
 
-
-      {/* Modal */}
-      <Modal
-        open={viewsModalOpen}
-        onClose={handleCloseModal}
-        aria-labelledby="modal-title"
-        aria-describedby="modal-description"
-      >
+      {/* Modal de Visualizações */}
+      <Modal open={viewsModalOpen} onClose={handleCloseModal}>
         <Box
           sx={{
             position: 'absolute',
@@ -304,46 +389,68 @@ const handleClose = () => {
             p: 4,
             borderRadius: 2,
             width: '80%',
+            maxWidth: 600,
             maxHeight: '80%',
             overflowY: 'auto',
           }}
         >
-          <Typography id="modal-title" variant="h6" component="h2" gutterBottom>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
             Empresas que visualizaram
           </Typography>
+          <Divider sx={{ mb: 2 }} />
           {empresasQueVisualizaram.length > 0 ? (
-            <Grid container spacing={2}>
-              {empresasQueVisualizaram.map((empresa) => (
-                <Grid item xs={12} sm={6} key={empresa.id}>
-                  <Box display="flex" alignItems="center" p={2} border={1} borderColor="divider" borderRadius={2}>
+          <Grid container spacing={2}>
+            {empresasQueVisualizaram.map((empresa) => (
+              <Grid item xs={12} sm={6} key={empresa.id}>
+                <Link to={`/perfil/${empresa.id}`} style={{ textDecoration: 'none' }}> {/* Adicione o Link aqui */}
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    p={2}
+                    border={1}
+                    borderColor="divider"
+                    borderRadius={2}
+                    sx={{
+                      cursor: 'pointer', // Adiciona um cursor de ponteiro para indicar que é clicável
+                      '&:hover': {
+                        backgroundColor: '#f5f5f5', // Efeito de hover para melhorar a usabilidade
+                      },
+                    }}
+                  >
                     <Avatar src={empresa.logoUrl || 'default-logo.png'} alt={empresa.nome} sx={{ mr: 2 }} />
                     <Typography variant="body1">{empresa.nome || 'Empresa Desconhecida'}</Typography>
                   </Box>
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Typography color="textSecondary">Nenhuma empresa visualizou até o momento.</Typography>
-          )}
+                </Link>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Typography color="textSecondary">Nenhuma empresa visualizou até o momento.</Typography>
+        )}
           <Box mt={3} textAlign="right">
-            <Button variant="contained" onClick={handleCloseModal}>Fechar</Button>
+            <Button variant="contained" onClick={handleCloseModal}>
+              Fechar
+            </Button>
           </Box>
         </Box>
       </Modal>
 
-      {/* Modal com os detalhes da proposta */}
+      {/* Modal de Detalhes da Proposta */}
       <Dialog open={openModal} onClose={handleClose}>
-        <DialogTitle>Detalhes da Proposta</DialogTitle>
+        <DialogTitle fontWeight="bold">Detalhes da Proposta</DialogTitle>
         <DialogContent>
           {proposalDetails ? (
             <div>
-            <Typography variant="h6">Proposta:</Typography>
-                <div 
-                  dangerouslySetInnerHTML={{ __html: proposalDetails.proposal }} 
-                />             
-                 <Typography variant="body1">Estado: {proposalDetails.status}</Typography>
-                 <Typography variant="body1">Nota: {proposalDetails?.nota || 'Ainda sem nota'}</Typography>
-                 {/* Outros detalhes da proposta aqui */}
+              <Typography variant="h6" gutterBottom>
+                Proposta:
+              </Typography>
+              <div dangerouslySetInnerHTML={{ __html: proposalDetails.proposal }} />
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                Estado: {proposalDetails.status}
+              </Typography>
+              <Typography variant="body1">
+                Nota: {proposalDetails?.nota || 'Ainda sem nota'}
+              </Typography>
             </div>
           ) : (
             <Typography variant="body1">Carregando detalhes...</Typography>
@@ -356,6 +463,27 @@ const handleClose = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Modal de Denúncia */}
+      <Dialog open={denunciaModalOpen} onClose={handleFecharDenunciaModal}>
+        <DialogTitle>Denunciar Cotação</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Motivo da Denúncia"
+            value={motivoDenuncia}
+            onChange={(e) => setMotivoDenuncia(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFecharDenunciaModal}>Cancelar</Button>
+          <Button onClick={handleDenunciar} color="error">
+            Denunciar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -44,30 +44,26 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             setLoading(false);
             return;
         }
-
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val();
+            console.log(cotacoesData); // Verifique aqui no console
             if (cotacoesData) {
                 const cotacoesArray = Object.values(cotacoesData);
-
                 const filteredCotacoes = cotacoesArray.filter((cotacao) =>
                     Array.isArray(cotacao.provincia) &&
                     (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia))
                 );
-
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
                 setCotacoes(sortedCotacoes);
             } else {
                 setCotacoes([]);
             }
-
             setLoading(false);
         });
-
         return () => unsubscribeCotacoes();
     }, [hasModuleSMS, user.provincia]);
+
 
     useEffect(() => {
         const fetchCampanhasAtivas = async () => {
@@ -142,6 +138,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         }
     };
 
+    console.log(filteredCotacoes())
+
     const handleCotacaoClick = (id) => {
         navigate(`/cotacao/${id}`);
     };
@@ -150,8 +148,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         navigate('/sms');
     };
 
-    // Renderização condicional da lista de concursos
     const renderCotacoes = () => {
+        // Verifica se o módulo SMS está inativo
         if (!hasModuleSMS) {
             return (
                 <Alert
@@ -167,7 +165,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 </Alert>
             );
         }
-
+    
+        // Verifica se o saldo de SMS está zerado
         if (!hasBalance) {
             return (
                 <Alert
@@ -183,16 +182,31 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 </Alert>
             );
         }
-
-        
-        {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-                <CircularProgress />
-            </Box>
-        ) : filteredCotacoes().length > 0 ? (
+    
+        // Exibe um indicador de carregamento enquanto os dados estão sendo carregados
+        if (loading) {
+            return (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                    <CircularProgress />
+                </Box>
+            );
+        }
+    
+        // Verifica se há cotações filtradas para exibir
+        const cotacoesFiltradas = filteredCotacoes();
+        if (cotacoesFiltradas.length === 0) {
+            return (
+                <Typography textAlign="center" sx={{ p: 2 }}>
+                    Nenhum pedido de cotação disponível.
+                </Typography>
+            );
+        }
+    
+        // Renderiza a lista de cotações
+        return (
             <List>
-                {filteredCotacoes().map((cotacao) => (
-                    <React.Fragment key={cotacao.id}>
+                {cotacoesFiltradas.map((cotacao) => (
+                    <Box key={cotacao.id}>
                         <ListItem
                             alignItems="flex-start"
                             sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#fafafa' } }}
@@ -224,7 +238,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             deleteCotacao(cotacao.id);
-                                        }}>
+                                        }}
+                                    >
                                         <Delete />
                                     </IconButton>
                                     <IconButton
@@ -240,14 +255,11 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                             )}
                         </ListItem>
                         <Divider variant="inset" component="li" />
-                    </React.Fragment>
+                    </Box>
                 ))}
             </List>
-        ) : (
-            <Typography textAlign="center" sx={{ p: 2 }}>Nenhum pedido de cotação disponível.</Typography>
-        )}
+        );
     };
-
     return (
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
             {!hasModuleSMS && !isPaying && (

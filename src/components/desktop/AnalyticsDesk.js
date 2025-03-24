@@ -25,31 +25,37 @@ const AnalyticsDesk = ({ user }) => {
 
   // Carregar dados do Firebase
   useEffect(() => {
-    // Carregar cotações
+    // Carregar cotações do usuário
     const cotacoesRef = ref(db, 'cotacoes');
     onValue(cotacoesRef, (snapshot) => {
       const data = snapshot.val();
+      console.log(data); // Depuração
       if (data) {
-        setCotacoesData(Object.values(data));
+        // Filtra as cotações onde o company.id é igual ao user.id
+        const userCotacoes = Object.values(data).filter(cotacao => cotacao.company?.id === user.id);
+        setCotacoesData(userCotacoes);
       }
     });
-
-    // Carregar concursos
+  
+    // Carregar concursos do usuário
     const concursosRef = ref(db, 'concursos');
     onValue(concursosRef, (snapshot) => {
       const data = snapshot.val();
+      console.log(data); // Depuração
       if (data) {
-        setConcursosData(Object.values(data));
+        // Filtra os concursos onde o user.id está na lista de participantes
+        const userConcursos = Object.values(data).filter(concurso => concurso.participantes?.includes(user.id));
+        setConcursosData(userConcursos);
       }
     });
-
-    // Carregar perfil da empresa
+  
+    // Carregar perfil da empresa do usuário
     const companyRef = ref(db, `company/${user.id}`);
     onValue(companyRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setPerfilData(data);
-        console.log(data.visitas)
+        console.log(data.visitas); // Depuração
       }
     });
   }, [user]);

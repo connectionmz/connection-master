@@ -18,7 +18,7 @@ import {
   Paper,
   useMediaQuery,
 } from "@mui/material";
-import { CameraAlt, ExitToApp, Save } from "@mui/icons-material";
+import { CameraAlt, ExitToApp, Receipt, Save } from "@mui/icons-material";
 
 const ApxDesk = ({ user }) => {
   const [userData, setUserData] = useState({});
@@ -145,6 +145,37 @@ const ApxDesk = ({ user }) => {
       </Box>
 
       <br />
+
+ {/* Seção de Recibos */}
+ <Card sx={{ mb: 2, p: 2 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
+            <Receipt sx={{ mr: 1 }} /> Recibos e Transações
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={() => navigate("/receipts")}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            Ver Todos
+          </Button>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Acompanhe seus pagamentos e recibos
+        </Typography>
+        {/* Aqui você pode adicionar uma lista resumida de recibos recentes se necessário */}
+        <Box sx={{ mt: 2 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            fullWidth
+            onClick={() => navigate("/recibos")}
+            startIcon={<Receipt />}
+          >
+            Meus Pagamentos
+          </Button>
+        </Box>
+      </Card>
 
       {/* Card de Perfil */}
       <Link to={"/profile"}>

@@ -3,10 +3,16 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../fb';
+import {
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Typography,
+  Box,
+} from '@mui/material';
 
-const inputStyles = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500";
-
-export const SectorDeActividades = ({ companyData, handleChange, inputStyles }) => {
+export const SectorDeActividades = ({ companyData, handleChange }) => {
   const [sectores, setSectores] = useState([]);
 
   useEffect(() => {
@@ -14,7 +20,7 @@ export const SectorDeActividades = ({ companyData, handleChange, inputStyles }) 
     onValue(sectoresRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const sectoresList = Object.values(data).map(item => item.setor); 
+        const sectoresList = Object.values(data).map(item => item.setor);
         setSectores(sectoresList);
       } else {
         setSectores([]);
@@ -23,33 +29,36 @@ export const SectorDeActividades = ({ companyData, handleChange, inputStyles }) 
   }, []);
 
   return (
-    <div className="form-group mt-4">
-      <label htmlFor="sector" className="block text-sm font-medium text-gray-700">
-        Sector de Actividade
-      </label>
-      <select
-        id="sector"
-        name="sector"
-        value={companyData.sector}
-        onChange={handleChange}
-        required
-        className={inputStyles}
-      >
-        {sectores.length > 0 ? (
-          sectores.map((sector, index) => (
-            <option key={index} value={sector}>
-              {sector}
-            </option>
-          ))
-        ) : (
-          <option value="">Carregando sectores...</option>
-        )}
-      </select>
-    </div>
+    <Box mt={2}>
+      <FormControl fullWidth>
+        <InputLabel id="sector-label">Sector de Actividade</InputLabel>
+        <Select
+          labelId="sector-label"
+          id="sector"
+          name="sector"
+          value={companyData.sector || ''}
+          onChange={handleChange}
+          required
+          label="Sector de Actividade"
+        >
+          {sectores.length > 0 ? (
+            sectores.map((sector, index) => (
+              <MenuItem key={index} value={sector}>
+                {sector}
+              </MenuItem>
+            ))
+          ) : (
+            <MenuItem value="" disabled>
+              Carregando sectores...
+            </MenuItem>
+          )}
+        </Select>
+      </FormControl>
+    </Box>
   );
 };
 
-export const TipoEntidade = ({ companyData, handleChange, inputStyles }) => {
+export const TipoEntidade = ({ companyData, handleChange }) => {
   const [tipoEntidade, setTipoEntidade] = useState([]);
 
   useEffect(() => {
@@ -57,7 +66,7 @@ export const TipoEntidade = ({ companyData, handleChange, inputStyles }) => {
     onValue(tipoEntidadeRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const tipoEntidadeList = Object.values(data).map(item => item.setor); 
+        const tipoEntidadeList = Object.values(data).map(item => item.setor);
         setTipoEntidade(tipoEntidadeList);
       } else {
         setTipoEntidade([]);
@@ -66,77 +75,94 @@ export const TipoEntidade = ({ companyData, handleChange, inputStyles }) => {
   }, []);
 
   return (
-    <div className="form-group mt-4">
-      <label htmlFor="sector" className="block text-sm font-medium text-gray-700">
-       Tipo de Entidades
-      </label>
-      <select
-        id="sector"
-        name="sector"
-        value={companyData.sector}
-        onChange={handleChange}
-        required
-        className={inputStyles}
-      >
-        {tipoEntidade.length > 0 ? (
-          tipoEntidade.map((entidade, index) => (
-            <option key={index} value={entidade}>
-              {entidade}
-            </option>
-          ))
-        ) : (
-          <option value="">Carregando Tipo de entidade...</option>
-        )}
-      </select>
-    </div>
+    <Box mt={2}>
+      <FormControl fullWidth>
+        <InputLabel id="tipo-entidade-label">Tipo de Entidade</InputLabel>
+        <Select
+          labelId="tipo-entidade-label"
+          id="tipo-entidade"
+          name="tipo-entidade"
+          value={companyData.sector || ''}
+          onChange={handleChange}
+          required
+          label="Tipo de Entidade"
+        >
+          {tipoEntidade.length > 0 ? (
+            tipoEntidade.map((entidade, index) => (
+              <MenuItem key={index} value={entidade}>
+                {entidade}
+              </MenuItem>
+            ))
+          ) : (
+            <MenuItem value="" disabled>
+              Carregando tipos de entidade...
+            </MenuItem>
+          )}
+        </Select>
+      </FormControl>
+    </Box>
   );
 };
 
-export const Provincias = ({ companyData, handleChange, inputStyles }) => { 
+export const Provincias = ({ companyData, handleChange }) => {
+  const provinciasList = [
+    'Maputo',
+    'Gaza',
+    'Inhambane',
+    'Sofala',
+    'Manica',
+    'Tete',
+    'Zambézia',
+    'Nampula',
+    'Cabo Delgado',
+    'Niassa',
+  ];
+
   return (
-    <div className="form-group">
-      <label htmlFor="provincia" className="block text-sm font-medium text-gray-700">Província</label>
-      <select
-        id="provincia"
-        name="provincia"
-        value={companyData.provincia}
-        onChange={handleChange}
-        required
-        className={inputStyles}>
-        <option value="">Escolha...</option>
-        <option value="Maputo">Maputo</option>
-        <option value="Gaza">Gaza</option>
-        <option value="Inhambane">Inhambane</option>
-        <option value="Sofala">Sofala</option>
-        <option value="Manica">Manica</option>
-        <option value="Tete">Tete</option>
-        <option value="Zambézia">Zambézia</option>
-        <option value="Nampula">Nampula</option>
-        <option value="Cabo Delgado">Cabo Delgado</option>
-        <option value="Niassa">Niassa</option>
-      </select>
-    </div>
+    <Box mt={2}>
+      <FormControl fullWidth>
+        <InputLabel id="provincia-label">Província</InputLabel>
+        <Select
+          labelId="provincia-label"
+          id="provincia"
+          name="provincia"
+          value={companyData.provincia || ''}
+          onChange={handleChange}
+          required
+          label="Província"
+        >
+          <MenuItem value="" disabled>
+            Escolha...
+          </MenuItem>
+          {provinciasList.map((provincia, index) => (
+            <MenuItem key={index} value={provincia}>
+              {provincia}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Box>
   );
 };
 
 export const EditorText = ({ description, setDescription }) => {
   return (
-    <ReactQuill
-      value={description || ''}
-      onChange={setDescription}
-      className="bg-white"
-      theme="snow"
-      placeholder="Descreva"
-      modules={{
-        toolbar: [
-          [{ header: '1' }, { header: '2' }, { font: [] }],
-          [{ size: [] }],
-          ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-          [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
-          ['clean'],
-        ],
-      }}
-    />
+    <Box mt={2}>
+      <ReactQuill
+        value={description || ''}
+        onChange={setDescription}
+        theme="snow"
+        placeholder="Descreva"
+        modules={{
+          toolbar: [
+            [{ header: '1' }, { header: '2' }, { font: [] }],
+            [{ size: [] }],
+            ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+            [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+            ['clean'],
+          ],
+        }}
+      />
+    </Box>
   );
 };
-

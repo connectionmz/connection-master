@@ -47,6 +47,7 @@ const Explore = React.memo(({ user }) => {
   const defaultLogoUrl = 'https://via.placeholder.com/150';
   const isMobile = useMediaQuery('(max-width:600px)');
 
+  // Carregar dados iniciais
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -82,60 +83,86 @@ const Explore = React.memo(({ user }) => {
     fetchCompanies();
   }, []);
 
-  const handleSectorChange = useCallback((e) => {
-    const selectedSector = e.target.value;
-    setSelectedSector(selectedSector);
-    const foundSector = sectores.find((s) => s.setor === selectedSector);
-    setSubsectores(foundSector ? foundSector.subsectores : []);
-    setSelectedSubsector('');
-  }, [sectores]);
+  // Atualizar subsectores quando o setor é alterado
+  useEffect(() => {
+    if (selectedSector) {
+      const foundSector = sectores.find((s) => s.setor === selectedSector);
+      setSubsectores(foundSector ? foundSector.subsectores : []);
+    } else {
+      setSubsectores([]);
+    }
+    setSelectedSubsector(''); // Resetar subsector ao mudar o setor
+  }, [selectedSector, sectores]);
 
-  const handleProvinceChange = useCallback((e) => {
-    const selectedProvince = e.target.value;
-    setSelectedProvince(selectedProvince);
-    const foundProvince = provincias.find((p) => p.provincia === selectedProvince);
-    setDistritos(foundProvince ? foundProvince.distritos : []);
-    setSelectedDistrict('');
-  }, [provincias]);
+  // Atualizar distritos quando a província é alterada
+  useEffect(() => {
+    if (selectedProvince) {
+      const foundProvince = provincias.find((p) => p.provincia === selectedProvince);
+      setDistritos(foundProvince ? foundProvince.distritos : []);
+    } else {
+      setDistritos([]);
+    }
+    setSelectedDistrict(''); // Resetar distrito ao mudar a província
+  }, [selectedProvince, provincias]);
 
-  const handleSortOrderChange = useCallback((e) => {
-    setSortOrder(e.target.value);
-  }, []);
-
-  const handlePageChange = useCallback((event, value) => {
-    setCurrentPage(value);
-  }, []);
-
+  // Funções de filtro
   const filteredCompanies = useMemo(() => {
-    return companies
-      .filter((company) => {
-        const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesSector = selectedSector ? company.sector === selectedSector : true;
-        const matchesSubsector = selectedSubsector ? company.subsector === selectedSubsector : true;
-        const matchesProvince = selectedProvince ? company.provincia === selectedProvince : true;
-        const matchesDistrict = selectedDistrict ? company.distrito === selectedDistrict : true;
-        const matchesTipoEntidade = selectedTipoEntidade ? company.tipoEntidade === selectedTipoEntidade : true;
-        return matchesSearch && matchesSector && matchesSubsector && matchesProvince && matchesDistrict && matchesTipoEntidade;
-      })
-      .sort((a, b) => {
-        if (sortOrder === 'asc') {
-          return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
-        } else {
-          return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
-        }
-      });
-  }, [companies, searchTerm, selectedSector, selectedSubsector, selectedProvince, selectedDistrict, selectedTipoEntidade, sortOrder]);
+    return companies.filter((company) => {
+      const matchesSearch = company.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSector = selectedSector
+        ? company.sector?.toLowerCase() === selectedSector.toLowerCase()
+        : true;
+      const matchesSubsector = selectedSubsector
+        ? company.subsectores?.some((sub) => sub.toLowerCase() === selectedSubsector.toLowerCase())
+        : true;
+      const matchesProvince = selectedProvince
+        ? company.provincia?.toLowerCase() === selectedProvince.toLowerCase()
+        : true;
+      const matchesDistrict = selectedDistrict
+        ? company.distrito?.toLowerCase() === selectedDistrict.toLowerCase()
+        : true;
+      const matchesTipoEntidade = selectedTipoEntidade
+        ? company.tipoEntidade?.toLowerCase() === selectedTipoEntidade.toLowerCase()
+        : true;
+      return (
+        matchesSearch &&
+        matchesSector &&
+        matchesSubsector &&
+        matchesProvince &&
+        matchesDistrict &&
+        matchesTipoEntidade
+      );
+    }).sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' });
+      } else {
+        return b.nome.localeCompare(a.nome, 'pt', { sensitivity: 'base' });
+      }
+    });
+  }, [
+    companies,
+    searchTerm,
+    selectedSector,
+    selectedSubsector,
+    selectedProvince,
+    selectedDistrict,
+    selectedTipoEntidade,
+    sortOrder,
+  ]);
 
+  // Paginação
   const currentCompanies = useMemo(() => {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     return filteredCompanies.slice(indexOfFirstItem, indexOfLastItem);
   }, [filteredCompanies, currentPage, itemsPerPage]);
 
+  // Navegação para o perfil da empresa
   const handleCompanyClick = useCallback((companyId) => {
     navigate(`/perfil/${companyId}`);
   }, [navigate]);
 
+  // Abrir e fechar modal de filtros
   const openModal = useCallback(() => setIsModalOpen(true), []);
   const closeModal = useCallback(() => setIsModalOpen(false), []);
 
@@ -175,7 +202,7 @@ const Explore = React.memo(({ user }) => {
         <Box justifyContent="flex-end" mb={2}>
           <Select
             value={sortOrder}
-            onChange={handleSortOrderChange}
+            onChange={(e) => setSortOrder(e.target.value)}
             sx={{ minWidth: 120 }}
           >
             <MenuItem value="asc">A-Z</MenuItem>
@@ -193,6 +220,7 @@ const Explore = React.memo(({ user }) => {
         </Button>
       </Box>
 
+      {/* Modal de Filtros */}
       <Dialog open={isModalOpen} onClose={closeModal} maxWidth="sm" fullWidth>
         <DialogTitle>Filtros</DialogTitle>
         <DialogContent>
@@ -201,7 +229,7 @@ const Explore = React.memo(({ user }) => {
               select
               label="Setor"
               value={selectedSector}
-              onChange={handleSectorChange}
+              onChange={(e) => setSelectedSector(e.target.value)}
             >
               <MenuItem value="">Todos</MenuItem>
               {sectores.map((s) => (
@@ -215,6 +243,7 @@ const Explore = React.memo(({ user }) => {
               label="Subsector"
               value={selectedSubsector}
               onChange={(e) => setSelectedSubsector(e.target.value)}
+              disabled={!selectedSector}
             >
               <MenuItem value="">Todos</MenuItem>
               {subsectores.map((sub, index) => (
@@ -227,7 +256,7 @@ const Explore = React.memo(({ user }) => {
               select
               label="Província"
               value={selectedProvince}
-              onChange={handleProvinceChange}
+              onChange={(e) => setSelectedProvince(e.target.value)}
             >
               <MenuItem value="">Todas</MenuItem>
               {provincias.map((prov) => (
@@ -241,6 +270,7 @@ const Explore = React.memo(({ user }) => {
               label="Distrito"
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
+              disabled={!selectedProvince}
             >
               <MenuItem value="">Todos</MenuItem>
               {distritos.map((dist, index) => (
@@ -272,6 +302,7 @@ const Explore = React.memo(({ user }) => {
         </DialogActions>
       </Dialog>
 
+      {/* Resultados */}
       <Typography variant="subtitle1" gutterBottom>
         {filteredCompanies.length === 0
           ? 'Nenhuma empresa encontrada.'
@@ -341,7 +372,7 @@ const Explore = React.memo(({ user }) => {
         <Pagination
           count={Math.ceil(filteredCompanies.length / itemsPerPage)}
           page={currentPage}
-          onChange={handlePageChange}
+          onChange={(e, value) => setCurrentPage(value)}
           color="primary"
         />
       </Box>
