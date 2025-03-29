@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Email, Visibility, VisibilityOff } from '@mui/icons-material';
 import { auth, db } from '../fb';
-import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth'; // Adicionado signInAnonymously
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import logo from '../img/bg.png';
@@ -22,11 +22,11 @@ const AuthDesk = ({ data }) => {
   const saveUserData = async (user) => {
     const userRef = ref(db, 'users/' + user.uid);
     const userData = {
-      displayName: user.displayName || 'Usuário Anônimo', // Nome padrão para usuários anônimos
+      displayName: user.displayName || 'Usuário Anônimo',
       uid: user.uid,
-      email: user.email || 'anonimo@exemplo.com', // Email padrão para usuários anônimos
-      profilepic: user.photoURL || '', // Foto de perfil vazia para anônimos
-      provider: user.providerData[0]?.providerId || 'anonymous', // Provedor anônimo
+      email: user.email || 'anonimo@exemplo.com',
+      profilepic: user.photoURL || '',
+      provider: user.providerData[0]?.providerId || 'anonymous',
       country: 'Unknown',
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
@@ -65,33 +65,8 @@ const AuthDesk = ({ data }) => {
 
       await saveUserData(result.user);
 
-      if (data) {
-        if (data.status) {
           navigate('/');
-        } 
-      } else {
-        navigate('/setup');
-      }
-    } catch (error) {
-      console.log(error.code);
-      const userFriendlyMessage = getFirebaseErrorMessage(error.code);
-      setErrorMessage(userFriendlyMessage);
-      setShowSnackbar(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Função para login anônimo
-  const handleAnonymousSignIn = async () => {
-    setIsLoading(true);
-    setErrorMessage('');
-
-    try {
-      const result = await signInAnonymously(auth); // Autenticação anônima
-      await saveUserData(result.user); // Salva os dados do usuário anônimo
-      navigate('/');
-
+     
     } catch (error) {
       console.log(error.code);
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);
@@ -110,9 +85,9 @@ const AuthDesk = ({ data }) => {
     <Grid container sx={{ height: '100vh' }}>
       <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 2 : 0 }}>
         <Box sx={{ maxWidth: 400, width: '100%', p: isMobile ? 2 : 0 }}>
-          <div className="text-center mb-6">
+          <a href='/' className="text-center mb-6">
             <img src={logo} alt="Logo" className="w-36 mx-auto mb-4" />
-          </div>
+          </a>
           <form onSubmit={handleEmailSignIn}>
             <div className="space-y-4">
               <TextField
@@ -160,17 +135,13 @@ const AuthDesk = ({ data }) => {
             </div>
           </form>
 
-          {/* Botão para login anônimo */}
-          <Button
-            variant="outlined"
-            color="secondary"
-            fullWidth
-            disabled={isLoading}
-            onClick={handleAnonymousSignIn}
-            sx={{ mt: 2 }}
-          >
-            {isLoading ? 'Carregando...' : 'Entrar como Visitante'}
-          </Button>
+          {/* Botão para criar conta */}
+          <div className="text-center mt-6">
+            <p className="text-gray-600 font-bold">
+              Já tem uma conta?{' '}
+              <a href="/create" className="text-blue-500 hover:underline">Entrar agora</a>
+            </p>
+          </div>
 
           <div className="text-center mt-6">
             <p className="mt-2">

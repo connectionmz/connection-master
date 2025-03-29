@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
@@ -68,7 +68,7 @@ import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
 import Blogs from '../desktop/Blogs';
-import { onValue, ref, set, update } from 'firebase/database';
+import { onValue, push, ref, set, update } from 'firebase/database';
 import { db } from '../../fb';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
@@ -81,6 +81,8 @@ import EditarFaturaDesk from '../desktop/EditarFaturaDesk';
 import ReceiptsPage from '../desktop/ReceiptsPage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import CompanyDataFormDesk from '../CompanyDataFormDesk';
+import AuthCreateDesk from '../AuthCreateDesk';
 
 const theme = createTheme({
   palette: {
@@ -95,6 +97,7 @@ const theme = createTheme({
 });
 
 const DesktopRoutes = ({ user }) => {
+  console.log(user)
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
@@ -111,7 +114,21 @@ const DesktopRoutes = ({ user }) => {
     feedback: ''
   });
 
+  const currentLocation = useLocation(); // Rename to avoid conflicts
+
   const isMobile = useMediaQuery('(max-width:600px)');
+
+
+  const fullScreenRoutes = [
+    '/auth',
+    '/email-verification',
+    '/create',
+    '/setup',
+    '/forget-password',
+  ];
+
+  // Verifica se a rota atual é uma das rotas especiais
+  const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
 
   useEffect(() => {
     const acceptedTerms = localStorage.getItem('acceptedTerms');
@@ -245,20 +262,23 @@ const DesktopRoutes = ({ user }) => {
           flexDirection: 'column',
         }}
       >
-        <HeaderDesk user={user} />
-
-        <Box
-          sx={{
-            flex: 1,
-            width: '100%',
-            maxWidth: isMobile ? '100%' : '1200px',
-            margin: '0 auto',
-            padding: isMobile ? '8px' : '24px',
-            boxSizing: 'border-box',
-          }}
-        >
+   {/* Renderiza o HeaderDesk apenas para rotas que não estão em fullScreenRoutes */}
+   {!isFullScreenRoute && <HeaderDesk user={user} />}
+    <Box
+      sx={{
+        flex: 1,
+        width: '100%',
+        maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px', // Ajuste aqui
+        margin: '0 auto',
+        padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px', // Ajuste aqui
+        boxSizing: 'border-box',
+        minHeight: isFullScreenRoute ? '100vh' : 'auto', // Garante altura total para telas cheias
+      }}
+    >
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
+
+            
             {/* Rotas públicas */}
             <Route path="/" element={<DashboardComponent user={user} />} />
             <Route path="/feed" element={<FeedDesk user={user} />} />
@@ -333,8 +353,15 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/termos" element={<Terms />} />
             <Route path="/politicas" element={<Politicas />} />
 
-            <Route path="/forget-password" element={<ForgetPassword />} />
             <Route path="/change-password" element={<ChangePassword user={user} />} />
+            
+            {/* Rotas de autenticação */}
+            <Route path="/auth" element={<AuthDesk user={user} />} />
+            <Route path="/email-verification" element={<EmailVerification user={user?.email} />} />
+            <Route path="/create" element={<AuthCreateDesk user={user} />} />
+            <Route path="/setup" element={<CompanyDataFormDesk />} />
+            <Route path="/forget-password" element={<ForgetPassword />} />
+
             {/* Rota de fallback para redirecionamento */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

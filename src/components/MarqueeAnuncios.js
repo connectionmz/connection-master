@@ -28,12 +28,15 @@ const MarqueeAnuncios = ({ user }) => {
     const loadAnuncios = async () => {
       try {
         const data = await fetchAnuncios();
-        
-        const anunciosFiltrados = data.filter(anuncio => 
-          anuncio.company?.provincia === user?.provinciaTemp || 
-          anuncio.company?.provincia === user.provincia
-        );
-        
+
+        // Verifica se o usuário existe e tem as propriedades necessárias
+        const anunciosFiltrados = user && (user.provinciaTemp || user.provincia)
+          ? data.filter(anuncio =>
+              anuncio.company?.provincia === user.provinciaTemp ||
+              anuncio.company?.provincia === user.provincia
+            )
+          : data; // Se o usuário não existir ou não tiver as propriedades, lista todos os anúncios
+
         setAnuncios(anunciosFiltrados);
       } catch (error) {
         console.error('Erro ao carregar os anúncios:', error);
