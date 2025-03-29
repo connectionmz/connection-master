@@ -58,18 +58,28 @@ const ListaDeServicosDesk = ({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const companyList = Object.keys(data)
-            .map((key) => ({
-              id: key,
-              nome: data[key].nome,
-              logoUrl: data[key].logoUrl,
-              sector: data[key].sector,
-            }))
-            .filter(
+          let companyList = Object.keys(data).map((key) => ({
+            id: key,
+            nome: data[key].nome,
+            logoUrl: data[key].logoUrl,
+            sector: data[key].sector,
+            provincia: data[key].provincia,
+          }));
+
+          // Filtrar apenas se o usuário existir
+          if (user) {
+            companyList = companyList.filter(
               (company) =>
-                data[company.id].categoriaExterna === categoriaId &&
-                data[company.id].provincia === user.provincia
+                company.categoriaExterna === categoriaId &&
+                company.provincia === user.provincia
             );
+          } else {
+            // Exibe todas as empresas da categoria, sem filtrar por província
+            companyList = companyList.filter(
+              (company) => company.categoriaExterna === categoriaId
+            );
+          }
+
           setCompanies(companyList);
         } else {
           setCompanies([]);
@@ -85,7 +95,7 @@ const ListaDeServicosDesk = ({ user }) => {
     fetchCompanies();
 
     return () => unsubscribe();
-  }, [categoriaId, user.provincia]);
+  }, [categoriaId, user?.provincia]);
 
   const handleCompanyClick = (companyId) => {
     navigate(`/perfil/${companyId}`);

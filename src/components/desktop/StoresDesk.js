@@ -75,21 +75,23 @@ const StoresDesk = ({ user }) => {
   };
 
   useEffect(() => {
-    if (!user || !user.provincia) return;
-
     const fetchStores = async () => {
       try {
         const storesRef = ref(db, "stores");
         const snapshot = await get(storesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const provinciaSelecionada = user.provinciaTemp || user.provincia;
-    
-          const storesArray = Object.entries(data)
-            .map(([id, store]) => ({ id, ...store }))
-            .filter((store) => store.company?.provincia === provinciaSelecionada);
-    
-          const shuffledStores = shuffleArray(storesArray);
+          const storesArray = Object.entries(data).map(([id, store]) => ({ id, ...store }));
+
+          // Filtrar apenas se o usuário existir
+          const filteredStores = user
+            ? storesArray.filter(
+                (store) =>
+                  store.company?.provincia === (user.provinciaTemp || user.provincia)
+              )
+            : storesArray; // Exibe todas as lojas se o usuário não existir
+
+          const shuffledStores = shuffleArray(filteredStores);
           setStoresList(shuffledStores);
           setFilteredStores(shuffledStores);
         } else {
@@ -102,8 +104,6 @@ const StoresDesk = ({ user }) => {
         setLoading(false);
       }
     };
-    
-
     fetchStores();
   }, [user?.provincia]);
 
@@ -128,7 +128,8 @@ const StoresDesk = ({ user }) => {
           alignItems: "center",
           mb: 4,
           gap: isMobile ? 2 : 0,
-        }}>
+        }}
+      >
         <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
           Lojas e Produtos
         </Typography>
@@ -143,7 +144,6 @@ const StoresDesk = ({ user }) => {
           sx={{ maxWidth: 600 }}
         />
       </Box>
-
       <Box
         sx={{
           display: "flex",
@@ -163,7 +163,8 @@ const StoresDesk = ({ user }) => {
               cursor: "pointer",
             }}
             component={Link}
-            to={`/loja/${store.id}`}>
+            to={`/loja/${store.id}`}
+          >
             <Avatar
               src={store?.company?.logo || "https://via.placeholder.com/80"}
               sx={{
@@ -182,7 +183,6 @@ const StoresDesk = ({ user }) => {
           </Box>
         ))}
       </Box>
-
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
           <CircularProgress />
@@ -317,7 +317,6 @@ const StoresDesk = ({ user }) => {
           )}
         </Grid>
       )}
-
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}

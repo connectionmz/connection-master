@@ -25,8 +25,6 @@ const StorieListDesk = ({ user }) => {
 
   const defaultLogoUrl = "https://via.placeholder.com/150";
 
-
-
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -34,17 +32,22 @@ const StorieListDesk = ({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const companyList = Object.keys(data)
-            .map((key) => ({
-              id: key,
-              ...data[key],
-            }))
-            .filter(
+          let companyList = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+
+          // Filtrar apenas se o usuário existir
+          if (user) {
+            companyList = companyList.filter(
               (company) =>
                 (company.provincia === user.provinciaTemp ||
                   company.provincia === user.provincia) &&
                 company.id !== user.id
             );
+          }
+
+          // Embaralhar e limitar a 6 empresas
           const randomCompanies = companyList
             .sort(() => Math.random() - 0.5)
             .slice(0, 7); // Alterado para exibir 6 itens
@@ -98,7 +101,7 @@ const StorieListDesk = ({ user }) => {
         overflowX: "auto",
         "&::-webkit-scrollbar": {
           display: "none", // Esconde a barra de rolagem
-        }
+        },
       }}
     >
       {stories.map((store) => (

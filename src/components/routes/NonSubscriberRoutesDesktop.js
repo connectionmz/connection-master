@@ -8,6 +8,7 @@ import ChangePassword from '../password/ChangePassword';
 import { auth } from '../../fb';
 import { onAuthStateChanged } from 'firebase/auth';
 import EmailVerification from '../EmailVerification';
+import Dashboard from '../Dashboard';
 
 const NonSubscriberRoutesDesktop = ({ userDb }) => {
   const [user, setUser] = useState(null);
@@ -42,7 +43,7 @@ const NonSubscriberRoutesDesktop = ({ userDb }) => {
 
   return (
     <Routes>
-      <Route path="/" element={<AuthDesk />} />
+      <Route path="/" element={<Dashboard />} />
       <Route path="/auth" element={<AuthDesk user={user} />} />
       <Route path="/email-verification" element={<EmailVerification user={user?.email} />} />
       <Route path="/create" element={<AuthCreateDesk user={user} />} />

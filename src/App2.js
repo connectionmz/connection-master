@@ -94,7 +94,14 @@ const App = () => {
     <Router>
       <div className="App">
         <div className="content">
-            <DesktopRoutes user={userData} /> 
+          {/* Verifica se o usuário é anônimo */}
+          {userData?.isAnonymous ? (
+            <PublicRoutes /> // Rotas públicas para usuários anônimos
+          ) : userData?.subscriptions?.status === 'active' ? (
+            <DesktopRoutes user={userData} /> // Rotas para usuários autenticados e verificados
+          ) : (
+            <NonSubscriberRoutesDesktop userDb={userData} /> // Rotas para usuários não verificados
+          )}
         </div>
       </div>
     </Router>

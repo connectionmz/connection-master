@@ -40,8 +40,8 @@ const PostDetailPageDesk = ({ user }) => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedCommentText, setEditedCommentText] = useState('');
-  const [denunciaModalOpen, setDenunciaModalOpen] = useState(false); // Estado para o modal de denúncia
-  const [motivoDenuncia, setMotivoDenuncia] = useState(''); // Estado para o motivo da denúncia
+  const [denunciaModalOpen, setDenunciaModalOpen] = useState(false);
+  const [motivoDenuncia, setMotivoDenuncia] = useState('');
   const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
@@ -65,7 +65,17 @@ const PostDetailPageDesk = ({ user }) => {
     });
   }, [postId]);
 
+  const checkUserAuth = () => {
+    if (!user || !user.id) {
+      setSnackbar({ open: true, message: 'Você precisa estar logado para realizar esta ação', severity: 'error' });
+      return false;
+    }
+    return true;
+  };
+
   const handleAddComment = () => {
+    if (!checkUserAuth()) return;
+    
     if (commentText.trim()) {
       const commentRef = ref(db, `posts/${postId}/comments`);
       const newCommentRef = push(commentRef);
@@ -89,6 +99,8 @@ const PostDetailPageDesk = ({ user }) => {
   };
 
   const handleLike = () => {
+    if (!checkUserAuth()) return;
+    
     const postRef = ref(db, `posts/${postId}/likes/${user.id}`);
     set(postRef, true)
       .then(() => {
@@ -101,30 +113,31 @@ const PostDetailPageDesk = ({ user }) => {
   };
 
   const handleShare = () => {
+   
     // Implemente a lógica de compartilhamento aqui
   };
 
   const handleReport = () => {
-    setDenunciaModalOpen(true); // Abre o modal de denúncia
+    if (!checkUserAuth()) return;
+    setDenunciaModalOpen(true);
   };
 
   const handleDenunciar = () => {
+    if (!checkUserAuth()) return;
+    
     if (!motivoDenuncia.trim()) {
       setSnackbar({ open: true, message: 'Por favor, insira um motivo para a denúncia.', severity: 'error' });
       return;
     }
   
-    // Verifica se o usuário já denunciou este post
     const denunciaUsuarioRef = ref(db, `denuncias/posts/${postId}/${user.id}`);
   
     get(denunciaUsuarioRef).then((snapshot) => {
       if (snapshot.exists()) {
-        // Se já existe uma denúncia, exibe uma mensagem e bloqueia o envio
         setSnackbar({ open: true, message: 'Você já denunciou este post. Não é possível denunciar novamente.', severity: 'error' });
-        setDenunciaModalOpen(false); // Fecha o modal
+        setDenunciaModalOpen(false);
       } else {
-        // Se não existe, permite o envio da denúncia
-        const novaDenunciaRef = push(denunciaUsuarioRef); // Gera um novo ID único para a denúncia
+        const novaDenunciaRef = push(denunciaUsuarioRef);
   
         set(novaDenunciaRef, {
           motivo: motivoDenuncia,
@@ -134,8 +147,8 @@ const PostDetailPageDesk = ({ user }) => {
         })
           .then(() => {
             setSnackbar({ open: true, message: 'Denúncia enviada com sucesso!', severity: 'success' });
-            setDenunciaModalOpen(false); // Fecha o modal
-            setMotivoDenuncia(''); // Limpa o campo de motivo
+            setDenunciaModalOpen(false);
+            setMotivoDenuncia('');
           })
           .catch((error) => {
             setSnackbar({ open: true, message: 'Erro ao enviar denúncia.', severity: 'error' });
@@ -149,6 +162,8 @@ const PostDetailPageDesk = ({ user }) => {
   };
 
   const handleDeleteComment = (commentId) => {
+    if (!checkUserAuth()) return;
+    
     const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
     remove(commentRef)
       .then(() => {
@@ -161,11 +176,15 @@ const PostDetailPageDesk = ({ user }) => {
   };
 
   const handleEditComment = (commentId, currentText) => {
+    if (!checkUserAuth()) return;
+    
     setEditingCommentId(commentId);
     setEditedCommentText(currentText);
   };
 
   const handleSaveEdit = async (commentId) => {
+    if (!checkUserAuth()) return;
+    
     if (editedCommentText.trim()) {
       try {
         const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
@@ -322,7 +341,7 @@ const PostDetailPageDesk = ({ user }) => {
                     <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                       Por: {comment.userName}
                     </Typography>
-                    {(comment.userId === user.id || post.companyId === user.id) && (
+                    {(comment.userId === user?.id || post.companyId === user?.id) && (
                       <Box>
                         <IconButton
                           onClick={() => handleEditComment(comment.id, comment.comment)}

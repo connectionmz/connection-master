@@ -17,8 +17,13 @@ const FeedDesk = ({ user }) => {
 
       if (data) {
         Object.entries(data).forEach(([postId, post]) => {
-          const provinciaUsuario = user.provinciaTemp || user.provincia;
-          if (post.company.provincia === provinciaUsuario) {
+          // Filtrar apenas se o usuário existir
+          const provinciaUsuario = user?.provinciaTemp || user?.provincia;
+          const shouldIncludePost = user
+            ? post.company.provincia === provinciaUsuario
+            : true; // Exibe todos os posts se o usuário não existir
+
+          if (shouldIncludePost) {
             allPosts.push({
               id: postId,
               description: post.description || '',
@@ -35,7 +40,7 @@ const FeedDesk = ({ user }) => {
       allPosts.sort((a, b) => b.timestamp - a.timestamp);
       setPosts(allPosts);
     });
-  }, [user.provinciaTemp, user.provincia]);
+  }, [user?.provinciaTemp, user?.provincia]);
 
   const handleClick = (postId) => {
     navigate(`/post/${postId}`);
@@ -115,7 +120,7 @@ const FeedDesk = ({ user }) => {
                 </Box>
                 <Typography variant="caption">{formatTimestamp(post.timestamp)}</Typography>
 
-                {post.companyId === user.id && (
+                {post.companyId === user?.id && (
                   <IconButton
                     size="small"
                     sx={{ color: '#ff4d4d' }}

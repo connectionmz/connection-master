@@ -176,22 +176,21 @@ const Dashboard = ({ user }) => {
           const data = snapshot.val();
           if (data) {
             const campanhasArray = [];
-
             Object.keys(data).forEach((campanhaKey) => {
               const campanhasInternas = data[campanhaKey];
-
               Object.keys(campanhasInternas).forEach((subKey) => {
                 const campanha = campanhasInternas[subKey];
-
-                if (
-                  campanha.component === "home" &&
-                  (user.provinciaTemp || user.provincia) === campanha.company?.provincia
-                ) {
-                  campanhasArray.push({ id: subKey, ...campanha });
+                // Verifica se o componente é "home"
+                if (campanha.component === "home") {
+                  // Se o usuário existir, filtra pela província; caso contrário, lista tudo
+                  if (!user || (user.provinciaTemp || user.provincia) === campanha.company?.provincia) {
+                    campanhasArray.push({ id: subKey, ...campanha });
+                  } else if (!user) {
+                    campanhasArray.push({ id: subKey, ...campanha });
+                  }
                 }
               });
             });
-
             setCampanhasAtivas(campanhasArray);
           }
         });
@@ -200,7 +199,7 @@ const Dashboard = ({ user }) => {
         setError("Erro ao carregar campanhas");
       }
     };
-
+  
     const fetchRespondedInqueritos = async () => {
       try {
         const responsesRef = ref(db, "survey_responses/");
@@ -213,10 +212,12 @@ const Dashboard = ({ user }) => {
         console.error("Erro ao carregar inquéritos respondidos:", error);
       }
     };
-
+  
     fetchCampanhasAtivas();
     fetchRespondedInqueritos();
   }, [user]);
+
+
 
   const filteredInqueritos = useMemo(() => {
     return inqueritos.filter((inquerito) => !hasRespondedIds.has(inquerito.id));
@@ -339,51 +340,72 @@ const Dashboard = ({ user }) => {
 
           {/* Sidebar Direita */}
           <Grid item xs={12} sm={3}>
-            {/* Seção de Publicidade para PHC CS */}
-            <Paper
-              sx={{
-                padding: 2,
-                marginBottom: 2,
-                backgroundColor: "#FF5050",
-                borderRadius: "8px",
-                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2, color: "#FFF" }}>
-                Software PHC CS
-              </Typography>
-              <img
-                src="https://phcsoftware.com/mz/wp-content/uploads/sites/6/2024/03/phc_cs_1_banner.png"
-                alt="PHC CS"
-                style={{ width: "100%", borderRadius: "8px", marginBottom: "16px" }}
-              />
-              <Typography variant="body1" sx={{ mb: 2, color: "#fff", lineHeight: "1.6" }}>
-                Automatize processos, aumente a produtividade e tome decisões mais inteligentes.
-              </Typography>
-              {hasRequestedDemo ? (
-                <Typography variant="body2" sx={{ color: "#fff", textAlign: "center", mb: 2 }}>
-                  Você já solicitou uma demonstração.
-                </Typography>
-              ) : (
-                <Button
-                  variant="contained"
-                  sx={{
-                    backgroundColor: "#FF5050",
-                    color: "#ffffff",
-                    fontWeight: "bold",
-                    "&:hover": { backgroundColor: "#FF3030" },
-                  }}
-                  fullWidth
-                  onClick={requestDemo}
-                >
-                  Demonstração
-                </Button>
-              )}
-            </Paper>
-
-            {/* Outros blocos de informação */}
-            <InfoBlock title="Inquéritos" items={filteredInqueritos} linkBase="/inquerito" />
-          </Grid>
+  {/* Seção de Publicidade para PHC CS */}
+  <Paper
+    sx={{
+      padding: 2,
+      marginBottom: 2,
+      backgroundColor: "#FF5050",
+      borderRadius: "8px",
+      boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
+    }}
+  >
+    <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2, color: "#FFF" }}>
+      Software PHC CS
+    </Typography>
+    <img
+      src="https://phcsoftware.com/mz/wp-content/uploads/sites/6/2024/03/phc_cs_1_banner.png"
+      alt="PHC CS"
+      style={{ width: "100%", borderRadius: "8px", marginBottom: "16px" }}
+    />
+    <Typography variant="body1" sx={{ mb: 2, color: "#fff", lineHeight: "1.6" }}>
+      Automatize processos, aumente a produtividade e tome decisões mais inteligentes.
+    </Typography>
+    {hasRequestedDemo ? (
+      <Typography variant="body2" sx={{ color: "#fff", textAlign: "center", mb: 2 }}>
+        Você já solicitou uma demonstração.
+      </Typography>
+    ) : (
+      <Button
+        variant="contained"
+        sx={{
+          backgroundColor: "#FF5050",
+          color: "#ffffff",
+          fontWeight: "bold",
+          "&:hover": { backgroundColor: "#FF3030" },
+        }}
+        fullWidth
+        onClick={requestDemo}
+      >
+        Demonstração
+      </Button>
+    )}
+  </Paper>
+  {/* Outros blocos de informação */}
+  {user ? (
+    <InfoBlock title="Inquéritos" items={filteredInqueritos} linkBase="/inquerito" />
+  ) : (
+    <Paper sx={{ padding: 2, marginBottom: 2 }}>
+      <Typography variant="h6" sx={{ fontWeight: "bold", textAlign: "center", mb: 2 }}>
+        Faça login para ver os inquéritos
+      </Typography>
+      <Button
+        component={Link}
+        to="/auth"
+        variant="contained"
+        fullWidth
+        sx={{
+          backgroundColor: "#1976d2",
+          color: "#ffffff",
+          fontWeight: "bold",
+          "&:hover": { backgroundColor: "#1565c0" },
+        }}
+      >
+        Autenticar
+      </Button>
+    </Paper>
+  )}
+</Grid>
         </Grid>
       </Container>
 

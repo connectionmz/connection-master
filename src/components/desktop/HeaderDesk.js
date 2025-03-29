@@ -112,18 +112,18 @@ const HeaderDesk = ({ user }) => {
     { to: "/empresas", icon: <DomainIcon />, label: "Empresas" },
     { to: "/lojas", icon: <StoreMallDirectoryIcon />, label: "Lojas" },
     {
-      to: "/concursos",
+      to: user ? "/concursos" : "/auth",
       icon: (
-        <Badge badgeContent={pendingContests || 0} color="error" overlap="circular">
+        <Badge badgeContent={user ? pendingContests || 0 : 0} color="error" overlap="circular">
           <GavelIcon />
         </Badge>
       ),
       label: "Concursos",
     },
     {
-      to: "/cotacoes",
+      to: user ? "/cotacoes" : "/auth",
       icon: (
-        <Badge badgeContent={pendingQuotes || 0} color="error" overlap="circular">
+        <Badge badgeContent={user ? pendingQuotes || 0 : 0} color="error" overlap="circular">
           <DescriptionIcon />
         </Badge>
       ),
@@ -131,25 +131,25 @@ const HeaderDesk = ({ user }) => {
     },
     { to: "/feed", icon: <FeedIcon />, label: "Feed" },
     {
-      to: "/inbox",
+      to: user ? "/inbox" : "/auth",
       icon: (
-        <Badge badgeContent={pendingNotifications || 0} color="error" overlap="circular">
+        <Badge badgeContent={user ? pendingNotifications || 0 : 0} color="error" overlap="circular">
           <NotificationsIcon />
         </Badge>
       ),
       label: "Notificações",
     },
     {
-      to: "/conexoes",
+      to: user ? "/conexoes" : "/auth",
       icon: (
-        <Badge badgeContent={pendingConnections || 0} color="error" overlap="circular">
+        <Badge badgeContent={user ? pendingConnections || 0 : 0} color="error" overlap="circular">
           <PeopleIcon />
         </Badge>
       ),
       label: "Conexões",
     },
     {
-      to: "/app",
+      to: user ? "/app" : "/auth",
       icon: (
         <Avatar src={user?.logoUrl || ""} alt="Perfil">
           {!user?.logoUrl && <AccountCircleIcon />}
