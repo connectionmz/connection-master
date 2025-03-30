@@ -246,7 +246,7 @@ const ReceiptsPage = ({ user }) => {
             <Text style={styles.value}>{receipt.clientName || 'Cliente Anônimo'}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>NIF:</Text>
+            <Text style={styles.label}>NUIT:</Text>
             <Text style={styles.value}>{receipt.clientNif || 'N/A'}</Text>
           </View>
           <View style={styles.row}>

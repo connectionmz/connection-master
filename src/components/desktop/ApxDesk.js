@@ -152,13 +152,7 @@ const ApxDesk = ({ user }) => {
           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
             <Receipt sx={{ mr: 1 }} /> Recibos e Transações
           </Typography>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate("/receipts")}
-            size={isMobile ? 'small' : 'medium'}
-          >
-            Ver Todos
-          </Button>
+        
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Acompanhe seus pagamentos e recibos
