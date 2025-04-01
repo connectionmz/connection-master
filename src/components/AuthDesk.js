@@ -55,13 +55,14 @@ const AuthDesk = ({ data }) => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
 
-      if (!result.user.emailVerified) {
+        {/*
+               if (!result.user.emailVerified) {
         setErrorMessage('Por favor, verifique seu e-mail antes de fazer login.');
         navigate('/email-verification');
         setShowSnackbar(true);
         setIsLoading(false);
         return;
-      }
+      }*/}
 
       await saveUserData(result.user);
 

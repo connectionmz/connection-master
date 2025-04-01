@@ -4,7 +4,7 @@ import './App.css';
 import ClipLoader from 'react-spinners/ClipLoader';
 import { LinearProgress, Box, Typography } from '@mui/material';
 import { auth, db } from './fb';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, remove } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
@@ -65,6 +65,21 @@ const App = () => {
     return () => unsubscribeAuth(); // Limpa o listener de autenticação ao desmontar
   }, []);
 
+{/*
+    async function deleteAllCompanies() {
+    try {
+      const companiesRef = ref(db, "company/"); // Referência para o nó "company"
+      // Remove todos os dados no nó "company"
+      await remove(companiesRef);
+  
+      console.log("Todas as empresas foram eliminadas com sucesso!");
+    } catch (error) {
+      console.error("Erro ao eliminar as empresas:", error);
+    }
+  }
+  
+  // Chamada da função
+  deleteAllCompanies();*/}
   if (loading) {
     return (
       <Box className="loader-container" textAlign="center" padding={2}>

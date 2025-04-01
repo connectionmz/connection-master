@@ -357,7 +357,6 @@ const DesktopRoutes = ({ user }) => {
             
             {/* Rotas de autenticação */}
             <Route path="/auth" element={<AuthDesk user={user} />} />
-            <Route path="/email-verification" element={<EmailVerification user={user?.email} />} />
             <Route path="/create" element={<AuthCreateDesk user={user} />} />
             <Route path="/setup" element={<CompanyDataFormDesk />} />
             <Route path="/forget-password" element={<ForgetPassword />} />
