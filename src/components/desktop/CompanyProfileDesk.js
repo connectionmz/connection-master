@@ -54,9 +54,7 @@ const CompanyProfile = ({ user }) => {
 
     useEffect(() => {
         if (userId) {
-            if(userId==user.id){
-                navigate('/perfil');
-            }
+
             const fetchData = async () => {
                 try {
                     const companyRef = ref(db, `company/${userId}`);
@@ -97,8 +95,8 @@ const CompanyProfile = ({ user }) => {
     
                     const newVisitRef = push(visitasRef);
                     await update(newVisitRef, {
-                        visitorId: user.id,
-                        visitorName: user.nome || 'Visitante Anônimo',
+                        visitorId: user?.id || '',
+                        visitorName: user?.nome || 'Visitante Anônimo',
                         timestamp: new Date().toISOString()
                     });
     
