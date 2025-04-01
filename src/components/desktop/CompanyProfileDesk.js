@@ -54,6 +54,9 @@ const CompanyProfile = ({ user }) => {
 
     useEffect(() => {
         if (userId) {
+            if(userId==user.id){
+                navigate('/perfil');
+            }
             const fetchData = async () => {
                 try {
                     const companyRef = ref(db, `company/${userId}`);

@@ -308,7 +308,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/inbox" element={<InboxDesk user={user} />} />
 
             {/* Rotas de perfil e configurações */}
-            <Route path="/profile" element={<ProfileDesk user={user} />} />
+            <Route path="/perfil" element={<ProfileDesk user={user} />} />
             <Route path="/editar-perfil" element={<EditProfileDesk user={user} />} />
 
             {/* Rotas de cotações e propostas */}

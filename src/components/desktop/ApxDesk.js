@@ -172,7 +172,7 @@ const ApxDesk = ({ user }) => {
       </Card>
 
       {/* Card de Perfil */}
-      <Link to={"/profile"}>
+      <Link to={"/perfil"}>
         <Card sx={{ p: 2, display: "flex", alignItems: "center" }}>
           <Avatar src={userData.logoUrl} alt="User" sx={{ width: 76, height: 76, mr: 2 }} />
           <Box>

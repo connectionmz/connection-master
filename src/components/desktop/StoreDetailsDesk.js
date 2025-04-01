@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ref, get } from 'firebase/database';
 import { db } from '../../fb';
 import ProductGridDesk from './ProductGridDesk';
-import { Box, Typography, Button, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, CircularProgress, Badge } from '@mui/material';
+import { Box, Typography, Button, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, CircularProgress, Badge, Avatar } from '@mui/material';
 import { ShoppingCart, Share, Store } from '@mui/icons-material';
 import BackButton from '../BackButton';
 
@@ -22,6 +22,7 @@ const StoreDetailDesk = () => {
                 const storeSnapshot = await get(storeRef);
                 if (storeSnapshot.exists()) {
                     setStore(storeSnapshot.val());
+                    console.log(storeSnapshot.val())
                 } else {
                     setStore(null);
                 }
@@ -77,10 +78,23 @@ const StoreDetailDesk = () => {
 
             <Box sx={{ backgroundColor: '#fff', boxShadow: 3, position: 'sticky', top: 0, zIndex: 10, padding: '16px 24px' }}>
             <BackButton sx={{ mb: 2 }} />
-
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
                         <Store sx={{ marginRight: 1 }} /> {store.name}
+                    </Typography>
+                    <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar 
+                            alt={store.company.nome} 
+                            src={store.company.logo} 
+                            sx={{ 
+                            width: 32, 
+                            height: 32, 
+                            marginRight: 1 
+                            }}
+                        />
+                        <Typography variant="body1">{store.company.nome}</Typography>
+                        </Box>
                     </Typography>
                     <Box>
                         <IconButton onClick={handleShare} sx={{ marginRight: 2 }}>

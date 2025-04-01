@@ -227,62 +227,48 @@ const ReceiptsPage = ({ user }) => {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <View>
-            <Text style={{ fontSize: 14, fontWeight: 'bold' }}>{user.nome || 'Nome da Empresa'}</Text>
-            <Text style={{ fontSize: 12 }}>{user.sector || 'Setor de Atividade'}</Text>
-            <Text style={{ fontSize: 12 }}>{user.provincia || 'Localização'}</Text>
-            <Text style={{ fontSize: 12 }}>NIF: {user.nif || 'N/A'}</Text>
-          </View>
-          <View>
-            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>RECIBO DE PAGAMENTO</Text>
-            <Text style={{ fontSize: 12 }}>Nº: {receipt.id.substring(0, 8)}</Text>
-            <Text style={{ fontSize: 12 }}>Data: {formatDate(receipt.issuedDate)}</Text>
-          </View>
+          <Text style={{ fontSize: 14, fontWeight: 'bold' }}>{user.nome || 'CONNECTION MOZAMBIQUE, LDA'}</Text>
+          <Text style={{ fontSize: 12 }}>Número NUIT: {user.nif || 'N/A'}</Text>
+          <Text style={{ fontSize: 12 }}>{user.provincia || 'CABO DELGADO - PEMBA'}</Text>
+          <Text style={{ fontSize: 12 }}>{user.email || 'connectionmozambique@gmail.com'}</Text>
         </View>
-
+        
+        <View style={styles.invoiceDetails}>
+          <Text style={{ fontSize: 16, fontWeight: 'bold' }}>RECIBO DE PAGAMENTO</Text>
+          <Text style={{ fontSize: 12 }}>ID do Recibo: {receipt.id.substring(0, 8)}</Text>
+          <Text style={{ fontSize: 12 }}>Data de Emissão: {formatDate(receipt.issuedDate)}</Text>
+        </View>
+  
         <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Recebi de:</Text>
-            <Text style={styles.value}>{receipt.clientName || 'Cliente Anônimo'}</Text>
+          <Text style={{ fontSize: 12 }}>Recebemos de:</Text>
+          <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{receipt.clientName || 'Cliente Particular'}</Text>
+          <Text style={{ fontSize: 12 }}>NUIT: {receipt.clientNif || 'N/A'}</Text>
+          <Text style={{ fontSize: 12 }}>Contacto: {receipt.clientContact || 'N/A'}</Text>
+        </View>
+  
+        <View style={styles.table}>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableHeader}>Descrição</Text>
+            <Text style={styles.tableHeader}>Montante</Text>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>NUIT:</Text>
-            <Text style={styles.value}>{receipt.clientNif || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Contacto:</Text>
-            <Text style={styles.value}>{receipt.clientContact || 'N/A'}</Text>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>{receipt.description || 'Pagamento de serviço'}</Text>
+            <Text style={styles.tableCell}>{formatCurrency(receipt.amount)} MZN</Text>
           </View>
         </View>
-
-        <View style={styles.section}>
-          <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Referente a:</Text>
-          <Text>{receipt.description || `Pagamento pelo serviço: ${receipt.moduleKey?.replace('modulo', '').replace(/([A-Z])/g, ' $1').trim()}`}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Método de Pagamento:</Text>
-            <Text style={styles.value}>{receipt.method}</Text>
-          </View>
-        </View>
-
+  
         <View style={styles.total}>
-          <Text>Total: {formatCurrency(receipt.amount)}</Text>
+          <Text>Total Pago: {formatCurrency(receipt.amount)} MZN</Text>
         </View>
-
-        <View style={styles.signatures}>
-          <View style={styles.signatureLine}>
-            <Text>Assinatura do Emitente</Text>
-          </View>
-          <View style={styles.signatureLine}>
-            <Text>Assinatura do Cliente</Text>
-          </View>
+  
+        <View style={styles.paymentStatus}>
+          <Text style={{ fontSize: 12, fontWeight: 'bold', color: 'green' }}>PAGO</Text>
+          <Text style={{ fontSize: 10 }}>Data do Pagamento: {formatDate(receipt.paymentDate)}</Text>
         </View>
-
-        <View style={{ marginTop: 20, fontSize: 10, textAlign: 'center' }}>
-          <Text>Este documento serve como comprovativo de pagamento</Text>
-          <Text>Emitido eletronicamente - válido sem assinatura</Text>
+  
+        <View style={styles.footer}>
+          <Text style={{ fontSize: 10, textAlign: 'center' }}>Obrigado pelo seu pagamento</Text>
+          <Text style={{ fontSize: 10, textAlign: 'center' }}>Este documento foi gerado eletronicamente e não requer assinatura</Text>
         </View>
       </Page>
     </Document>
