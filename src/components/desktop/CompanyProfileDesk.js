@@ -144,7 +144,7 @@ const CompanyProfile = ({ user }) => {
         });
 
         return () => unsubscribe();
-    }, [userId, user.id, db]);
+    });
 
     const handleCotacaoClick = (id, companyId) => {
         console.log(id);

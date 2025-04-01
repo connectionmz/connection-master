@@ -103,7 +103,6 @@ const App = () => {
       </Box>
     );
   }
-
   return (
     <Router>
       <div className="App">
