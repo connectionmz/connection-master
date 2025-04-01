@@ -9,7 +9,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
 import NonSubscriberRoutesDesktop from './components/routes/NonSubscriberRoutesDesktop';
-import PublicRoutes from './components/routes/PublicRoutes'; // Importe as rotas públicas
 
 const App = () => {
   const [userData, setUserData] = useState(null);
