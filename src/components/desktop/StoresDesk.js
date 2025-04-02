@@ -49,18 +49,6 @@ const StoresDesk = ({ user }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
-  // Carregar carrinho do localStorage ao inicializar
-  useEffect(() => {
-    const savedCart = localStorage.getItem("cart");
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
-    }
-  }, []);
-
-  // Salvar carrinho no localStorage sempre que ele for alterado
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
 
   const addToCart = (product) => {
     setCart((prevCart) => {
@@ -387,7 +375,7 @@ const StoresDesk = ({ user }) => {
                           {product.name || "Produto sem nome"}
                         </Typography>
 
-                        {/* Rating */}
+                        {/* Rating 
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <Rating
                             value={product.rating || 4}
@@ -400,7 +388,7 @@ const StoresDesk = ({ user }) => {
                             ({product.reviewCount || 12})
                           </Typography>
                         </Box>
-
+*/}
                         {/* Price Section */}
                         <Box sx={{ mt: 'auto' }}>
                           {product.storeSettings.showPrice === false ? (
@@ -448,7 +436,7 @@ const StoresDesk = ({ user }) => {
                           )}
                         </Box>
 
-                        {/* Shipping Info */}
+                        {/* Shipping Info 
                         <Box sx={{ 
                           display: 'flex', 
                           alignItems: 'center', 
@@ -463,6 +451,7 @@ const StoresDesk = ({ user }) => {
                             Frete grátis
                           </Typography>
                         </Box>
+                        */}
                       </CardContent>
                     </CardActionArea>
 
@@ -483,9 +472,6 @@ const StoresDesk = ({ user }) => {
                         }}
                       >
                         <ShoppingCartIcon fontSize={isMobile ? "small" : "medium"} />
-                      </IconButton>
-                      <IconButton size="small">
-                        <FavoriteBorderIcon fontSize={isMobile ? "small" : "medium"} />
                       </IconButton>
                       <IconButton size="small">
                         <ShareIcon fontSize={isMobile ? "small" : "medium"} />

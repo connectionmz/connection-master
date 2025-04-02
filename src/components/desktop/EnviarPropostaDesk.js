@@ -78,9 +78,7 @@ const EnviarPropostaDesk = ({ user }) => {
         console.error('Erro ao verificar proposta:', error);
       }
     };
-
     checkProposal();
-
     return () => {
       setHasProposal(false); 
     };

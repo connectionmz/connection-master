@@ -73,6 +73,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
             ...data.proposals[propostaId],
           }));
           setPropostas(prop);
+        
         }
 
         if (data?.views) {
