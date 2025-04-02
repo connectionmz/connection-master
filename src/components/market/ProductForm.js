@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   getStorage,
   ref as storageRef,
@@ -6,51 +6,63 @@ import {
   getDownloadURL,
 } from 'firebase/storage';
 import { Alert, Snackbar, LinearProgress, IconButton } from '@mui/material';
-import { push, ref, set } from 'firebase/database';
+import { ref, update, push, set } from 'firebase/database';
 import { db } from '../../fb';
 import { useParams } from 'react-router-dom';
-import { Add, DoneAll, Delete } from '@mui/icons-material';
+import { Add, DoneAll, Delete, Close } from '@mui/icons-material';
 
-const ProductForm = ({ user }) => {
-  const { storeId } = useParams();
-
-  const [products, setProducts] = useState([]);
+const ProductForm = ({ 
+  storeId, 
+  editingProduct, 
+  onAddProduct, 
+  onUpdateProduct, 
+  onCancel 
+}) => {
+  const [product, setProduct] = useState({
+    name: '',
+    price: '',
+    description: '',
+    imageUrl: '',
+    imageFile: null
+  });
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [loading, setLoading] = useState(false);  // Novo estado para controlar o carregamento
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('info');
+  const [loading, setLoading] = useState(false);
 
-  // Adiciona um novo produto ao array de produtos
-  const handleAddProduct = () => {
-    setProducts((prevProducts) => [
-      ...prevProducts,
-      { name: '', price: '', description: '', imageUrl: '', imageFile: null },
-    ]);
+  // Preenche o formulário se estiver no modo de edição
+  useEffect(() => {
+    if (editingProduct) {
+      setProduct({
+        name: editingProduct.name || '',
+        price: editingProduct.price || '',
+        description: editingProduct.description || '',
+        imageUrl: editingProduct.imageUrl || '',
+        imageFile: null
+      });
+    } else {
+      // Reseta o formulário para adição
+      setProduct({
+        name: '',
+        price: '',
+        description: '',
+        imageUrl: '',
+        imageFile: null
+      });
+    }
+  }, [editingProduct]);
+
+  const handleChange = (field, value) => {
+    setProduct(prev => ({ ...prev, [field]: value }));
   };
 
-  // Atualiza os campos do produto individualmente
-  const handleProductChange = (index, field, value) => {
-    const updatedProducts = [...products];
-    updatedProducts[index][field] = value;
-    setProducts(updatedProducts);
+  const handleImageChange = (file) => {
+    setProduct(prev => ({ ...prev, imageFile: file }));
   };
 
-  // Atualiza a imagem de um produto
-  const handleImageChange = (index, file) => {
-    const updatedProducts = [...products];
-    updatedProducts[index].imageFile = file;
-    setProducts(updatedProducts);
-  };
-
-  // Remove um produto do array
-  const handleRemoveProduct = (index) => {
-    setProducts((prevProducts) => prevProducts.filter((_, i) => i !== index));
-  };
-
-  // Função para upload das imagens para o Firebase Storage
-  const handleUploadImages = async (product) => {
-    if (!product.imageFile) return product;
+  const handleUploadImage = async () => {
+    if (!product.imageFile) return product.imageUrl;
 
     const storage = getStorage();
     const storageReference = storageRef(storage, `products/${product.imageFile.name}`);
@@ -66,140 +78,199 @@ const ProductForm = ({ user }) => {
         (error) => reject(error),
         async () => {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve({ ...product, imageUrl: downloadURL });
+          resolve(downloadURL);
         }
       );
     });
   };
 
-  // Função para validar o preenchimento dos campos
-  const validateProducts = () => {
-    for (const product of products) {
-      if (!product.name || !product.price || !product.imageFile) {
-        setErrorMessage('Por favor, preencha todos os campos e carregue uma imagem para cada produto.');
-        return false;
-      }
+  const validateProduct = () => {
+    if (!product.name) {
+      showSnackbar('Por favor, insira o nome do produto', 'error');
+      return false;
+    }
+    if (!product.price) {
+      showSnackbar('Por favor, insira o preço do produto', 'error');
+      return false;
+    }
+    if (!editingProduct && !product.imageFile) {
+      showSnackbar('Por favor, selecione uma imagem para o produto', 'error');
+      return false;
     }
     return true;
   };
 
-  // Submissão de produtos com validação e upload de imagem
-  const handleSubmit = async () => {
-    if (!validateProducts()) return;
+  const showSnackbar = (message, severity = 'info') => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
 
-    setLoading(true);  // Inicia o estado de carregamento
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateProduct()) return;
+
+    setLoading(true);
 
     try {
-      const uploadedProducts = await Promise.all(
-        products.map((product) => handleUploadImages(product))
-      );
-
-      const productsRef = ref(db, `stores/${storeId}/products`);
-
-      for (const product of uploadedProducts) {
-        const newProductRef = push(productsRef);
-        await set(newProductRef, {
-          name: product.name,
-          price: product.price,
-          description: product.description,
-          imageUrl: product.imageUrl || '',
-        });
+      let imageUrl = product.imageUrl;
+      
+      // Faz upload da nova imagem se foi selecionada
+      if (product.imageFile) {
+        imageUrl = await handleUploadImage();
       }
 
-      setUploadSuccess(true);
-      setSnackbarOpen(true);
-      setProducts([]);
-      setUploadProgress(0); // Reseta a barra de progresso após a submissão
+      const productData = {
+        name: product.name,
+        price: product.price,
+        description: product.description,
+        imageUrl: imageUrl
+      };
+
+      if (editingProduct) {
+        // Modo edição - atualiza o produto existente
+        const productRef = ref(db, `stores/${storeId}/products/${editingProduct.id}`);
+        await update(productRef, productData);
+        onUpdateProduct({ id: editingProduct.id, ...productData });
+        showSnackbar('Produto atualizado com sucesso!', 'success');
+      } else {
+        // Modo adição - cria novo produto
+        const productsRef = ref(db, `stores/${storeId}/products`);
+        const newProductRef = push(productsRef);
+        await set(newProductRef, productData);
+        onAddProduct({ id: newProductRef.key, ...productData });
+        showSnackbar('Produto adicionado com sucesso!', 'success');
+      }
+
+      // Limpa o formulário após sucesso (apenas no modo adição)
+      if (!editingProduct) {
+        setProduct({
+          name: '',
+          price: '',
+          description: '',
+          imageUrl: '',
+          imageFile: null
+        });
+      }
     } catch (error) {
-      setErrorMessage('Erro ao adicionar produtos, tente novamente.');
-      setSnackbarOpen(true);
+      console.error('Erro ao salvar produto:', error);
+      showSnackbar('Erro ao salvar produto. Tente novamente.', 'error');
     } finally {
-      setLoading(false);  // Finaliza o estado de carregamento
+      setLoading(false);
     }
   };
 
-  // Fecha o Snackbar de feedback
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
-    setErrorMessage('');
   };
 
   return (
     <div className="p-4 bg-white shadow-md rounded-md">
-      <h2 className="text-2xl font-semibold mb-4">Adicionar Produtos</h2>
-
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
-      {products.map((product, index) => (
-        <div key={index} className="mb-4 border-b pb-4 relative">
-          <input
-            type="text"
-            placeholder="Nome do Produto"
-            value={product.name}
-            onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <input
-            type="number"
-            placeholder="Preço"
-            value={product.price}
-            onChange={(e) => handleProductChange(index, 'price', e.target.value)}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <textarea
-            placeholder="Descrição"
-            value={product.description}
-            onChange={(e) => handleProductChange(index, 'description', e.target.value)}
-            className="w-full p-2 border rounded mb-2"
-          ></textarea>
-          <input
-            type="file"
-            onChange={(e) => handleImageChange(index, e.target.files[0])}
-            className="mb-2"
-          />
-          {product.imageFile && (
-            <div>
-              <p className="text-sm">Arquivo: {product.imageFile.name}</p>
-            </div>
-          )}
-          {/* Botão de remover produto */}
-          <IconButton
-            onClick={() => handleRemoveProduct(index)}
-            className="absolute right-0 top-0"
-          >
-            <Delete color="error" />
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold">
+          {editingProduct ? 'Editar Produto' : 'Adicionar Produto'}
+        </h2>
+        {onCancel && (
+          <IconButton onClick={onCancel}>
+            <Close />
           </IconButton>
-        </div>
-      ))}
-
-      {uploadProgress > 0 && (
-        <LinearProgress variant="determinate" value={uploadProgress} className="mb-4" />
-      )}
-
-      <div className="flex justify-between items-center">
-        <button
-          onClick={handleAddProduct}
-          className="bg-blue-500 text-white py-2 px-4 rounded"
-          disabled={loading}  // Desabilita o botão se estiver carregando
-        >
-          <Add />
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={products.length === 0 || loading}  // Desabilita o botão se estiver carregando ou não houver produtos
-          className={`py-2 px-4 rounded ${products.length === 0 || loading ? 'bg-gray-400' : 'bg-green-500 text-white'}`}
-        >
-          <DoneAll />
-        </button>
+        )}
       </div>
 
-      <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity={uploadSuccess ? 'success' : 'info'} sx={{ width: '100%' }}>
-          {uploadSuccess ? 'Produtos adicionados com sucesso!' : `Progresso do upload: ${Math.round(uploadProgress)}%`}
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Nome do Produto</label>
+          <input
+            type="text"
+            value={product.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            className="w-full p-2 border rounded"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Preço</label>
+          <input
+            type="number"
+            value={product.price}
+            onChange={(e) => handleChange('price', e.target.value)}
+            className="w-full p-2 border rounded"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Descrição</label>
+          <textarea
+            value={product.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            className="w-full p-2 border rounded"
+            disabled={loading}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {editingProduct ? 'Alterar Imagem (opcional)' : 'Imagem do Produto'}
+          </label>
+          <input
+            type="file"
+            onChange={(e) => handleImageChange(e.target.files[0])}
+            disabled={loading}
+          />
+          {product.imageFile && (
+            <p className="text-sm mt-1">Novo arquivo: {product.imageFile.name}</p>
+          )}
+          {!product.imageFile && product.imageUrl && (
+            <div className="mt-2">
+              <p className="text-sm">Imagem atual:</p>
+              <img 
+                src={product.imageUrl} 
+                alt="Imagem do produto" 
+                className="w-20 h-20 object-cover"
+              />
+            </div>
+          )}
+        </div>
+
+        {uploadProgress > 0 && uploadProgress < 100 && (
+          <LinearProgress variant="determinate" value={uploadProgress} className="mb-4" />
+        )}
+
+        <div className="flex justify-end space-x-2">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="bg-gray-500 text-white py-2 px-4 rounded"
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+          )}
+          <button
+            type="submit"
+            className="bg-green-500 text-white py-2 px-4 rounded"
+            disabled={loading}
+          >
+            {loading ? 'Salvando...' : editingProduct ? 'Atualizar Produto' : 'Adicionar Produto'}
+          </button>
+        </div>
+      </form>
+
+      <Snackbar 
+        open={snackbarOpen} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
         </Alert>
       </Snackbar>
     </div>

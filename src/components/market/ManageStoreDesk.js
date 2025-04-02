@@ -46,6 +46,8 @@ const ManageStoreDesk = ({ storeId }) => {
   const [storeDescription, setStoreDescription] = useState('');
   const [storeLogo, setStoreLogo] = useState('');
   const [logoFile, setLogoFile] = useState(null); // Para armazenar o arquivo de logo
+  const [editModalOpen, setEditModalOpen] = useState(false);
+const [currentProduct, setCurrentProduct] = useState(null);
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
@@ -57,6 +59,7 @@ const ManageStoreDesk = ({ storeId }) => {
       setStoreLogo(URL.createObjectURL(file)); // Atualiza a visualização do logo
     }
   };
+
 
 
   useEffect(() => {
@@ -142,11 +145,27 @@ const ManageStoreDesk = ({ storeId }) => {
   };
 
   const handleEditProduct = (productId, productData) => {
-    const confirmEdit = window.confirm('Tem certeza que deseja editar este produto?');
-    if (confirmEdit) {
-      setEditProductId(productId);
-      setEditProductData(productData);
-      setShowAddProductForm(true);
+    setEditProductId(productId);
+    setCurrentProduct(productData);
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const productRef = ref(db, `stores/${storeId}/products/${editProductId}`);
+      await update(productRef, currentProduct);
+      
+      setProducts(prevProducts => 
+        prevProducts.map(([key, product]) => 
+          key === editProductId ? [key, currentProduct] : [key, product]
+        )
+      );
+      
+      setEditModalOpen(false);
+      setFeedback({ open: true, message: 'Produto atualizado com sucesso!', severity: 'success' });
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      setFeedback({ open: true, message: 'Erro ao atualizar o produto.', severity: 'error' });
     }
   };
 
@@ -449,6 +468,83 @@ const ManageStoreDesk = ({ storeId }) => {
         Salvar
       </Button>
     </Box>
+  </Box>
+</Modal>
+
+{/* Modal de Edição de Produto */}
+<Modal
+  open={editModalOpen}
+  onClose={() => setEditModalOpen(false)}
+  aria-labelledby="edit-product-modal"
+>
+  <Box sx={{
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 400,
+    bgcolor: 'background.paper',
+    boxShadow: 24,
+    p: 4,
+    borderRadius: 2,
+  }}>
+    <Typography variant="h6" sx={{ mb: 3 }}>
+      Editar Produto
+    </Typography>
+    
+    {currentProduct && (
+      <>
+        <TextField
+          label="Nome"
+          value={currentProduct.name || ''}
+          onChange={(e) => setCurrentProduct({...currentProduct, name: e.target.value})}
+          fullWidth
+          sx={{ mb: 2 }}
+        />
+        
+        <TextField
+          label="Preço (MZN)"
+          type="number"
+          value={currentProduct.price || ''}
+          onChange={(e) => setCurrentProduct({...currentProduct, price: e.target.value})}
+          fullWidth
+          sx={{ mb: 2 }}
+        />
+        
+        <TextField
+          label="Categoria"
+          value={currentProduct.category || ''}
+          onChange={(e) => setCurrentProduct({...currentProduct, category: e.target.value})}
+          fullWidth
+          sx={{ mb: 2 }}
+        />
+        
+        <TextField
+          label="Descrição"
+          multiline
+          rows={3}
+          value={currentProduct.description || ''}
+          onChange={(e) => setCurrentProduct({...currentProduct, description: e.target.value})}
+          fullWidth
+          sx={{ mb: 3 }}
+        />
+        
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => setEditModalOpen(false)}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveEdit}
+          >
+            Salvar
+          </Button>
+        </Box>
+      </>
+    )}
   </Box>
 </Modal>
 

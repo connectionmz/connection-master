@@ -288,15 +288,6 @@ const ReceiptsPage = ({ user }) => {
         <Typography variant="h4" component="h1">
           Histórico de Pagamentos
         </Typography>
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={() => navigate('/payment')}
-          startIcon={<Add />}
-          size={isMobile ? 'small' : 'medium'}
-        >
-          Novo Pagamento
-        </Button>
       </Box>
 
       {/* Filtros e Busca */}

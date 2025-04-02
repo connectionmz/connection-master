@@ -2,14 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ref, get, remove, update } from 'firebase/database';
 import { db } from '../../fb';
 import ProductForm from './ProductForm';
-import { Link } from 'react-router-dom';
 
 const ManageStore = ({ storeId }) => {
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAddProductForm, setShowAddProductForm] = useState(false);
-  const [editProductId, setEditProductId] = useState(null);
-  const [editProductData, setEditProductData] = useState(null);
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,8 +33,8 @@ const ManageStore = ({ storeId }) => {
     fetchProducts();
   }, [storeId]);
 
-  const handleProductAdd = (newProducts) => {
-    setProducts((prevProducts) => [...prevProducts, ...newProducts]);
+  const handleProductAdd = (newProduct) => {
+    setProducts((prevProducts) => [...prevProducts, newProduct]);
     resetFormState();
   };
 
@@ -55,20 +53,21 @@ const ManageStore = ({ storeId }) => {
   };
 
   const handleEditProduct = (productId, productData) => {
-    setEditProductId(productId);
-    setEditProductData(productData);
-    setShowAddProductForm(true);
+    setEditingProduct({ id: productId, ...productData });
+    setShowProductForm(true);
   };
 
   const handleProductUpdate = async (updatedProduct) => {
     try {
-      const productRef = ref(db, `stores/${storeId}/products/${editProductId}`);
+      const productRef = ref(db, `stores/${storeId}/products/${editingProduct.id}`);
       await update(productRef, updatedProduct);
+      
       setProducts((prevProducts) =>
         prevProducts.map(([key, product]) =>
-          key === editProductId ? [key, updatedProduct] : [key, product]
+          key === editingProduct.id ? [key, updatedProduct] : [key, product]
         )
       );
+      
       resetFormState();
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
@@ -77,9 +76,8 @@ const ManageStore = ({ storeId }) => {
   };
 
   const resetFormState = () => {
-    setEditProductId(null);
-    setEditProductData(null);
-    setShowAddProductForm(false);
+    setEditingProduct(null);
+    setShowProductForm(false);
   };
 
   const filteredProducts = useMemo(() => {
@@ -90,36 +88,39 @@ const ManageStore = ({ storeId }) => {
 
   return (
     <div className="w-full bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-3xl font-semibold mb-6 flex items-center justify-between text-gray-800">
-        Gerir Loja
-        <Link to={`/addProduct/${storeId}`} className="text-blue-500 hover:underline text-lg">
-          Adicionar Produto
-        </Link>
-      </h2>
+      <h2 className="text-3xl font-semibold mb-6 text-gray-800">Gerir Loja</h2>
 
-   
-
-      {showAddProductForm && (
-        <div className="mb-6">
-          <ProductForm
-            storeId={storeId}
-            setProducts={setProducts}
-            initialProductData={editProductData}
-            onUpdateProduct={handleProductUpdate}
-            onAddProduct={handleProductAdd}
-          />
-        </div>
-      )}
-
-      <div className="mb-6">
+      <div className="flex justify-between items-center mb-6">
         <input
           type="text"
           placeholder="Pesquisar produto..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full max-w-md p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        
+        <button
+          onClick={() => {
+            setEditingProduct(null);
+            setShowProductForm(true);
+          }}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+        >
+          Adicionar Produto
+        </button>
       </div>
+
+      {showProductForm && (
+        <div className="mb-6">
+          <ProductForm
+            storeId={storeId}
+            onAddProduct={handleProductAdd}
+            onUpdateProduct={handleProductUpdate}
+            editingProduct={editingProduct}
+            onCancel={resetFormState}
+          />
+        </div>
+      )}
 
       {loading ? (
         <p className="text-gray-500">Carregando produtos...</p>
@@ -159,16 +160,14 @@ const ManageStore = ({ storeId }) => {
                       <td className="px-6 py-3">{product?.description || 'Sem descrição'}</td>
                       <td className="px-6 py-3 flex items-center space-x-2">
                         <button
-                          className="bg-yellow-500 text-white px-4 py-2 rounded-md transition duration-200 hover:bg-yellow-400 focus:outline-none"
+                          className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition"
                           onClick={() => handleEditProduct(key, product)}
-                          aria-label="Editar produto"
                         >
                           Editar
                         </button>
                         <button
-                          className="bg-red-500 text-white px-4 py-2 rounded-md transition duration-200 hover:bg-red-400 focus:outline-none"
+                          className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition"
                           onClick={() => handleRemoveProduct(key)}
-                          aria-label="Remover produto"
                         >
                           Remover
                         </button>

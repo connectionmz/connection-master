@@ -158,6 +158,7 @@ const NovaCotacao = ({ user }) => {
           if (!empresa.contacto && !empresa.email) continue;
 
           const message = `Título: ${formData.title}\nDescrição: ${formData.description}\nData Limite: ${formData.deadline}\nSetor de Atividade: ${formData.sector}\nAcesse: ${linkDoPedido}`;
+          
           const mailMessage = {
             title: formData.title,
             description: formData.description.replace(/<\/?[^>]+(>|$)/g, ""),
@@ -168,7 +169,7 @@ const NovaCotacao = ({ user }) => {
 
           if (empresa.email) {
             const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
-            await Promise.all(emails.map(email => sendEmail('connectionmozambique@gmail.com', mailMessage)));
+            await Promise.all(emails.map(email => sendEmail(emails, mailMessage)));
           }
         }
       }
