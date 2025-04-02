@@ -19,8 +19,17 @@ import {
   useMediaQuery,
   Snackbar,
   Alert,
+  Rating,
+  Chip,
+  Stack,
+  Divider,
+  useTheme,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import ShareIcon from "@mui/icons-material/Share";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import VerifiedIcon from "@mui/icons-material/Verified";
 
 const shuffleArray = (array) => {
   return array
@@ -36,7 +45,9 @@ const StoresDesk = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState([]);
   const [openSnackbar, setOpenSnackbar] = useState(false);
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   // Carregar carrinho do localStorage ao inicializar
   useEffect(() => {
@@ -118,211 +129,406 @@ const StoresDesk = ({ user }) => {
     }
   }, [searchQuery, storesList]);
 
+  // Calculate discount percentage if original price exists
+  const calculateDiscount = (price, originalPrice) => {
+    if (!originalPrice) return 0;
+    return Math.round(((originalPrice - price) / originalPrice) * 100);
+  };
+
   return (
-    <Box sx={{ p: isMobile ? 2 : 4, width: '100%', backgroundColor:'#fff' }}>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 4,
-          gap: isMobile ? 2 : 0,
-        }}
-      >
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
+    <Box sx={{ 
+      p: isMobile ? 2 : 4, 
+      width: '100%', 
+      backgroundColor: '#f8f8f8',
+      minHeight: '100vh'
+    }}>
+      {/* Search and Title Section */}
+      <Box sx={{ 
+        maxWidth: 1400, 
+        mx: 'auto', 
+        mb: 4,
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 2
+      }}>
+        <Typography variant={isMobile ? "h5" : "h4"} sx={{ 
+          fontWeight: "bold",
+          color: theme.palette.primary.main
+        }}>
           Lojas e Produtos
         </Typography>
-      </Box>
-      <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
+        
         <TextField
-          label="Pesquisar loja por nome..."
+          label="Pesquisar loja ou produto..."
           variant="outlined"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           fullWidth
-          sx={{ maxWidth: 600 }}
+          sx={{ 
+            maxWidth: 600,
+            backgroundColor: '#fff',
+            borderRadius: 1
+          }}
+          size={isMobile ? 'small' : 'medium'}
         />
       </Box>
-      <Box
-        sx={{
+
+      {/* Stores Carousel */}
+      <Box sx={{ 
+        maxWidth: 1400,
+        mx: 'auto',
+        mb: 4,
+        p: 1,
+        backgroundColor: '#fff',
+        borderRadius: 2,
+        boxShadow: 1
+      }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          Lojas em Destaque
+        </Typography>
+        <Box sx={{
           display: "flex",
           overflowX: "auto",
-          mb: 4,
           gap: 2,
-          padding: 1,
-        }}
-      >
-        {storesList.map((store) => (
-          <Box
-            key={store.id}
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              cursor: "pointer",
-            }}
-            component={Link}
-            to={`/loja/${store.id}`}
-          >
-            <Avatar
-              src={store?.company?.logo || "https://via.placeholder.com/80"}
+          py: 1,
+          px: 1,
+          '&::-webkit-scrollbar': {
+            height: 6,
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: theme.palette.primary.main,
+            borderRadius: 3,
+          },
+        }}>
+          {storesList.map((store) => (
+            <Box
+              key={store.id}
               sx={{
-                width: 80,
-                height: 80,
-                border: "2px solid #ff5722",
-                marginBottom: 1,
+                minWidth: 120,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textDecoration: 'none',
               }}
-            />
-            <Typography
-              variant="body2"
-              sx={{ textAlign: "center", maxWidth: "80px" }}
+              component={Link}
+              to={`/loja/${store.id}`}
             >
-              {store.name}
-            </Typography>
-          </Box>
-        ))}
+              <Avatar
+                src={store?.company?.logo || "https://via.placeholder.com/80"}
+                sx={{
+                  width: 80,
+                  height: 80,
+                  border: `2px solid ${theme.palette.primary.main}`,
+                  marginBottom: 1,
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{ 
+                  textAlign: "center", 
+                  fontWeight: 500,
+                  color: theme.palette.text.primary
+                }}
+              >
+                {store.name}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
       </Box>
+
+      {/* Products Grid */}
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-          <CircularProgress />
+        <Box sx={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: 'center',
+          height: '50vh'
+        }}>
+          <CircularProgress size={isMobile ? 40 : 60} />
         </Box>
       ) : (
-        <Grid container spacing={isMobile ? 2 : 4}>
-          {filteredStores.length > 0 ? (
-            shuffleArray(
-              filteredStores.flatMap((store) =>
-                store.products
-                  ? Object.entries(store.products).map(([productId, product]) => ({
-                      ...product,
-                      storeName: store.name || "Loja Desconhecida",
-                      storeId: store.id,
-                      logo: store.logo || "https://via.placeholder.com/80",
-                      id: productId,
-                      storeSettings: store.settings || {},
-                    }))
-                  : []
-              )
-            ).map((product) => (
-              <Grid item xs={12} sm={6} md={4} key={product.id}>
-                <Card
-                  sx={{
-                    height: 320,
-                    boxShadow: 4,
-                    transition: "transform 0.2s, box-shadow 0.2s",
-                    "&:hover": {
-                      transform: "scale(1.03)",
-                      boxShadow: 6,
-                    },
-                  }}
-                >
-                  <CardActionArea
+        <Box sx={{ 
+          maxWidth: 1400,
+          mx: 'auto'
+        }}>
+          <Grid container spacing={isMobile ? 1 : 3}>
+            {filteredStores.length > 0 ? (
+              shuffleArray(
+                filteredStores.flatMap((store) =>
+                  store.products
+                    ? Object.entries(store.products).map(([productId, product]) => ({
+                        ...product,
+                        storeName: store.name || "Loja Desconhecida",
+                        storeId: store.id,
+                        logo: store.logo || "https://via.placeholder.com/80",
+                        id: productId,
+                        storeSettings: store.settings || {},
+                      }))
+                    : []
+                )
+              ).map((product) => (
+                <Grid item xs={6} sm={4} md={3} lg={2.4} key={product.id}>
+                  <Card
                     sx={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 2,
+                      boxShadow: 0,
+                      border: '1px solid #eee',
+                      transition: "transform 0.2s, box-shadow 0.2s",
+                      "&:hover": {
+                        transform: "translateY(-5px)",
+                        boxShadow: 3,
+                      },
+                      position: 'relative',
+                      overflow: 'visible',
+                      backgroundColor: '#fff'
                     }}
-                    component={Link}
-                    to={`/product/${product.id}/store/${product.storeId}`}
                   >
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 150,
-                        overflow: "hidden",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        backgroundColor: "#f5f5f5",
-                      }}
-                    >
-                      <CardMedia
-                        component="img"
-                        image={product.imageUrl || "https://via.placeholder.com/150"}
-                        alt={product.name || "Produto sem nome"}
+                    {/* Product Labels */}
+                    {product.discountPrice && (
+                      <Chip
+                        label={`-${calculateDiscount(product.discountPrice, product.price)}%`}
+                        color="error"
+                        size="small"
                         sx={{
-                          width: "auto",
-                          height: "100%",
-                          objectFit: "contain",
+                          position: 'absolute',
+                          top: 8,
+                          left: 8,
+                          fontWeight: 'bold',
+                          zIndex: 1
                         }}
                       />
-                    </Box>
-                    <CardContent
+                    )}
+                    
+                    {product.isNew && (
+                      <Chip
+                        label="Novo"
+                        color="success"
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          fontWeight: 'bold',
+                          zIndex: 1
+                        }}
+                      />
+                    )}
+
+                    <CardActionArea
                       sx={{
                         flexGrow: 1,
                         display: "flex",
                         flexDirection: "column",
-                        justifyContent: "space-between",
-                        padding: 1,
                       }}
+                      component={Link}
+                      to={`/product/${product.id}/store/${product.storeId}`}
                     >
-                      <Typography
-                        variant="h6"
+                      {/* Product Image */}
+                      <Box
                         sx={{
-                          fontWeight: "bold",
-                          fontSize: "1rem",
-                          textAlign: "center",
-                          mb: 0.5,
+                          width: "100%",
+                          height: isMobile ? 120 : 180,
+                          overflow: "hidden",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          backgroundColor: "#fafafa",
+                          position: 'relative'
                         }}
                       >
-                        {product.name || "Produto sem nome"}
-                      </Typography>
-                      <Typography
-                        variant="body1"
+                        <CardMedia
+                          component="img"
+                          image={product.imageUrl || "https://via.placeholder.com/150"}
+                          alt={product.name || "Produto sem nome"}
+                          sx={{
+                            width: "auto",
+                            height: "80%",
+                            objectFit: "contain",
+                            transition: 'transform 0.3s',
+                            '&:hover': {
+                              transform: 'scale(1.05)'
+                            }
+                          }}
+                        />
+                      </Box>
+
+                      {/* Product Details */}
+                      <CardContent
                         sx={{
-                          color: "#ff5722",
-                          textAlign: "center",
-                          fontWeight: "bold",
-                          fontSize: "0.875rem",
+                          flexGrow: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                          p: 2,
+                          pt: 1
                         }}
                       >
-                        {product.storeSettings.showPrice === false
-                          ? "Preço indisponível"
-                          : product.price
-                          ? `${product.price} Mt`
-                          : "Preço não informado"}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: "gray",
-                          textAlign: "center",
+                        {/* Product Name */}
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            fontWeight: 500,
+                            fontSize: isMobile ? "0.875rem" : "0.9375rem",
+                            mb: 1,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            minHeight: isMobile ? 40 : 44,
+                            color: theme.palette.text.primary
+                          }}
+                        >
+                          {product.name || "Produto sem nome"}
+                        </Typography>
+
+                        {/* Rating */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Rating
+                            value={product.rating || 4}
+                            precision={0.5}
+                            readOnly
+                            size={isMobile ? "small" : "medium"}
+                            sx={{ color: '#ffb400', mr: 0.5 }}
+                          />
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            ({product.reviewCount || 12})
+                          </Typography>
+                        </Box>
+
+                        {/* Price Section */}
+                        <Box sx={{ mt: 'auto' }}>
+                          {product.storeSettings.showPrice === false ? (
+                            <Typography variant="body2" color="text.secondary">
+                              Preço indisponível
+                            </Typography>
+                          ) : (
+                            <>
+                              {product.discountPrice ? (
+                                <>
+                                  <Typography
+                                    variant="h6"
+                                    sx={{
+                                      color: theme.palette.error.main,
+                                      fontWeight: 'bold',
+                                      fontSize: isMobile ? '1rem' : '1.125rem'
+                                    }}
+                                  >
+                                    {product.discountPrice} MT
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: 'text.secondary',
+                                      textDecoration: 'line-through',
+                                      fontSize: '0.75rem'
+                                    }}
+                                  >
+                                    {product.price} MT
+                                  </Typography>
+                                </>
+                              ) : (
+                                <Typography
+                                  variant="h6"
+                                  sx={{
+                                    color: theme.palette.primary.main,
+                                    fontWeight: 'bold',
+                                    fontSize: isMobile ? '1rem' : '1.125rem'
+                                  }}
+                                >
+                                  {product.price || "0"} MT
+                                </Typography>
+                              )}
+                            </>
+                          )}
+                        </Box>
+
+                        {/* Shipping Info */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
                           mt: 0.5,
-                          fontSize: "0.75rem",
+                          color: theme.palette.success.main
+                        }}>
+                          <LocalShippingIcon sx={{ 
+                            fontSize: isMobile ? '0.875rem' : '1rem', 
+                            mr: 0.5 
+                          }} />
+                          <Typography variant="caption">
+                            Frete grátis
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </CardActionArea>
+
+                    {/* Action Buttons */}
+                    <Box sx={{ 
+                      p: 1, 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      borderTop: '1px solid #f0f0f0'
+                    }}>
+                      <IconButton 
+                        size="small" 
+                        sx={{ color: theme.palette.error.main }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addToCart(product);
                         }}
                       >
-                        {product.storeName}
-                      </Typography>
-                    </CardContent>
-                  </CardActionArea>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    onClick={() => addToCart(product)}
-                    sx={{ mt: 1 }}
-                  >
-                    Adicionar ao Carrinho
-                  </Button>
-                </Card>
-              </Grid>
-            ))
-          ) : (
-            <Typography
-              variant="body2"
-              sx={{ color: "gray", textAlign: "center", width: "100%" }}
-            >
-              Nenhum produto encontrado.
-            </Typography>
-          )}
-        </Grid>
+                        <ShoppingCartIcon fontSize={isMobile ? "small" : "medium"} />
+                      </IconButton>
+                      <IconButton size="small">
+                        <FavoriteBorderIcon fontSize={isMobile ? "small" : "medium"} />
+                      </IconButton>
+                      <IconButton size="small">
+                        <ShareIcon fontSize={isMobile ? "small" : "medium"} />
+                      </IconButton>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              <Box sx={{ 
+                width: '100%', 
+                textAlign: 'center', 
+                p: 4,
+                gridColumn: '1 / -1'
+              }}>
+                <Typography variant="h6" color="text.secondary">
+                  Nenhum produto encontrado
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Tente ajustar sua pesquisa ou filtros
+                </Typography>
+              </Box>
+            )}
+          </Grid>
+        </Box>
       )}
+
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}
         onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            boxShadow: 3,
+            alignItems: 'center'
+          }}
+          icon={<VerifiedIcon fontSize="inherit" />}
+        >
           Produto adicionado ao carrinho!
         </Alert>
       </Snackbar>

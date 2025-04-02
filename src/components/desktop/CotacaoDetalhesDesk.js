@@ -17,6 +17,10 @@ import {
   Chip,
   Divider,
   TextField,
+  useMediaQuery,
+  useTheme,
+  Stack,
+  IconButton,
 } from '@mui/material';
 import BackButton from '../BackButton';
 
@@ -29,9 +33,12 @@ const CotacaoDetalhesDesk = ({ user }) => {
   const [hasProposal, setHasProposal] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [proposalDetails, setProposalDetails] = useState(null);
-  const [denunciaModalOpen, setDenunciaModalOpen] = useState(false); // Estado para o modal de denúncia
-  const [motivoDenuncia, setMotivoDenuncia] = useState(''); // Estado para o motivo da denúncia
+  const [denunciaModalOpen, setDenunciaModalOpen] = useState(false);
+  const [motivoDenuncia, setMotivoDenuncia] = useState('');
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -71,9 +78,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
         if (data?.views) {
           const empresasIds = Object.keys(data.views);
         
-          // Busca os detalhes de cada empresa que visualizou a cotação
           const empresasPromises = empresasIds.map(async (empresaId) => {
-
             if (empresaId === user.id) {
               return null;
             }
@@ -83,17 +88,14 @@ const CotacaoDetalhesDesk = ({ user }) => {
             if (companySnapshot.exists()) {
               return {
                 id: empresaId,
-                ...companySnapshot.val(), // Adiciona os detalhes da empresa
+                ...companySnapshot.val(),
               };
             } else {
-              return null; // Se a empresa não for encontrada, retorna null
+              return null;
             }
           });
         
-          // Resolve todas as promessas e filtra empresas válidas
           const empresas = (await Promise.all(empresasPromises)).filter(Boolean);
-        
-          // Atualiza o estado com as empresas que visualizaram
           setEmpresasQueVisualizaram(empresas);
         }
       });
@@ -158,75 +160,72 @@ const CotacaoDetalhesDesk = ({ user }) => {
     }
   };
 
-  // Função para abrir o modal de denúncia
   const handleAbrirDenunciaModal = () => {
     setDenunciaModalOpen(true);
   };
 
-  // Função para fechar o modal de denúncia
   const handleFecharDenunciaModal = () => {
     setDenunciaModalOpen(false);
-    setMotivoDenuncia(''); // Limpa o motivo ao fechar
+    setMotivoDenuncia('');
   };
 
-  // Função para salvar a denúncia no Firebase
-// Função para salvar a denúncia no Firebase
-const handleDenunciar = () => {
-  if (!motivoDenuncia.trim()) {
-    alert("Por favor, insira um motivo para a denúncia.");
-    return;
-  }
-
-  // Verifica se o usuário já denunciou esta cotação
-  const denunciaUsuarioRef = ref(db, `denuncias/cotacao/${id}/${user.id}`);
-  
-  get(denunciaUsuarioRef).then((snapshot) => {
-    if (snapshot.exists()) {
-      // Se já existe uma denúncia, exibe uma mensagem e bloqueia o envio
-      alert("Você já denunciou esta cotação. Não é possível denunciar novamente.");
-      handleFecharDenunciaModal();
-    } else {
-      // Se não existe, permite o envio da denúncia
-      const novaDenunciaRef = push(denunciaUsuarioRef); // Gera um novo ID único para a denúncia
-
-      set(novaDenunciaRef, {
-        motivo: motivoDenuncia,
-        timestamp: new Date().toISOString(),
-        userId: user.id,
-        cotacaoId: id,
-      })
-        .then(() => {
-          alert("Denúncia enviada com sucesso!");
-          handleFecharDenunciaModal();
-        })
-        .catch((error) => {
-          console.error("Erro ao enviar denúncia:", error);
-          alert("Erro ao enviar denúncia. Tente novamente.");
-        });
+  const handleDenunciar = () => {
+    if (!motivoDenuncia.trim()) {
+      alert("Por favor, insira um motivo para a denúncia.");
+      return;
     }
-  }).catch((error) => {
-    console.error("Erro ao verificar denúncia existente:", error);
-    alert("Erro ao verificar denúncia existente. Tente novamente.");
-  });
-};
+
+    const denunciaUsuarioRef = ref(db, `denuncias/cotacao/${id}/${user.id}`);
+    
+    get(denunciaUsuarioRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        alert("Você já denunciou esta cotação. Não é possível denunciar novamente.");
+        handleFecharDenunciaModal();
+      } else {
+        const novaDenunciaRef = push(denunciaUsuarioRef);
+
+        set(novaDenunciaRef, {
+          motivo: motivoDenuncia,
+          timestamp: new Date().toISOString(),
+          userId: user.id,
+          cotacaoId: id,
+        })
+          .then(() => {
+            alert("Denúncia enviada com sucesso!");
+            handleFecharDenunciaModal();
+          })
+          .catch((error) => {
+            console.error("Erro ao enviar denúncia:", error);
+            alert("Erro ao enviar denúncia. Tente novamente.");
+          });
+      }
+    }).catch((error) => {
+      console.error("Erro ao verificar denúncia existente:", error);
+      alert("Erro ao verificar denúncia existente. Tente novamente.");
+    });
+  };
+
   if (!cotacao) {
     return <Typography align="center" color="textSecondary">Carregando...</Typography>;
   }
+
   return (
-    <Box width="100%" mx="auto" p={3}>
+    <Box width="100%" mx="auto" p={isMobile ? 1 : 3}>
       <BackButton sx={{ mb: 2 }} />
+      
+      {/* Main Card */}
       <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
-          <Grid container spacing={3} alignItems="center">
+          <Grid container spacing={2} alignItems="center">
             <Grid item>
               <Avatar
                 src={cotacao.company.logoUrl || 'default-logo.png'}
                 alt={cotacao.company.nome}
-                sx={{ width: 64, height: 64 }}
+                sx={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64 }}
               />
             </Grid>
             <Grid item xs>
-              <Typography variant="h5" gutterBottom fontWeight="bold">
+              <Typography variant={isMobile ? "h6" : "h5"} gutterBottom fontWeight="bold">
                 {cotacao.company.nome}
               </Typography>
               <Chip
@@ -235,29 +234,50 @@ const handleDenunciar = () => {
                 size="small"
                 sx={{ mb: 1 }}
               />
+              
               <Box mt={1}>
-                <Grid container spacing={2} alignItems="center">
+                <Grid container spacing={isMobile ? 1 : 2} alignItems="center">
                   <Grid item>
                     <Typography
                       color="primary"
-                      sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      sx={{ 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        fontSize: isMobile ? '0.8rem' : '1rem'
+                      }}
                       onClick={handleOpenModal}
                     >
-                      <RemoveRedEye color="primary" sx={{ mr: 1 }} /> {cotacao.viewCount || 0} visualizações
+                      <RemoveRedEye color="primary" sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} /> 
+                      {cotacao.viewCount || 0} visualizações
                     </Typography>
                   </Grid>
                   <Grid item>
-                    <Typography sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Inbox color="warning" sx={{ mr: 1 }} /> {propostas.length} propostas
+                    <Typography sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      fontSize: isMobile ? '0.8rem' : '1rem'
+                    }}>
+                      <Inbox color="warning" sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} /> 
+                      {propostas.length} propostas
                     </Typography>
                   </Grid>
                 </Grid>
               </Box>
+              
               <Box mt={2}>
-                <Grid container spacing={2}>
+                <Grid container spacing={isMobile ? 1 : 2} direction={isMobile ? 'column' : 'row'}>
                   <Grid item>
-                    <Typography color="textSecondary" sx={{ display: 'flex', alignItems: 'center' }}>
-                      <CalendarToday sx={{ mr: 1 }} /> Publicado em{' '}
+                    <Typography 
+                      color="textSecondary" 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        fontSize: isMobile ? '0.8rem' : '1rem'
+                      }}
+                    >
+                      <CalendarToday sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} /> 
+                      Publicado em{' '}
                       {new Date(cotacao.timestamp).toLocaleDateString('pt-PT', {
                         day: '2-digit',
                         month: '2-digit',
@@ -266,8 +286,16 @@ const handleDenunciar = () => {
                     </Typography>
                   </Grid>
                   <Grid item>
-                    <Typography color="error" sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AccessTime sx={{ mr: 1 }} /> Limite em{' '}
+                    <Typography 
+                      color="error" 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        fontSize: isMobile ? '0.8rem' : '1rem'
+                      }}
+                    >
+                      <AccessTime sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} /> 
+                      Limite em{' '}
                       {new Date(cotacao.datalimite).toLocaleString('pt-PT', {
                         day: '2-digit',
                         month: '2-digit',
@@ -282,56 +310,106 @@ const handleDenunciar = () => {
             </Grid>
           </Grid>
         </CardContent>
-        <CardActions sx={{ p: 2 }}>
-          <Button variant="contained" color="primary" onClick={handleBaixarPedido} startIcon={<FileDownload />}>
-            Baixar Pedido
-          </Button>
-          <Button variant="outlined" onClick={handlePartilhar} startIcon={<Share />}>
-            Partilhar
-          </Button>
-          <Button variant="outlined" color="error" onClick={handleAbrirDenunciaModal} startIcon={<Report />}>
-            Denunciar
-          </Button>
-          {user.id === cotacao.company.id ? (
-            <>
-              <Button variant="contained" color="secondary" onClick={handleVerPropostas}>
-                Ver Propostas
-              </Button>
-              {cotacao.status !== "Fechada" && (
-                <Button variant="contained" color="error" onClick={handleFecharCotacao}>
-                  Fechar Cotação
+        
+        {/* Actions - Responsive */}
+        <CardActions sx={{ p: isMobile ? 1 : 2 }}>
+          <Stack 
+            direction={isMobile ? 'column' : 'row'} 
+            spacing={isMobile ? 1 : 2} 
+            width="100%"
+          >
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleBaixarPedido} 
+              startIcon={<FileDownload />}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+            >
+              {isMobile ? 'Baixar' : 'Baixar Pedido'}
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={handlePartilhar} 
+              startIcon={<Share />}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+            >
+              {isMobile ? 'Partilhar' : 'Partilhar'}
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="error" 
+              onClick={handleAbrirDenunciaModal} 
+              startIcon={<Report />}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+            >
+              {isMobile ? 'Denunciar' : 'Denunciar'}
+            </Button>
+            
+            {user.id === cotacao.company.id ? (
+              <>
+                <Button 
+                  variant="contained" 
+                  color="secondary" 
+                  onClick={handleVerPropostas}
+                  size={isMobile ? 'small' : 'medium'}
+                  fullWidth={isMobile}
+                >
+                  {isMobile ? 'Propostas' : 'Ver Propostas'}
                 </Button>
-              )}
-            </>
-          ) : (
-            <>
-              {hasProposal ? (
-                <Button variant="contained" color="info" onClick={handleOpen}>
-                  Ver Minha Proposta
-                </Button>
-              ) : (
-                <div>
-                  {cotacao.status === "Fechada" ? (
-                    <Typography variant="body1" color="error">
-                      A cotação está fechada. Não é possível enviar propostas.
-                    </Typography>
-                  ) : (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleEnviarProposta(cotacao.company.id)}
-                      disabled={hasProposal || cotacao.status === "Fechada"}
-                    >
-                      Enviar Proposta
-                    </Button>
-                  )}
-                </div>
-              )}
-            </>
-          )}
+                {cotacao.status !== "Fechada" && (
+                  <Button 
+                    variant="contained" 
+                    color="error" 
+                    onClick={handleFecharCotacao}
+                    size={isMobile ? 'small' : 'medium'}
+                    fullWidth={isMobile}
+                  >
+                    {isMobile ? 'Fechar' : 'Fechar Cotação'}
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                {hasProposal ? (
+                  <Button 
+                    variant="contained" 
+                    color="info" 
+                    onClick={handleOpen}
+                    size={isMobile ? 'small' : 'medium'}
+                    fullWidth={isMobile}
+                  >
+                    {isMobile ? 'Minha Proposta' : 'Ver Minha Proposta'}
+                  </Button>
+                ) : (
+                  <div style={{ width: isMobile ? '100%' : 'auto' }}>
+                    {cotacao.status === "Fechada" ? (
+                      <Typography variant="body2" color="error" align="center">
+                        Cotação fechada
+                      </Typography>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleEnviarProposta(cotacao.company.id)}
+                        disabled={hasProposal || cotacao.status === "Fechada"}
+                        size={isMobile ? 'small' : 'medium'}
+                        fullWidth={isMobile}
+                      >
+                        {isMobile ? 'Enviar' : 'Enviar Proposta'}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </Stack>
         </CardActions>
       </Card>
 
+      {/* Description Card */}
       <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -342,6 +420,7 @@ const handleDenunciar = () => {
         </CardContent>
       </Card>
 
+      {/* Items Card */}
       <Card sx={{ borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -357,7 +436,12 @@ const handleDenunciar = () => {
                       <img
                         src={item.imageUrl}
                         alt={item.name}
-                        style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: 8 }}
+                        style={{ 
+                          width: '100%', 
+                          height: isMobile ? '100px' : '150px', 
+                          objectFit: 'cover', 
+                          borderRadius: 8 
+                        }}
                       />
                       <Typography variant="body1" fontWeight="bold" sx={{ mt: 1 }}>
                         {item.name}
@@ -376,7 +460,7 @@ const handleDenunciar = () => {
         </CardContent>
       </Card>
 
-      {/* Modal de Visualizações */}
+      {/* Views Modal */}
       <Modal open={viewsModalOpen} onClose={handleCloseModal}>
         <Box
           sx={{
@@ -386,9 +470,9 @@ const handleDenunciar = () => {
             transform: 'translate(-50%, -50%)',
             bgcolor: 'background.paper',
             boxShadow: 24,
-            p: 4,
+            p: isMobile ? 2 : 4,
             borderRadius: 2,
-            width: '80%',
+            width: isMobile ? '90%' : '80%',
             maxWidth: 600,
             maxHeight: '80%',
             overflowY: 'auto',
@@ -399,44 +483,50 @@ const handleDenunciar = () => {
           </Typography>
           <Divider sx={{ mb: 2 }} />
           {empresasQueVisualizaram.length > 0 ? (
-          <Grid container spacing={2}>
-            {empresasQueVisualizaram.map((empresa) => (
-              <Grid item xs={12} sm={6} key={empresa.id}>
-                <Link to={`/perfil/${empresa.id}`} style={{ textDecoration: 'none' }}> {/* Adicione o Link aqui */}
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    p={2}
-                    border={1}
-                    borderColor="divider"
-                    borderRadius={2}
-                    sx={{
-                      cursor: 'pointer', // Adiciona um cursor de ponteiro para indicar que é clicável
-                      '&:hover': {
-                        backgroundColor: '#f5f5f5', // Efeito de hover para melhorar a usabilidade
-                      },
-                    }}
-                  >
-                    <Avatar src={empresa.logoUrl || 'default-logo.png'} alt={empresa.nome} sx={{ mr: 2 }} />
-                    <Typography variant="body1">{empresa.nome || 'Empresa Desconhecida'}</Typography>
-                  </Box>
-                </Link>
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Typography color="textSecondary">Nenhuma empresa visualizou até o momento.</Typography>
-        )}
+            <Grid container spacing={2}>
+              {empresasQueVisualizaram.map((empresa) => (
+                <Grid item xs={12} sm={6} key={empresa.id}>
+                  <Link to={`/perfil/${empresa.id}`} style={{ textDecoration: 'none' }}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      p={isMobile ? 1 : 2}
+                      border={1}
+                      borderColor="divider"
+                      borderRadius={2}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: '#f5f5f5',
+                        },
+                      }}
+                    >
+                      <Avatar 
+                        src={empresa.logoUrl || 'default-logo.png'} 
+                        alt={empresa.nome} 
+                        sx={{ mr: isMobile ? 1 : 2, width: isMobile ? 32 : 40, height: isMobile ? 32 : 40 }} 
+                      />
+                      <Typography variant={isMobile ? "body2" : "body1"}>
+                        {empresa.nome || 'Empresa Desconhecida'}
+                      </Typography>
+                    </Box>
+                  </Link>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography color="textSecondary">Nenhuma empresa visualizou até o momento.</Typography>
+          )}
           <Box mt={3} textAlign="right">
-            <Button variant="contained" onClick={handleCloseModal}>
+            <Button variant="contained" onClick={handleCloseModal} size={isMobile ? 'small' : 'medium'}>
               Fechar
             </Button>
           </Box>
         </Box>
       </Modal>
 
-      {/* Modal de Detalhes da Proposta */}
-      <Dialog open={openModal} onClose={handleClose}>
+      {/* Proposal Details Modal */}
+      <Dialog open={openModal} onClose={handleClose} fullScreen={isMobile}>
         <DialogTitle fontWeight="bold">Detalhes da Proposta</DialogTitle>
         <DialogContent>
           {proposalDetails ? (
@@ -463,14 +553,14 @@ const handleDenunciar = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Modal de Denúncia */}
-      <Dialog open={denunciaModalOpen} onClose={handleFecharDenunciaModal}>
+      {/* Report Modal */}
+      <Dialog open={denunciaModalOpen} onClose={handleFecharDenunciaModal} fullScreen={isMobile}>
         <DialogTitle>Denunciar Cotação</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
             multiline
-            rows={4}
+            rows={isMobile ? 3 : 4}
             label="Motivo da Denúncia"
             value={motivoDenuncia}
             onChange={(e) => setMotivoDenuncia(e.target.value)}
@@ -478,8 +568,10 @@ const handleDenunciar = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleFecharDenunciaModal}>Cancelar</Button>
-          <Button onClick={handleDenunciar} color="error">
+          <Button onClick={handleFecharDenunciaModal} size={isMobile ? 'small' : 'medium'}>
+            Cancelar
+          </Button>
+          <Button onClick={handleDenunciar} color="error" size={isMobile ? 'small' : 'medium'}>
             Denunciar
           </Button>
         </DialogActions>

@@ -34,10 +34,6 @@ const StoreDetailDesk = () => {
         fetchStoreDetails();
     }, [storeId]);
 
-    const addToCart = (product) => {
-        setCart((prevCart) => [...prevCart, product]);
-        alert(`${product.name} foi adicionado ao carrinho.`);
-    };
 
     const handleShare = () => {
         if (navigator.share) {
@@ -100,26 +96,6 @@ const StoreDetailDesk = () => {
                         <IconButton onClick={handleShare} sx={{ marginRight: 2 }}>
                             <Share />
                         </IconButton>
-                        <IconButton
-                            onClick={() => setCartOpen(true)}
-                            sx={{
-                                position: 'relative',
-                            }}
-                        >
-                            <ShoppingCart />
-                            {cart.length > 0 && (
-                                <Badge
-                                    badgeContent={cart.length}
-                                    color="error"
-                                    sx={{
-                                        position: 'absolute',
-                                        top: -5,
-                                        right: -5,
-                                        fontSize: '12px',
-                                    }}
-                                />
-                            )}
-                        </IconButton>
                     </Box>
                 </Box>
             </Box>
@@ -133,44 +109,8 @@ const StoreDetailDesk = () => {
                     {store.description || 'Sem descrição disponível para esta loja.'}
                 </Typography>
 
-                <ProductGridDesk products={store.products} storeId={storeId} addToCart={addToCart} />
+                <ProductGridDesk products={store.products} storeId={storeId}  />
             </Box>
-
-            {/* Carrinho de Compras */}
-            <Dialog open={cartOpen} onClose={() => setCartOpen(false)} fullWidth maxWidth="sm">
-                <DialogTitle>Carrinho de Compras</DialogTitle>
-                <DialogContent>
-                    {cart.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                            Seu carrinho está vazio.
-                        </Typography>
-                    ) : (
-                        <Box>
-                            {cart.map((product, index) => (
-                                <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                                    <Typography variant="body2">{product.name}</Typography>
-                                    <Typography variant="body2">{product.price} MZN</Typography>
-                                </Box>
-                            ))}
-                            <Typography variant="h6" sx={{ marginTop: 2 }}>
-                                Total: {cart.reduce((sum, product) => sum + product.price, 0)} MZN
-                            </Typography>
-                        </Box>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleDialogClose} color="primary">
-                        Fechar
-                    </Button>
-                    <Button
-                        onClick={generateInvoice}
-                        color="secondary"
-                        disabled={cart.length === 0}
-                    >
-                        Gerar Fatura
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </Box>
     );
 };

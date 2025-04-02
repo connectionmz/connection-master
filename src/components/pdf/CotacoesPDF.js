@@ -8,15 +8,22 @@ import {
   CircularProgress,
   Alert,
   Divider,
+  useMediaQuery,
+  useTheme,
+  Stack,
 } from "@mui/material";
 import { db } from "../../fb";
 import BackButton from "../BackButton";
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 const CotacoesPDF = ({ user }) => {
   const { id } = useParams();
   const [cot, setCotacao] = useState(null);
   const [error, setError] = useState(null);
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   useEffect(() => {
     const fetchProforma = async () => {
@@ -43,6 +50,8 @@ const CotacoesPDF = ({ user }) => {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -109,70 +118,143 @@ const CotacoesPDF = ({ user }) => {
         justifyContent: "center",
         alignItems: "center",
         minHeight: "100vh",
-        p: 2,
+        p: isMobile ? 1 : 3,
         bgcolor: "background.default",
         flexDirection: "column",
       }}
     >
       {/* Botões no topo */}
-      <Box sx={{ width: "100%", display: "flex", justifyContent: "space-between", mb: 2 }}>
-        <BackButton sx={{ mb: 2 }} variant="contained" color="primary" />
+      <Box sx={{ 
+        width: "100%", 
+        display: "flex", 
+        justifyContent: "space-between", 
+        mb: 2,
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 2 : 0
+      }}>
+        <BackButton 
+          sx={{ mb: isMobile ? 0 : 2 }} 
+          variant="contained" 
+          color="primary" 
+          size={isMobile ? 'small' : 'medium'}
+        />
         {cot && (
-          <Button variant="contained" color="primary" sx={{ mt: 3 }}>
-            <PDFDownloadLink document={<MyDocument />} fileName={`Pedido_de_Cotacao_${cot.company.nome}.pdf`}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            sx={{ mt: isMobile ? 0 : 3 }}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            <PDFDownloadLink 
+              document={<MyDocument />} 
+              fileName={`Pedido_de_Cotacao_${cot.company.nome}.pdf`}
+              style={{ 
+                color: 'inherit', 
+                textDecoration: 'none',
+                fontSize: isMobile ? '0.8rem' : '1rem',
+                padding: isMobile ? '6px 8px' : '8px 16px'
+              }}
+            >
               {({ blob, url, loading, error }) =>
-                loading ? "Carregando documento..." : "Baixar PDF"
+                loading ? "Carregando..." : "Baixar PDF"
               }
             </PDFDownloadLink>
           </Button>
         )}
       </Box>
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       {cot ? (
-        <Box sx={{ width: "210mm", minHeight: "297mm", p: 3, border:'1px solid #F1F1F1' }}>
+        <Box sx={{ 
+          width: isMobile ? '100%' : '210mm', 
+          minHeight: isMobile ? 'auto' : '297mm', 
+          p: isMobile ? 2 : 3, 
+          border: '1px solid #F1F1F1',
+          borderRadius: 2,
+          boxShadow: 1
+        }}>
           {/* Logo da empresa */}
-          <Typography variant="h4" fontWeight="bold" color="text.primary">
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            fontWeight="bold" 
+            color="text.primary"
+            gutterBottom
+          >
             {cot.company?.nome}
           </Typography>
-          <Typography variant="h6" color="error" fontWeight="bold">
+          
+          <Typography 
+            variant={isMobile ? "body1" : "h6"} 
+            color="error" 
+            fontWeight="bold"
+            gutterBottom
+          >
             PEDIDO DE COTAÇÃO
           </Typography>
-          <Typography variant="h6" fontWeight="bold">
+          
+          <Typography 
+            variant={isMobile ? "body1" : "h6"} 
+            fontWeight="bold"
+            gutterBottom
+          >
             {cot.title}
           </Typography>
-          <Typography variant="body2">{cot.company?.provincia} - {cot.company?.distrito}</Typography>
-          <Typography variant="body2">{cot.company?.morada}</Typography>
-          <Typography variant="body2">Nuit:{cot.company?.nuit}</Typography>
-          <Typography variant="body2">Sector: {cot.company?.sector}</Typography>
-          <Typography variant="body2">Valor Máximo de Propostas: {cot.maxProposals} MT</Typography>
+          
+          <Stack spacing={0.5} sx={{ mb: 2 }}>
+            <Typography variant="body2">{cot.company?.provincia} - {cot.company?.distrito}</Typography>
+            <Typography variant="body2">{cot.company?.morada}</Typography>
+            <Typography variant="body2">Nuit: {cot.company?.nuit}</Typography>
+            <Typography variant="body2">Sector: {cot.company?.sector}</Typography>
+            <Typography variant="body2">Valor Máximo de Propostas: {cot.maxProposals} MT</Typography>
+          </Stack>
 
           <Divider sx={{ my: 2 }} />
 
-          <Typography variant="body2">Publicado: {formatDate(cot.timestamp)}</Typography>
-          <Typography variant="body2" sx={{ color: "red" }}>
-            Data Limite: {formatDate(cot.datalimite)}
-          </Typography>
+          <Stack spacing={1} sx={{ mb: 2 }}>
+            <Typography variant="body2">Publicado: {formatDate(cot.timestamp)}</Typography>
+            <Typography variant="body2" sx={{ color: "red" }}>
+              Data Limite: {formatDate(cot.datalimite)}
+            </Typography>
+          </Stack>
 
           <Divider sx={{ my: 2 }} />
 
           {/* Verificação para cot.items */}
           {cot && cot.items && cot.items.length > 0 ? (
             <>
-              <Typography variant="h6">Itens da Cotação</Typography>
-              {cot.items.map((item, index) => (
-                <Box key={index} sx={{ mb: 1 }}>
-                  <Typography variant="body2">
-                    <strong>Serviço/Produto:</strong> {item.name}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Quantidade:</strong> {item?.qtd || "N/A"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Descrição:</strong> {item.description || "Sem descrição"}
-                  </Typography>
-                </Box>
-              ))}
+              <Typography 
+                variant={isMobile ? "body1" : "h6"} 
+                fontWeight="bold"
+                gutterBottom
+              >
+                Itens da Cotação
+              </Typography>
+              
+              <Stack spacing={2}>
+                {cot.items.map((item, index) => (
+                  <Box key={index} sx={{ 
+                    p: 1, 
+                    border: '1px solid #eee', 
+                    borderRadius: 1,
+                    backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'transparent'
+                  }}>
+                    <Typography variant="body2">
+                      <strong>Serviço/Produto:</strong> {item.name}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Quantidade:</strong> {item?.qtd || "N/A"}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Descrição:</strong> {item.description || "Sem descrição"}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
             </>
           ) : (
             <Typography variant="body2" sx={{ color: "red" }}>
@@ -182,19 +264,24 @@ const CotacoesPDF = ({ user }) => {
 
           <Divider sx={{ my: 2 }} />
 
-          <Typography variant="body2">
-            Contacto: {cot.company?.contacto} | Email: {cot.company?.email}
-          </Typography>
-          <Typography variant="body2">connectionmozambique.com</Typography>
+          <Stack spacing={0.5}>
+            <Typography variant="body2">
+              <strong>Contacto:</strong> {cot.company?.contacto}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Email:</strong> {cot.company?.email}
+            </Typography>
+            <Typography variant="body2">connectionmozambique.com</Typography>
+          </Stack>
         </Box>
-      ) : (
-        <CircularProgress />
+      ) : !error && (
+        <CircularProgress size={isMobile ? 40 : 60} />
       )}
     </Box>
   );
 };
 
-// Estilos para o PDF
+// Estilos para o PDF (mantidos os mesmos)
 const styles = StyleSheet.create({
   page: {
     padding: 40,
