@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ref, onValue, set } from "firebase/database";
+import { ref, onValue, set, update } from "firebase/database";
 import { db } from '../../fb';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -14,33 +14,63 @@ const BannerDesk = ({ user }) => {
 
   useEffect(() => {
     const bannersRef = ref(db, 'banners');
-    onValue(bannersRef, (snapshot) => {
+    const unsubscribe = onValue(bannersRef, (snapshot) => {
       const bannersData = snapshot.val();
       if (bannersData) {
-        const bannerList = Object.values(bannersData);
+        const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
+          id,
+          ...banner
+        }));
 
-        // Filtrar apenas se o usuário existir
-        const bannersFiltrados = user
-          ? bannerList.filter((banner) => {
-              return (
-                banner.provincias.includes(user?.provincia) &&
-                banner.sectores.includes(user?.sector)
-              );
-            })
-          : bannerList; // Exibe todos os banners se o usuário não existir
+        // Check expiration and update status
+        const currentDate = new Date();
+        const updatedBanners = bannerList.map(banner => {
+          const expireDate = new Date(banner.expireDate);
+          if (expireDate < currentDate && banner.status !== 'expired') {
+            // Update status in Firebase if expired
+            update(ref(db, `banners/${banner.id}`), { status: 'expired' });
+            return { ...banner, status: 'expired' };
+          }
+          return banner;
+        });
 
-        setBanners(bannersFiltrados);
+        // Filter banners based on user profile and type
+        const filteredBanners = updatedBanners.filter(banner => {
+          // Only show active banners
+          if (banner.status !== 'active') return false;
+          
+          // Filter by type (home page banners)
+          if (banner.tipoAnuncio !== 'home') return false;
 
-        // Registrar visualizações apenas para usuários logados
+          // Check if banner has expired
+          const expireDate = new Date(banner.expireDate);
+          if (expireDate < currentDate) return false;
+
+          // If user exists, filter by province and sector
+          if (user) {
+            const matchesProvincia = banner.provincias.includes(user.provincia);
+            const matchesSector = banner.sectores.includes(user.sector);
+            return matchesProvincia && matchesSector;
+          }
+          
+          // Show all active banners if no user
+          return true;
+        });
+
+        setBanners(filteredBanners);
+
+        // Register views for logged-in users
         if (user) {
-          bannersFiltrados.forEach((banner) => registrarView(banner.id));
+          filteredBanners.forEach((banner) => registrarView(banner.id));
         }
       } else {
         setBanners([]);
       }
       setLoading(false);
     });
-  }, [user?.provincia, user?.sector]);
+
+    return () => unsubscribe();
+  }, [user?.provincia, user?.sector, user?.id]);
 
   const registrarView = (bannerId) => {
     if (!user?.id) return;
@@ -74,13 +104,19 @@ const BannerDesk = ({ user }) => {
     );
   }
 
+  // Get active banners (filter again in case state hasn't updated)
+  const activeBanners = banners.filter(banner => {
+    const expireDate = new Date(banner.expireDate);
+    return banner.status === 'active' && expireDate > new Date();
+  });
+
   return (
     <Box className="w-full max-w-screen-xl mx-auto">
-      {banners.length > 0 ? (
+      {activeBanners.length > 0 ? (
         <Slider {...settings}>
-          {banners.map((banner, index) => (
+          {activeBanners.map((banner, index) => (
             <Box
-              key={index}
+              key={banner.id}
               className="w-full flex overflow-hidden"
               sx={{
                 height: { xs: '250px', sm: '400px', md: '600px' },

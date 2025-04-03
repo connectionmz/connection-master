@@ -14,7 +14,7 @@ import {
     CircularProgress,
 } from '@mui/material';
 import { AccessTime, CheckCircle, History } from '@mui/icons-material';
-import { ref, onValue, remove, update } from 'firebase/database';
+import { ref, onValue, remove, update, off } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
@@ -55,32 +55,64 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
     }, [hasModuleSMS]);
 
     useEffect(() => {
-        const fetchCampanhasAtivas = async () => {
-            try {
-                const campanhasRef = ref(db, "campanhas");
-                onValue(campanhasRef, (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        const campanhasArray = [];
-                        Object.keys(data).forEach((campanhaKey) => {
-                            const campanhasInternas = data[campanhaKey];
-                            Object.keys(campanhasInternas).forEach((subKey) => {
-                                const campanha = campanhasInternas[subKey];
-                                if (campanha.component === "home") {
-                                    campanhasArray.push({ id: subKey, ...campanha });
-                                }
-                            });
-                        });
-                        setCampanhasAtivas(campanhasArray);
-                    }
-                });
-            } catch (error) {
-                console.error("Erro ao carregar campanhas ativas:", error);
-            }
-        };
-        fetchCampanhasAtivas();
-    }, []);
-
+        const bannersRef = ref(db, 'banners');
+        const unsubscribe = onValue(bannersRef, (snapshot) => {
+          const bannersData = snapshot.val();
+          if (bannersData) {
+            const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
+              id,
+              ...banner
+            }));
+    
+            // Check expiration and update status
+            const currentDate = new Date();
+            const updatedBanners = bannerList.map(banner => {
+              const expireDate = new Date(banner.expireDate);
+              if (expireDate < currentDate && banner.status !== 'expired') {
+                // Update status in Firebase if expired
+                update(ref(db, `banners/${banner.id}`), { status: 'expired' });
+                return { ...banner, status: 'expired' };
+              }
+              return banner;
+            });
+    
+            // Filter banners based on user profile and type
+            const filteredBanners = updatedBanners.filter(banner => {
+              // Only show active banners
+              if (banner.status !== 'active') return false;
+              
+              // Filter by type (home page banners)
+              if (banner.tipoAnuncio !== 'concurso') return false;
+    
+              // Check if banner has expired
+              const expireDate = new Date(banner.expireDate);
+              if (expireDate < currentDate) return false;
+    
+              // If user exists, filter by province and sector
+              if (user) {
+                const matchesProvincia = banner.provincias.includes(user.provincia);
+                const matchesSector = banner.sectores.includes(user.sector);
+                return matchesProvincia && matchesSector;
+              }
+              
+              // Show all active banners if no user
+              return true;
+            });
+    
+            setCampanhasAtivas(filteredBanners);
+    
+           
+          } else {
+            setCampanhasAtivas([]);
+          }
+          setLoading(false);
+        });
+    
+        return () => unsubscribe();
+      }, [user?.provincia, user?.sector, user?.id]);
+    
+    
+      
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
             setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir concursos.', severity: 'warning' });

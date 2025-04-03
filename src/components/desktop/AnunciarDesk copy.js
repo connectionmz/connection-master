@@ -21,6 +21,8 @@ import {
   FormControlLabel,
   Radio,
 } from '@mui/material';
+import Checkout from '../checkout/Checkout';
+import { handlePayment } from '../../utils/handlePayment';
 import BackButton from '../BackButton';
 
 const AnunciarDesk = ({ user }) => {
@@ -39,6 +41,7 @@ const AnunciarDesk = ({ user }) => {
   const [selectedSectores, setSelectedSectores] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
+  const [showCheckout, setShowCheckout] = useState(false);
   const [tipoAnuncio, setTipoAnuncio] = useState('home');
 
   // Preços base para cada tipo de anúncio
@@ -141,6 +144,7 @@ const AnunciarDesk = ({ user }) => {
 
   // Função para validar o formulário
   const validateForm = () => {
+ 
     if (!file) {
       showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
       return false;
@@ -152,35 +156,58 @@ const AnunciarDesk = ({ user }) => {
     return true;
   };
 
-  // Função para publicar o anúncio
-  const handlePublish = async () => {
+  // Função para iniciar o processo de upload
+  const handleUpload = () => {
     if (!validateForm()) return;
+    setShowCheckout(true);
+  };
+
+  // Função para confirmar o pagamento
+  const handleConfirmPayment = async (paymentMethod) => {
     setUploading(true);
 
-    try {
-      const fileRef = createStorageRef(storage, `images/${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      await saveToDatabase(url);
-      
-      showSnackbar('Anúncio publicado com sucesso!', 'success');
-      resetForm();
-    } catch (error) {
-      console.error('Erro ao publicar anúncio:', error);
-      showSnackbar('Erro ao publicar o anúncio. Tente novamente.', 'error');
-    } finally {
+    const paymentResult = await handlePayment({
+      phoneNumber,
+      paymentMethod,
+      user,
+      planPrice: totalCost,
+      smsCount: 1,
+      onPaymentSuccess: () => {
+        const fileRef = createStorageRef(storage, `images/${file.name}`);
+        uploadBytes(fileRef, file)
+          .then((snapshot) => {
+            getDownloadURL(fileRef).then((url) => {
+              saveToDatabase(url);
+              setUploading(false);
+              showSnackbar('Anúncio publicado com sucesso!', 'success');
+              setShowCheckout(false);
+            });
+          })
+          .catch((error) => {
+            setUploading(false);
+            console.error('Erro ao fazer upload da imagem:', error);
+            showSnackbar('Erro ao publicar o anúncio. Tente novamente.', 'error');
+          });
+      },
+      setError: (message) => showSnackbar(message, 'error'),
+      setIsLoading: setUploading,
+      setPendingTransaction: () => {},
+    });
+
+    if (!paymentResult.success) {
       setUploading(false);
+      showSnackbar('Erro no pagamento. Tente novamente.', 'error');
     }
   };
 
   // Função para salvar no banco de dados
-  const saveToDatabase = async (url) => {
+  const saveToDatabase = (url) => {
     const anuncioRef = push(ref(db, 'banners'));
     const idAnuncio = anuncioRef.key;
 
     const expireDate = calculateExpireDate(days);
 
-    await set(anuncioRef, {
+    set(anuncioRef, {
       id: idAnuncio,
       description,
       imageUrl: url,
@@ -193,9 +220,9 @@ const AnunciarDesk = ({ user }) => {
       provincias: selectedProvincias,
       sectores: selectedSectores,
       tipoAnuncio,
-      phoneNumber,
-      status: 'active'
     });
+
+    resetForm();
   };
 
   // Função para calcular a data de expiração
@@ -233,148 +260,138 @@ const AnunciarDesk = ({ user }) => {
     <Box width="100%" minHeight="100vh">
       <Paper sx={{ width: '100%', padding: 3 }}>
         <BackButton sx={{ mb: 2 }} />
-        <Typography variant="h5" gutterBottom>
-          Criar Anúncio
-        </Typography>
-
-        {/* Seletor de tipo de anúncio */}
-        <FormControl component="fieldset" sx={{ mb: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Escolha o tipo de anúncio:
-          </Typography>
-          <RadioGroup
-            value={tipoAnuncio}
-            onChange={(e) => setTipoAnuncio(e.target.value)}
-          >
-            <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
-            <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
-            <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
-            <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil" />
-          </RadioGroup>
-        </FormControl>
-
-        <TextField
-          label="Descrição do anúncio"
-          variant="outlined"
-          fullWidth
-          multiline
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-
-        <TextField
-          label="Link externo (opcional)"
-          variant="outlined"
-          fullWidth
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Imagem do anúncio *
-          </Typography>
-          <input 
-            type="file" 
-            onChange={handleFileChange} 
-            accept="image/*"
+        {showCheckout ? (
+          <Checkout
+            totalCost={totalCost}
+            onConfirmPayment={handleConfirmPayment}
+            onCancel={() => setShowCheckout(false)}
           />
-          {imageUrl && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                Pré-visualização:
+        ) : (
+          <>
+            <Typography variant="h5" gutterBottom>
+              Anunciar
+            </Typography>
+
+            {/* Seletor de tipo de anúncio */}
+            <FormControl component="fieldset" sx={{ mb: 2 }}>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                Escolha o tipo de anúncio:
               </Typography>
-              <img
-                src={imageUrl}
-                alt="Preview da Imagem"
-                style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+              <RadioGroup
+                value={tipoAnuncio}
+                onChange={(e) => setTipoAnuncio(e.target.value)}
+              >
+                <FormControlLabel value="home" control={<Radio />} label="Pagina Inicial (30 MT/dia)" />
+                <FormControlLabel value="concurso" control={<Radio />} label="Concurso (50 MT/dia)" />
+                <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações (40 MT/dia)" />
+                <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil (100 MT/dia)" />
+              </RadioGroup>
+            </FormControl>
+
+            <TextField
+              label="Link externo (opcional)"
+              variant="outlined"
+              fullWidth
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            <input type="file" onChange={handleFileChange} className="mb-3" />
+
+            {imageUrl && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  Preview da Imagem:
+                </Typography>
+                <img
+                  src={imageUrl}
+                  alt="Preview da Imagem"
+                  style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+                />
+              </Box>
+            )}
+
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="provincias-label">Províncias *</InputLabel>
+              <Select
+                labelId="provincias-label"
+                multiple
+                value={selectedProvincias}
+                onChange={handleProvinciaChange}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {provincias.map((provincia) => (
+                  <MenuItem key={provincia.provincia} value={provincia.provincia}>
+                    <Checkbox
+                      checked={selectedProvincias.includes(provincia.provincia)}
+                      disabled={user.provincia === provincia.provincia} // Desabilita a desmarcação da província padrão
+                    />
+                    <ListItemText primary={provincia.provincia} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
+              <Select
+                labelId="sectores-label"
+                multiple
+                value={selectedSectores}
+                onChange={handleSetorChange}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {sectores.map((setor) => (
+                  <MenuItem key={setor.setor} value={setor.setor}>
+                    <Checkbox
+                      checked={selectedSectores.includes(setor.setor)}
+                      disabled={user.sector === setor.setor} // Desabilita a desmarcação do setor padrão
+                    />
+                    <ListItemText primary={setor.setor} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Box mb={2}>
+              <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
+              <TextField
+                type="number"
+                value={days}
+                onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
+                inputProps={{ min: 1, max: 30 }}
+                fullWidth
               />
             </Box>
-          )}
-        </Box>
 
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="provincias-label">Províncias *</InputLabel>
-          <Select
-            labelId="provincias-label"
-            multiple
-            value={selectedProvincias}
-            onChange={handleProvinciaChange}
-            renderValue={(selected) => selected.join(', ')}
-          >
-            {provincias.map((provincia) => (
-              <MenuItem key={provincia.provincia} value={provincia.provincia}>
-                <Checkbox
-                  checked={selectedProvincias.includes(provincia.provincia)}
-                  disabled={user.provincia === provincia.provincia}
-                />
-                <ListItemText primary={provincia.provincia} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Valor total: <strong>{totalCost} MT</strong>
+            </Typography>
 
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
-          <Select
-            labelId="sectores-label"
-            multiple
-            value={selectedSectores}
-            onChange={handleSetorChange}
-            renderValue={(selected) => selected.join(', ')}
-          >
-            {sectores.map((setor) => (
-              <MenuItem key={setor.setor} value={setor.setor}>
-                <Checkbox
-                  checked={selectedSectores.includes(setor.setor)}
-                  disabled={user.sector === setor.setor}
-                />
-                <ListItemText primary={setor.setor} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
+            </Typography>
 
-        <Box mb={2}>
-          <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
-          <TextField
-            type="number"
-            value={days}
-            onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
-            inputProps={{ min: 1, max: 30 }}
-            fullWidth
-          />
-        </Box>
+            <TextField
+              label="Número de celular *"
+              variant="outlined"
+              fullWidth
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              sx={{ mb: 2 }}
+            />
 
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          Valor estimado: <strong>{totalCost} MT</strong>
-        </Typography>
-
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
-        </Typography>
-
-        <TextField
-          label="Número de celular *"
-          variant="outlined"
-          fullWidth
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handlePublish}
-          disabled={!file || !phoneNumber || uploading}
-          sx={{ mb: 2 }}
-        >
-          {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
-        </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleUpload}
+              disabled={!file || !phoneNumber}
+              sx={{ mb: 2 }}
+            >
+              {uploading ? <CircularProgress size={24} /> : 'Continuar'}
+            </Button>
+          </>
+        )}
       </Paper>
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
