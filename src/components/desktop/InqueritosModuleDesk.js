@@ -1,22 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { ref, onValue, remove, update } from 'firebase/database';
+import { ref, onValue, remove, update, get } from 'firebase/database';
 import { db } from '../../fb';
 import CriarInqueritoDesk from './CriarInqueritoDesk';
 import VisualizarRespostasDesk from './VisualizarRespostasDesk';
-import { Box, Typography, TextField, Button, MenuItem, Select, FormControl, InputLabel, List, ListItem, ListItemText, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  List,
+  ListItem,
+  ListItemText,
+  CircularProgress,
+  Paper,
+  Chip,
+  Divider,
+  Alert,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
+import { Edit, Delete, Visibility, ArrowBack, Check, Close } from '@mui/icons-material';
 
 const InqueritosModuleDesk = ({ user }) => {
   const [inqueritos, setInqueritos] = useState([]);
   const [abaAtiva, setAbaAtiva] = useState('inqueritos');
   const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({ title: '', description: '' });
+  const [editData, setEditData] = useState({ title: '', description: '', sector: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
-  const itemsPerPage = 5;
-  const [currentPage, setCurrentPage] = useState(1);
   const [sectores, setSectores] = useState([]);
+  const [responsesCount, setResponsesCount] = useState({});
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    content: '',
+    onConfirm: () => {}
+  });
 
   const filteredInqueritos = inqueritos.filter((inq) => {
     const matchesSearch = inq.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -24,59 +52,99 @@ const InqueritosModuleDesk = ({ user }) => {
     return matchesSearch && matchesSector;
   });
 
-  const paginatedInqueritos = filteredInqueritos.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   useEffect(() => {
-    const inqueritosRef = ref(db, 'surveys');
-    setLoading(true);
-    onValue(inqueritosRef, (snapshot) => {
-      const data = snapshot.val();
-      const listaInqueritos = data
-        ? Object.entries(data)
-            .map(([id, details]) => ({ id, ...details }))
-            .filter((inquerito) => inquerito.company.id === user.id)
-        : [];
-      setInqueritos(listaInqueritos);
-      console.log(listaInqueritos)
-      setLoading(false);
-    });
+    const fetchData = async () => {
+      setLoading(true);
+      
+      // Fetch surveys
+      const inqueritosRef = ref(db, 'surveys');
+      onValue(inqueritosRef, (snapshot) => {
+        const data = snapshot.val();
+        const listaInqueritos = data
+          ? Object.entries(data)
+              .map(([id, details]) => ({ id, ...details }))
+              .filter((inquerito) => inquerito.company.id === user.id)
+          : [];
+        setInqueritos(listaInqueritos);
+      });
 
-    onValue(ref(db, 'sectores_de_atividade'), (snapshot) => {
-      setSectores(snapshot.val() || []);
-    });
+      // Fetch sectors
+      onValue(ref(db, 'sectores_de_atividade'), (snapshot) => {
+        setSectores(snapshot.val() || []);
+      });
+
+      // Fetch responses count for each survey
+      const responsesRef = ref(db, 'survey_responses');
+      onValue(responsesRef, (snapshot) => {
+        const responsesData = snapshot.val();
+        const counts = {};
+        
+        if (responsesData) {
+          Object.keys(responsesData).forEach(surveyId => {
+            counts[surveyId] = Object.keys(responsesData[surveyId]).length;
+          });
+        }
+        
+        setResponsesCount(counts);
+        setLoading(false);
+      });
+    };
+
+    fetchData();
   }, [user.id]);
 
-  const handleDelete = (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este inquérito?')) {
-      remove(ref(db, `surveys/${id}`)).then(() => {
-        alert('Inquérito excluído com sucesso.');
-      });
-    }
+  const canEditSurvey = (surveyId) => {
+    return !responsesCount[surveyId] || responsesCount[surveyId] === 0;
   };
 
-
-
+  const handleDelete = (id) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar Exclusão',
+      content: 'Tem certeza que deseja excluir este inquérito? Esta ação não pode ser desfeita.',
+      onConfirm: async () => {
+        try {
+          await remove(ref(db, `surveys/${id}`));
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          console.error('Erro ao excluir inquérito:', error);
+        }
+      }
+    });
+  };
 
   const startEdit = (id, currentData) => {
+    if (!canEditSurvey(id)) {
+      return;
+    }
     setEditingId(id);
-    setEditData({ title: currentData.title, description: currentData.description });
+    setEditData({ 
+      title: currentData.title, 
+      description: currentData.description,
+      sector: currentData.sector
+    });
     setAbaAtiva('editar');
   };
 
-  const saveEdit = () => {
-    if (!editData.title || !editData.description) {
-      alert('Preencha todos os campos.');
+  const saveEdit = async () => {
+    if (!editData.title || !editData.description || !editData.sector) {
+      setConfirmDialog({
+        open: true,
+        title: 'Campos obrigatórios',
+        content: 'Preencha todos os campos antes de salvar.',
+        onConfirm: () => setConfirmDialog({ ...confirmDialog, open: false })
+      });
       return;
     }
-    update(ref(db, `surveys/${editingId}`), editData).then(() => {
-      alert('Inquérito atualizado com sucesso.');
+
+    try {
+      await update(ref(db, `surveys/${editingId}`), editData);
       setEditingId(null);
-      setEditData({ title: '', description: '' });
+      setEditData({ title: '', description: '', sector: '' });
       setAbaAtiva('inqueritos');
-    });
+    } catch (error) {
+      console.error('Erro ao atualizar inquérito:', error);
+    }
   };
 
   const visualizarRespostas = (surveyId) => {
@@ -85,261 +153,244 @@ const InqueritosModuleDesk = ({ user }) => {
   };
 
   return (
-<Box
-  sx={{
-    padding: 4,
-    width:'100%',
-    backgroundColor:'#FFF'
-  }}
->
-  <Typography
-    variant="h5"
-    gutterBottom
-    sx={{
-      fontWeight: 'bold',
-      color: '#333',
-      textAlign: 'center',
-      marginBottom: 4,
-    }}
-  >
-    Painel de Inquéritos
-  </Typography>
-
-  <Box
-    sx={{
-      display: 'flex',
-      gap: 2,
-      borderBottom: '1px solid #ddd',
-      marginBottom: 3,
-      justifyContent: 'center',
-    }}
-  >
-    <Button
-      onClick={() => setAbaAtiva('inqueritos')}
-      variant={abaAtiva === 'inqueritos' ? 'contained' : 'text'}
-      sx={{
-        flex: 1,
-        padding: 1.5,
-        backgroundColor: abaAtiva === 'inqueritos' ? '#007BFF' : 'transparent',
-        color: abaAtiva === 'inqueritos' ? '#fff' : '#333',
-        borderRadius: 2,
-        '&:hover': {
-          backgroundColor: abaAtiva === 'inqueritos' ? '#0056b3' : '#f0f0f0',
-        },
-      }}
-    >
-      Inquéritos
-    </Button>
-    <Button
-      onClick={() => setAbaAtiva('novo')}
-      variant={abaAtiva === 'novo' ? 'contained' : 'text'}
-      sx={{
-        flex: 1,
-        padding: 1.5,
-        backgroundColor: abaAtiva === 'novo' ? '#007BFF' : 'transparent',
-        color: abaAtiva === 'novo' ? '#fff' : '#333',
-        borderRadius: 2,
-        '&:hover': {
-          backgroundColor: abaAtiva === 'novo' ? '#0056b3' : '#f0f0f0',
-        },
-      }}
-    >
-      Novo
-    </Button>
-  </Box>
-
-  {abaAtiva === 'inqueritos' && (
-    <Box>
-      <Typography
-        variant="h6"
-        sx={{
-          fontWeight: 'bold',
-          marginBottom: 2,
-          color: '#333',
-        }}
-      >
-        Lista de Inquéritos
-      </Typography>
-
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 2,
-          marginBottom: 3,
-          flexDirection: { xs: 'column', sm: 'row' },
-        }}
-      >
-        <TextField
-          label="Pesquisar por título..."
-          variant="outlined"
-          fullWidth
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+    <Paper elevation={3} sx={{ p: 4, borderRadius: 3, backgroundColor: '#fff' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          Painel de Inquéritos
+        </Typography>
+        <Chip 
+          label={user.companyName} 
+          color="secondary" 
+          sx={{ ml: 2, fontSize: '0.875rem', height: 28 }} 
         />
-        <FormControl fullWidth>
-          <InputLabel>Setor</InputLabel>
-          <Select
-            value={selectedSector}
-            onChange={(e) => setSelectedSector(e.target.value)}
-            label="Setor"
-          >              <MenuItem value="">Todos</MenuItem>
-
-             {sectores.map((s) => (
-                <MenuItem key={s.setor} value={s.setor}>
-                  {s.setor}
-                </MenuItem>
-              ))}
-           
-          </Select>
-        </FormControl>
       </Box>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
-          <CircularProgress />
-        </Box>
-      ) : filteredInqueritos.length === 0 ? (
-        <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center' }}>
-          Nenhum inquérito encontrado.
-        </Typography>
-      ) : (
-        <List>
-          {paginatedInqueritos.map((inq) => (
-            <ListItem
-              key={inq.id}
-              sx={{
-                border: '1px solid #ddd',
-                padding: 2,
-                marginBottom: 2,
-                borderRadius: 2,
-                boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)',
-                backgroundColor: '#fff',
-              }}
-            >
-              <ListItemText
-                primary={inq.title}
-                secondary={inq.description}
-                sx={{ color: '#555' }}
-              />
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  onClick={() => startEdit(inq.id, inq)}
-                  color="primary"
-                  variant="text"
-                  sx={{ '&:hover': { color: '#0056b3' } }}
-                >
-                  Editar
-                </Button>
-                <Button
-                  onClick={() => handleDelete(inq.id)}
-                  color="error"
-                  variant="text"
-                  sx={{ '&:hover': { color: '#c62828' } }}
-                >
-                  Excluir
-                </Button>
-                <Button
-                  onClick={() => visualizarRespostas(inq.id)}
-                  color="secondary"
-                  variant="text"
-                  sx={{ '&:hover': { color: '#6d4c41' } }}
-                >
-                  Visualizar Respostas
-                </Button>
-              </Box>
-            </ListItem>
-          ))}
-        </List>
-      )}
-    </Box>
-  )}
-
-  {abaAtiva === 'novo' && (
-    <Box>
-      <Typography
-        variant="h6"
-        sx={{
-          fontWeight: 'bold',
-          marginBottom: 2,
-          color: '#333',
-        }}
-      >
-        Criar Novo Inquérito
-      </Typography>
-      <CriarInqueritoDesk user={user} />
-    </Box>
-  )}
-
-  {abaAtiva === 'editar' && (
-    <Box>
-      <Typography
-        variant="h6"
-        sx={{
-          fontWeight: 'bold',
-          marginBottom: 2,
-          color: '#333',
-        }}
-      >
-        Editar Inquérito
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          label="Título"
-          variant="outlined"
-          fullWidth
-          value={editData.title}
-          onChange={(e) =>
-            setEditData({ ...editData, title: e.target.value })
-          }
-        />
-        <TextField
-          label="Descrição"
-          variant="outlined"
-          multiline
-          rows={4}
-          fullWidth
-          value={editData.description}
-          onChange={(e) =>
-            setEditData({ ...editData, description: e.target.value })
-          }
-        />
-        <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
-            onClick={saveEdit}
-            variant="contained"
-            color="success"
-            sx={{
-              flex: 1,
-              backgroundColor: '#2e7d32',
-              '&:hover': { backgroundColor: '#1b5e20' },
-            }}
+            onClick={() => setAbaAtiva('inqueritos')}
+            variant={abaAtiva === 'inqueritos' ? 'contained' : 'outlined'}
+            startIcon={<Visibility />}
+            sx={{ borderRadius: 2 }}
           >
-            Salvar
+            Meus Inquéritos
           </Button>
           <Button
-            onClick={() => {
-              setEditingId(null);
-              setEditData({ title: '', description: '' });
-              setAbaAtiva('inqueritos');
-            }}
-            variant="outlined"
-            sx={{ flex: 1, borderColor: '#bbb', '&:hover': { borderColor: '#888' } }}
+            onClick={() => setAbaAtiva('novo')}
+            variant={abaAtiva === 'novo' ? 'contained' : 'outlined'}
+            color="success"
+            sx={{ borderRadius: 2 }}
           >
+            Criar Novo
+          </Button>
+        </Box>
+      </Box>
+
+      {abaAtiva === 'inqueritos' && (
+        <Box>
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+            <TextField
+              label="Pesquisar inquéritos..."
+              variant="outlined"
+              fullWidth
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ flex: 2 }}
+            />
+            <FormControl fullWidth sx={{ flex: 1 }}>
+              <InputLabel>Filtrar por setor</InputLabel>
+              <Select
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                label="Filtrar por setor"
+              >
+                <MenuItem value="">Todos os setores</MenuItem>
+                {sectores.map((s) => (
+                  <MenuItem key={s.setor} value={s.setor}>
+                    {s.setor}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress size={60} />
+            </Box>
+          ) : filteredInqueritos.length === 0 ? (
+            <Alert severity="info" sx={{ my: 2 }}>
+              Nenhum inquérito encontrado com os critérios selecionados.
+            </Alert>
+          ) : (
+            <List sx={{ width: '100%' }}>
+              {filteredInqueritos.map((inq) => (
+                <Paper key={inq.id} elevation={2} sx={{ mb: 2, borderRadius: 2 }}>
+                  <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {inq.title}
+                      </Typography>
+                      <Chip 
+                        label={inq.sector} 
+                        color="primary" 
+                        size="small" 
+                        sx={{ ml: 1 }} 
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      {inq.description}
+                    </Typography>
+                    <Divider sx={{ my: 1 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Chip
+                          label={`${responsesCount[inq.id] || 0} respostas`}
+                          variant="outlined"
+                          size="small"
+                          color={responsesCount[inq.id] ? 'primary' : 'default'}
+                        />
+                        <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                          Criado em: {new Date(inq.createdAt).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <IconButton
+                          onClick={() => startEdit(inq.id, inq)}
+                          color="primary"
+                          disabled={!canEditSurvey(inq.id)}
+                          title={!canEditSurvey(inq.id) ? "Não é possível editar inquéritos com respostas" : "Editar"}
+                        >
+                          <Edit />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => handleDelete(inq.id)}
+                          color="error"
+                        >
+                          <Delete />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => visualizarRespostas(inq.id)}
+                          color="secondary"
+                        >
+                          <Visibility />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  </ListItem>
+                </Paper>
+              ))}
+            </List>
+          )}
+        </Box>
+      )}
+
+      {abaAtiva === 'novo' && (
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <IconButton onClick={() => setAbaAtiva('inqueritos')} sx={{ mr: 1 }}>
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              Criar Novo Inquérito
+            </Typography>
+          </Box>
+          <CriarInqueritoDesk 
+            user={user} 
+            onSuccess={() => setAbaAtiva('inqueritos')} 
+            sectores={sectores}
+          />
+        </Box>
+      )}
+
+      {abaAtiva === 'editar' && (
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <IconButton onClick={() => setAbaAtiva('inqueritos')} sx={{ mr: 1 }}>
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              Editar Inquérito
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 800, mx: 'auto' }}>
+            <TextField
+              label="Título do Inquérito"
+              variant="outlined"
+              fullWidth
+              value={editData.title}
+              onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+            />
+            <TextField
+              label="Descrição"
+              variant="outlined"
+              multiline
+              rows={4}
+              fullWidth
+              value={editData.description}
+              onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Setor de Atividade</InputLabel>
+              <Select
+                value={editData.sector}
+                onChange={(e) => setEditData({ ...editData, sector: e.target.value })}
+                label="Setor de Atividade"
+              >
+                {sectores.map((s) => (
+                  <MenuItem key={s.setor} value={s.setor}>
+                    {s.setor}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+              <Button
+                onClick={() => setAbaAtiva('inqueritos')}
+                variant="outlined"
+                color="inherit"
+                startIcon={<Close />}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={saveEdit}
+                variant="contained"
+                color="primary"
+                startIcon={<Check />}
+              >
+                Salvar Alterações
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {abaAtiva === 'respostas' && selectedSurveyId && (
+        <VisualizarRespostasDesk
+          surveyId={selectedSurveyId}
+          onBack={() => setAbaAtiva('inqueritos')}
+        />
+      )}
+
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+      >
+        <DialogTitle>{confirmDialog.title}</DialogTitle>
+        <DialogContent>
+          <Typography>{confirmDialog.content}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}>
             Cancelar
           </Button>
-        </Box>
-      </Box>
-    </Box>
-  )}
-
-  {abaAtiva === 'respostas' && selectedSurveyId && (
-    <VisualizarRespostasDesk
-      surveyId={selectedSurveyId}
-      onBack={() => setAbaAtiva('inqueritos')}
-    />
-  )}
-</Box>
-
+          <Button onClick={confirmDialog.onConfirm} color="primary" autoFocus>
+            Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Paper>
   );
 };
 

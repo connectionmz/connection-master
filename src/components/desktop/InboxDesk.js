@@ -14,6 +14,7 @@ import {
   Avatar,
   Tooltip,
   Link,
+  Chip,
 } from '@mui/material';
 import { ref, onValue, update, remove } from 'firebase/database';
 import { auth, db } from '../../fb';
@@ -26,15 +27,14 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 const InboxDesk = ({ user }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const isMobile = useMediaQuery('(max-width:600px)'); // Detecta dispositivos móveis
+  const isMobile = useMediaQuery('(max-width:600px)');
+  const isSmallMobile = useMediaQuery('(max-width:400px)');
 
-  // Função para buscar notificações
   useEffect(() => {
     const notificationsRef = ref(db, 'notifications');
     onValue(notificationsRef, (snapshot) => {
       const data = snapshot.val();
       const userNotifications = [];
-      // Filtrando as notificações para o usuário logado
       for (const userId in data) {
         if (data[userId]) {
           for (const notificationId in data[userId]) {
@@ -54,11 +54,10 @@ const InboxDesk = ({ user }) => {
           }
         }
       }
-      // Ordenar notificações por timestamp (mais recente primeiro)
       userNotifications.sort((a, b) => {
-        const dateA = new Date(a.timestamp).getTime(); // Converte para timestamp
-        const dateB = new Date(b.timestamp).getTime(); // Converte para timestamp
-        return dateB - dateA; // Ordena em ordem decrescente
+        const dateA = new Date(a.timestamp).getTime();
+        const dateB = new Date(b.timestamp).getTime();
+        return dateB - dateA;
       });
       setNotifications(userNotifications);
       setLoading(false);
@@ -69,13 +68,11 @@ const InboxDesk = ({ user }) => {
     };
   }, [user.id]);
 
-  // Função para marcar a notificação como lida
   const markAsRead = (notificationId) => {
     const notificationRef = ref(db, `notifications/${user.id}/${notificationId}`);
     update(notificationRef, { status: 'read' });
   };
 
-  // Função para marcar todas as notificações como lidas
   const markAllAsRead = () => {
     notifications.forEach((notification) => {
       if (notification.status === 'unread') {
@@ -85,13 +82,11 @@ const InboxDesk = ({ user }) => {
     });
   };
 
-  // Função para excluir uma notificação
   const deleteNotification = (notificationId) => {
     const notificationRef = ref(db, `notifications/${user.id}/${notificationId}`);
     remove(notificationRef);
   };
 
-  // Função para excluir todas as notificações
   const deleteAllNotifications = () => {
     notifications.forEach((notification) => {
       const notificationRef = ref(db, `notifications/${user.id}/${notification.id}`);
@@ -100,7 +95,11 @@ const InboxDesk = ({ user }) => {
   };
 
   if (loading) {
-    return <Typography variant="h6" align="center">Carregando...</Typography>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography variant="h6" align="center">Carregando...</Typography>
+      </Box>
+    );
   }
 
   return (
@@ -108,164 +107,252 @@ const InboxDesk = ({ user }) => {
       sx={{
         width: '100%',
         minHeight: '100vh',
-        padding: isMobile ? 1 : 4, // Ajusta o padding para mobile
-        backgroundColor: '#fff', // Fundo suave
+        padding: isMobile ? 1 : 4,
+        backgroundColor: '#f5f7fa',
       }}
     >
       <BackButton sx={{ mb: 2 }} />
       <Paper
         sx={{
-          padding: isMobile ? 2 : 4,
+          padding: isMobile ? 2 : 3,
           borderRadius: 2,
-          maxWidth: isMobile ? '100%' : '800px', // Limita a largura máxima
-          margin: '0 auto', // Centraliza horizontalmente
+          maxWidth: '100%',
+          margin: '0 auto',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
         }}
       >
         {/* Cabeçalho */}
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'center',
             justifyContent: 'space-between',
             mb: 3,
+            gap: isMobile ? 2 : 0,
           }}
         >
-
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Typography 
+            variant="h5" 
+            component="h1"
+            sx={{
+              fontWeight: 600,
+              fontSize: isMobile ? '1.25rem' : '1.5rem',
+              color: '#2c3e50',
+            }}
+          >
+            Suas Notificações
+          </Typography>
+          
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1,
+            flexWrap: 'wrap',
+            justifyContent: isMobile ? 'flex-start' : 'flex-end',
+            width: isMobile ? '100%' : 'auto',
+          }}>
             <Tooltip title="Marcar todas como lidas">
               <Button
                 variant="contained"
                 color="primary"
+                size={isMobile ? 'small' : 'medium'}
                 startIcon={<MarkEmailReadIcon />}
                 onClick={markAllAsRead}
                 sx={{
-                  fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {isMobile ? 'Marcar todas' : 'Marcar todas como lidas'}
+                {isMobile ? 'Ler todas' : 'Marcar como lidas'}
               </Button>
             </Tooltip>
             <Tooltip title="Eliminar todas">
               <Button
                 variant="outlined"
                 color="error"
+                size={isMobile ? 'small' : 'medium'}
                 startIcon={<DeleteForeverIcon />}
                 onClick={deleteAllNotifications}
                 sx={{
-                  fontSize: isMobile ? '0.75rem' : '0.875rem',
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {isMobile ? 'Eliminar todas' : 'Eliminar todas'}
+                {isMobile ? 'Limpar' : 'Limpar tudo'}
               </Button>
             </Tooltip>
           </Box>
         </Box>
 
         {notifications.length === 0 ? (
-          <Typography
-            variant="h6"
-            color="textSecondary"
-            sx={{
-              textAlign: 'center',
-              mt: 4,
-              fontSize: isMobile ? '0.875rem' : '1rem', 
-            }}
-          >
-            Nenhuma notificação encontrada.
-          </Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            py: 4 
+          }}>
+            <EmailIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            <Typography
+              variant="h6"
+              color="textSecondary"
+              sx={{
+                textAlign: 'center',
+                fontSize: isMobile ? '1rem' : '1.25rem',
+              }}
+            >
+              Nenhuma notificação encontrada
+            </Typography>
+          </Box>
         ) : (
-          <List sx={{ width: '100%' }}>
+          <List sx={{ width: '100%', p: 0 }}>
             {notifications.map((notification) => (
               <Paper
                 key={notification.id}
-                elevation={1}
+                elevation={0}
                 sx={{
                   mb: 2,
                   borderRadius: 2,
-                  backgroundColor:
-                    notification.status === 'unread' ? '#f9f9f9' : '#ffffff', 
-                  transition: 'all 0.3s ease',
+                  borderLeft: notification.status === 'unread' ? '4px solid #1976d2' : '4px solid transparent',
+                  backgroundColor: notification.status === 'unread' ? '#f0f7ff' : '#ffffff',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: 3,
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                   },
                 }}
               >
                 <ListItem
-                  dense={isMobile}
                   sx={{
-                    padding: isMobile ? '8px 16px' : '12px 24px', 
+                    p: isMobile ? 1 : 2,
+                    alignItems: 'flex-start',
+                    flexDirection: isSmallMobile ? 'column' : 'row',
                   }}
                 >
-                  <ListItemText
-                    primary={
-                      <Link
-                        href={notification.link || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    flex: 1,
+                    minWidth: 0, // Previne overflow
+                  }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      mb: 0.5,
+                      gap: 1,
+                    }}>
+                      {notification.status === 'unread' && (
+                        <Chip 
+                          label="Nova" 
+                          size="small" 
+                          color="primary" 
+                          sx={{ 
+                            height: 20,
+                            fontSize: '0.65rem',
+                            fontWeight: 'bold',
+                          }} 
+                        />
+                      )}
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
                         sx={{
-                          textDecoration: 'none',
-                          color: 'inherit',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    
+                    <ListItemText
+                      primary={
+                        <Link
+                          href={notification.link || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{
+                            textDecoration: 'none',
+                            color: 'inherit',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                            },
+                          }}
+                        >
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              fontSize: isMobile ? '0.875rem' : '1rem',
+                              fontWeight: notification.status === 'unread' ? '600' : '400',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {notification.message}
+                          </Typography>
+                        </Link>
+                      }
+                      secondary={
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            fontSize: '0.75rem',
+                            display: 'inline-block',
+                            mt: 0.5,
+                          }}
+                        >
+                          Tipo: {notification.type}
+                        </Typography>
+                      }
+                    />
+                  </Box>
+                  
+                  <ListItemSecondaryAction
+                    sx={{
+                      position: isSmallMobile ? 'relative' : 'absolute',
+                      right: isSmallMobile ? 0 : 16,
+                      top: isSmallMobile ? 'auto' : 16,
+                      transform: isSmallMobile ? 'none' : 'translateY(0)',
+                      display: 'flex',
+                      flexDirection: isSmallMobile ? 'row' : 'column',
+                      gap: isSmallMobile ? 1 : 0.5,
+                      mt: isSmallMobile ? 1 : 0,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Tooltip title={notification.status === 'read' ? 'Já lida' : 'Marcar como lida'}>
+                      <IconButton
+                        size="small"
+                        color={notification.status === 'read' ? 'default' : 'primary'}
+                        onClick={() => markAsRead(notification.id)}
+                        disabled={notification.status === 'read'}
+                        sx={{
+                          bgcolor: notification.status === 'read' ? 'action.selected' : 'primary.light',
                           '&:hover': {
-                            textDecoration: 'underline',
+                            bgcolor: notification.status === 'read' ? 'action.selected' : 'primary.main',
+                            color: 'white',
                           },
                         }}
                       >
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            fontSize: isMobile ? '0.875rem' : '1rem', 
-                            fontWeight: notification.status === 'unread' ? 'bold' : 'normal',
-                          }}
-                        >
-                          {notification.message}
-                        </Typography>
-                      </Link>
-                    }
-                    secondary={
-                      <Typography
-                        variant="caption"
-                        color="textSecondary"
+                        <MarkEmailReadIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    
+                    <Tooltip title="Excluir">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => deleteNotification(notification.id)}
                         sx={{
-                          fontSize: isMobile ? '0.75rem' : '0.875rem', // Ajusta o tamanho da fonte para mobile
+                          bgcolor: 'error.light',
+                          '&:hover': {
+                            bgcolor: 'error.main',
+                            color: 'white',
+                          },
                         }}
                       >
-                        {`Tipo: ${notification.type} | Data: ${new Date(
-                          notification.timestamp
-                        ).toLocaleString()}`}
-                      </Typography>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Tooltip title="lida">
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          onClick={() => markAsRead(notification.id)}
-                          disabled={notification.status === 'read'}
-                          sx={{
-                            fontSize: isMobile ? '0.75rem' : '0.875rem', // Ajusta o tamanho da fonte para mobile
-                            px: isMobile ? 1 : 2, // Ajusta o padding horizontal
-                            py: isMobile ? 0.5 : 1, // Ajusta o padding vertical
-                          }}
-                        >
-                          {notification.status === 'read' ? 'Lida' : 'Marcar como lida'}
-                        </Button>
-                      </Tooltip>
-                      <Tooltip title="Eliminar">
-                        <IconButton
-                          edge="end"
-                          aria-label="delete"
-                          onClick={() => deleteNotification(notification.id)}
-                          sx={{
-                            ml: isMobile ? 0.5 : 1, 
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </ListItemSecondaryAction>
                 </ListItem>
               </Paper>

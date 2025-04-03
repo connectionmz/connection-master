@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Button,
   Paper,
@@ -19,223 +19,447 @@ import {
   Grid,
   Box,
   useMediaQuery,
+  Card,
+  CardContent,
+  Avatar,
+  Chip,
+  Divider,
+  CircularProgress
 } from '@mui/material';
-import { ref, onValue, update } from 'firebase/database';
+import { ref, onValue, update, get } from 'firebase/database';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
 import { saveContentToInbox } from '../SaveToInbox';
 import { useParams } from 'react-router-dom';
+import {
+  CheckCircle,
+  Cancel,
+  Edit,
+  Send,
+  Business,
+  Phone,
+  Description,
+  AttachFile,
+  ArrowBack
+} from '@mui/icons-material';
+import sendEmail from '../sms/SendMail';
 
 const DetalhesPropostaDesk = ({ user }) => {
+  // Constants and state
   const { id, propostaId } = useParams();
   const [proposta, setProposta] = useState(null);
   const [nota, setNota] = useState('');
-  const [confirmAccept, setConfirmAccept] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ open: false, text: '', type: 'success' });
   const [notaEnviada, setNotaEnviada] = useState(false);
-  const isMobile = useMediaQuery('(max-width:600px)'); // Detecta dispositivos móveis
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    content: '',
+    onConfirm: () => {}
+  });
 
+  const isMobile = useMediaQuery('(max-width:600px)');
+  const customUrl = 'app.connectionmozambique.com/';
+
+  // Status colors mapping
+  const statusColors = {
+    'Aceite': 'success',
+    'Recusada': 'error',
+    'Pendente': 'warning'
+  };
+
+  // Fetch proposal data
   useEffect(() => {
     const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
-
-    onValue(propostaRef, (snapshot) => {
-      setProposta(snapshot.val());
+    const unsubscribe = onValue(propostaRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setProposta(snapshot.val());
+        setNota(snapshot.val().nota || '');
+        setNotaEnviada(!!snapshot.val().nota);
+      }
+      setLoading(false);
     });
+
+    return () => unsubscribe();
   }, [id, propostaId]);
 
-  const handleEditNota = () => {
-    setNotaEnviada(false); // Permite editar a nota
+  // Helper functions
+  const showMessage = (text, type = 'success') => {
+    setMessage({ open: true, text, type });
   };
 
-  const handleStatusUpdate = (status) => {
-    const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
-    update(propostaRef, { status })
-      .then(() => {
-        setMessage({ open: true, text: `Proposta ${status} com sucesso!`, type: 'success' });
+  const handleError = (error, defaultMessage) => {
+    console.error(error);
+    showMessage(defaultMessage, 'error');
+  };
 
-        if (status === 'Aceite') {
-          const notification = {
-            type: 'cotation_reply',
-            message: `${user.nome} Sua Proposta foi aceita`,
-            fromUserId: user.id,
-            fromUserName: user.nome,
-            timestamp: new Date().toISOString(),
-            status: 'unread',
-            url: `/cotacao/${id}/proposta/${propostaId}`,
-          };
-          saveContentToInbox(proposta.from.id, notification);
+  // Proposal status handlers
+  const updateProposalStatus = async (status) => {
+    try {
+      const updates = { 
+        status,
+        [`${status === 'Aceite' ? 'acceptedAt' : 'rejectedAt'}`]: new Date().toISOString()
+      };
+      
+      await update(ref(db, `cotacoes/${id}/proposals/${propostaId}`), updates);
+      showMessage(`Proposta ${status} com sucesso!`, 'success');
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao atualizar status da proposta');
+      return false;
+    }
+  };
+
+  const sendNotification = async (recipientId, messageText, isAccepted = false) => {
+    try {
+      const notification = {
+        type: 'cotation_reply',
+        message: messageText,
+        fromUserId: user.id,
+        fromUserName: user.nome,
+        timestamp: new Date().toISOString(),
+        status: 'unread',
+        url: `/cotacao/${id}/proposta/${propostaId}`,
+      };
+      await saveContentToInbox(recipientId, notification);
+    } catch (error) {
+      handleError(error, 'Erro ao enviar notificação');
+    }
+  };
+
+  const sendEmailNotification = async (email, subject, messageText) => {
+    try {
+      const fullUrl = `https://${customUrl}cotacao/${id}/proposta/${propostaId}`;
+      const emailContent = `
+        Olá,
+
+        ${messageText}
+
+        Você pode visualizar os detalhes acessando: ${fullUrl}
+
+        ${subject.includes('aceita') ? 
+          'Por favor, entre em contato com o comprador para os próximos passos.' : 
+          'Agradecemos seu interesse e esperamos contar com você em futuras cotações.'
         }
-      })
-      .catch(() => {
-        setMessage({ open: true, text: 'Erro ao atualizar status.', type: 'error' });
+
+        Atenciosamente,
+        Equipe Connection Mozambique
+      `;
+      
+      await sendEmail({
+        to: email,
+        subject,
+        text: emailContent
       });
+    } catch (error) {
+      handleError(error, 'Erro ao enviar e-mail de notificação');
+    }
   };
 
-  const handleNotaChange = (event) => {
-    setNota(event.target.value);
+  const rejectOtherProposals = async (acceptedProposalId) => {
+    try {
+      const proposalsRef = ref(db, `cotacoes/${id}/proposals`);
+      const snapshot = await get(proposalsRef);
+      
+      if (!snapshot.exists()) return false;
+
+      const updates = {};
+      const proposals = snapshot.val();
+      const notificationPromises = [];
+      
+      Object.keys(proposals).forEach(proposalId => {
+        if (proposalId !== acceptedProposalId) {
+          updates[`${proposalId}/status`] = 'Recusada';
+          updates[`${proposalId}/rejectedAt`] = new Date().toISOString();
+          
+          const proposal = proposals[proposalId];
+          if (proposal.from?.id) {
+            notificationPromises.push(
+              sendNotification(
+                proposal.from.id,
+                `Sua proposta para a cotação foi recusada por ${user.nome}`
+              )
+            );
+          }
+          
+          if (proposal.from?.email) {
+            notificationPromises.push(
+              sendEmailNotification(
+                proposal.from.email,
+                `Sua proposta foi recusada - Cotação #${id.slice(0, 8)}`,
+                `Infelizmente sua proposta para a cotação foi recusada por ${user.nome}.`
+              )
+            );
+          }
+        }
+      });
+      
+      await update(proposalsRef, updates);
+      await Promise.all(notificationPromises);
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao recusar outras propostas');
+      return false;
+    }
   };
 
-  const handleNotaSubmit = () => {
+  const handleAcceptProposal = async () => {
+    try {
+      // 1. Update accepted proposal
+      const success = await updateProposalStatus('Aceite');
+      if (!success) return;
+
+      // 2. Reject other proposals
+      await rejectOtherProposals(propostaId);
+
+      // 3. Send acceptance notifications
+      await Promise.all([
+        sendNotification(
+          proposta.from.id,
+          `Sua proposta foi aceita por ${user.nome}`
+        ),
+        proposta.from?.email && sendEmailNotification(
+          proposta.from.email,
+          `Sua proposta foi aceita - Cotação #${id.slice(0, 8)}`,
+          `Parabéns! Sua proposta para a cotação foi aceita por ${user.nome}.`
+        )
+      ]);
+    } catch (error) {
+      handleError(error, 'Erro ao processar a aceitação');
+    }
+  };
+
+  const handleRejectProposal = async () => {
+    try {
+      await updateProposalStatus('Recusada');
+      await sendNotification(
+        proposta.from.id,
+        `Sua proposta foi recusada por ${user.nome}`
+      );
+    } catch (error) {
+      handleError(error, 'Erro ao recusar proposta');
+    }
+  };
+
+  const handleCancelApproval = async () => {
+    try {
+      await updateProposalStatus('Pendente');
+    } catch (error) {
+      handleError(error, 'Erro ao cancelar aprovação');
+    }
+  };
+
+  // Note handlers
+  const handleNotaSubmit = async () => {
     if (!nota.trim()) {
-      setMessage({ open: true, text: 'A nota não pode estar vazia.', type: 'error' });
+      showMessage('A nota não pode estar vazia.', 'error');
       return;
     }
 
-    const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
-    update(propostaRef, { nota })
-      .then(() => {
-        setMessage({ open: true, text: 'Nota enviada com sucesso!', type: 'success' });
-        setNota('');
-        setNotaEnviada(true); // Marca a nota como enviada
-      })
-      .catch(() => {
-        setMessage({ open: true, text: 'Erro ao enviar nota.', type: 'error' });
-      });
+    try {
+      await update(ref(db, `cotacoes/${id}/proposals/${propostaId}`), { nota });
+      showMessage('Nota enviada com sucesso!');
+      setNotaEnviada(true);
+    } catch (error) {
+      handleError(error, 'Erro ao enviar nota');
+    }
   };
 
-  const handleAccept = () => {
-    setConfirmAccept(true);
+  const showAcceptConfirmation = () => {
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar Aceitação',
+      content: 'Ao aceitar esta proposta, todas as outras serão automaticamente recusadas. Esta ação é irreversível. Deseja continuar?',
+      onConfirm: handleAcceptProposal
+    });
   };
 
-  const handleConfirmAccept = () => {
-    handleStatusUpdate('Aceite');
-    setConfirmAccept(false);
+  const showRejectConfirmation = () => {
+    setConfirmDialog({
+      open: true,
+      title: 'Confirmar Recusa',
+      content: 'Tem certeza que deseja recusar esta proposta? Esta ação é irreversível.',
+      onConfirm: handleRejectProposal
+    });
   };
 
-  const handleCancelApproval = () => {
-    handleStatusUpdate('Pendente');
-  };
+  // Loading and error states
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
 
-  if (!proposta) return <Typography>Carregando detalhes da proposta...</Typography>;
+  if (!proposta) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <Typography variant="h6">Proposta não encontrada</Typography>
+        <Button 
+          startIcon={<ArrowBack />}
+          onClick={() => window.history.back()}
+          variant="outlined"
+        >
+          Voltar
+        </Button>
+      </Box>
+    );
+  }
 
+  // Main render
   return (
-    <Paper
-      sx={{
-        width: '100%',
-        maxWidth: isMobile ? '100%' : '800px', // Ajusta largura máxima para mobile
-        margin: '0 auto',
-        padding: isMobile ? 2 : 3,
-        boxSizing: 'border-box',
-      }}
-    >
+    <Paper sx={{
+      width: '100%',
+      maxWidth: 800,
+      margin: 'auto',
+      p: isMobile ? 2 : 4,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+      borderRadius: 3,
+      backgroundColor: 'background.paper'
+    }}>
       <BackButton sx={{ mb: 2 }} />
-      <Typography
-        variant="h5"
-        align="center"
-        gutterBottom
-        sx={{
-          fontSize: isMobile ? '1.5rem' : '2rem', // Ajusta tamanho da fonte para mobile
-          fontWeight: 'bold',
-        }}
-      >
-        Detalhes da Proposta
-      </Typography>
 
-      {/* Informações da Empresa */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Empresa: {proposta.from.nome}
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary', mb: 2 }}>
-          Contacto: {proposta.from.contacto}
-        </Typography>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        mb: 3,
+        flexDirection: isMobile ? 'column' : 'row'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+          <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+            <Business fontSize="medium" />
+          </Avatar>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Detalhes da Proposta
+            </Typography>
+          </Box>
+        </Box>
 
-        {/* Conteúdo da Proposta */}
-        <div
-          dangerouslySetInnerHTML={{ __html: proposta.proposal }}
-          sx={{
-            fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
-            mb: 2,
+        <Chip
+          icon={<CheckCircle fontSize="small" />}
+          label={proposta.status || 'Pendente'}
+          color={statusColors[proposta.status] || 'default'}
+          variant="outlined"
+          sx={{ 
+            px: 1,
+            fontWeight: 500,
+            borderWidth: 2,
+            '& .MuiChip-icon': { ml: 0.5 }
           }}
         />
-        {proposta.fileUrl && (
-          <Button
-            href={proposta.fileUrl}
-            target="_blank"
-            sx={{
-              textDecoration: 'underline',
-              color: 'primary.main',
-              display: 'block',
-              textAlign: 'center',
-              mb: 2,
-            }}
-          >
-            Baixar Arquivo
-          </Button>
-        )}
-
-        {/* Status da Proposta */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            mt: 2,
-            justifyContent: 'center',
-          }}
-        >
-          <Box
-            sx={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              backgroundColor:
-                proposta.status === 'Aceite'
-                  ? 'success.main'
-                  : proposta.status === 'Recusada'
-                  ? 'error.main'
-                  : 'gray',
-              mr: 1,
-            }}
-          />
-          <Typography variant="body2">
-            {proposta.status || 'Pendente'}
-          </Typography>
-        </Box>
       </Box>
 
-      {/* Produtos/Serviços */}
-      <Grid container spacing={3} sx={{ mt: 4 }}>
-        <Grid item xs={12}>
-          <Typography
-            variant="h6"
-            align="center"
-            sx={{
-              fontSize: isMobile ? '1rem' : '1.25rem', // Ajusta tamanho da fonte para mobile
-              mb: 2,
-            }}
-          >
-            Produtos/Serviços:
+      <Divider sx={{ my: 3 }} />
+
+      {/* Company Information */}
+      <Card sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Business color="primary" /> Informações da Empresa
           </Typography>
-          {proposta.selectedProducts && proposta.selectedProducts.length > 0 ? (
-            <TableContainer
-              component={Paper}
-              sx={{
-                maxHeight: isMobile ? 300 : 400, // Altura máxima da tabela para mobile
-                overflowY: 'auto',
-              }}
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Empresa
+              </Typography>
+              <Typography variant="body1">
+                {proposta.from.nome}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Contacto
+              </Typography>
+              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Phone fontSize="small" /> {proposta.from.contacto}
+              </Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Proposal Content */}
+      <Card sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Description color="primary" /> Conteúdo da Proposta
+          </Typography>
+          
+          <Box 
+            dangerouslySetInnerHTML={{ __html: proposta.proposal }}
+            sx={{
+              '& p': { mb: 2 },
+              '& ul, & ol': { pl: 3, mb: 2 },
+              fontSize: '0.9375rem',
+              lineHeight: 1.6
+            }}
+          />
+
+          {proposta.fileUrl && (
+            <Button
+              href={proposta.fileUrl}
+              target="_blank"
+              startIcon={<AttachFile />}
+              variant="outlined"
+              sx={{ mt: 2 }}
             >
+              Baixar Arquivo Anexado
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Products/Services */}
+      <Card sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Description color="primary" /> Produtos/Serviços
+          </Typography>
+          
+          {proposta.selectedProducts?.length > 0 ? (
+            <TableContainer sx={{ 
+              maxHeight: 400,
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1
+            }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Nome</TableCell>
-                    <TableCell>Preço (MT)</TableCell>
-                    <TableCell>Ação</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Nome</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Preço (MT)</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Ação</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {proposta.selectedProducts.map((product) => (
-                    <TableRow key={product.id}>
+                    <TableRow key={product.id} hover>
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.price}</TableCell>
                       <TableCell>
                         <Button
                           href={product.url}
                           target="_blank"
-                          sx={{
-                            textDecoration: 'underline',
-                            color: 'primary.main',
-                            fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
-                          }}
+                          size="small"
+                          variant="outlined"
                         >
                           Ver Detalhes
                         </Button>
@@ -246,83 +470,29 @@ const DetalhesPropostaDesk = ({ user }) => {
               </Table>
             </TableContainer>
           ) : (
-            <Typography variant="body2" align="center" sx={{ color: 'text.secondary', mt: 2 }}>
-              Nenhum produto selecionado.
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+              Nenhum produto/serviço selecionado nesta proposta
             </Typography>
           )}
-        </Grid>
+        </CardContent>
+      </Card>
 
-        {/* Botões de Ação */}
-        <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'center' }}>
-          {proposta.status === 'Aceite' ? (
-            <Button
-              onClick={handleCancelApproval}
-              variant="contained"
-              color="warning"
-              fullWidth={!isMobile} // Ocupa toda a largura em mobile
-              sx={{
-                px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
-                py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
-                mb: 2,
-              }}
-            >
-              Cancelar Aprovação
-            </Button>
-          ) : (
-            <Button
-              onClick={handleAccept}
-              variant="contained"
-              color="success"
-              fullWidth={!isMobile} // Ocupa toda a largura em mobile
-              sx={{
-                px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
-                py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
-                mb: 2,
-              }}
-            >
-              Aprovar
-            </Button>
-          )}
-        </Grid>
-        <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'center' }}>
-          <Button
-            onClick={() => handleStatusUpdate('Recusada')}
-            variant="contained"
-            color="error"
-            fullWidth={!isMobile} // Ocupa toda a largura em mobile
-            sx={{
-              px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
-              py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
-              mb: 2,
-            }}
-          >
-            Recusar
-          </Button>
-        </Grid>
-
-        {/* Nota */}
-        <Grid item xs={12}>
+      {/* Notes */}
+      <Card sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Description color="primary" /> Notas
+          </Typography>
+          
           {notaEnviada ? (
             <>
-              <Typography
-                variant="body1"
-                align="center"
-                sx={{
-                  fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
-                  mb: 2,
-                }}
-              >
-                Nota enviada: {nota}
+              <Typography variant="body1" sx={{ mb: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
+                {nota}
               </Typography>
               <Button
-                onClick={handleEditNota}
+                onClick={() => setNotaEnviada(false)}
+                startIcon={<Edit />}
                 variant="outlined"
-                color="primary"
-                fullWidth={!isMobile} // Ocupa toda a largura em mobile
-                sx={{
-                  px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
-                  py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
-                }}
               >
                 Editar Nota
               </Button>
@@ -331,80 +501,126 @@ const DetalhesPropostaDesk = ({ user }) => {
             <>
               <TextField
                 value={nota}
-                onChange={handleNotaChange}
+                onChange={(e) => setNota(e.target.value)}
                 label="Adicionar uma nota"
                 multiline
-                rows={isMobile ? 3 : 4} // Ajusta número de linhas para mobile
+                rows={4}
                 fullWidth
                 variant="outlined"
                 sx={{ mb: 2 }}
               />
               <Button
                 onClick={handleNotaSubmit}
+                startIcon={<Send />}
                 variant="contained"
-                color="primary"
-                fullWidth={!isMobile} // Ocupa toda a largura em mobile
-                sx={{
-                  px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
-                  py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
-                }}
               >
                 Enviar Nota
               </Button>
             </>
           )}
-        </Grid>
-      </Grid>
+        </CardContent>
+      </Card>
 
-      {/* Snackbar para mensagens */}
+      {/* Actions */}
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 2,
+        flexDirection: isMobile ? 'column' : 'row',
+        mb: 2
+      }}>
+        {proposta.status === 'Aceite' ? (
+          <Button
+            onClick={handleCancelApproval}
+            startIcon={<Cancel />}
+            variant="contained"
+            color="warning"
+            fullWidth
+            size="large"
+          >
+            Cancelar Aprovação
+          </Button>
+        ) : (
+          <Button
+            onClick={showAcceptConfirmation}
+            startIcon={<CheckCircle />}
+            variant="contained"
+            color="success"
+            fullWidth
+            size="large"
+          >
+            Aprovar Proposta
+          </Button>
+        )}
+        
+        <Button
+          onClick={showRejectConfirmation}
+          startIcon={<Cancel />}
+          variant="contained"
+          color="error"
+          fullWidth
+          size="large"
+          disabled={proposta.status === 'Recusada'}
+        >
+          Recusar Proposta
+        </Button>
+      </Box>
+
+      {/* Message Snackbar */}
       <Snackbar
         open={message.open}
         autoHideDuration={4000}
         onClose={() => setMessage({ ...message, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
           onClose={() => setMessage({ ...message, open: false })}
           severity={message.type}
-          sx={{
-            fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
-          }}
+          sx={{ width: '100%' }}
+          elevation={6}
         >
           {message.text}
         </Alert>
       </Snackbar>
 
-      {/* Diálogo de Confirmação */}
-      <Dialog open={confirmAccept} onClose={() => setConfirmAccept(false)}>
-        <DialogTitle>Confirmação</DialogTitle>
+      {/* Confirmation Dialog */}
+      <Dialog 
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({...confirmDialog, open: false})}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            p: 2,
+            width: isMobile ? '90%' : '400px'
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>{confirmDialog.title}</DialogTitle>
         <DialogContent>
-          <Typography
-            sx={{
-              fontSize: isMobile ? '0.875rem' : '1rem', // Ajusta tamanho da fonte para mobile
-            }}
-          >
-            Tem certeza que deseja aceitar esta proposta?
+          <Typography>{confirmDialog.content}</Typography>
+          <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 500 }}>
+            Atenção: Esta ação não pode ser desfeita!
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2 }}>
           <Button
-            onClick={handleConfirmAccept}
-            color="success"
-            sx={{
-              px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
-              py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
-            }}
+            onClick={() => setConfirmDialog({...confirmDialog, open: false})}
+            variant="outlined"
+            color="inherit"
+            sx={{ borderRadius: 2 }}
           >
-            Sim
+            Cancelar
           </Button>
           <Button
-            onClick={() => setConfirmAccept(false)}
-            color="error"
-            sx={{
-              px: isMobile ? 2 : 4, // Ajusta padding horizontal para mobile
-              py: isMobile ? 1 : 2, // Ajusta padding vertical para mobile
+            onClick={() => {
+              confirmDialog.onConfirm();
+              setConfirmDialog({...confirmDialog, open: false});
             }}
+            variant="contained"
+            color="primary"
+            startIcon={<CheckCircle />}
+            sx={{ borderRadius: 2 }}
           >
-            Não
+            Confirmar
           </Button>
         </DialogActions>
       </Dialog>

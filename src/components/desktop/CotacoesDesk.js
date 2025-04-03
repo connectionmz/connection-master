@@ -32,12 +32,41 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [isPaying, setIsPaying] = useState(false);   
     const [loading, setLoading] = useState(true);
     const [campanhasAtivas, setCampanhasAtivas] = useState([]);
+     const [clickedCotacoes, setClickedCotacoes] = useState({});
 
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width:600px)');
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
     const hasBalance = user?.activeModules?.moduloSMS?.smsCount > 0; // Verifica se o saldo de SMS é maior que 0
+
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const loadClickedStatus = async () => {
+            try {
+                const clicksRef = ref(db, 'cotacoes');
+                onValue(clicksRef, (snapshot) => {
+                    const cotacoesData = snapshot.val();
+                    const clickedStatus = {};
+
+                    if (cotacoesData) {
+                        Object.entries(cotacoesData).forEach(([cotacaoId, cotacao]) => {
+                            if (cotacao.clicks && cotacao.clicks[user.id]) {
+                                clickedStatus[cotacaoId] = true;
+                            }
+                        });
+                    }
+
+                    setClickedCotacoes(clickedStatus);
+                });
+            } catch (error) {
+                console.error('Error loading clicked status:', error);
+            }
+        };
+
+        loadClickedStatus();
+    }, [user?.id]);
 
     useEffect(() => {
         if (!hasModuleSMS) {
@@ -47,9 +76,12 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val();
-            console.log(cotacoesData); // Verifique aqui no console
             if (cotacoesData) {
-                const cotacoesArray = Object.values(cotacoesData);
+                const cotacoesArray = Object.entries(cotacoesData).map(([id, cotacao]) => ({
+                    id,
+                    ...cotacao,
+                    isClicked: clickedCotacoes[id] || false // Add clicked status to each cotacao
+                }));
                 const filteredCotacoes = cotacoesArray.filter((cotacao) =>
                     Array.isArray(cotacao.provincia) &&
                     (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia))
@@ -62,7 +94,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             setLoading(false);
         });
         return () => unsubscribeCotacoes();
-    }, [hasModuleSMS, user.provincia]);
+    }, [hasModuleSMS, user.provincia, clickedCotacoes]);
+
 
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
@@ -121,6 +154,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         return () => unsubscribe();
       }, [user?.provincia, user?.sector, user?.id]);
 
+
+
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
             setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir concursos.', severity: 'warning' });
@@ -165,18 +200,31 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         }
     };
 
-    console.log(filteredCotacoes())
 
-    const handleCotacaoClick = (id) => {
-        navigate(`/cotacao/${id}`);
+    const handleCotacaoClick = async (id) => {
+        try {
+            // Mark as clicked in Firebase
+            await `set`(ref(db, `cotacoes/${id}/clicks/${user.id}`), true);
+            
+            // Update local state immediately for better UX
+            setClickedCotacoes(prev => ({
+                ...prev,
+                [id]: true
+            }));
+            
+            navigate(`/cotacao/${id}`);
+        } catch (error) {
+            console.error('Error recording click:', error);
+            navigate(`/cotacao/${id}`); // Still navigate even if recording fails
+        }
     };
+
 
     const handleRecarregarSaldo = () => {
         navigate('/sms');
     };
 
     const renderCotacoes = () => {
-        // Verifica se o módulo SMS está inativo
         if (!hasModuleSMS) {
             return (
                 <Alert
@@ -193,7 +241,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             );
         }
     
-        // Verifica se o saldo de SMS está zerado
         if (!hasBalance) {
             return (
                 <Alert
@@ -210,7 +257,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             );
         }
     
-        // Exibe um indicador de carregamento enquanto os dados estão sendo carregados
         if (loading) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -219,7 +265,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             );
         }
     
-        // Verifica se há cotações filtradas para exibir
         const cotacoesFiltradas = filteredCotacoes();
         if (cotacoesFiltradas.length === 0) {
             return (
@@ -229,14 +274,17 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             );
         }
     
-        // Renderiza a lista de cotações
         return (
             <List>
                 {cotacoesFiltradas.map((cotacao) => (
                     <Box key={cotacao.id}>
-                        <ListItem
+                       <ListItem
                             alignItems="flex-start"
-                            sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#fafafa' } }}
+                            sx={{ 
+                                cursor: 'pointer', 
+                                '&:hover': { backgroundColor: '#fafafa' },
+                                fontWeight: clickedCotacoes[cotacao.id] ? 'normal' : 'bold' // Make unclicked bold
+                            }}
                             onClick={() => handleCotacaoClick(cotacao.id)}
                         >
                             <ListItemAvatar>

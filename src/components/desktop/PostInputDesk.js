@@ -16,12 +16,24 @@ import {
   Paper,
   Grid,
   IconButton,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  CircularProgress,
+  useMediaQuery,
+  Tooltip,
+  Divider,
 } from "@mui/material";
 import { push, ref, set, get } from "firebase/database";
 import { db } from "../../fb";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import CloseIcon from "@mui/icons-material/Close";
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 
 const PostInputDesk = ({ user }) => {
   const [newPhotos, setNewPhotos] = useState([]);
@@ -32,6 +44,8 @@ const PostInputDesk = ({ user }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessages, setErrorMessages] = useState([]);
+  const isMobile = useMediaQuery('(max-width:600px)');
+  const isSmallScreen = useMediaQuery('(max-width:400px)');
 
   const validateData = () => {
     const errors = [];
@@ -65,16 +79,15 @@ const PostInputDesk = ({ user }) => {
           };
   
           const notificationRef = push(ref(db, `notifications/${connectionId}`));
-          return set(notificationRef, notification); // Retorna a promessa
+          return set(notificationRef, notification);
         });
   
-        await Promise.all(notificationsPromises); // Espera todas as notificações serem enviadas
+        await Promise.all(notificationsPromises);
       }
     } catch (error) {
       console.error("Erro ao enviar notificações:", error);
     }
   };
-  
 
   const handleSavePublishedPhotos = useCallback(async () => {
     if (!validateData()) return;
@@ -160,7 +173,10 @@ const PostInputDesk = ({ user }) => {
 
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
     setNewPhotos(files);
+    setErrorMessages([]);
 
     const previews = {};
     const descriptions = {};
@@ -185,6 +201,7 @@ const PostInputDesk = ({ user }) => {
     setNewPhotos((prevPhotos) => prevPhotos.filter((photo) => photo.name !== photoName));
     setPhotoPreviews((prevPreviews) => {
       const newPreviews = { ...prevPreviews };
+      URL.revokeObjectURL(newPreviews[photoName]);
       delete newPreviews[photoName];
       return newPreviews;
     });
@@ -195,9 +212,43 @@ const PostInputDesk = ({ user }) => {
     });
   };
 
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, false] }],
+      ['bold', 'italic', 'underline'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link'],
+      ['clean']
+    ]
+  };
+
   return (
-    <Paper sx={{ p: 4, maxWidth: 800, mx: "auto" }}>
+    <Paper 
+      sx={{ 
+        p: isMobile ? 2 : 4, 
+        maxWidth: 800, 
+        mx: "auto", 
+        borderRadius: 3,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+        backgroundColor: 'background.paper'
+      }}
+    >
       <Box sx={{ width: "100%" }}>
+        <Typography 
+          variant="h5" 
+          component="h2" 
+          sx={{ 
+            mb: 3, 
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          <PhotoLibraryIcon color="primary" />
+          Criar Nova Publicação
+        </Typography>
+
         <input
           accept="image/*"
           style={{ display: "none" }}
@@ -208,95 +259,223 @@ const PostInputDesk = ({ user }) => {
           disabled={isUploading}
         />
         <label htmlFor="raised-button-file">
-          <Button variant="contained" component="span" disabled={isUploading}>
+          <Button 
+            variant="contained" 
+            component="span" 
+            disabled={isUploading}
+            startIcon={<CloudUploadIcon />}
+            sx={{
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: isMobile ? '0.875rem' : '1rem',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(25, 118, 210, 0.2)'
+              }
+            }}
+          >
             Selecionar Fotos
           </Button>
         </label>
 
         {errorMessages.length > 0 && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {errorMessages.map((message, index) => (
-              <Typography key={index} variant="body2">
-                {message}
-              </Typography>
-            ))}
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mt: 2,
+              borderRadius: 2,
+              alignItems: 'center'
+            }}
+            onClose={() => setErrorMessages([])}
+          >
+            <Box>
+              {errorMessages.map((message, index) => (
+                <Typography key={index} variant="body2">
+                  {message}
+                </Typography>
+              ))}
+            </Box>
           </Alert>
         )}
 
         {newPhotos.length > 0 && (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <DescriptionIcon color="action" />
+              Fotos selecionadas ({newPhotos.length})
+            </Typography>
+            
+            <Divider sx={{ mb: 3 }} />
+
             {newPhotos.map((photo, index) => (
-              <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
-                    <Box
+              <Card 
+                key={index} 
+                sx={{ 
+                  mb: 3, 
+                  borderRadius: 2,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                  border: '1px solid',
+                  borderColor: 'divider'
+                }}
+              >
+                <Grid container>
+                  <Grid item xs={12} sm={5} md={4}>
+                    <CardMedia
                       component="img"
-                      src={photoPreviews[photo.name]}
+                      image={photoPreviews[photo.name]}
                       alt={photo.name}
-                      sx={{ width: "100%", height: "auto", borderRadius: 1 }}
+                      sx={{ 
+                        height: isMobile ? 200 : 240, 
+                        objectFit: 'cover',
+                        borderTopLeftRadius: '8px',
+                        borderBottomLeftRadius: isMobile ? 0 : '8px',
+                        borderTopRightRadius: isMobile ? '8px' : 0
+                      }}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={8}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                      <Typography variant="body1" fontWeight="bold">
-                        {photo.name}
-                      </Typography>
-                      <IconButton onClick={() => handleRemovePhoto(photo.name)}>
-                        <CloseIcon />
-                      </IconButton>
-                    </Box>
-                    <ReactQuill
-                      value={photoDescriptions[photo.name] || ""}
-                      onChange={(value) => handleDescriptionChange(value, photo.name)}
-                      placeholder="Adicionar descrição"
-                      modules={{
-                        toolbar: [
-                          [{ header: "1" }, { header: "2" }, { font: [] }],
-                          [{ list: "ordered" }, { list: "bullet" }],
-                          ["bold", "italic", "underline"],
-                          ["link"],
-                          [{ align: [] }],
-                        ],
-                      }}
-                      style={{ height: "120px", marginBottom: "12px" }}
-                    />
-                    <LinearProgress
-                      variant="determinate"
-                      value={uploadProgress[photo.name] || 0}
-                      sx={{
-                        mt: 2,
-                        backgroundColor: "#e0e0e0",
-                        "& .MuiLinearProgress-bar": {
-                          backgroundColor:
-                            uploadProgress[photo.name] === 100 ? "#4caf50" : "#2196f3",
-                        },
-                      }}
-                    />
+                  <Grid item xs={12} sm={7} md={8}>
+                    <CardContent sx={{ position: 'relative', pb: '56px !important' }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        mb: 1
+                      }}>
+                        <Tooltip title={photo.name}>
+                          <Typography 
+                            variant="subtitle2" 
+                            sx={{ 
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: isMobile ? '180px' : '300px'
+                            }}
+                          >
+                            {photo.name}
+                          </Typography>
+                        </Tooltip>
+                        <IconButton 
+                          onClick={() => handleRemovePhoto(photo.name)}
+                          size="small"
+                          sx={{
+                            color: 'error.main',
+                            '&:hover': {
+                              backgroundColor: 'error.light',
+                              color: 'error.dark'
+                            }
+                          }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+
+                      <ReactQuill
+                        value={photoDescriptions[photo.name] || ""}
+                        onChange={(value) => handleDescriptionChange(value, photo.name)}
+                        placeholder="Adicione uma descrição para sua foto..."
+                        modules={quillModules}
+                        style={{ 
+                          height: isMobile ? '120px' : '140px', 
+                          marginBottom: '12px',
+                          fontSize: '0.875rem'
+                        }}
+                        theme="snow"
+                      />
+
+                      <Box sx={{ 
+                        position: 'absolute', 
+                        bottom: 16, 
+                        left: 16, 
+                        right: 16 
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          {uploadProgress[photo.name] === 100 ? (
+                            <CheckCircleIcon color="success" fontSize="small" />
+                          ) : (
+                            <CircularProgress 
+                              size={16} 
+                              thickness={6}
+                              value={uploadProgress[photo.name] || 0}
+                              variant={isUploading ? "determinate" : "indeterminate"}
+                            />
+                          )}
+                          <Typography variant="caption" color="text.secondary">
+                            {uploadProgress[photo.name] === 100 ? 
+                              'Pronto para enviar' : 
+                              (isUploading ? 'Enviando...' : '')}
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={uploadProgress[photo.name] || 0}
+                          sx={{
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: 'action.selected',
+                            '& .MuiLinearProgress-bar': {
+                              borderRadius: 3,
+                              backgroundColor: 
+                                uploadProgress[photo.name] === 100 ? 'success.main' : 'primary.main',
+                            },
+                          }}
+                        />
+                      </Box>
+                    </CardContent>
                   </Grid>
                 </Grid>
-              </Paper>
+              </Card>
             ))}
+
+            <Button
+              onClick={handleSavePublishedPhotos}
+              variant="contained"
+              color="primary"
+              disabled={isUploading || newPhotos.length === 0}
+              fullWidth
+              size="large"
+              startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{
+                mt: 2,
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 500,
+                boxShadow: 'none',
+                '&:hover': {
+                  boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+                  backgroundColor: 'primary.dark'
+                },
+                '&:disabled': {
+                  backgroundColor: 'action.disabledBackground'
+                }
+              }}
+            >
+              {isUploading ? "Publicando..." : "Publicar Fotos"}
+            </Button>
           </Box>
         )}
-
-        <Button
-          onClick={handleSavePublishedPhotos}
-          variant="contained"
-          color="primary"
-          disabled={isUploading || newPhotos.length === 0}
-          fullWidth
-          sx={{ mt: 2 }}
-        >
-          {isUploading ? "Carregando..." : "Upload Novas Fotos"}
-        </Button>
 
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={3000}
           onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          <Alert onClose={handleCloseSnackbar} severity="success">
-            Carregamento concluído com sucesso!
+          <Alert 
+            onClose={handleCloseSnackbar} 
+            severity="success"
+            icon={<CheckCircleIcon fontSize="inherit" />}
+            sx={{
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              width: '100%'
+            }}
+          >
+            Fotos publicadas com sucesso!
           </Alert>
         </Snackbar>
       </Box>

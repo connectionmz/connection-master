@@ -420,7 +420,16 @@ const CotacaoDetalhesDesk = ({ user }) => {
           <Typography dangerouslySetInnerHTML={{ __html: cotacao.description }} />
         </CardContent>
       </Card>
-
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
+           Valor maximo de propostas: {cotacao.maxProposals}
+          </Typography>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
+           Limite de propostas: {cotacao?.proposalLimit || 'N/A'}
+          </Typography>
+        </CardContent>
+      </Card>
       {/* Items Card */}
       <Card sx={{ borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
