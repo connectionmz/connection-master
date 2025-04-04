@@ -53,33 +53,42 @@ const MarqueeParceiros = () => {
 
       {/* Marquee de Parceiros */}
       <Box
-        flexGrow={1}
-        sx={{
-          display: "flex",
-          overflow: "hidden",
-          whiteSpace: "nowrap",
-          animation: "marquee 20s linear infinite",
-        }}
+  flexGrow={1}
+  sx={{
+    display: "flex",
+    overflow: "hidden",
+    position: "relative",
+    height: "60px", // ajustar conforme necessário
+  }}
+>
+  <Box
+    sx={{
+      display: "flex",
+      whiteSpace: "nowrap",
+      animation: "marquee 20s linear infinite",
+    }}
+  >
+    {[...parceiros].map((parceiro, index) => (
+      <Box
+        key={index}
+        display="flex"
+        alignItems="center"
+        sx={{ mx: 3, cursor: "pointer" }}
+        onClick={() => handleCompanyClick(parceiro.companyId)}
       >
-        {parceiros.map((parceiro, index) => (
-          <Box
-            key={index}
-            display="flex"
-            alignItems="center"
-            sx={{ mx: 3, cursor: "pointer" }}
-            onClick={() => handleCompanyClick(parceiro.companyId)}
-          >
-            <Avatar
-              src={parceiro.logo}
-              alt={parceiro.nome || "Logo da Empresa"}
-              sx={{ width: 40, height: 40, mr: 1 }}
-            />
-            <Typography fontWeight="bold">
-              {parceiro.nome || "Empresa Desconhecida"}
-            </Typography>
-          </Box>
-        ))}
+        <Avatar
+          src={parceiro.logo}
+          alt={parceiro.nome || "Logo da Empresa"}
+          sx={{ width: 40, height: 40, mr: 1 }}
+        />
+        <Typography fontWeight="bold">
+          {parceiro.nome || "Empresa Desconhecida"}
+        </Typography>
       </Box>
+    ))}
+  </Box>
+</Box>
+
     </Box>
   );
 };
