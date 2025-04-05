@@ -22,6 +22,7 @@ import {
   Radio,
 } from '@mui/material';
 import BackButton from '../BackButton';
+import { formatPrice } from '../../utils/utils';
 
 const AnunciarDesk = ({ user }) => {
   const [file, setFile] = useState(null);
@@ -350,7 +351,7 @@ const AnunciarDesk = ({ user }) => {
         </Box>
 
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          Valor estimado: <strong>{totalCost} MT</strong>
+          Valor estimado: <strong>{formatPrice(totalCost)} MT</strong>
         </Typography>
 
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>

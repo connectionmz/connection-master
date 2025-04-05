@@ -26,6 +26,7 @@ import BackButton from '../BackButton';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PaymentIcon from '@mui/icons-material/Payment';
 import axios from 'axios';
+import { formatPrice } from '../../utils/utils';
 
 const SmsDesk = ({ user }) => {
   const [smsBalance, setSmsBalance] = useState(0);
@@ -319,10 +320,10 @@ const updateSmsBalanceInFirebase = async (newBalance, valorPago, metodoDePagamen
             inputProps={{ step: 25, min: 25 }}
           />
           <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>
-            Pacotes de 25 SMS (150 Mt por pacote)
+            Pacotes de 25 SMS (150,00 Mt por pacote)
           </Typography>
           <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 2 }}>
-            Preço Total: {calculatePrice(smsCount)} Mt
+            Preço Total: {formatPrice(calculatePrice(smsCount))} Mt
           </Typography>
         </DialogContent>
         <DialogActions>
