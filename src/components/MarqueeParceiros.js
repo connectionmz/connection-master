@@ -28,7 +28,7 @@ const MarqueeParceiros = () => {
   };
 
   const handleCompanyClick = (companyId) => {
-    navigate(`/vperfil/${companyId}`);
+    navigate(`/perfil/${companyId}`);
   };
 
   return (

@@ -34,6 +34,7 @@ const InboxDesk = ({ user }) => {
     const notificationsRef = ref(db, 'notifications');
     onValue(notificationsRef, (snapshot) => {
       const data = snapshot.val();
+      console.log(data)
       const userNotifications = [];
       for (const userId in data) {
         if (data[userId]) {
@@ -253,17 +254,23 @@ const InboxDesk = ({ user }) => {
                           }} 
                         />
                       )}
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {new Date(notification.timestamp).toLocaleString()}
-                      </Typography>
+            <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  fontSize: '0.75rem',
+                }}
+              >
+                {new Date(notification.timestamp).toLocaleString('pt-PT', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </Typography>
                     </Box>
-                    
                     <ListItemText
                       primary={
                         <Link
@@ -289,19 +296,6 @@ const InboxDesk = ({ user }) => {
                             {notification.message}
                           </Typography>
                         </Link>
-                      }
-                      secondary={
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{
-                            fontSize: '0.75rem',
-                            display: 'inline-block',
-                            mt: 0.5,
-                          }}
-                        >
-                          Tipo: {notification.type}
-                        </Typography>
                       }
                     />
                   </Box>

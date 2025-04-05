@@ -17,13 +17,18 @@ import {
     Divider,
     IconButton,
     Paper,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from '@mui/material';
 import { Delete, AccessTime, CheckCircle, History, Edit } from '@mui/icons-material';
-import { ref, onValue, update, remove } from 'firebase/database';
+import { ref, onValue, update, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
 import AnunciosDesk from './AnunciosDesk';
+import EditarCotacao from './EditarCotacao'; // Import the edit component
 
 const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
@@ -32,13 +37,15 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [isPaying, setIsPaying] = useState(false);   
     const [loading, setLoading] = useState(true);
     const [campanhasAtivas, setCampanhasAtivas] = useState([]);
-     const [clickedCotacoes, setClickedCotacoes] = useState({});
+    const [clickedCotacoes, setClickedCotacoes] = useState({});
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [selectedCotacao, setSelectedCotacao] = useState(null);
 
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width:600px)');
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
-    const hasBalance = user?.activeModules?.moduloSMS?.smsCount > 0; // Verifica se o saldo de SMS é maior que 0
+    const hasBalance = user?.activeModules?.moduloSMS?.smsCount > 0;
 
     useEffect(() => {
         if (!user?.id) return;
@@ -80,7 +87,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 const cotacoesArray = Object.entries(cotacoesData).map(([id, cotacao]) => ({
                     id,
                     ...cotacao,
-                    isClicked: clickedCotacoes[id] || false // Add clicked status to each cotacao
+                    isClicked: clickedCotacoes[id] || false
                 }));
                 const filteredCotacoes = cotacoesArray.filter((cotacao) =>
                     Array.isArray(cotacao.provincia) &&
@@ -96,7 +103,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         return () => unsubscribeCotacoes();
     }, [hasModuleSMS, user.provincia, clickedCotacoes]);
 
-
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
         const unsubscribe = onValue(bannersRef, (snapshot) => {
@@ -107,44 +113,32 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
               ...banner
             }));
     
-            // Check expiration and update status
             const currentDate = new Date();
             const updatedBanners = bannerList.map(banner => {
               const expireDate = new Date(banner.expireDate);
               if (expireDate < currentDate && banner.status !== 'expired') {
-                // Update status in Firebase if expired
                 update(ref(db, `banners/${banner.id}`), { status: 'expired' });
                 return { ...banner, status: 'expired' };
               }
               return banner;
             });
     
-            // Filter banners based on user profile and type
             const filteredBanners = updatedBanners.filter(banner => {
-              // Only show active banners
               if (banner.status !== 'active') return false;
-              
-              // Filter by type (home page banners)
               if (banner.tipoAnuncio !== 'cotacao') return false;
-    
-              // Check if banner has expired
               const expireDate = new Date(banner.expireDate);
               if (expireDate < currentDate) return false;
     
-              // If user exists, filter by province and sector
               if (user) {
                 const matchesProvincia = banner.provincias.includes(user.provincia);
                 const matchesSector = banner.sectores.includes(user.sector);
                 return matchesProvincia && matchesSector;
               }
               
-              // Show all active banners if no user
               return true;
             });
     
             setCampanhasAtivas(filteredBanners);
-    
-           
           } else {
             setCampanhasAtivas([]);
           }
@@ -153,8 +147,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     
         return () => unsubscribe();
       }, [user?.provincia, user?.sector, user?.id]);
-
-
 
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
@@ -200,25 +192,29 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         }
     };
 
-
     const handleCotacaoClick = async (id) => {
         try {
-            // Mark as clicked in Firebase
-            await `set`(ref(db, `cotacoes/${id}/clicks/${user.id}`), true);
-            
-            // Update local state immediately for better UX
+            await set(ref(db, `cotacoes/${id}/clicks/${user.id}`), true);
             setClickedCotacoes(prev => ({
                 ...prev,
                 [id]: true
             }));
-            
             navigate(`/cotacao/${id}`);
         } catch (error) {
             console.error('Error recording click:', error);
-            navigate(`/cotacao/${id}`); // Still navigate even if recording fails
+            navigate(`/cotacao/${id}`);
         }
     };
 
+    const handleEditClick = (cotacao) => {
+        setSelectedCotacao(cotacao);
+        setEditDialogOpen(true);
+    };
+
+    const handleCloseEditDialog = () => {
+        setEditDialogOpen(false);
+        setSelectedCotacao(null);
+    };
 
     const handleRecarregarSaldo = () => {
         navigate('/sms');
@@ -278,12 +274,12 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             <List>
                 {cotacoesFiltradas.map((cotacao) => (
                     <Box key={cotacao.id}>
-                       <ListItem
+                        <ListItem
                             alignItems="flex-start"
                             sx={{ 
                                 cursor: 'pointer', 
                                 '&:hover': { backgroundColor: '#fafafa' },
-                                fontWeight: clickedCotacoes[cotacao.id] ? 'normal' : 'bold' // Make unclicked bold
+                                fontWeight: clickedCotacoes[cotacao.id] ? 'normal' : 'bold'
                             }}
                             onClick={() => handleCotacaoClick(cotacao.id)}
                         >
@@ -321,7 +317,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                         color="primary"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            navigate(`/editar-cotacao/${cotacao.id}`);
+                                            handleEditClick(cotacao);
                                         }}
                                     >
                                         <Edit />
@@ -335,6 +331,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             </List>
         );
     };
+
     return (
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
             {!hasModuleSMS && !isPaying && (
@@ -398,10 +395,39 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     </Paper>
 
                     <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
-                    {renderCotacoes()}
+                        {renderCotacoes()}
                     </Paper>
                 </>
             )}
+
+            {/* Edit Dialog */}
+            <Dialog
+                open={editDialogOpen}
+                onClose={handleCloseEditDialog}
+                fullWidth
+                maxWidth="md"
+            >
+                <DialogTitle>Editar Cotação</DialogTitle>
+                <DialogContent>
+                    {selectedCotacao && (
+                        <EditarCotacao 
+                            cotacao={selectedCotacao} 
+                            user={user} 
+                            onClose={handleCloseEditDialog}
+                            onSuccess={() => {
+                                setSnackbar({ open: true, message: 'Cotação atualizada com sucesso!', severity: 'success' });
+                                handleCloseEditDialog();
+                            }}
+                            onError={(error) => {
+                                setSnackbar({ open: true, message: `Erro ao atualizar cotação: ${error}`, severity: 'error' });
+                            }}
+                        />
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseEditDialog}>Cancelar</Button>
+                </DialogActions>
+            </Dialog>
 
             <Snackbar
                 open={snackbar.open}
