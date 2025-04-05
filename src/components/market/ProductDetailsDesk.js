@@ -29,6 +29,7 @@ import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import VerifiedIcon from '@mui/icons-material/Verified';
+import { formatPrice } from "../../utils/utils";
 
 const ProductDetailsDesk = () => {
   const { productId, store } = useParams();
@@ -240,12 +241,12 @@ const ProductDetailsDesk = () => {
                     {product.discountPrice} MT
                   </Typography>
                   <Typography variant="body1" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
-                    {product.price} MT
+                  {formatPrice(product.price || "0")}MT
                   </Typography>
                 </>
               ) : (
                 <Typography variant={isMobile ? "h5" : "h4"} color="primary" fontWeight="bold">
-                  {product.price} MT
+                                  {formatPrice(product.price || "0")}MT
                 </Typography>
               )}
               

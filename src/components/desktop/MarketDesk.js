@@ -95,7 +95,6 @@ const MarketDesk = ({ user }) => {
       </Box>
     );
   }
-
   return (
     <Box sx={{ width: '100%' }} display="flex" justifyContent="center" alignItems="center" padding={2}>
       <Paper sx={{ width: '100%', maxWidth: 800, padding: 3 }}>

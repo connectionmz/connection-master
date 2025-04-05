@@ -19,6 +19,7 @@ import {
 import { db } from '../../fb';
 import BackButton from '../BackButton';
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { formatPrice } from '../../utils/utils';
 
 // Create styles for PDF
 const styles = StyleSheet.create({
@@ -145,9 +146,9 @@ const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total }) => (
     marginTop: 5
   }}>
     <View style={{ width: '30%', textAlign: 'right' }}>
-      <Text>Subtotal: {subtotal.toFixed(2)} MT</Text>
+      <Text>Subtotal:{formatPrice(subtotal.toFixed(2))} MT</Text>
       <Text>IVA: {iva.toFixed(2)} MT</Text>
-      <Text style={{ fontWeight: 'bold' }}>Total: {total.toFixed(2)} MT</Text>
+      <Text style={{ fontWeight: 'bold' }}>Total: {formatPrice(total.toFixed(2))} MT</Text>
     </View>
   </View>
 
@@ -343,9 +344,9 @@ const FaturaDesk = ({ user }) => {
                 <Typography fontWeight="bold">Total:</Typography>
               </Box>
               <Box textAlign="right">
-                <Typography>{subtotal.toFixed(2)} MT</Typography>
+                <Typography>{formatPrice(subtotal.toFixed(2))} MT</Typography>
                 <Typography>{iva.toFixed(2)} MT</Typography>
-                <Typography fontWeight="bold">{total.toFixed(2)} MT</Typography>
+                <Typography fontWeight="bold">{formatPrice(total.toFixed(2))} MT</Typography>
               </Box>
             </Box>
 

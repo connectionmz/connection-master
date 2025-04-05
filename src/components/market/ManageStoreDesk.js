@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import { Search, Edit, Delete, Settings } from '@mui/icons-material';
 import { getDownloadURL, uploadBytes } from 'firebase/storage';
+import { formatPrice } from '../../utils/utils';
 
 const ManageStoreDesk = ({ storeId }) => {
   const [products, setProducts] = useState([]);
@@ -149,15 +150,20 @@ const [currentProduct, setCurrentProduct] = useState(null);
     setCurrentProduct(productData);
     setEditModalOpen(true);
   };
-
   const handleSaveEdit = async () => {
     try {
+      // Converte o preço para número antes de salvar
+      const productToSave = {
+        ...currentProduct,
+        price: parseFloat(currentProduct.price) || 0
+      };
+  
       const productRef = ref(db, `stores/${storeId}/products/${editProductId}`);
-      await update(productRef, currentProduct);
+      await update(productRef, productToSave);
       
       setProducts(prevProducts => 
         prevProducts.map(([key, product]) => 
-          key === editProductId ? [key, currentProduct] : [key, product]
+          key === editProductId ? [key, productToSave] : [key, product]
         )
       );
       
@@ -314,7 +320,7 @@ const [currentProduct, setCurrentProduct] = useState(null);
                       )}
                     </TableCell>
                     <TableCell>{product?.name || 'Sem nome'}</TableCell>
-                    <TableCell>{product?.price || 'Sem preço'} MZN</TableCell>
+                    <TableCell>{formatPrice(product?.price) || 'Sem preço'} MZN</TableCell>
                     <TableCell>{product?.category || 'Sem categoria'}</TableCell>
                     <TableCell>{product?.description || 'Sem descrição'}</TableCell>
                     <TableCell>
@@ -503,14 +509,23 @@ const [currentProduct, setCurrentProduct] = useState(null);
         />
         
         <TextField
-          label="Preço (MZN)"
-          type="number"
-          value={currentProduct.price || ''}
-          onChange={(e) => setCurrentProduct({...currentProduct, price: e.target.value})}
-          fullWidth
-          sx={{ mb: 2 }}
-        />
-        
+            label="Preço (MZN)"
+            type="number"
+            value={currentProduct.price || ''}
+            onChange={(e) => {
+              // Remove todos os caracteres não numéricos
+              const rawValue = e.target.value.replace(/[^0-9.]/g, '');
+              // Mantém apenas números e um ponto decimal
+              const cleanValue = rawValue.replace(/(\..*)\./g, '$1');
+              setCurrentProduct({...currentProduct, price: cleanValue});
+            }}
+            inputProps={{
+              step: "0.01",
+              min: "0"
+            }}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
         <TextField
           label="Categoria"
           value={currentProduct.category || ''}

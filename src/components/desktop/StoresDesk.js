@@ -30,6 +30,7 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ShareIcon from "@mui/icons-material/Share";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import { formatPrice } from "../../utils/utils";
 
 const shuffleArray = (array) => {
   return array
@@ -429,7 +430,7 @@ const StoresDesk = ({ user }) => {
                                     fontSize: isMobile ? '1rem' : '1.125rem'
                                   }}
                                 >
-                                  {product.price || "0"} MT
+                                  {formatPrice(product.price || "0")}MT
                                 </Typography>
                               )}
                             </>

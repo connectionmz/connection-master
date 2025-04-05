@@ -15,6 +15,7 @@ import {
 import { db } from "../../fb";
 import BackButton from "../BackButton";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { formatPrice } from "../../utils/utils";
 
 const CotacoesPDF = ({ user }) => {
   const { id } = useParams();
@@ -67,7 +68,8 @@ const CotacoesPDF = ({ user }) => {
           <Text>{cot?.company?.morada}</Text>
           <Text>Nuit: {cot?.company?.nuit}</Text>
           <Text>Sector: {cot?.company?.sector}</Text>
-          <Text>Valor Máximo de Propostas: {cot?.maxProposals} MT</Text>
+          <Text>Valor Máximo de Propostas: {formatPrice(cot?.maxProposals || "0")}MT</Text>
+          
         </View>
 
         <View style={styles.info}>
@@ -210,7 +212,7 @@ const CotacoesPDF = ({ user }) => {
             <Typography variant="body2">{cot.company?.morada}</Typography>
             <Typography variant="body2">Nuit: {cot.company?.nuit}</Typography>
             <Typography variant="body2">Sector: {cot.company?.sector}</Typography>
-            <Typography variant="body2">Valor Máximo de Propostas: {cot.maxProposals} MT</Typography>
+            <Typography variant="body2">Valor Máximo de Propostas:{formatPrice(cot?.maxProposals || "0")}MT</Typography>
           </Stack>
 
           <Divider sx={{ my: 2 }} />
