@@ -17,16 +17,18 @@ import {
   Grid,
   Paper,
   useMediaQuery,
+  useTheme,
+  Divider,
+  Stack
 } from "@mui/material";
-import { CameraAlt, ExitToApp, Receipt, Save } from "@mui/icons-material";
+import { CameraAlt, ExitToApp, Receipt, Save, ArrowForward, LocationOn } from "@mui/icons-material";
 
 const ApxDesk = ({ user }) => {
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user.provincia);
-  const [editProvince, setEditProvince] = useState(true);
-  const isMobile = useMediaQuery('(max-width:600px)'); 
-
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,124 +67,205 @@ const ApxDesk = ({ user }) => {
   }
 
   return (
-    <Box width="100%" minHeight="100vh" padding={isMobile ? 1 : 2}>
-      {/* Card de Introdução */}
-      <Card sx={{ width: '100%' }}>
-        <Paper elevation={1} sx={{ padding: isMobile ? 2 : 3 }}>
-          <Typography variant="h5" component="div" sx={{ mb: 2 }}>
-            Já imaginou ter todas as ferramentas essenciais para impulsionar o seu negócio e levá-lo ao próximo nível?
+    <Box sx={{ 
+      width: '100%', 
+      minHeight: '100vh', 
+      p: isMobile ? 2 : 3,
+      backgroundColor: theme.palette.background.default
+    }}>
+      {/* Welcome Card */}
+      <Card sx={{ 
+        mb: 3,
+        color: 'black',
+        borderRadius: 2,
+        boxShadow: 3
+      }}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h5" component="div" sx={{ mb: 1, fontWeight: 600 }}>
+          {userData.nome}!
           </Typography>
-          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-            Estamos aqui para lembrá-lo(a) de um passo fundamental para transformar a sua experiência na plataforma:
-            ative os módulos disponíveis e abra as portas para um mundo de oportunidades ilimitadas!
+          <Typography variant="body1" sx={{ opacity: 0.9 }}>
+            Tenha todas as ferramentas essenciais para impulsionar seu negócio.
           </Typography>
-        </Paper>
+        </Box>
       </Card>
-      <br />
 
-      {/* Seção de Ações */}
-      <Grid container spacing={2}>
-        {/* Botão "Fazer Publicação" */}
-        <Grid item xs={12} sm={4} display="flex" justifyContent="center">
+      {/* Action Buttons */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={4}>
           <Button
+            fullWidth
             variant="contained"
             startIcon={<CameraAlt />}
             onClick={() => navigate("/post")}
-            sx={{ minWidth: isMobile ? '100%' : 200 }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: 2,
+              boxShadow: 1,
+              textTransform: 'none',
+              fontSize: isMobile ? '0.875rem' : '1rem'
+            }}
           >
-            Fazer Publicação
+            Nova Publicação
           </Button>
         </Grid>
 
-        {/* Seletor de Província */}
         <Grid item xs={12} sm={4}>
-          {editProvince && (
-            <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: "bold" }}>
-                Mudar Localização:
-              </Typography>
+          <Paper sx={{ 
+            p: 1.5, 
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: theme.palette.background.paper
+          }}>
+            <Box display="flex" alignItems="center">
+              <LocationOn color="primary" sx={{ mr: 1 }} />
               <Select
                 value={provinceTemp}
                 onChange={(e) => setProvinceTemp(e.target.value)}
                 size="small"
+                variant="standard"
+                disableUnderline
                 sx={{ 
-                  minWidth: isMobile ? '100px' : 120, // Reduz o tamanho do Select em telas pequenas
-                  fontSize: isMobile ? '0.875rem' : '1rem', // Reduz o tamanho da fonte em telas pequenas
+                  minWidth: 120,
+                  fontWeight: 500,
+                  '& .MuiSelect-select': { py: 0.5 }
                 }}
               >
                 {[
                   "Maputo", "Gaza", "Inhambane", "Sofala", "Manica", "Tete",
                   "Zambézia", "Nampula", "Cabo Delgado", "Niassa",
                 ].map((prov) => (
-                  <MenuItem key={prov} value={prov} sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                  <MenuItem key={prov} value={prov}>
                     {prov}
                   </MenuItem>
                 ))}
               </Select>
-              <IconButton color="success" onClick={saveProvince}>
-                <Save />
-              </IconButton>
             </Box>
-          )}
+            <IconButton 
+              size="small" 
+              onClick={saveProvince}
+              sx={{ color: theme.palette.primary.main }}
+            >
+              <Save fontSize="small" />
+            </IconButton>
+          </Paper>
         </Grid>
 
-        {/* Botão "Desconectar" */}
-        <Grid item xs={12} sm={4} display="flex" justifyContent="center">
+        <Grid item xs={12} sm={4}>
           <Button
-            variant="contained"
+            fullWidth
+            variant="outlined"
             color="error"
             startIcon={<ExitToApp />}
             onClick={handleLogout}
-            sx={{ minWidth: isMobile ? '100%' : 200 }}>
-            Desconectar
+            sx={{ 
+              py: 1.5,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: isMobile ? '0.875rem' : '1rem'
+            }}
+          >
+            Sair
           </Button>
         </Grid>
       </Grid>
 
-      {/* Grid de Módulos */}
-      <Box mt={4} sx={{ padding: isMobile ? 2 : 4, backgroundColor: 'white', borderRadius: 2, boxShadow: 3 }}>
-        <ModuleGrid activeModules={userData.activeModules || []} />
-      </Box>
-
-      <br />
-
- {/* Seção de Recibos */}
- <Card sx={{ mb: 2, p: 2 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
-            <Receipt sx={{ mr: 1 }} /> Recibos e Transações
+      {/* Modules Section */}
+      <Card sx={{ 
+        mb: 3,
+        borderRadius: 2,
+        boxShadow: 3,
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ 
+          p: 3,
+          backgroundColor: theme.palette.background.paper
+        }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            Seus Módulos
           </Typography>
-        
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Acompanhe seus pagamentos e recibos
-        </Typography>
-        {/* Aqui você pode adicionar uma lista resumida de recibos recentes se necessário */}
-        <Box sx={{ mt: 2 }}>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            fullWidth
-            onClick={() => navigate("/recibos")}
-            startIcon={<Receipt />}
-          >
-            Meus Pagamentos
-          </Button>
+          <ModuleGrid activeModules={userData.activeModules || []} />
         </Box>
       </Card>
 
-      {/* Card de Perfil */}
-      <Link to={"/perfil"}>
-        <Card sx={{ p: 2, display: "flex", alignItems: "center" }}>
-          <Avatar src={userData.logoUrl} alt="User" sx={{ width: 76, height: 76, mr: 2 }} />
-          <Box>
-            <Typography variant="h6">{userData.nome}</Typography>
-            <Typography variant="body2" color="textSecondary">
-              {userData.sector}
-            </Typography>
-          </Box>
-        </Card>
-      </Link>
+      {/* Receipts Section */}
+      <Card sx={{ 
+        mb: 3,
+        borderRadius: 2,
+        boxShadow: 3
+      }}>
+        <Box sx={{ p: 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                <Receipt color="primary" sx={{ mr: 1 }} /> Transações
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Acompanhe seus pagamentos e recibos
+              </Typography>
+            </Box>
+            <Button
+              endIcon={<ArrowForward />}
+              onClick={() => navigate("/recibos")}
+              sx={{ 
+                textTransform: 'none',
+                color: theme.palette.primary.main
+              }}
+            >
+              Ver todos
+            </Button>
+          </Stack>
+        </Box>
+      </Card>
+
+      {/* Profile Card */}
+      <Card 
+        component={Link} 
+        to="/perfil"
+        sx={{ 
+          display: 'flex',
+          alignItems: 'center',
+          p: 2,
+          textDecoration: 'none',
+          borderRadius: 2,
+          boxShadow: 3,
+          transition: 'transform 0.2s',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: 4
+          }
+        }}
+      >
+        <Avatar 
+          src={userData.logoUrl} 
+          alt="User" 
+          sx={{ 
+            width: 64, 
+            height: 64, 
+            mr: 2,
+            border: `2px solid ${theme.palette.primary.main}`
+          }} 
+        />
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {userData.nome}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {userData.sector}
+          </Typography>
+          <Typography variant="body2" sx={{ 
+            mt: 0.5,
+            color: theme.palette.primary.main,
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <LocationOn fontSize="small" sx={{ mr: 0.5 }} />
+            {provinceTemp}
+          </Typography>
+        </Box>
+      </Card>
     </Box>
   );
 };

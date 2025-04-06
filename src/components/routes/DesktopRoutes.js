@@ -83,6 +83,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import CompanyDataFormDesk from '../CompanyDataFormDesk';
 import AuthCreateDesk from '../AuthCreateDesk';
+import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
 
 const theme = createTheme({
   palette: {
@@ -351,6 +352,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/destacar" element={<DestacarModule user={user} />} />
             <Route path="/analises" element={<AnalyticsDesk user={user} />} />
             <Route path="/termos" element={<Terms />} />
+            <Route path="/recrutamento" element={<RecrutamentoDesk user={user}/>} />
             <Route path="/politicas" element={<Politicas />} />
 
             <Route path="/change-password" element={<ChangePassword user={user} />} />

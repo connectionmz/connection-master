@@ -1,5 +1,16 @@
 import { useNavigate } from 'react-router-dom';
-import { FaReceipt, FaStore, FaAd, FaSms, FaPhone, FaPoll, FaTruckLoading, FaStar, FaChartLine } from 'react-icons/fa';
+import { 
+  FaReceipt, 
+  FaStore, 
+  FaAd, 
+  FaSms, 
+  FaPhone, 
+  FaPoll, 
+  FaTruckLoading, 
+  FaStar, 
+  FaChartLine,
+  FaUserTie 
+} from 'react-icons/fa';
 
 const ModuleGrid = ({ activeModules }) => {
   const navigate = useNavigate();
@@ -7,13 +18,13 @@ const ModuleGrid = ({ activeModules }) => {
   const allModules = [
     { name: 'Proforma', link: '/faturacao', icon: <FaReceipt size={40} />, key: 'moduloProforma' },
     { name: 'Market', link: '/market', icon: <FaStore size={40} />, key: 'moduloMarket' },
-    { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloAnunciar' ,alwaysEnabled: true},
+    { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloAnunciar', alwaysEnabled: true },
     { name: 'SMS', link: '/sms', icon: <FaSms size={40} />, key: 'moduloSMS' },
     { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter', alwaysEnabled: true },
     { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement', alwaysEnabled: true },
     { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
-    { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' }
-    //{ name: 'Destacar', link: '/destacar', icon: <FaStar size={40} />, key: 'moduloDestacar' ,alwaysEnabled: true},
+    { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' },
+    { name: 'Recrutamento', link: '/recrutamento', icon: <FaUserTie size={40} />, key: 'moduloRecrutamento', alwaysEnabled: true }
   ];
   
   const handleAcquireModule = (module) => {
