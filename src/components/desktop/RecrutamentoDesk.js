@@ -29,7 +29,8 @@ import {
   DialogActions,
   Divider,
   Badge,
-  MenuItem
+  MenuItem,
+  Autocomplete
 } from '@mui/material';
 import { Search, Work, School, Star, Email, Phone, Close, People, Edit } from '@mui/icons-material';
 
@@ -48,34 +49,46 @@ const externalFirebaseConfig = {
 const externalApp = initializeApp(externalFirebaseConfig, 'external');
 const externalDb = getDatabase(externalApp);
 
-
-
 const RecrutamentoDesk = ({ user }) => {
-
-    console.log(externalDb)
-
   const [vagas, setVagas] = useState([]);
   const [candidatos, setCandidatos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [areaAtuacao, setAreaAtuacao] = useState('');
+  const [areaBusca, setAreaBusca] = useState('');
   const [loading, setLoading] = useState({ vagas: false, candidatos: false });
   const [selectedCandidato, setSelectedCandidato] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novaVaga, setNovaVaga] = useState({
     titulo: '',
     descricao: '',
-    area: '',
+    areaAtuacao: '',
+    areaFormacao: '',
     salario: '',
     localizacao: user.provincia,
     tipo: 'Tempo Integral'
   });
+  const [areasAtuacao, setAreasAtuacao] = useState([]);
+  const [areasFormacao, setAreasFormacao] = useState([]);
   const isMobile = useMediaQuery('(max-width:600px)');
   const navigate = useNavigate();
 
-  // Buscar vagas da empresa atual
+  // Carregar áreas disponíveis
+  useEffect(() => {
+    const areasRef = ref(externalDb, 'areas');
+    onValue(areasRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setAreasAtuacao(data.areasDeActuacao || []);
+        setAreasFormacao(data.areasDeFormacao || []);
+      }
+    });
+
+    return () => off(areasRef);
+  }, []);
+
+  // Buscar vagas da empresa
   useEffect(() => {
     setLoading(prev => ({ ...prev, vagas: true }));
-    const vagasRef = ref(externalDb, `vagas`);
+    const vagasRef = ref(externalDb, 'vagas');
     const empresaVagasQuery = query(vagasRef, orderByChild('empresaId'), equalTo(user.id));
 
     const unsubscribe = onValue(empresaVagasQuery, (snapshot) => {
@@ -92,27 +105,55 @@ const RecrutamentoDesk = ({ user }) => {
     return () => off(empresaVagasQuery, 'value', unsubscribe);
   }, [user.id]);
 
-  // Buscar candidatos quando área de atuação for definida
+  // Buscar candidatos por área
   const buscarCandidatos = () => {
-    if (!areaAtuacao) return;
+    if (!areaBusca) return;
     
     setLoading(prev => ({ ...prev, candidatos: true }));
-    const candidatosRef = ref(externalDb, `candidatos`);
-    const areaQuery = query(candidatosRef, orderByChild('areaAtuacao'), equalTo(areaAtuacao));
+    setCandidatos([]);
+    
+    // Primeiro busca por área de atuação
+    const candidatosAtuacaoRef = ref(externalDb, 'candidatos');
+    const atuacaoQuery = query(candidatosAtuacaoRef, orderByChild('areasDeActuacao'), equalTo(areaBusca));
+    
+    // Depois busca por área de formação
+    const formacaoQuery = query(candidatosAtuacaoRef, orderByChild('areasDeFormacao'), equalTo(areaBusca));
 
-    onValue(areaQuery, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const candidatosArray = Object.entries(data).map(([id, cand]) => ({ id, ...cand }));
-        setCandidatos(candidatosArray);
-      } else {
-        setCandidatos([]);
+    const promises = [
+      new Promise(resolve => onValue(atuacaoQuery, snapshot => resolve(snapshot.val()))),
+      new Promise(resolve => onValue(formacaoQuery, snapshot => resolve(snapshot.val())))
+    ];
+
+    Promise.all(promises).then(([atuacaoData, formacaoData]) => {
+      const candidatosUnicos = new Map();
+      
+      // Processa candidatos por área de atuação
+      if (atuacaoData) {
+        Object.entries(atuacaoData).forEach(([id, cand]) => {
+          candidatosUnicos.set(id, { ...cand, matchType: 'Atuação' });
+        });
       }
+      
+      // Processa candidatos por área de formação
+      if (formacaoData) {
+        Object.entries(formacaoData).forEach(([id, cand]) => {
+          if (!candidatosUnicos.has(id)) {
+            candidatosUnicos.set(id, { ...cand, matchType: 'Formação' });
+          }
+        });
+      }
+      
+      setCandidatos(Array.from(candidatosUnicos.values()));
       setLoading(prev => ({ ...prev, candidatos: false }));
     });
   };
 
   const publicarVaga = async () => {
+    if (!novaVaga.titulo || !novaVaga.descricao || (!novaVaga.areaAtuacao && !novaVaga.areaFormacao)) {
+      alert('Preencha os campos obrigatórios');
+      return;
+    }
+
     setLoading(prev => ({ ...prev, vagas: true }));
     try {
       const vagasRef = ref(externalDb, 'vagas');
@@ -124,13 +165,15 @@ const RecrutamentoDesk = ({ user }) => {
         empresaId: user.id,
         logoEmpresa: user.logoUrl,
         dataPublicacao: new Date().toISOString(),
-        status: 'Ativa'
+        status: 'Ativa',
+        candidatos: []
       });
 
       setNovaVaga({
         titulo: '',
         descricao: '',
-        area: '',
+        areaAtuacao: '',
+        areaFormacao: '',
         salario: '',
         localizacao: user.provincia,
         tipo: 'Tempo Integral'
@@ -143,8 +186,8 @@ const RecrutamentoDesk = ({ user }) => {
   };
 
   const handleContactarCandidato = (candidato) => {
-    // Lógica para enviar mensagem/email para o candidato
-    console.log('Contatando candidato:', candidato.email);
+    // Implemente a lógica de contato aqui
+    console.log('Contatando:', candidato.email);
     setDialogOpen(false);
   };
 
@@ -153,48 +196,56 @@ const RecrutamentoDesk = ({ user }) => {
     vaga.descricao.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const areasAtuacao = [
-    'TI e Programação', 'Design', 'Marketing', 'Vendas', 
-    'Administração', 'Saúde', 'Engenharia', 'Educação'
-  ];
-
   return (
     <Box sx={{ p: isMobile ? 2 : 3 }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Recrutamento Inteligente
+        Recrutamento Avançado
       </Typography>
 
       {/* Seção de Publicação de Vagas */}
-      <Card sx={{ p: 3, mb: 3 }}>
+      <Card sx={{ p: 3, mb: 3, boxShadow: 3 }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-          Publicar Nova Oportunidade
+          Publicar Nova Vaga
         </Typography>
         
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <TextField
-              label="Título da Vaga"
+              label="Título da Vaga*"
               fullWidth
               value={novaVaga.titulo}
               onChange={(e) => setNovaVaga({...novaVaga, titulo: e.target.value})}
             />
           </Grid>
+          
           <Grid item xs={12} md={6}>
-            <TextField
-              label="Área de Atuação"
-              select
+            <Autocomplete
+              options={areasAtuacao}
+              getOptionLabel={(option) => option}
+              renderInput={(params) => (
+                <TextField {...params} label="Área de Atuação" />
+              )}
+              value={novaVaga.areaAtuacao}
+              onChange={(_, newValue) => setNovaVaga({...novaVaga, areaAtuacao: newValue})}
               fullWidth
-              value={novaVaga.area}
-              onChange={(e) => setNovaVaga({...novaVaga, area: e.target.value})}
-            >
-              {areasAtuacao.map(area => (
-                <MenuItem key={area} value={area}>{area}</MenuItem>
-              ))}
-            </TextField>
+            />
           </Grid>
+          <Grid item xs={12} md={6}>
+            <Autocomplete
+              options={areasFormacao}
+              getOptionLabel={(option) => option}
+              renderInput={(params) => (
+                <TextField {...params} label="Área de Formação" />
+              )}
+              value={novaVaga.areaFormacao}
+              onChange={(_, newValue) => setNovaVaga({...novaVaga, areaFormacao: newValue})}
+              fullWidth
+            />
+          </Grid>
+          
           <Grid item xs={12}>
             <TextField
-              label="Descrição Completa"
+              label="Descrição Completa*"
               multiline
               rows={4}
               fullWidth
@@ -202,6 +253,7 @@ const RecrutamentoDesk = ({ user }) => {
               onChange={(e) => setNovaVaga({...novaVaga, descricao: e.target.value})}
             />
           </Grid>
+          
           <Grid item xs={12} md={4}>
             <TextField
               label="Localização"
@@ -210,6 +262,7 @@ const RecrutamentoDesk = ({ user }) => {
               onChange={(e) => setNovaVaga({...novaVaga, localizacao: e.target.value})}
             />
           </Grid>
+          
           <Grid item xs={12} md={4}>
             <TextField
               label="Tipo de Vaga"
@@ -224,6 +277,7 @@ const RecrutamentoDesk = ({ user }) => {
               <MenuItem value="Freelance">Freelance</MenuItem>
             </TextField>
           </Grid>
+          
           <Grid item xs={12} md={4}>
             <TextField
               label="Salário (opcional)"
@@ -232,12 +286,14 @@ const RecrutamentoDesk = ({ user }) => {
               onChange={(e) => setNovaVaga({...novaVaga, salario: e.target.value})}
             />
           </Grid>
+          
           <Grid item xs={12}>
             <Button 
               variant="contained" 
               onClick={publicarVaga}
               disabled={loading.vagas}
               startIcon={<Work />}
+              sx={{ mt: 2 }}
             >
               {loading.vagas ? <CircularProgress size={24} /> : 'Publicar Vaga'}
             </Button>
@@ -246,30 +302,30 @@ const RecrutamentoDesk = ({ user }) => {
       </Card>
 
       {/* Seção de Busca de Candidatos */}
-      <Card sx={{ p: 3, mb: 3 }}>
+      <Card sx={{ p: 3, mb: 3, boxShadow: 3 }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
           Encontrar Talentos
         </Typography>
         
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
-            <TextField
-              select
-              label="Área de Atuação"
+          <Grid item xs={12} md={8}>
+            <Autocomplete
+              options={[...areasAtuacao, ...areasFormacao]}
+              getOptionLabel={(option) => option}
+              renderInput={(params) => (
+                <TextField {...params} label="Buscar por área de atuação ou formação" />
+              )}
+              value={areaBusca}
+              onChange={(_, newValue) => setAreaBusca(newValue)}
               fullWidth
-              value={areaAtuacao}
-              onChange={(e) => setAreaAtuacao(e.target.value)}
-            >
-              {areasAtuacao.map(area => (
-                <MenuItem key={area} value={area}>{area}</MenuItem>
-              ))}
-            </TextField>
+            />
           </Grid>
-          <Grid item xs={12} md={6}>
+          
+          <Grid item xs={12} md={4}>
             <Button
               variant="contained"
               onClick={buscarCandidatos}
-              disabled={!areaAtuacao || loading.candidatos}
+              disabled={!areaBusca || loading.candidatos}
               fullWidth
               sx={{ height: '56px' }}
             >
@@ -280,15 +336,26 @@ const RecrutamentoDesk = ({ user }) => {
 
         {candidatos.length > 0 && (
           <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
               {candidatos.length} candidatos encontrados
             </Typography>
             
             <Grid container spacing={2}>
-              {candidatos.map(candidato => (
-                <Grid item xs={12} sm={6} md={4} key={candidato.id}>
+              {candidatos.map((candidato, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
                   <Card 
-                    sx={{ p: 2, cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+                    sx={{ 
+                      p: 2, 
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      cursor: 'pointer',
+                      '&:hover': { 
+                        boxShadow: 4,
+                        transform: 'translateY(-2px)',
+                        transition: 'all 0.3s ease'
+                      }
+                    }}
                     onClick={() => setSelectedCandidato(candidato)}
                   >
                     <Box display="flex" alignItems="center" mb={2}>
@@ -298,21 +365,45 @@ const RecrutamentoDesk = ({ user }) => {
                       />
                       <Box>
                         <Typography fontWeight="bold">{candidato.nome}</Typography>
-                        <Typography variant="body2">{candidato.areaAtuacao}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {candidato.matchType === 'Atuação' ? 
+                            `Atua em ${areaBusca}` : 
+                            `Formado em ${areaBusca}`}
+                        </Typography>
                       </Box>
                     </Box>
-                    <Box display="flex" justifyContent="space-between">
-                      <Chip 
-                        icon={<School />} 
-                        label={`${candidato.cursos?.length || 0} cursos`} 
-                        size="small" 
-                      />
-                      <Chip 
-                        icon={<Star />}
-                        label={`${candidato.rating || 0}/10`}
-                        color="primary"
-                        size="small"
-                      />
+                    
+                    <Box sx={{ mt: 'auto' }}>
+                      <Box display="flex" justifyContent="space-between" mb={1}>
+                        <Chip 
+                          icon={<School />} 
+                          label={`${candidato.formacao?.length || 0} cursos`} 
+                          size="small" 
+                        />
+                        <Chip 
+                          icon={<Star />}
+                          label={`${candidato.rating || 0}/10`}
+                          color="primary"
+                          size="small"
+                        />
+                      </Box>
+                      
+                      {candidato.areasDeActuacao?.includes(areaBusca) && (
+                        <Chip 
+                          label="Atua na área" 
+                          color="success" 
+                          size="small" 
+                          sx={{ mr: 1 }}
+                        />
+                      )}
+                      
+                      {candidato.areasDeFormacao?.includes(areaBusca) && (
+                        <Chip 
+                          label="Formado na área" 
+                          color="info" 
+                          size="small" 
+                        />
+                      )}
                     </Box>
                   </Card>
                 </Grid>
@@ -323,7 +414,7 @@ const RecrutamentoDesk = ({ user }) => {
       </Card>
 
       {/* Seção de Vagas Publicadas */}
-      <Card sx={{ p: 3 }}>
+      <Card sx={{ p: 3, boxShadow: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
             Minhas Vagas Publicadas
@@ -360,9 +451,14 @@ const RecrutamentoDesk = ({ user }) => {
               </TableHead>
               <TableBody>
                 {filteredVagas.map(vaga => (
-                  <TableRow key={vaga.id}>
+                  <TableRow key={vaga.id} hover>
                     <TableCell>{vaga.titulo}</TableCell>
-                    <TableCell>{vaga.area}</TableCell>
+                    <TableCell>
+                      <Box>
+                        {vaga.areaAtuacao && <Chip label={vaga.areaAtuacao} size="small" sx={{ mr: 1 }} />}
+                        {vaga.areaFormacao && <Chip label={vaga.areaFormacao} size="small" color="info" />}
+                      </Box>
+                    </TableCell>
                     <TableCell>
                       <Chip label={vaga.tipo} size="small" />
                     </TableCell>
@@ -386,90 +482,182 @@ const RecrutamentoDesk = ({ user }) => {
       </Card>
 
       {/* Dialog de Detalhes do Candidato */}
-      <Dialog open={!!selectedCandidato} onClose={() => setSelectedCandidato(null)} maxWidth="md" fullWidth>
+      <Dialog 
+        open={!!selectedCandidato} 
+        onClose={() => setSelectedCandidato(null)} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
         {selectedCandidato && (
           <>
             <DialogTitle>
               <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">Perfil do Candidato</Typography>
+                <Typography variant="h6">Perfil Completo</Typography>
                 <IconButton onClick={() => setSelectedCandidato(null)}>
                   <Close />
                 </IconButton>
               </Box>
             </DialogTitle>
+            
             <DialogContent dividers>
               <Grid container spacing={3}>
+                {/* Coluna Esquerda - Informações Pessoais */}
                 <Grid item xs={12} md={4}>
                   <Box display="flex" flexDirection="column" alignItems="center">
                     <Avatar 
                       src={selectedCandidato.fotoPerfil} 
                       sx={{ width: 120, height: 120, mb: 2 }}
                     />
-                    <Typography variant="h6">{selectedCandidato.nome}</Typography>
-                    <Typography color="textSecondary">{selectedCandidato.areaAtuacao}</Typography>
                     
-                    <Box mt={2} width="100%">
-                      <Typography variant="subtitle1" gutterBottom>
-                        <Box display="flex" alignItems="center">
-                          <Star color="primary" sx={{ mr: 1 }} />
-                          Avaliação: {selectedCandidato.rating || 'Não avaliado'}
-                        </Box>
+                    <Typography variant="h6" align="center">
+                      {selectedCandidato.nome}
+                    </Typography>
+                    
+                    <Typography color="textSecondary" align="center" sx={{ mb: 2 }}>
+                      {selectedCandidato.profissao || 'Profissional'}
+                    </Typography>
+                    
+                    <Box width="100%" sx={{ mb: 3 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        CONTATO
                       </Typography>
                       
-                      <Typography variant="body2">
-                        <Phone sx={{ mr: 1, verticalAlign: 'middle' }} />
-                        {selectedCandidato.telefone || 'Não informado'}
+                      <Box sx={{ pl: 1 }}>
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Email sx={{ mr: 1, color: 'text.secondary' }} />
+                          {selectedCandidato.email}
+                        </Typography>
+                        
+                        {selectedCandidato.telefone && (
+                          <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Phone sx={{ mr: 1, color: 'text.secondary' }} />
+                            {selectedCandidato.telefone}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                    
+                    <Box width="100%">
+                      <Typography variant="subtitle2" gutterBottom>
+                        ÁREAS DE ATUAÇÃO
                       </Typography>
-                      
-                      <Typography variant="body2">
-                        <Email sx={{ mr: 1, verticalAlign: 'middle' }} />
-                        {selectedCandidato.email}
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {selectedCandidato.areasDeActuacao?.map((area, i) => (
+                          <Chip key={`atuacao-${i}`} label={area} size="small" />
+                        )) || <Typography variant="body2">Não informado</Typography>}
+                      </Box>
+                    </Box>
+                    
+                    <Box width="100%" sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        ÁREAS DE FORMAÇÃO
                       </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {selectedCandidato.areasDeFormacao?.map((area, i) => (
+                          <Chip key={`formacao-${i}`} label={area} size="small" color="info" />
+                        )) || <Typography variant="body2">Não informado</Typography>}
+                      </Box>
                     </Box>
                   </Box>
                 </Grid>
                 
+                {/* Coluna Direita - Detalhes Profissionais */}
                 <Grid item xs={12} md={8}>
-                  <Typography variant="h6" gutterBottom>Formação Acadêmica</Typography>
-                  {selectedCandidato.formacao?.map((item, index) => (
-                    <Box key={index} mb={2}>
-                      <Typography fontWeight="bold">{item.curso}</Typography>
-                      <Typography variant="body2">{item.instituicao}</Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {item.periodo}
-                      </Typography>
-                    </Box>
-                  )) || <Typography>Não informado</Typography>}
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="h6" gutterBottom>Experiência Profissional</Typography>
-                  {selectedCandidato.experiencia?.map((item, index) => (
-                    <Box key={index} mb={2}>
-                      <Typography fontWeight="bold">{item.cargo}</Typography>
-                      <Typography variant="body2">{item.empresa}</Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {item.periodo} • {item.duracao}
-                      </Typography>
-                    </Box>
-                  )) || <Typography>Não informado</Typography>}
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="h6" gutterBottom>Habilidades</Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {selectedCandidato.habilidades?.map((habilidade, index) => (
-                      <Chip key={index} label={habilidade} />
-                    )) || <Typography>Não informado</Typography>}
+                  <Box sx={{ mb: 4 }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Star color="primary" sx={{ mr: 1 }} />
+                      Avaliação: {selectedCandidato.rating || 'Não avaliado'}
+                    </Typography>
+                    
+                    <Typography variant="body1">
+                      {selectedCandidato.resumo || 'Nenhum resumo profissional disponível.'}
+                    </Typography>
                   </Box>
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <Typography variant="h6" gutterBottom>
+                    Experiência Profissional
+                  </Typography>
+                  
+                  {selectedCandidato.experiencia?.length > 0 ? (
+                    selectedCandidato.experiencia.map((exp, index) => (
+                      <Box key={index} sx={{ mb: 3 }}>
+                        <Typography fontWeight="bold">{exp.cargo}</Typography>
+                        <Typography variant="body2">{exp.empresa}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {exp.periodo} • {exp.duracao}
+                        </Typography>
+                        {exp.descricao && (
+                          <Typography variant="body2" sx={{ mt: 1 }}>
+                            {exp.descricao}
+                          </Typography>
+                        )}
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography variant="body2">Nenhuma experiência registrada</Typography>
+                  )}
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <Typography variant="h6" gutterBottom>
+                    Formação Acadêmica
+                  </Typography>
+                  
+                  {selectedCandidato.formacao?.length > 0 ? (
+                    selectedCandidato.formacao.map((form, index) => (
+                      <Box key={index} sx={{ mb: 3 }}>
+                        <Typography fontWeight="bold">{form.curso}</Typography>
+                        <Typography variant="body2">{form.instituicao}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {form.periodo} • {form.status || 'Concluído'}
+                        </Typography>
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography variant="body2">Nenhuma formação registrada</Typography>
+                  )}
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <Typography variant="h6" gutterBottom>
+                    Habilidades e Certificações
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    {selectedCandidato.habilidades?.map((hab, index) => (
+                      <Chip key={index} label={hab} />
+                    )) || <Typography variant="body2">Nenhuma habilidade informada</Typography>}
+                  </Box>
+                  
+                  {selectedCandidato.certificacoes?.length > 0 && (
+                    <>
+                      <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                        Certificações:
+                      </Typography>
+                      <ul style={{ paddingLeft: 20 }}>
+                        {selectedCandidato.certificacoes.map((cert, index) => (
+                          <li key={index}>
+                            <Typography variant="body2">
+                              {cert.nome} - {cert.instituicao} ({cert.ano})
+                            </Typography>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </Grid>
               </Grid>
             </DialogContent>
-            <DialogActions>
+            
+            <DialogActions sx={{ p: 3 }}>
               <Button 
                 variant="contained" 
                 startIcon={<Email />}
                 onClick={() => handleContactarCandidato(selectedCandidato)}
+                sx={{ borderRadius: 2 }}
               >
                 Enviar Proposta
               </Button>

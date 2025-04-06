@@ -130,8 +130,8 @@ const AuthDesk = ({ data }) => {
           {/* Botão para criar conta */}
           <div className="text-center mt-6">
             <p className="text-gray-600 font-bold">
-              Já tem uma conta?{' '}
-              <a href="/create" className="text-blue-500 hover:underline">Entrar agora</a>
+               Crie sua conta agora!{' '}
+              <a href="/create" className="text-blue-500 hover:underline">Criar conta</a>
             </p>
           </div>
 
