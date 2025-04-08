@@ -98,7 +98,6 @@ const theme = createTheme({
 });
 
 const DesktopRoutes = ({ user }) => {
-  console.log(user)
   const [language, setLanguage] = useState('pt');
   const [anchorEl, setAnchorEl] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
