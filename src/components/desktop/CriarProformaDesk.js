@@ -345,9 +345,6 @@ const CriarProformaDesk = ({ user }) => {
                 </MenuItem>
               ))}
             </TextField>
-            <Button variant="contained" onClick={handleOpenModal} startIcon={<AddIcon />}>
-              Adicionar Cliente
-            </Button>
           </Box>
           {cliente && (
             <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>

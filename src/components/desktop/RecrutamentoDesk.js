@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, query, orderByChild, equalTo, onValue, off, push, set } from 'firebase/database';
-import { useNavigate } from 'react-router-dom';
+import { getDatabase, ref, query, orderByChild, equalTo, onValue, off, push, set, get, update } from 'firebase/database';
 import { Alert, Box, Snackbar, Typography, useMediaQuery } from '@mui/material';
 import BuscarCandidatos from '../recrutamento/BuscarCandidatos';
 import VagasPublicadas from '../recrutamento/VagasPublicadas';
 import CandidatoDialog from '../recrutamento/CandidatoDialog';
 import PublicarVaga from '../recrutamento/PublicarVaga';
 
-// Configuração do Firebase (mesma do código original)
 const externalFirebaseConfig = {
   apiKey: "AIzaSyC1oa1a3ts2jP4LXDA0lYzvkfKXO4L5ijk",
   authDomain: "connectiopos.firebaseapp.com",
@@ -24,111 +22,193 @@ const externalApp = initializeApp(externalFirebaseConfig, 'external');
 const externalDb = getDatabase(externalApp);
 
 const RecrutamentoDesk = ({ user }) => {
-  const [state, setState] = useState({
-    vagas: [],
-    candidatos: [],
-    searchTerm: '',
-    areaBusca: '',
-    loading: { vagas: false, candidatos: false },
-    selectedCandidato: null,
-    areasFormacao: [],
-    notification: { open: false, message: '', severity: 'success' }
-  });
+  const [vagas, setVagas] = useState([]);
+  const [candidatos, setCandidatos] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [areaBusca, setAreaBusca] = useState('');
+  const [loading, setLoading] = useState({ vagas: false, candidatos: false });
+  const [selectedCandidato, setSelectedCandidato] = useState(null);
+  const [areasFormacao, setAreasFormacao] = useState([]);
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
   const [areas, setAreas] = useState({}); 
+  const [perfis, setPerfis] = useState([]);
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  // Carregar dados iniciais
+  const showNotification = useCallback((message, severity) => {
+    setNotification({ open: true, message, severity });
+  }, []);
+
+  // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        // Carregar áreas de atuação
+        // Load áreas de atuação
         const areasAtuacaoRef = ref(externalDb, 'areasDeActuacao');
-        onValue(areasAtuacaoRef, (snapshot) => {
-          const areasData = snapshot.val();
-          setAreas(areasData); // Define as áreas com suas subcategorias
+        const areasAtuacaoListener = onValue(areasAtuacaoRef, (snapshot) => {
+          setAreas(snapshot.val() || {});
         });
 
-        // Carregar áreas de formação
+        // Load áreas de formação
         const areasForRef = ref(externalDb, 'areasDeFormacao');
-        onValue(areasForRef, (snapshot) => {
+        const areasForListener = onValue(areasForRef, (snapshot) => {
           const data = snapshot.val();
           const formacaoArray = data ? Object.values(data).map(item => ({
             nivel: item.nivel,
             descricao: item.descricao
           })) : [];
-          setState(prev => ({ ...prev, areasFormacao: formacaoArray }));
+          setAreasFormacao(formacaoArray);
         });
 
-        // Carregar vagas da empresa
-        setState(prev => ({ ...prev, loading: { ...prev.loading, vagas: true } }));
+        // Load company vacancies
+        setLoading(prev => ({ ...prev, vagas: true }));
         const vagasRef = query(ref(externalDb, 'vagas'), orderByChild('empresaId'), equalTo(user.id));
-        onValue(vagasRef, (snapshot) => {
+        const vagasListener = onValue(vagasRef, (snapshot) => {
           const data = snapshot.val();
           const vagasArray = data ? Object.entries(data).map(([id, vaga]) => ({ id, ...vaga })) : [];
-          setState(prev => ({ 
-            ...prev, 
-            vagas: vagasArray,
-            loading: { ...prev.loading, vagas: false }
-          }));
+          setVagas(vagasArray);
+          setLoading(prev => ({ ...prev, vagas: false }));
+          checkCompatibility(vagasArray);
         });
 
+        return () => {
+          off(areasAtuacaoRef, areasAtuacaoListener);
+          off(areasForRef, areasForListener);
+          off(vagasRef, vagasListener);
+        };
       } catch (error) {
         showNotification('Erro ao carregar dados', 'error');
       }
     };
-
+    
     loadInitialData();
-  }, [user.id]);
+  }, [user.id, showNotification]);
 
-  const buscarCandidatos = async () => {
-    if (!state.areaBusca) return;
+  // Load candidate profiles
+  useEffect(() => {
+    const perfisRef = ref(externalDb, "candidato");
+    const perfisListener = onValue(perfisRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const perfisArray = Object.keys(data)
+          .map((key) => ({ id: key, ...data[key] }))
+          .filter((perfil) => perfil.profileCompleted);
+        setPerfis(perfisArray);
+      }
+    });
+    return () => off(perfisRef, perfisListener);
+  }, []);
+
+  const buscarCandidatos = useCallback(async () => {
+    if (!areaBusca) return;
 
     try {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, candidatos: true } }));
+      setLoading(prev => ({ ...prev, candidatos: true }));
+
+      const candidatosRef = ref(externalDb, 'candidato');
       
-      const candidatosRef = ref(externalDb, 'candidatos');
-      const [atuacaoData, formacaoData] = await Promise.all([
-        new Promise(resolve => onValue(
-          query(candidatosRef, orderByChild('areasDeActuacao'), equalTo(state.areaBusca)), 
-          snapshot => resolve(snapshot.val())
-        )),
-        new Promise(resolve => onValue(
-          query(candidatosRef, orderByChild('areasDeFormacao'), equalTo(state.areaBusca)), 
-          snapshot => resolve(snapshot.val())
-        ))
+      const [atuacaoSnapshot, formacaoSnapshot] = await Promise.all([
+        get(query(candidatosRef, orderByChild('areasDeActuacao'), equalTo(areaBusca))),
+        get(query(candidatosRef, orderByChild('areasDeFormacao'), equalTo(areaBusca)))
       ]);
 
       const candidatosUnicos = new Map();
       
-      if (atuacaoData) {
-        Object.entries(atuacaoData).forEach(([id, cand]) => {
+      if (atuacaoSnapshot.exists()) {
+        Object.entries(atuacaoSnapshot.val()).forEach(([id, cand]) => {
           candidatosUnicos.set(id, { ...cand, matchType: 'Atuação' });
         });
       }
       
-      if (formacaoData) {
-        Object.entries(formacaoData).forEach(([id, cand]) => {
+      if (formacaoSnapshot.exists()) {
+        Object.entries(formacaoSnapshot.val()).forEach(([id, cand]) => {
           if (!candidatosUnicos.has(id)) {
             candidatosUnicos.set(id, { ...cand, matchType: 'Formação' });
           }
         });
       }
-      
-      setState(prev => ({ 
-        ...prev, 
-        candidatos: Array.from(candidatosUnicos.values()),
-        loading: { ...prev.loading, candidatos: false }
-      }));
 
+      setCandidatos(Array.from(candidatosUnicos.values()));
+      setLoading(prev => ({ ...prev, candidatos: false }));
     } catch (error) {
       showNotification('Erro ao buscar candidatos', 'error');
+      setLoading(prev => ({ ...prev, candidatos: false }));
     }
-  };
+  }, [areaBusca, showNotification]);
 
-  const publicarVaga = async (vagaData) => {
-
+  const checkCompatibility = useCallback(async (vagasToCheck) => {
     try {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, vagas: true } }));
+      const candidatosRef = ref(externalDb, "candidato");
+      const snapshot = await get(candidatosRef);
+
+      if (!snapshot.exists()) return;
+
+      const candidatos = snapshot.val();
+      const candidatosComAreas = Object.keys(candidatos).filter((userId) => {
+        const candidato = candidatos[userId];
+        return candidato.areasDeActuacao && candidato.areasDeActuacao.length > 0;
+      });
+
+      const currentDate = new Date();
+      
+      for (const vaga of vagasToCheck) {
+        if (new Date(vaga.dataLimite) < currentDate) continue;
+
+        for (const userId of candidatosComAreas) {
+          const candidato = candidatos[userId];
+          const smsRef = ref(externalDb, `vagasSMS/${userId}/${vaga.id}`);
+          const smsSnapshot = await get(smsRef);
+
+          if (smsSnapshot.exists()) continue;
+
+          const areasVaga = Array.isArray(vaga.areasDeFormacao)
+            ? vaga.areasDeFormacao.map((area) => area.toLowerCase())
+            : [vaga.areasDeFormacao?.toLowerCase()];
+
+          const areasCandidato = Array.isArray(candidato.areasDeActuacao)
+            ? candidato.areasDeActuacao.map((area) => area.toLowerCase())
+            : [];
+
+          const hasMatch = areasVaga.some(area => 
+            areasCandidato.includes(area)
+          );
+
+          if (hasMatch) {
+            await sendCandidateMessage(userId, vaga, candidato);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking compatibility:', error);
+    }
+  }, []);
+
+  const sendCandidateMessage = useCallback(async (userId, vaga, candidato) => {
+    try {
+      const telefone = candidato.telefone || candidato.telefoneAlternativo;
+      const smsRef = ref(externalDb, `vagasSMS/${userId}/${vaga.id}`);
+      
+      await set(smsRef, {
+        idVaga: vaga.id,
+        numeroCelular: telefone || "Número não disponível",
+        estadoEnvio: "pendente",
+        dataEnvio: null,
+        link: vaga.link,
+      });
+
+      if (!telefone) {
+        await update(smsRef, { estadoEnvio: "falha", dataEnvio: new Date().toISOString() });
+        return;
+      }
+
+      await update(smsRef, { estadoEnvio: "Por enviar", dataEnvio: new Date().toISOString() });
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  }, []);
+
+  const publicarVaga = useCallback(async (vagaData) => {
+    try {
+      setLoading(prev => ({ ...prev, vagas: true }));
       
       const novaVagaRef = push(ref(externalDb, 'vagas'));
       await set(novaVagaRef, {
@@ -143,28 +223,23 @@ const RecrutamentoDesk = ({ user }) => {
 
       showNotification('Vaga publicada com sucesso!', 'success');
       
+      // Get the newly created vaga to check compatibility
+      const snapshot = await get(novaVagaRef);
+      if (snapshot.exists()) {
+        const newVaga = { id: novaVagaRef.key, ...snapshot.val() };
+        checkCompatibility([newVaga]);
+      }
     } catch (error) {
       console.error('Erro ao publicar vaga:', error);
       showNotification('Erro ao publicar vaga', 'error');
     } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, vagas: false } }));
+      setLoading(prev => ({ ...prev, vagas: false }));
     }
-  };
+  }, [user, showNotification, checkCompatibility]);
 
-  const showNotification = (message, severity) => {
-    setState(prev => ({ 
-      ...prev, 
-      notification: { open: true, message, severity }
-    }));
-  };
-
-  const handleCloseNotification = () => {
-    setState(prev => ({ ...prev, notification: { ...prev.notification, open: false } }));
-  };
-
-  const handleStateChange = (key, value) => {
-    setState(prev => ({ ...prev, [key]: value }));
-  };
+  const handleCloseNotification = useCallback(() => {
+    setNotification(prev => ({ ...prev, open: false }));
+  }, []);
 
   return (
     <Box sx={{ p: isMobile ? 2 : 3 }}>
@@ -174,51 +249,51 @@ const RecrutamentoDesk = ({ user }) => {
 
       <PublicarVaga 
         user={user} 
-        areasFormacao={state.areasFormacao} 
+        areasFormacao={areasFormacao} 
         areasAtuacao={areas} 
-        provincia={state.provincia} 
-        loading={state.loading.vagas} 
+        candidatos={perfis}
+        loading={loading.vagas} 
         onPublicarVaga={publicarVaga} 
       />
 
       <BuscarCandidatos 
-        areaBusca={state.areaBusca}
-        candidatos={state.candidatos}
-        loading={state.loading.candidatos}
+        areaBusca={areaBusca}
+        candidatos={candidatos}
+        loading={loading.candidatos}
         onBuscarCandidatos={buscarCandidatos}
-        onSelectCandidato={(candidato) => handleStateChange('selectedCandidato', candidato)}
-        onAreaBuscaChange={(area) => handleStateChange('areaBusca', area)}
+        onSelectCandidato={setSelectedCandidato}
+        onAreaBuscaChange={setAreaBusca}
       />
 
       <VagasPublicadas 
-        vagas={state.vagas} 
-        loading={state.loading.vagas} 
-        searchTerm={state.searchTerm} 
-        onSearchChange={(term) => handleStateChange('searchTerm', term)}
+        vagas={vagas} 
+        loading={loading.vagas} 
+        searchTerm={searchTerm} 
+        onSearchChange={setSearchTerm}
       />
 
       <CandidatoDialog 
-        candidato={state.selectedCandidato}
-        open={!!state.selectedCandidato}
-        onClose={() => handleStateChange('selectedCandidato', null)}
+        candidato={selectedCandidato}
+        open={!!selectedCandidato}
+        onClose={() => setSelectedCandidato(null)}
         onContactar={(candidato) => {
           console.log('Contatando:', candidato.email);
-          handleStateChange('selectedCandidato', null);
+          setSelectedCandidato(null);
         }}
       />
 
       <Snackbar
-        open={state.notification.open}
+        open={notification.open}
         autoHideDuration={6000}
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert 
           onClose={handleCloseNotification} 
-          severity={state.notification.severity}
+          severity={notification.severity}
           sx={{ width: '100%' }}
         >
-          {state.notification.message}
+          {notification.message}
         </Alert>
       </Snackbar>
     </Box>

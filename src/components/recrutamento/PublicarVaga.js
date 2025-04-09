@@ -1,295 +1,261 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Card,
-  Grid,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Typography,
+import { 
+  Box, 
+  Button, 
+  Dialog, 
+  DialogActions, 
+  DialogContent, 
+  DialogTitle, 
+  FormControl, 
+  InputLabel, 
+  MenuItem, 
+  Select, 
+  TextField, 
+  Chip,
+  Autocomplete,
   Checkbox,
   ListItemText,
-  FormGroup,
-  FormControlLabel,
-  TextField
+  OutlinedInput
 } from '@mui/material';
-import { Work, LocationOn, Category } from '@mui/icons-material';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import DatePicker from 'react-datepicker';
 
-const PublicarVaga = ({ user, loading, onPublicarVaga, areasFormacao, areasAtuacao }) => {
-  // Estados para os dados da vaga
-  const [novaVaga, setNovaVaga] = useState({
+const PublicarVaga = ({ 
+  user, 
+  areasFormacao, 
+  areasAtuacao, 
+  onPublicarVaga, 
+  loading 
+}) => {
+  const [open, setOpen] = useState(false);
+  const [vagaData, setVagaData] = useState({
     titulo: '',
     descricao: '',
-    areas: [], // Alterado para array para múltiplas seleções
-    areasFormacao: [], // Alterado para array para múltiplas seleções
-    salario: '',
+    areas: [],
     provincia: '',
-    distrito: '',
-    tipo: 'Tempo Integral',
-    requisitos: ''
+    dataLimite: null,
+    requisitos: '',
+    beneficios: '',
+    tipoContrato: '',
+    experiencia: '',
+    salario: '',
+    subAreas: []
   });
+  const [selectedArea, setSelectedArea] = useState('');
+  const [availableSubAreas, setAvailableSubAreas] = useState([]);
 
-  // Estados para os dados de localização
-  const [provincias, setProvincias] = useState([]);
-  const [distritos, setDistritos] = useState([]);
-
-  // Buscar dados iniciais
+  // Atualiza as subáreas disponíveis quando a área principal é selecionada
   useEffect(() => {
-    const buscarProvincias = async () => {
-      const provinciasMock = [
-        { id: '1', nome: 'Maputo' },
-        { id: '2', nome: 'Gaza' },
-        { id: '3', nome: 'Inhambane' },
-        { id: '4', nome: 'Sofala' },
-        { id: '5', nome: 'Manica' },
-        { id: '6', nome: 'Tete' },
-        { id: '7', nome: 'Zambézia' },
-        { id: '8', nome: 'Nampula' },
-        { id: '9', nome: 'Cabo Delgado' },
-        { id: '10', nome: 'Niassa' }
-      ];
-      setProvincias(provinciasMock);
-    };
-
-    buscarProvincias();
-  }, []);
-
-  // Buscar distritos quando a província é selecionada
-  useEffect(() => {
-    if (novaVaga.provincia) {
-      const buscarDistritos = async () => {
-        const distritosMock = {
-          '1': [
-            { id: '101', nome: 'Cidade de Maputo' },
-            { id: '102', nome: 'Matola' },
-            { id: '103', nome: 'Marracuene' }
-          ],
-          '2': [
-            { id: '201', nome: 'Xai-Xai' },
-            { id: '202', nome: 'Chókwè' },
-            { id: '203', nome: 'Bilene' }
-          ]
-        };
-        
-        setDistritos(distritosMock[novaVaga.provincia] || []);
-        setNovaVaga(prev => ({ ...prev, distrito: '' }));
-      };
-
-      buscarDistritos();
+    if (selectedArea && areasAtuacao[selectedArea]) {
+      setAvailableSubAreas(areasAtuacao[selectedArea]);
+      // Limpa as subáreas selecionadas quando muda a área principal
+      setVagaData(prev => ({ ...prev, subAreas: [] }));
+    } else {
+      setAvailableSubAreas([]);
     }
-  }, [novaVaga.provincia]);
+  }, [selectedArea, areasAtuacao]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setNovaVaga(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleMultiSelectChange = (event, field) => {
-    const { value } = event.target;
-    setNovaVaga(prev => ({
-      ...prev,
-      [field]: typeof value === 'string' ? value.split(',') : value,
-    }));
-  };
-
-  const handleCheckboxChange = (field, itemValue) => {
-    setNovaVaga(prev => {
-      const currentValues = prev[field];
-      const newValues = currentValues.includes(itemValue)
-        ? currentValues.filter(v => v !== itemValue)
-        : [...currentValues, itemValue];
-      
-      return { ...prev, [field]: newValues };
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => {
+    setOpen(false);
+    // Reset form when closing
+    setVagaData({
+      titulo: '',
+      descricao: '',
+      areas: [],
+      provincia: '',
+      dataLimite: null,
+      requisitos: '',
+      beneficios: '',
+      tipoContrato: '',
+      experiencia: '',
+      salario: '',
+      subAreas: []
     });
-  };
-
-  const handleDescricaoChange = (value) => {
-    setNovaVaga(prev => ({ ...prev, descricao: value }));
-  };
-
-  const handleRequisitosChange = (value) => {
-    setNovaVaga(prev => ({ ...prev, requisitos: value }));
+    setSelectedArea('');
   };
 
   const handleSubmit = () => {
-    
-    onPublicarVaga(novaVaga);
+   
+
+    // Combine áreas principais e subáreas selecionadas
+    const areasCompletas = [
+      ...vagaData.areas,
+      ...vagaData.subAreas
+    ];
+
+    onPublicarVaga({
+      ...vagaData,
+      areas: areasCompletas,
+      dataLimite: vagaData.dataLimite ? vagaData.dataLimite.toISOString() : null
+    });
+    handleClose();
   };
 
-  const quillModules = {
-    toolbar: [
-      ['bold', 'italic', 'underline', 'strike'],
-      ['blockquote', 'code-block'],
-      [{ 'header': 1 }, { 'header': 2 }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'script': 'sub'}, { 'script': 'super' }],
-      ['link'],
-      ['clean']
-    ]
+  const handleChange = (field, value) => {
+    setVagaData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
-    <Card sx={{ p: 3, mb: 3, boxShadow: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+    <>
+      <Button 
+        variant="contained" 
+        color="primary" 
+        onClick={handleOpen}
+        sx={{ mb: 3 }}
+      >
         Publicar Nova Vaga
-      </Typography>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <TextField
-            label="Título da Vaga*"
-            name="titulo"
-            fullWidth
-            value={novaVaga.titulo}
-            onChange={handleChange}
-            required
-          />
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth>
-            <InputLabel>Áreas de Atuação*</InputLabel>
-            <Select
-              name="areas"
+      </Button>
+
+      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+        <DialogTitle>Publicar Nova Vaga</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
+            <TextField
+              label="Título da Vaga *"
+              value={vagaData.titulo}
+              onChange={(e) => handleChange('titulo', e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              label="Descrição *"
+              value={vagaData.descricao}
+              onChange={(e) => handleChange('descricao', e.target.value)}
+              multiline
+              rows={4}
+              fullWidth
+            />
+
+            <FormControl fullWidth>
+              <InputLabel>Área Principal *</InputLabel>
+              <Select
+                value={selectedArea}
+                onChange={(e) => setSelectedArea(e.target.value)}
+                label="Área Principal"
+              >
+                {Object.keys(areasAtuacao || {}).map((area) => (
+                  <MenuItem key={area} value={area}>
+                    {area}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {selectedArea && (
+              <FormControl fullWidth>
+                <InputLabel>Subáreas (opcional)</InputLabel>
+                <Select
+                  multiple
+                  value={vagaData.subAreas}
+                  onChange={(e) => handleChange('subAreas', e.target.value)}
+                  input={<OutlinedInput label="Subáreas (opcional)" />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => (
+                        <Chip key={value} label={value} />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  {availableSubAreas.map((subArea) => (
+                    <MenuItem key={subArea} value={subArea}>
+                      <Checkbox checked={vagaData.subAreas.indexOf(subArea) > -1} />
+                      <ListItemText primary={subArea} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            <Autocomplete
               multiple
-              value={novaVaga.areas}
-              onChange={(e) => handleMultiSelectChange(e, 'areas')}
-              renderValue={(selected) => selected.join(', ')}
-              required
-            >
-              {Object.keys(areasAtuacao).map((key) => (
-                <MenuItem key={key} value={key}>
-                  <Checkbox checked={novaVaga.areas.includes(key)} />
-                  <ListItemText primary={key} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-        
-        <Grid item xs={12}>
-          <Typography variant="subtitle2" gutterBottom>
-            Descrição Completa*
-          </Typography>
-          <Box sx={{ border: '1px solid #ccc', borderRadius: 1 }}>
-            <ReactQuill
-              value={novaVaga.descricao}
-              onChange={handleDescricaoChange}
-              modules={quillModules}
-              placeholder="Descreva detalhadamente a vaga..."
-              style={{ height: '200px', marginBottom: '50px' }}
+              options={Object.keys(areasAtuacao || {})}
+              value={vagaData.areas}
+              onChange={(_, newValue) => handleChange('areas', newValue)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Outras Áreas Relacionadas (opcional)"
+                  placeholder="Selecione áreas adicionais"
+                />
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    label={option}
+                    {...getTagProps({ index })}
+                    key={option}
+                  />
+                ))
+              }
+            />
+
+            <TextField
+              label="Província *"
+              value={vagaData.provincia}
+              onChange={(e) => handleChange('provincia', e.target.value)}
+              fullWidth
+            />
+
+            <DatePicker
+              label="Data Limite (opcional)"
+              value={vagaData.dataLimite}
+              onChange={(newValue) => handleChange('dataLimite', newValue)}
+              renderInput={(params) => <TextField {...params} fullWidth />}
+            />
+
+            <TextField
+              label="Requisitos"
+              value={vagaData.requisitos}
+              onChange={(e) => handleChange('requisitos', e.target.value)}
+              multiline
+              rows={3}
+              fullWidth
+            />
+
+            <TextField
+              label="Benefícios"
+              value={vagaData.beneficios}
+              onChange={(e) => handleChange('beneficios', e.target.value)}
+              multiline
+              rows={3}
+              fullWidth
+            />
+
+            <TextField
+              label="Tipo de Contrato"
+              value={vagaData.tipoContrato}
+              onChange={(e) => handleChange('tipoContrato', e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              label="Experiência Necessária"
+              value={vagaData.experiencia}
+              onChange={(e) => handleChange('experiencia', e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              label="Salário (opcional)"
+              value={vagaData.salario}
+              onChange={(e) => handleChange('salario', e.target.value)}
+              fullWidth
             />
           </Box>
-        </Grid>
-        
-        <Grid item xs={12}>
-          <Typography variant="subtitle2" gutterBottom>
-            Áreas de Formação*
-          </Typography>
-          <FormGroup row>
-            {areasFormacao.map((area, index) => (
-              <FormControlLabel
-                key={index}
-                control={
-                  <Checkbox
-                    checked={novaVaga.areasFormacao.includes(area.nivel)}
-                    onChange={() => handleCheckboxChange('areasFormacao', area.nivel)}
-                    name={area.nivel}
-                  />
-                }
-                label={area.nivel}
-              />
-            ))}
-          </FormGroup>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth>
-            <InputLabel>Província*</InputLabel>
-            <Select
-              name="provincia"
-              value={novaVaga.provincia}
-              onChange={handleChange}
-              required
-              startAdornment={<LocationOn />}
-            >
-              <MenuItem value="">Selecione...</MenuItem>
-              {provincias.map((provincia) => (
-                <MenuItem key={provincia.id} value={provincia.id}>
-                  {provincia.nome}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <FormControl fullWidth>
-            <InputLabel>Distrito*</InputLabel>
-            <Select
-              name="distrito"
-              value={novaVaga.distrito}
-              onChange={handleChange}
-              disabled={!novaVaga.provincia}
-            >
-              <MenuItem value="">Selecione...</MenuItem>
-              {distritos.map((distrito) => (
-                <MenuItem key={distrito.id} value={distrito.id}>
-                  {distrito.nome}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          <TextField
-            label="Tipo de Vaga"
-            name="tipo"
-            select
-            fullWidth
-            value={novaVaga.tipo}
-            onChange={handleChange}
-          >
-            <MenuItem value="Tempo Integral">Tempo Integral</MenuItem>
-            <MenuItem value="Meio Período">Meio Período</MenuItem>
-            <MenuItem value="Remoto">Remoto</MenuItem>
-            <MenuItem value="Híbrido">Híbrido</MenuItem>
-            <MenuItem value="Freelance">Freelance</MenuItem>
-          </TextField>
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <TextField
-            label="Salário (opcional)"
-            name="salario"
-            fullWidth
-            value={novaVaga.salario}
-            onChange={handleChange}
-            placeholder="Ex: 20.000,00 MZN"
-          />
-        </Grid>
-        
-        <Grid item xs={12}>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancelar</Button>
           <Button 
+            onClick={handleSubmit} 
             variant="contained" 
-            onClick={handleSubmit}
             disabled={loading}
-            startIcon={<Work />}
-            sx={{ mt: 2 }}
-            size="large"
-            fullWidth
           >
-            {loading ? <CircularProgress size={24} /> : 'Publicar Vaga'}
+            {loading ? 'Publicando...' : 'Publicar Vaga'}
           </Button>
-        </Grid>
-      </Grid>
-    </Card>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
