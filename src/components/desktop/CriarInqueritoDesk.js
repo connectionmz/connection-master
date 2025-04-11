@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ref, push, onValue } from 'firebase/database';
+import { ref, push, onValue, set, get } from 'firebase/database';
 import { db } from '../../fb';
 import { Provincias, SectorDeActividades } from '../../utils/formUtils';
 import {
@@ -21,6 +21,7 @@ import {
   Box,
 } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
+import sendEmail from '../sms/SendMail';
 
 const CriarInqueritoDesk = ({ user }) => {
   const [titulo, setTitulo] = useState('');
@@ -103,7 +104,7 @@ const CriarInqueritoDesk = ({ user }) => {
       return;
     }
 
-    if (!sectores.length || !provincias.length) {
+    if (!selectedSectores.length || !selectedProvincias.length) {
       setSnackbar({
         open: true,
         message: 'Selecione pelo menos um setor e uma província.',
@@ -119,27 +120,32 @@ const CriarInqueritoDesk = ({ user }) => {
       const novoInquerito = {
         title: titulo,
         description: descricao,
-        provincia: provincias, // Array de províncias
+        provincias: selectedProvincias,
         company: {
           nome: user.nome,
           logo: user.logoUrl,
           provincia: user.provincia,
           id: user.id,
         },
-        sectores, // Array de setores
+        sectores: selectedSectores,
         tipoInquerito,
         questions: perguntas,
         createdAt: Date.now(),
       };
 
-      await push(inqueritoRef, novoInquerito);
+      const newSurveyRef = push(inqueritoRef);
+      await set(newSurveyRef, novoInquerito);
+      
+      // Gerar link do inquérito
+      const linkDoInquerito = `https://suaplataforma.com/inqueritos/${newSurveyRef.key}`;
 
-      //Notificar empresas do sector/ provincia do inquerito disponivel
+      // Notificar empresas dos setores e províncias selecionados
+      await notificarEmpresas(novoInquerito, linkDoInquerito);
 
       setTitulo('');
       setDescricao('');
-      setSectores([]);
-      setProvincias([]);
+      setSelectedSectores([]);
+      setSelectedProvincias([]);
       setTipoInquerito('');
       setPerguntas([]);
 
@@ -155,6 +161,67 @@ const CriarInqueritoDesk = ({ user }) => {
     }
   };
 
+  const notificarEmpresas = async (inquerito, link) => {
+    try {
+      // 1. Buscar empresas que correspondem aos setores E províncias selecionados
+      const empresasRef = ref(db, 'company');
+      const empresasSnapshot = await get(empresasRef);
+      
+      if (!empresasSnapshot.exists()) return;
+
+      const empresas = empresasSnapshot.val();
+      const empresasParaNotificar = [];
+
+      // Filtrar empresas que correspondem aos critérios
+      for (const empresaId in empresas) {
+        const empresa = empresas[empresaId];
+        
+        // Verificar se a empresa está em pelo menos um setor e uma província selecionada
+        const setorCorresponde = inquerito.sectores.includes(empresa.sector);
+        const provinciaCorresponde = inquerito.provincias.includes(empresa.provincia);
+        
+        if (setorCorresponde && provinciaCorresponde && (empresa.contacto || empresa.email)) {
+          empresasParaNotificar.push(empresa);
+        }
+      }
+
+      // 2. Enviar notificações para as empresas filtradas
+      for (const empresa of empresasParaNotificar) {
+        const mensagem = {
+          titulo: `Novo Inquérito: ${inquerito.title}`,
+          corpo: `Descrição: ${inquerito.description}\nSetor: ${inquerito.sectores.join(', ')}\nProvíncias: ${inquerito.provincias.join(', ')}\nAcesse: ${link}`,
+          tipo: 'novo_inquerito',
+          data: new Date().toISOString(),
+          lido: false,
+        };
+
+        // Enviar notificação para o Firebase (cada empresa tem sua coleção de notificações)
+        const notificacaoRef = ref(db, `notifications/${empresa.id}`);
+        await push(notificacaoRef, mensagem);
+
+        // Enviar email se existir (opcional)
+        if (empresa.email) {
+          const emailData = {
+            to: empresa.email,
+            subject: `Novo Inquérito disponível: ${inquerito.title}`,
+            html: `
+              <h2>${inquerito.title}</h2>
+              <p><strong>Descrição:</strong> ${inquerito.description}</p>
+              <p><strong>Setor:</strong> ${inquerito.sectores.join(', ')}</p>
+              <p><strong>Províncias:</strong> ${inquerito.provincias.join(', ')}</p>
+              <p><strong>Empresa solicitante:</strong> ${inquerito.company.nome}</p>
+              <p>Acesse o inquérito: <a href="${link}">${link}</a></p>
+            `
+          };
+          await sendEmail(emailData); // Implemente esta função conforme seu sistema de email
+        }
+      }
+
+      console.log(`Notificações enviadas para ${empresasParaNotificar.length} empresas`);
+    } catch (error) {
+      console.error('Erro ao enviar notificações:', error);
+    }
+  };
   return (
     <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 4 }}>

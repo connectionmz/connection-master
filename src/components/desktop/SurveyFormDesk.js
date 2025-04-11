@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Paper, Typography, Button, TextField, FormControl, RadioGroup, FormControlLabel, Radio, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { db } from "../../fb";
-import { ref, set, get } from "firebase/database";
+import { ref, set, get, push } from "firebase/database";
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../BackButton';
 
@@ -10,8 +10,8 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
   const [hasResponded, setHasResponded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [openConfirmDialog, setOpenConfirmDialog] = useState(false); // Controle do diálogo de confirmação
-  const [isSubmitting, setIsSubmitting] = useState(false); // Para evitar múltiplos cliques durante a submissão
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +30,29 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
     }));
   }, []);
 
+  const sendNotificationToSurveyCreator = async () => {
+    if (!surveyData?.company?.id) return;
+    
+    const notification = {
+      type: "survey_response",
+      message: `A empresa ${user.nome} respondeu ao seu inquérito "${surveyData.title}"`,
+      fromUserId: user.id,
+      fromUserName: user.nome,
+      link: `https://app.connectionmozambique.com/perfil/${user.id}`,
+      timestamp: new Date().toISOString(),
+      status: "unread",
+      surveyId: surveyId,
+      surveyTitle: surveyData.title
+    };
+
+    try {
+      const notificationsRef = ref(db, `notifications/${surveyData.company.id}`);
+      await push(notificationsRef, notification);
+    } catch (error) {
+      console.error("Erro ao enviar notificação:", error);
+    }
+  };
+
   const handleSubmit = async () => {
     if (loading || isSubmitting) return;
 
@@ -37,6 +60,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
     setError(null);
 
     try {
+      // 1. Salvar as respostas
       const surveyRef = ref(db, `survey_responses/${surveyId}/${user.id}`);
       await set(surveyRef, {
         company: {
@@ -50,6 +74,9 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
         submittedAt: Date.now(),
       });
 
+      // 2. Enviar notificação para o criador do inquérito
+      await sendNotificationToSurveyCreator();
+
       alert("Respostas enviadas com sucesso!");
       navigate("/dashboard");
     } catch (err) {
@@ -57,22 +84,22 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
       setError("Ocorreu um erro ao enviar suas respostas. Tente novamente.");
     } finally {
       setLoading(false);
-      setIsSubmitting(false); // Permitir novo envio
+      setIsSubmitting(false);
     }
   };
 
   const handleOpenConfirmDialog = () => {
-    setOpenConfirmDialog(true); // Abre o diálogo de confirmação
+    setOpenConfirmDialog(true);
   };
 
   const handleCloseConfirmDialog = () => {
-    setOpenConfirmDialog(false); // Fecha o diálogo de confirmação
+    setOpenConfirmDialog(false);
   };
 
   const handleConfirmSubmit = () => {
-    setIsSubmitting(true); // Bloqueia envio múltiplo enquanto está processando
-    handleSubmit(); // Chama a função de envio
-    setOpenConfirmDialog(false); // Fecha o diálogo após confirmação
+    setIsSubmitting(true);
+    handleSubmit();
+    setOpenConfirmDialog(false);
   };
 
   const renderQuestions = useCallback(() => {
@@ -123,32 +150,25 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
   if (hasResponded) {
     return (
-      <Box
-      width="100%"
-      height="100vh"
-> 
-    <Paper sx={{ padding: 3 }}>
-    <BackButton sx={{ mb: 2 }} />
-
-      <Typography variant="h5">
-        Você já respondeu a este inquérito.
-      </Typography>
-      </Paper>
+      <Box width="100%" height="100vh"> 
+        <Paper sx={{ padding: 3 }}>
+          <BackButton sx={{ mb: 2 }} />
+          <Typography variant="h5">
+            Você já respondeu a este inquérito.
+          </Typography>
+        </Paper>
       </Box>
     );
   }
 
   return (
-    <Box
-    width="100%"
-    height="100vh"
-  >    
-    <Paper sx={{ padding: 3 }}>
-    <BackButton sx={{ mb: 2 }} />
+    <Box width="100%" height="100vh">    
+      <Paper sx={{ padding: 3 }}>
+        <BackButton sx={{ mb: 2 }} />
 
         <Typography variant="h5" sx={{ marginBottom: 2 }}>
-        <a href={`/perfil/${surveyData.company.id}`}>{surveyData.company.nome}</a><br/>
-        {surveyData.title}
+          <a href={`/perfil/${surveyData.company.id}`}>{surveyData.company.nome}</a><br/>
+          {surveyData.title}
         </Typography>
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
           {surveyData.description}
@@ -166,7 +186,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
           <Button
             variant="contained"
             color="primary"
-            onClick={handleOpenConfirmDialog} // Abre o diálogo de confirmação
+            onClick={handleOpenConfirmDialog}
             disabled={loading || isSubmitting}
           >
             {loading || isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Enviar Respostas"}
@@ -174,11 +194,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
         </Box>
       </Paper>
 
-      {/* Dialog de confirmação */}
-      <Dialog
-        open={openConfirmDialog}
-        onClose={handleCloseConfirmDialog}
-      >
+      <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
         <DialogTitle>Confirmar Envio</DialogTitle>
         <DialogContent>
           <Typography>
