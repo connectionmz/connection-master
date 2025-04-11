@@ -67,7 +67,7 @@ const RecrutamentoDesk = ({ user }) => {
           const vagasArray = data ? Object.entries(data).map(([id, vaga]) => ({ id, ...vaga })) : [];
           setVagas(vagasArray);
           setLoading(prev => ({ ...prev, vagas: false }));
-          checkCompatibility(vagasArray);
+          console.log(vagasArray)
         });
 
         return () => {
@@ -135,76 +135,80 @@ const RecrutamentoDesk = ({ user }) => {
     }
   }, [areaBusca, showNotification]);
 
-  const checkCompatibility = useCallback(async (vagasToCheck) => {
-    try {
-      const candidatosRef = ref(externalDb, "candidato");
-      const snapshot = await get(candidatosRef);
 
-      if (!snapshot.exists()) return;
-
+  const verificarCompatibilidade = useCallback(async (vagas) => {
+    console.log(vagas)
+    const candidatosRef = ref(externalDb, "candidato");
+    const snapshot = await get(candidatosRef);
+  
+    if (snapshot.exists()) {
       const candidatos = snapshot.val();
       const candidatosComAreas = Object.keys(candidatos).filter((userId) => {
         const candidato = candidatos[userId];
         return candidato.areasDeActuacao && candidato.areasDeActuacao.length > 0;
       });
-
-      const currentDate = new Date();
-      
-      for (const vaga of vagasToCheck) {
-        if (new Date(vaga.dataLimite) < currentDate) continue;
-
-        for (const userId of candidatosComAreas) {
+  
+      vagas.forEach((vaga) => {
+        if (new Date(vaga.dataLimite) < new Date()) return;
+  
+        candidatosComAreas.forEach(async (userId) => {
           const candidato = candidatos[userId];
           const smsRef = ref(externalDb, `vagasSMS/${userId}/${vaga.id}`);
           const smsSnapshot = await get(smsRef);
-
-          if (smsSnapshot.exists()) continue;
-
+  
+          if (smsSnapshot.exists()) return;
+  
           const areasVaga = Array.isArray(vaga.areasDeFormacao)
             ? vaga.areasDeFormacao.map((area) => area.toLowerCase())
             : [vaga.areasDeFormacao?.toLowerCase()];
-
+  
           const areasCandidato = Array.isArray(candidato.areasDeActuacao)
             ? candidato.areasDeActuacao.map((area) => area.toLowerCase())
             : [];
-
-          const hasMatch = areasVaga.some(area => 
+  
+          const areasIntersecao = areasVaga.filter((area) =>
             areasCandidato.includes(area)
           );
-
-          if (hasMatch) {
-            await sendCandidateMessage(userId, vaga, candidato);
+  
+          if (areasIntersecao.length > 0) {
+            enviarMensagemCandidato(userId, vaga, candidato);
           }
-        }
-      }
-    } catch (error) {
-      console.error('Error checking compatibility:', error);
-    }
-  }, []);
-
-  const sendCandidateMessage = useCallback(async (userId, vaga, candidato) => {
-    try {
-      const telefone = candidato.telefone || candidato.telefoneAlternativo;
-      const smsRef = ref(externalDb, `vagasSMS/${userId}/${vaga.id}`);
-      
-      await set(smsRef, {
-        idVaga: vaga.id,
-        numeroCelular: telefone || "Número não disponível",
-        estadoEnvio: "pendente",
-        dataEnvio: null,
-        link: vaga.link,
+        });
       });
+    }
+  }, [showNotification]);
+  
 
+  const enviarMensagemCandidato = (userId, vaga, candidato) => {
+    const mensagem = {
+      titulo: vaga.titulo,
+      descricao: vaga.descricao,
+      localizacao: vaga.localizacao,
+      timestamp: new Date().toISOString(),
+    };
+
+    const telefone = candidato.telefone || candidato.telefoneAlternativo;
+    const smsRef = ref(externalDb, `vagasSMS/${userId}/${vaga.id}`);
+    
+    set(smsRef, {
+      idVaga: vaga.id,
+      numeroCelular: telefone || "Número não disponível",
+      estadoEnvio: "pendente",
+      dataEnvio: null,
+      link: vaga.link,
+    }).then(async () => {
       if (!telefone) {
         await update(smsRef, { estadoEnvio: "falha", dataEnvio: new Date().toISOString() });
         return;
       }
 
-      await update(smsRef, { estadoEnvio: "Por enviar", dataEnvio: new Date().toISOString() });
-    } catch (error) {
-      console.error('Error sending message:', error);
-    }
-  }, []);
+      try {
+        await update(smsRef, { estadoEnvio: "Por enviar", dataEnvio: new Date().toISOString() });
+      } catch (error) {
+        await update(smsRef, { estadoEnvio: "falha", dataEnvio: new Date().toISOString() });
+      }
+    });
+  };
 
   const publicarVaga = useCallback(async (vagaData) => {
     try {
@@ -227,7 +231,7 @@ const RecrutamentoDesk = ({ user }) => {
       const snapshot = await get(novaVagaRef);
       if (snapshot.exists()) {
         const newVaga = { id: novaVagaRef.key, ...snapshot.val() };
-        checkCompatibility([newVaga]);
+        verificarCompatibilidade([newVaga]);
       }
     } catch (error) {
       console.error('Erro ao publicar vaga:', error);
@@ -235,11 +239,15 @@ const RecrutamentoDesk = ({ user }) => {
     } finally {
       setLoading(prev => ({ ...prev, vagas: false }));
     }
-  }, [user, showNotification, checkCompatibility]);
+  }, [user, showNotification, verificarCompatibilidade]);
 
   const handleCloseNotification = useCallback(() => {
     setNotification(prev => ({ ...prev, open: false }));
   }, []);
+
+
+
+  
 
   return (
     <Box sx={{ p: isMobile ? 2 : 3 }}>

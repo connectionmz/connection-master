@@ -19,8 +19,14 @@ import {
   Rating,
   useMediaQuery,
   IconButton,
-  Badge,
+  Avatar,
   useTheme,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Badge,
+  Link
 } from "@mui/material";
 import BackButton from "../BackButton";
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
@@ -29,23 +35,29 @@ import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import VerifiedIcon from '@mui/icons-material/Verified';
+import StoreIcon from '@mui/icons-material/Store';
 import { formatPrice } from "../../utils/utils";
 
 const ProductDetailsDesk = () => {
   const { productId, store } = useParams();
   const navigate = useNavigate();  
   const [product, setProduct] = useState(null);
+  const [storeInfo, setStoreInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [views, setViews] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const IVA_PERCENTAGE = 16;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
-    const fetchProductDetails = async () => {
+    const fetchData = async () => {
       try {
+        setLoading(true);
+        
+        // Fetch product details
         const productRef = ref(db, `stores/${store}/products/${productId}`);
         const productSnapshot = await get(productRef);
         
@@ -58,17 +70,60 @@ const ProductDetailsDesk = () => {
           await update(ref(db, `stores/${store}/products/${productId}`), {
             views: increment(1)
           });
+
+          // Fetch store/company information
+          const storeRef = ref(db, `stores/${store}`);
+          const storeSnapshot = await get(storeRef);
+          if (storeSnapshot.exists()) {
+            setStoreInfo(storeSnapshot.val());
+          }
         } else {
           setProduct(null);
         }
       } catch (error) {
-        console.error("Erro ao buscar os detalhes do produto:", error);
+        console.error("Error fetching data:", error);
       }
       setLoading(false);
     };
 
-    fetchProductDetails();
+    fetchData();
   }, [productId, store]);
+
+  const handleOpenShareMenu = (event) => {
+    event.preventDefault();
+    setShareAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseShareMenu = () => {
+    setShareAnchorEl(null);
+  };
+
+  const shareOnPlatform = (platform) => {
+    const productUrl = `${window.location.origin}/product/${productId}/store/${store}`;
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=Confira este produto: ${product.name} - ${productUrl}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=Confira este produto: ${product.name}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(productUrl);
+        // Consider adding a toast notification here
+        handleCloseShareMenu();
+        return;
+      default:
+        return;
+    }
+    
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    handleCloseShareMenu();
+  };
 
   const addToCart = () => {
     if (product) {
@@ -143,11 +198,11 @@ const ProductDetailsDesk = () => {
           <Box sx={{ position: 'absolute', top: 16, left: 16, display: 'flex', gap: 1 }}>
             {product.discountPrice && (
               <Chip
-              label={`-${Math.round(((product.price - product.discountPrice) / product.price) * 100)}%`}
-              color="error"
-              size="small"
-              sx={{ fontWeight: 'bold' }}
-            />
+                label={`-${Math.round(((product.price - product.discountPrice) / product.price) * 100)}%`}
+                color="error"
+                size="small"
+                sx={{ fontWeight: 'bold' }}
+              />
             )}
             {product.isNew && (
               <Chip
@@ -178,6 +233,7 @@ const ProductDetailsDesk = () => {
               <FavoriteBorderIcon color={isFavorite ? "error" : "action"} />
             </IconButton>
             <IconButton 
+              onClick={handleOpenShareMenu}
               sx={{ 
                 backgroundColor: 'rgba(255,255,255,0.8)',
                 '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
@@ -191,45 +247,50 @@ const ProductDetailsDesk = () => {
         {/* Product Details Section */}
         <Box sx={{ flex: 1 }}>
           <CardContent sx={{ p: 0 }}>
+            {/* Company Info */}
+            {storeInfo?.company && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                mb: 2,
+                p: 1.5,
+                backgroundColor: '#f9f9f9',
+                borderRadius: 1
+              }}>
+                <Avatar 
+                  src={storeInfo.company.logo} 
+                  alt={storeInfo.company.nome}
+                  sx={{ 
+                    width: 40, 
+                    height: 40, 
+                    mr: 2,
+                    border: `1px solid ${theme.palette.divider}`
+                  }}
+                />
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    {storeInfo.company.nome}
+                  </Typography>
+                </Box>
+                <a 
+                  href={`/loja/${store}`} // ou store.slug, conforme o que usas na rota
+                  variant="outlined" 
+                  size="small" 
+                  startIcon={<StoreIcon />}
+                  sx={{ ml: 'auto' }}
+                >
+                  Ver Loja
+                </a>
+              </Box>
+            )}
+
             <Typography variant={isMobile ? "h5" : "h4"} gutterBottom fontWeight="bold">
               {product.name}
             </Typography>
             
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-              <Rating 
-                value={product.rating || 4.5} 
-                precision={0.5} 
-                readOnly 
-                size={isMobile ? "small" : "medium"}
-              />
-              <Typography variant="body2" color="text.secondary">
-                ({product.reviewCount || 24} avaliações)
-              </Typography>
-              <Box display="flex" alignItems="center" ml={2}>
-                <RemoveRedEyeIcon fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary" ml={0.5}>
-                  {views + 1} visualizações
-                </Typography>
-              </Box>
-            </Stack>
-            
             <Typography variant="body1" color="text.secondary" paragraph>
               {product.description}
             </Typography>
-            
-            <Box sx={{ 
-              backgroundColor: '#f9f9f9', 
-              p: 2, 
-              borderRadius: 1,
-              mb: 3
-            }}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <LocalShippingIcon color="success" />
-                <Typography variant="body2">
-                  Entrega grátis para Maputo e Matola
-                </Typography>
-              </Stack>
-            </Box>
             
             <Divider sx={{ my: 2 }} />
             
@@ -238,15 +299,15 @@ const ProductDetailsDesk = () => {
               {product.discountPrice ? (
                 <>
                   <Typography variant={isMobile ? "h5" : "h4"} color="error" fontWeight="bold">
-                    {product.discountPrice} MT
+                    {formatPrice(product.discountPrice)} MT
                   </Typography>
                   <Typography variant="body1" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
-                  {formatPrice(product.price || "0")}MT
+                    {formatPrice(product.price)} MT
                   </Typography>
                 </>
               ) : (
                 <Typography variant={isMobile ? "h5" : "h4"} color="primary" fontWeight="bold">
-                                  {formatPrice(product.price || "0")}MT
+                  {formatPrice(product.price)} MT
                 </Typography>
               )}
               
@@ -287,48 +348,81 @@ const ProductDetailsDesk = () => {
               <Stack spacing={1}>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Subtotal ({quantity} itens):</Typography>
-                  <Typography variant="body2">{total.toFixed(2)} MT</Typography>
+                  <Typography variant="body2">{formatPrice(total)} MT</Typography>
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">IVA ({IVA_PERCENTAGE}%):</Typography>
-                  <Typography variant="body2">{iva.toFixed(2)} MT</Typography>
+                  <Typography variant="body2">{formatPrice(iva)} MT</Typography>
                 </Box>
                 <Divider />
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body1" fontWeight="bold">Total:</Typography>
                   <Typography variant="body1" fontWeight="bold" color="primary">
-                    {totalWithIva.toFixed(2)} MT
+                    {formatPrice(totalWithIva)} MT
                   </Typography>
                 </Box>
               </Stack>
             </Box>
             
-            {/* Action Buttons */}
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                startIcon={<ShoppingCartIcon />}
-                onClick={addToCart}
-                sx={{ flex: 1 }}
-              >
-                Adicionar ao Carrinho
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                size="large"
-                startIcon={<VerifiedIcon />}
-                onClick={handlePayment}
-                sx={{ flex: 1 }}
-              >
-                Comprar Agora
-              </Button>
-            </Stack>
+ 
           </CardContent>
         </Box>
       </Box>
+
+      {/* Share Menu */}
+      <Menu
+        anchorEl={shareAnchorEl}
+        open={Boolean(shareAnchorEl)}
+        onClose={handleCloseShareMenu}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={() => shareOnPlatform('whatsapp')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124034.png" 
+              alt="WhatsApp" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>WhatsApp</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('facebook')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124010.png" 
+              alt="Facebook" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>Facebook</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('twitter')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124021.png" 
+              alt="Twitter" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>Twitter</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('copy')}>
+          <ListItemIcon>
+            <ShareIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Copiar link</ListItemText>
+        </MenuItem>
+      </Menu>
     </Container>
   );
 };

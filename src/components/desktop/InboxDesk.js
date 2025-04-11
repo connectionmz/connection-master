@@ -34,7 +34,6 @@ const InboxDesk = ({ user }) => {
     const notificationsRef = ref(db, 'notifications');
     onValue(notificationsRef, (snapshot) => {
       const data = snapshot.val();
-      console.log(data)
       const userNotifications = [];
       for (const userId in data) {
         if (data[userId]) {
@@ -272,6 +271,7 @@ const InboxDesk = ({ user }) => {
               </Typography>
                     </Box>
                     <ListItemText
+                     onClick={() => markAsRead(notification.id)}
                       primary={
                         <Link
                           href={notification.link || '#'}

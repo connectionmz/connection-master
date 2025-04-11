@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ref as createStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../fb';
-import { ref, push, set, onValue } from 'firebase/database';
+import { ref, push, set, onValue, query, orderByChild, equalTo } from 'firebase/database';
 import {
   Button,
   TextField,
@@ -20,11 +20,329 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  Divider,
+  Avatar,
+  Grid,
 } from '@mui/material';
 import BackButton from '../BackButton';
 import { formatPrice } from '../../utils/utils';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
 const AnunciarDesk = ({ user }) => {
+  const [activeTab, setActiveTab] = useState(0);
+  const [myAds, setMyAds] = useState([]);
+  const [loadingAds, setLoadingAds] = useState(false);
+
+  // Load user's ads when tab changes or component mounts
+  useEffect(() => {
+    if (activeTab === 0) {
+      loadUserAds();
+    }
+  }, [activeTab, user]);
+
+  const loadUserAds = async () => {
+    if (!user?.id) return;
+    
+    setLoadingAds(true);
+    try {
+      const adsRef = query(ref(db, 'banners'), orderByChild('companyId'), equalTo(user.id));
+      onValue(adsRef, (snapshot) => {
+        const adsData = snapshot.val();
+        if (adsData) {
+          const adsArray = Object.keys(adsData).map((key) => ({
+            id: key,
+            ...adsData[key],
+          }));
+          setMyAds(adsArray);
+        } else {
+          setMyAds([]);
+        }
+      });
+    } catch (error) {
+      console.error('Error loading ads:', error);
+    } finally {
+      setLoadingAds(false);
+    }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  return (
+    <Box width="100%" minHeight="100vh">
+      <Paper sx={{ width: '100%', padding: 3 }}>
+        <BackButton sx={{ mb: 2 }} />
+        <Typography variant="h5" gutterBottom>
+          Gestão de Anúncios
+        </Typography>
+
+        <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+          <Tab label="Meus Anúncios" />
+          <Tab label="Criar Anúncio" />
+        </Tabs>
+
+        {activeTab === 0 ? (
+          <MyAdsTab myAds={myAds} loading={loadingAds} />
+        ) : (
+          <CreateAdTab user={user} onAdCreated={() => setActiveTab(0)} />
+        )}
+      </Paper>
+    </Box>
+  );
+};
+
+const MyAdsTab = ({ myAds, loading }) => {
+  const [selectedAd, setSelectedAd] = useState(null);
+  const [openDetails, setOpenDetails] = useState(false);
+  const [adStats, setAdStats] = useState({
+    clicks: 0,
+    impressions: 0,
+    companiesReached: [],
+    performanceBySector: [],
+  });
+
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-PT');
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'success';
+      case 'pending': return 'warning';
+      case 'expired': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const handleViewAd = (ad) => {
+    setSelectedAd(ad);
+    // Simular dados de estatísticas (substitua por chamada real ao Firebase)
+    const mockStats = {
+      clicks: Math.floor(Math.random() * 1000),
+      impressions: Math.floor(Math.random() * 5000),
+      companiesReached: [
+        { id: '1', name: 'Empresa A', impressions: 120, clicks: 5 },
+        { id: '2', name: 'Empresa B', impressions: 85, clicks: 3 },
+        { id: '3', name: 'Empresa C', impressions: 64, clicks: 2 },
+      ],
+      performanceBySector: [
+        { sector: 'Tecnologia', impressions: 1200, clicks: 45 },
+        { sector: 'Construção', impressions: 850, clicks: 32 },
+        { sector: 'Saúde', impressions: 640, clicks: 28 },
+      ],
+    };
+    setAdStats(mockStats);
+    setOpenDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setOpenDetails(false);
+  };
+
+  if (loading) {
+    return <CircularProgress />;
+  }
+
+  if (myAds.length === 0) {
+    return <Typography>Não tem nenhum anúncio criado ainda.</Typography>;
+  }
+
+  return (
+    <>
+    <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Imagem</TableCell>
+              <TableCell>Descrição</TableCell>
+              <TableCell>Tipo</TableCell>
+              <TableCell>Duração</TableCell>
+              <TableCell>Custo</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Expira em</TableCell>
+              <TableCell>Ações</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {myAds.map((ad) => (
+              <TableRow key={ad.id}>
+                <TableCell>
+                  <img 
+                    src={ad.imageUrl} 
+                    alt="Anúncio" 
+                    style={{ width: 100, height: 50, objectFit: 'cover' }} 
+                  />
+                </TableCell>
+                <TableCell>{ad.description}</TableCell>
+                <TableCell>
+                  {ad.tipoAnuncio === 'home' && 'Página Inicial'}
+                  {ad.tipoAnuncio === 'concurso' && 'Concurso'}
+                  {ad.tipoAnuncio === 'cotacoes' && 'Cotações'}
+                  {ad.tipoAnuncio === 'destacar_perfil' && 'Destacar Perfil'}
+                </TableCell>
+                <TableCell>{ad.days} dias</TableCell>
+                <TableCell>{formatPrice(ad.totalCost)} MT</TableCell>
+                <TableCell>
+                  <Chip 
+                    label={ad.status} 
+                    color={getStatusColor(ad.status)} 
+                    size="small" 
+                  />
+                </TableCell>
+                <TableCell>{formatDate(ad.expireDate)}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleViewAd(ad)}
+                  >
+                 <BarChartIcon />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Dialog com detalhes do anúncio */}
+      <Dialog open={openDetails} onClose={handleCloseDetails} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center">
+            <VisibilityIcon sx={{ mr: 1 }} />
+            Detalhes do Anúncio
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedAd && (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={4}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>Informações Básicas</Typography>
+                  <img
+                    src={selectedAd.imageUrl}
+                    alt="Anúncio"
+                    style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }}
+                  />
+                  <Typography><strong>Descrição:</strong> {selectedAd.description}</Typography>
+                  <Typography><strong>Tipo:</strong> {
+                    selectedAd.tipoAnuncio === 'home' ? 'Página Inicial' :
+                    selectedAd.tipoAnuncio === 'concurso' ? 'Concurso' :
+                    selectedAd.tipoAnuncio === 'cotacoes' ? 'Cotações' : 'Destacar Perfil'
+                  }</Typography>
+                  <Typography><strong>Duração:</strong> {selectedAd.days} dias</Typography>
+                  <Typography><strong>Custo:</strong> {formatPrice(selectedAd.totalCost)} MT</Typography>
+                  <Typography><strong>Status:</strong> 
+                    <Chip 
+                      label={selectedAd.status} 
+                      color={getStatusColor(selectedAd.status)} 
+                      size="small" 
+                      sx={{ ml: 1 }}
+                    />
+                  </Typography>
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>Segmentação</Typography>
+                  <Typography><strong>Províncias:</strong> {selectedAd.provincias?.join(', ') || 'Nenhuma'}</Typography>
+                  <Typography><strong>Setores:</strong> {selectedAd.sectores?.join(', ') || 'Nenhum'}</Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={8}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>Estatísticas Gerais</Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h4">{adStats.clicks}</Typography>
+                        <Typography variant="subtitle1">Cliques</Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Paper sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h4">{adStats.impressions}</Typography>
+                        <Typography variant="subtitle1">Impressões</Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>Desempenho por Setor</Typography>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Setor</TableCell>
+                          <TableCell align="right">Impressões</TableCell>
+                          <TableCell align="right">Cliques</TableCell>
+                          <TableCell align="right">CTR</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {adStats.performanceBySector.map((sector) => (
+                          <TableRow key={sector.sector}>
+                            <TableCell>{sector.sector}</TableCell>
+                            <TableCell align="right">{sector.impressions}</TableCell>
+                            <TableCell align="right">{sector.clicks}</TableCell>
+                            <TableCell align="right">
+                              {((sector.clicks / sector.impressions) * 100).toFixed(2)}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                <Box>
+                  <Typography variant="h6" gutterBottom>Empresas Atingidas</Typography>
+                  <List dense>
+                    {adStats.companiesReached.map((company) => (
+                      <React.Fragment key={company.id}>
+                        <ListItem>
+                          <ListItemText
+                            primary={company.name}
+                            secondary={`Impressões: ${company.impressions} | Cliques: ${company.clicks} (CTR: ${((company.clicks / company.impressions) * 100).toFixed(2)}%)`}
+                          />
+                        </ListItem>
+                        <Divider />
+                      </React.Fragment>
+                    ))}
+                  </List>
+                </Box>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetails}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
+
+const CreateAdTab = ({ user, onAdCreated }) => {
   const [file, setFile] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -42,7 +360,6 @@ const AnunciarDesk = ({ user }) => {
   const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
   const [tipoAnuncio, setTipoAnuncio] = useState('home');
 
-  // Preços base para cada tipo de anúncio
   const prices = {
     home: 30,
     concurso: 50,
@@ -53,7 +370,6 @@ const AnunciarDesk = ({ user }) => {
   const ADDITIONAL_COST_PER_PROVINCIA = 30;
   const ADDITIONAL_COST_PER_SETOR = 30;
 
-  // Carregar dados iniciais
   useEffect(() => {
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
@@ -74,22 +390,17 @@ const AnunciarDesk = ({ user }) => {
       }
     });
 
-    // Definir setor e província padrão com base no perfil do usuário
     if (user) {
       setSelectedSectores(user.sector ? [user.sector] : []);
       setSelectedProvincias(user.provincia ? [user.provincia] : []);
     }
   }, [user]);
 
-  // Calcular custo total
   useEffect(() => {
     const baseCost = prices[tipoAnuncio] || prices.home;
-
-    // Verificar se há setores ou províncias adicionais selecionados
     const hasAdditionalSectors = selectedSectores.length > 1;
     const hasAdditionalProvincias = selectedProvincias.length > 1;
 
-    // Aplicar custo adicional apenas para setores ou províncias adicionais
     const additionalCost =
       (hasAdditionalProvincias ? (selectedProvincias.length - 1) * ADDITIONAL_COST_PER_PROVINCIA : 0) +
       (hasAdditionalSectors ? (selectedSectores.length - 1) * ADDITIONAL_COST_PER_SETOR : 0);
@@ -97,7 +408,6 @@ const AnunciarDesk = ({ user }) => {
     setTotalCost(days * (baseCost + additionalCost));
   }, [days, selectedProvincias, selectedSectores, tipoAnuncio]);
 
-  // Calcular empresas atingidas
   useEffect(() => {
     if (empresas.length > 0 && (selectedProvincias.length > 0 || selectedSectores.length > 0)) {
       const empresasFiltradas = empresas.filter((empresa) => {
@@ -111,27 +421,22 @@ const AnunciarDesk = ({ user }) => {
     }
   }, [selectedProvincias, selectedSectores, empresas]);
 
-  // Função para manipular a seleção de províncias
   const handleProvinciaChange = (e) => {
     const newSelectedProvincias = e.target.value;
-    // Garantir que a província padrão do usuário esteja sempre selecionada
     if (user.provincia && !newSelectedProvincias.includes(user.provincia)) {
       newSelectedProvincias.push(user.provincia);
     }
     setSelectedProvincias(newSelectedProvincias);
   };
 
-  // Função para manipular a seleção de setores
   const handleSetorChange = (e) => {
     const newSelectedSectores = e.target.value;
-    // Garantir que o setor padrão do usuário esteja sempre selecionado
     if (user.sector && !newSelectedSectores.includes(user.sector)) {
       newSelectedSectores.push(user.sector);
     }
     setSelectedSectores(newSelectedSectores);
   };
 
-  // Funções de manipulação de arquivo
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -140,7 +445,6 @@ const AnunciarDesk = ({ user }) => {
     }
   };
 
-  // Função para validar o formulário
   const validateForm = () => {
     if (!file) {
       showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
@@ -153,7 +457,6 @@ const AnunciarDesk = ({ user }) => {
     return true;
   };
 
-  // Função para publicar o anúncio
   const handlePublish = async () => {
     if (!validateForm()) return;
     setUploading(true);
@@ -166,6 +469,7 @@ const AnunciarDesk = ({ user }) => {
       
       showSnackbar('Anúncio publicado com sucesso!', 'success');
       resetForm();
+      onAdCreated();
     } catch (error) {
       console.error('Erro ao publicar anúncio:', error);
       showSnackbar('Erro ao publicar o anúncio. Tente novamente.', 'error');
@@ -174,7 +478,6 @@ const AnunciarDesk = ({ user }) => {
     }
   };
 
-  // Função para salvar no banco de dados
   const saveToDatabase = async (url) => {
     const anuncioRef = push(ref(db, 'banners'));
     const idAnuncio = anuncioRef.key;
@@ -199,7 +502,6 @@ const AnunciarDesk = ({ user }) => {
     });
   };
 
-  // Função para calcular a data de expiração
   const calculateExpireDate = (days) => {
     const currentDate = new Date();
     const expireDate = new Date(currentDate);
@@ -207,7 +509,6 @@ const AnunciarDesk = ({ user }) => {
     return expireDate.toISOString();
   };
 
-  // Função para resetar o formulário
   const resetForm = () => {
     setDescription('');
     setLink('');
@@ -220,170 +521,160 @@ const AnunciarDesk = ({ user }) => {
     setTipoAnuncio('home');
   };
 
-  // Função para exibir mensagens no Snackbar
   const showSnackbar = (message, severity) => {
     setSnackbar({ open: true, message, severity });
   };
 
-  // Função para fechar o Snackbar
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
   return (
-    <Box width="100%" minHeight="100vh">
-      <Paper sx={{ width: '100%', padding: 3 }}>
-        <BackButton sx={{ mb: 2 }} />
-        <Typography variant="h5" gutterBottom>
-          Criar Anúncio
+    <>
+      <FormControl component="fieldset" sx={{ mb: 2 }}>
+        <Typography variant="body1" sx={{ mb: 1 }}>
+          Escolha o tipo de anúncio:
         </Typography>
-
-        {/* Seletor de tipo de anúncio */}
-        <FormControl component="fieldset" sx={{ mb: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Escolha o tipo de anúncio:
-          </Typography>
-          <RadioGroup
-            value={tipoAnuncio}
-            onChange={(e) => setTipoAnuncio(e.target.value)}
-          >
-            <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
-            <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
-            <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
-            <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil" />
-          </RadioGroup>
-        </FormControl>
-
-        <TextField
-          label="Descrição do anúncio"
-          variant="outlined"
-          fullWidth
-          multiline
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-
-        <TextField
-          label="Link externo (opcional)"
-          variant="outlined"
-          fullWidth
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Imagem do anúncio *
-          </Typography>
-          <input 
-            type="file" 
-            onChange={handleFileChange} 
-            accept="image/*"
-          />
-          {imageUrl && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                Pré-visualização:
-              </Typography>
-              <img
-                src={imageUrl}
-                alt="Preview da Imagem"
-                style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
-              />
-            </Box>
-          )}
-        </Box>
-
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="provincias-label">Províncias *</InputLabel>
-          <Select
-            labelId="provincias-label"
-            multiple
-            value={selectedProvincias}
-            onChange={handleProvinciaChange}
-            renderValue={(selected) => selected.join(', ')}
-          >
-            {provincias.map((provincia) => (
-              <MenuItem key={provincia.provincia} value={provincia.provincia}>
-                <Checkbox
-                  checked={selectedProvincias.includes(provincia.provincia)}
-                  disabled={user.provincia === provincia.provincia}
-                />
-                <ListItemText primary={provincia.provincia} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
-          <Select
-            labelId="sectores-label"
-            multiple
-            value={selectedSectores}
-            onChange={handleSetorChange}
-            renderValue={(selected) => selected.join(', ')}
-          >
-            {sectores.map((setor) => (
-              <MenuItem key={setor.setor} value={setor.setor}>
-                <Checkbox
-                  checked={selectedSectores.includes(setor.setor)}
-                  disabled={user.sector === setor.setor}
-                />
-                <ListItemText primary={setor.setor} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <Box mb={2}>
-          <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
-          <TextField
-            type="number"
-            value={days}
-            onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
-            inputProps={{ min: 1, max: 30 }}
-            fullWidth
-          />
-        </Box>
-
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          Valor estimado: <strong>{formatPrice(totalCost)} MT</strong>
-        </Typography>
-
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-          Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
-        </Typography>
-
-        <TextField
-          label="Número de celular *"
-          variant="outlined"
-          fullWidth
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handlePublish}
-          disabled={!file || !phoneNumber || uploading}
-          sx={{ mb: 2 }}
+        <RadioGroup
+          value={tipoAnuncio}
+          onChange={(e) => setTipoAnuncio(e.target.value)}
         >
-          {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
-        </Button>
-      </Paper>
+          <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
+          <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
+          <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
+          <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil" />
+        </RadioGroup>
+      </FormControl>
+
+      <TextField
+        label="Descrição do anúncio"
+        variant="outlined"
+        fullWidth
+        multiline
+        rows={3}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        sx={{ mb: 2 }}
+      />
+
+      <TextField
+        label="Link externo (opcional)"
+        variant="outlined"
+        fullWidth
+        value={link}
+        onChange={(e) => setLink(e.target.value)}
+        sx={{ mb: 2 }}
+      />
+
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="body1" sx={{ mb: 1 }}>
+          Imagem do anúncio *
+        </Typography>
+        <input 
+          type="file" 
+          onChange={handleFileChange} 
+          accept="image/*"
+        />
+        {imageUrl && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+              Pré-visualização:
+            </Typography>
+            <img
+              src={imageUrl}
+              alt="Preview da Imagem"
+              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+            />
+          </Box>
+        )}
+      </Box>
+
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="provincias-label">Províncias *</InputLabel>
+        <Select
+          labelId="provincias-label"
+          multiple
+          value={selectedProvincias}
+          onChange={handleProvinciaChange}
+          renderValue={(selected) => selected.join(', ')}
+        >
+          {provincias.map((provincia) => (
+            <MenuItem key={provincia.provincia} value={provincia.provincia}>
+              <Checkbox
+                checked={selectedProvincias.includes(provincia.provincia)}
+                disabled={user.provincia === provincia.provincia}
+              />
+              <ListItemText primary={provincia.provincia} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
+        <Select
+          labelId="sectores-label"
+          multiple
+          value={selectedSectores}
+          onChange={handleSetorChange}
+          renderValue={(selected) => selected.join(', ')}
+        >
+          {sectores.map((setor) => (
+            <MenuItem key={setor.setor} value={setor.setor}>
+              <Checkbox
+                checked={selectedSectores.includes(setor.setor)}
+                disabled={user.sector === setor.setor}
+              />
+              <ListItemText primary={setor.setor} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Box mb={2}>
+        <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
+        <TextField
+          type="number"
+          value={days}
+          onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
+          inputProps={{ min: 1, max: 30 }}
+          fullWidth
+        />
+      </Box>
+
+      <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+        Valor estimado: <strong>{formatPrice(totalCost)} MT</strong>
+      </Typography>
+
+      <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+        Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
+      </Typography>
+
+      <TextField
+        label="Número de celular *"
+        variant="outlined"
+        fullWidth
+        value={phoneNumber}
+        onChange={(e) => setPhoneNumber(e.target.value)}
+        sx={{ mb: 2 }}
+      />
+
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handlePublish}
+        disabled={!file || !phoneNumber || uploading}
+        sx={{ mb: 2 }}
+      >
+        {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
+      </Button>
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </>
   );
 };
 

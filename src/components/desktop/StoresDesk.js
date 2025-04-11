@@ -13,30 +13,33 @@ import {
   CardActionArea,
   CardMedia,
   Avatar,
-  Button,
-  Badge,
   IconButton,
   useMediaQuery,
-  Snackbar,
-  Alert,
-  Rating,
   Chip,
-  Stack,
-  Divider,
   useTheme,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ShareIcon from "@mui/icons-material/Share";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { formatPrice } from "../../utils/utils";
 
-const shuffleArray = (array) => {
-  return array
-    .map((item) => ({ item, sort: Math.random() }))
-    .sort((a, b) => a.sort - b.sort)
-    .map(({ item }) => item);
+// Improved shuffle function with better randomization
+const shuffleArray = (array, seed = 1) => {
+  const random = (min, max) => {
+    const x = Math.sin(seed++) * 10000;
+    const rand = x - Math.floor(x);
+    return Math.floor(rand * (max - min + 1)) + min;
+  };
+  
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = random(0, i);
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
 };
 
 const StoresDesk = ({ user }) => {
@@ -44,52 +47,73 @@ const StoresDesk = ({ user }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStores, setFilteredStores] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState([]);
-  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
+  const [shareProductId, setShareProductId] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
-
-  const addToCart = (product) => {
-    setCart((prevCart) => {
-      const existingProduct = prevCart.find((item) => item.id === product.id);
-      if (existingProduct) {
-        return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prevCart, { ...product, quantity: 1 }];
-    });
-    setOpenSnackbar(true); 
+  const handleOpenShareMenu = (event, id) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShareProductId(id);
+    setShareAnchorEl(event.currentTarget);
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+  const handleCloseShareMenu = () => {
+    setShareAnchorEl(null);
+    setShareProductId(null);
   };
 
-  const handleCloseSnackbar = () => {
-    setOpenSnackbar(false);
+  const shareOnPlatform = (platform) => {
+    if (!shareProductId) return;
+    
+    const productUrl = `${window.location.origin}/product/${shareProductId}`;
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=Confira este produto: ${productUrl}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(productUrl);
+        // Consider adding a toast notification here
+        handleCloseShareMenu();
+        return;
+      default:
+        return;
+    }
+    
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    handleCloseShareMenu();
   };
 
   useEffect(() => {
     const fetchStores = async () => {
       try {
+        setLoading(true);
         const storesRef = ref(db, "stores");
         const snapshot = await get(storesRef);
+        
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const storesArray = Object.entries(data).map(([id, store]) => ({ id, ...store }));
+          const storesArray = Object.entries(data).map(([id, store]) => ({ 
+            id, 
+            ...store,
+            products: store.products || {}
+          }));
 
-          // Filtrar apenas se o usuário existir
-          const filteredStores = user
+          const filteredStores = user?.provinciaTemp || user?.provincia
             ? storesArray.filter(
-                (store) =>
-                  store.company?.provincia === (user.provinciaTemp || user.provincia)
+                store => store.company?.provincia === (user.provinciaTemp || user.provincia)
               )
-            : storesArray; // Exibe todas as lojas se o usuário não existir
+            : storesArray;
 
           const shuffledStores = shuffleArray(filteredStores);
           setStoresList(shuffledStores);
@@ -104,25 +128,45 @@ const StoresDesk = ({ user }) => {
         setLoading(false);
       }
     };
+    
     fetchStores();
-  }, [user?.provincia]);
+  }, [user?.provincia, user?.provinciaTemp]);
 
   useEffect(() => {
     if (searchQuery.trim()) {
-      const filtered = storesList.filter((store) =>
-        store.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const query = searchQuery.toLowerCase();
+      const filtered = storesList.filter(store =>
+        store.name.toLowerCase().includes(query) ||
+        Object.values(store.products).some(product => 
+          product.name?.toLowerCase().includes(query)
+        )
       );
       setFilteredStores(shuffleArray(filtered));
     } else {
-      setFilteredStores(shuffleArray(storesList));
+      setFilteredStores(shuffleArray([...storesList]));
     }
   }, [searchQuery, storesList]);
 
-  // Calculate discount percentage if original price exists
   const calculateDiscount = (price, originalPrice) => {
-    if (!originalPrice) return 0;
+    if (!originalPrice || originalPrice <= price) return 0;
     return Math.round(((originalPrice - price) / originalPrice) * 100);
   };
+
+  // Memoize product list to avoid unnecessary re-renders
+  const productList = React.useMemo(() => {
+    return shuffleArray(
+      filteredStores.flatMap(store =>
+        Object.entries(store.products).map(([productId, product]) => ({
+          ...product,
+          storeName: store.name || "Loja Desconhecida",
+          storeId: store.id,
+          logo: store.company?.logo || "https://via.placeholder.com/80",
+          id: productId,
+          storeSettings: store.settings || {},
+        }))
+      )
+    );
+  }, [filteredStores]);
 
   return (
     <Box sx={{ 
@@ -161,72 +205,81 @@ const StoresDesk = ({ user }) => {
             borderRadius: 1
           }}
           size={isMobile ? 'small' : 'medium'}
+          InputProps={{
+            type: 'search'
+          }}
         />
       </Box>
 
       {/* Stores Carousel */}
-      <Box sx={{ 
-        maxWidth: 1400,
-        mx: 'auto',
-        mb: 4,
-        p: 1,
-        backgroundColor: '#fff',
-        borderRadius: 2,
-        boxShadow: 1
-      }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-          Lojas em Destaque
-        </Typography>
-        <Box sx={{
-          display: "flex",
-          overflowX: "auto",
-          gap: 2,
-          py: 1,
-          px: 1,
-          '&::-webkit-scrollbar': {
-            height: 6,
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: theme.palette.primary.main,
-            borderRadius: 3,
-          },
+      {storesList.length > 0 && (
+        <Box sx={{ 
+          maxWidth: 1400,
+          mx: 'auto',
+          mb: 4,
+          p: 1,
+          backgroundColor: '#fff',
+          borderRadius: 2,
+          boxShadow: 1
         }}>
-          {storesList.map((store) => (
-            <Box
-              key={store.id}
-              sx={{
-                minWidth: 120,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textDecoration: 'none',
-              }}
-              component={Link}
-              to={`/loja/${store.id}`}
-            >
-              <Avatar
-                src={store?.company?.logo || "https://via.placeholder.com/80"}
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            Lojas em Destaque
+          </Typography>
+          <Box sx={{
+            display: "flex",
+            overflowX: "auto",
+            gap: 2,
+            py: 1,
+            px: 1,
+            '&::-webkit-scrollbar': {
+              height: 6,
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: theme.palette.primary.main,
+              borderRadius: 3,
+            },
+          }}>
+            {storesList.slice(0, 10).map((store) => (
+              <Box
+                key={store.id}
                 sx={{
-                  width: 80,
-                  height: 80,
-                  border: `2px solid ${theme.palette.primary.main}`,
-                  marginBottom: 1,
+                  minWidth: 120,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textDecoration: 'none',
                 }}
-              />
-              <Typography
-                variant="body2"
-                sx={{ 
-                  textAlign: "center", 
-                  fontWeight: 500,
-                  color: theme.palette.text.primary
-                }}
+                component={Link}
+                to={`/loja/${store.id}`}
               >
-                {store.name}
-              </Typography>
-            </Box>
-          ))}
+                <Avatar
+                  src={store?.company?.logo || "https://via.placeholder.com/80"}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    border: `2px solid ${theme.palette.primary.main}`,
+                    marginBottom: 1,
+                  }}
+                />
+                <Typography
+                  variant="body2"
+                  sx={{ 
+                    textAlign: "center", 
+                    fontWeight: 500,
+                    color: theme.palette.text.primary,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '100%'
+                  }}
+                >
+                  {store.name}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         </Box>
-      </Box>
+      )}
 
       {/* Products Grid */}
       {loading ? (
@@ -244,22 +297,9 @@ const StoresDesk = ({ user }) => {
           mx: 'auto'
         }}>
           <Grid container spacing={isMobile ? 1 : 3}>
-            {filteredStores.length > 0 ? (
-              shuffleArray(
-                filteredStores.flatMap((store) =>
-                  store.products
-                    ? Object.entries(store.products).map(([productId, product]) => ({
-                        ...product,
-                        storeName: store.name || "Loja Desconhecida",
-                        storeId: store.id,
-                        logo: store.logo || "https://via.placeholder.com/80",
-                        id: productId,
-                        storeSettings: store.settings || {},
-                      }))
-                    : []
-                )
-              ).map((product) => (
-                <Grid item xs={6} sm={4} md={3} lg={2.4} key={product.id}>
+            {productList.length > 0 ? (
+              productList.map((product) => (
+                <Grid item xs={6} sm={4} md={3} lg={2.4} key={`${product.storeId}-${product.id}`}>
                   <Card
                     sx={{
                       height: '100%',
@@ -344,6 +384,7 @@ const StoresDesk = ({ user }) => {
                               transform: 'scale(1.05)'
                             }
                           }}
+                          loading="lazy"
                         />
                       </Box>
 
@@ -376,20 +417,29 @@ const StoresDesk = ({ user }) => {
                           {product.name || "Produto sem nome"}
                         </Typography>
 
-                        {/* Rating 
+                        {/* Store Info */}
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Rating
-                            value={product.rating || 4}
-                            precision={0.5}
-                            readOnly
-                            size={isMobile ? "small" : "medium"}
-                            sx={{ color: '#ffb400', mr: 0.5 }}
+                          <Avatar 
+                            src={product.logo} 
+                            sx={{ 
+                              width: 20, 
+                              height: 20, 
+                              mr: 1 
+                            }} 
                           />
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            ({product.reviewCount || 12})
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {product.storeName}
                           </Typography>
                         </Box>
-*/}
+
                         {/* Price Section */}
                         <Box sx={{ mt: 'auto' }}>
                           {product.storeSettings.showPrice === false ? (
@@ -408,7 +458,7 @@ const StoresDesk = ({ user }) => {
                                       fontSize: isMobile ? '1rem' : '1.125rem'
                                     }}
                                   >
-                                    {product.discountPrice} MT
+                                    {formatPrice(product.discountPrice)} MT
                                   </Typography>
                                   <Typography
                                     variant="body2"
@@ -418,7 +468,7 @@ const StoresDesk = ({ user }) => {
                                       fontSize: '0.75rem'
                                     }}
                                   >
-                                    {product.price} MT
+                                    {formatPrice(product.price)} MT
                                   </Typography>
                                 </>
                               ) : (
@@ -430,29 +480,12 @@ const StoresDesk = ({ user }) => {
                                     fontSize: isMobile ? '1rem' : '1.125rem'
                                   }}
                                 >
-                                  {formatPrice(product.price || "0")}MT
+                                  {formatPrice(product.price || "0")} MT
                                 </Typography>
                               )}
                             </>
                           )}
                         </Box>
-
-                        {/* Shipping Info 
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          mt: 0.5,
-                          color: theme.palette.success.main
-                        }}>
-                          <LocalShippingIcon sx={{ 
-                            fontSize: isMobile ? '0.875rem' : '1rem', 
-                            mr: 0.5 
-                          }} />
-                          <Typography variant="caption">
-                            Frete grátis
-                          </Typography>
-                        </Box>
-                        */}
                       </CardContent>
                     </CardActionArea>
 
@@ -460,21 +493,14 @@ const StoresDesk = ({ user }) => {
                     <Box sx={{ 
                       p: 1, 
                       display: 'flex', 
-                      justifyContent: 'space-between',
+                      justifyContent: 'flex-end',
                       borderTop: '1px solid #f0f0f0'
                     }}>
                       <IconButton 
-                        size="small" 
-                        sx={{ color: theme.palette.error.main }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          addToCart(product);
-                        }}
+                        size="small"
+                        onClick={(e) => handleOpenShareMenu(e, product.id)}
+                        aria-label="Compartilhar produto"
                       >
-                        <ShoppingCartIcon fontSize={isMobile ? "small" : "medium"} />
-                      </IconButton>
-                      <IconButton size="small">
                         <ShareIcon fontSize={isMobile ? "small" : "medium"} />
                       </IconButton>
                     </Box>
@@ -482,43 +508,81 @@ const StoresDesk = ({ user }) => {
                 </Grid>
               ))
             ) : (
-              <Box sx={{ 
-                width: '100%', 
-                textAlign: 'center', 
-                p: 4,
-                gridColumn: '1 / -1'
-              }}>
-                <Typography variant="h6" color="text.secondary">
-                  Nenhum produto encontrado
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Tente ajustar sua pesquisa ou filtros
-                </Typography>
-              </Box>
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  width: '100%', 
+                  textAlign: 'center', 
+                  p: 4,
+                }}>
+                  <Typography variant="h6" color="text.secondary">
+                    Nenhum produto encontrado
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    {searchQuery.trim() 
+                      ? "Tente ajustar sua pesquisa" 
+                      : "Nenhuma loja disponível no momento"}
+                  </Typography>
+                </Box>
+              </Grid>
             )}
           </Grid>
         </Box>
       )}
 
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      {/* Share Menu */}
+      <Menu
+        anchorEl={shareAnchorEl}
+        open={Boolean(shareAnchorEl)}
+        onClose={handleCloseShareMenu}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity="success" 
-          sx={{ 
-            width: '100%',
-            boxShadow: 3,
-            alignItems: 'center'
-          }}
-          icon={<VerifiedIcon fontSize="inherit" />}
-        >
-          Produto adicionado ao carrinho!
-        </Alert>
-      </Snackbar>
+        <MenuItem onClick={() => shareOnPlatform('whatsapp')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124034.png" 
+              alt="WhatsApp" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>WhatsApp</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('facebook')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124010.png" 
+              alt="Facebook" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>Facebook</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('twitter')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124021.png" 
+              alt="Twitter" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>Twitter</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('copy')}>
+          <ListItemIcon>
+            <ShareIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Copiar link</ListItemText>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

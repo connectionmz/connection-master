@@ -23,7 +23,8 @@ import {
   Tooltip,
   useMediaQuery,
   Grid,
-  useTheme
+  useTheme,
+  Avatar
 } from '@mui/material';
 import { 
   Search as SearchIcon, 
@@ -75,7 +76,12 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
 
   const handleEdit = () => {
     onClose();
-    navigate(`/vagas/${vaga.id}`);
+    onEdit();
+  };
+
+  const formatDate = (dateString) => {
+    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(dateString).toLocaleDateString('pt-BR', options);
   };
 
   return (
@@ -89,9 +95,23 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
     >
       <DialogTitle>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" id="vaga-details-title">
-            {vaga.titulo}
-          </Typography>
+          <Box display="flex" alignItems="center" gap={2}>
+            {vaga.logoEmpresa && (
+              <Avatar 
+                src={vaga.logoEmpresa} 
+                alt={vaga.empresa}
+                sx={{ width: 56, height: 56 }}
+              />
+            )}
+            <Box>
+              <Typography variant="h6" id="vaga-details-title">
+                {vaga.titulo}
+              </Typography>
+              <Typography variant="subtitle2" color="text.secondary">
+                {vaga.empresa}
+              </Typography>
+            </Box>
+          </Box>
           <IconButton 
             onClick={onClose} 
             aria-label="fechar detalhes da vaga"
@@ -100,13 +120,17 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
             <Close />
           </IconButton>
         </Box>
-        <Box display="flex" gap={1} mt={1} flexWrap="wrap">
-          <Chip label={vaga.tipo} color="secondary" size="small" />
+        <Box display="flex" gap={1} mt={2} flexWrap="wrap">
           <StatusChip status={vaga.status} />
           <Chip 
-            label={vaga.localizacao} 
+            label={vaga.provincia} 
             size="small" 
             variant="outlined" 
+          />
+          <Chip 
+            label={vaga.tipoContrato} 
+            size="small" 
+            color="secondary" 
           />
         </Box>
       </DialogTitle>
@@ -122,16 +146,20 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
                 border: '1px solid #eee', 
                 borderRadius: 1, 
                 p: 2,
-                minHeight: 200,
+                minHeight: 100,
                 backgroundColor: theme.palette.background.paper
               }}
             >
-              <ReactQuill
-                value={vaga.descricao}
-                readOnly={true}
-                theme="bubble"
-                modules={{ toolbar: false }}
-              />
+              {vaga.descricao ? (
+                <ReactQuill
+                  value={vaga.descricao}
+                  readOnly={true}
+                  theme="bubble"
+                  modules={{ toolbar: false }}
+                />
+              ) : (
+                <Typography color="text.secondary">Nenhuma descrição fornecida</Typography>
+              )}
             </Box>
             
             {vaga.requisitos && (
@@ -156,6 +184,29 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
                 </Box>
               </>
             )}
+
+            {vaga.beneficios && (
+              <>
+                <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }} component="h3">
+                  Benefícios
+                </Typography>
+                <Box 
+                  sx={{ 
+                    border: '1px solid #eee', 
+                    borderRadius: 1, 
+                    p: 2,
+                    backgroundColor: theme.palette.background.paper
+                  }}
+                >
+                  <ReactQuill
+                    value={vaga.beneficios}
+                    readOnly={true}
+                    theme="bubble"
+                    modules={{ toolbar: false }}
+                  />
+                </Box>
+              </>
+            )}
           </Grid>
           
           <Grid item xs={12} md={4}>
@@ -168,33 +219,30 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
                 Data de Publicação
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {new Date(vaga.dataPublicacao).toLocaleDateString()}
+                {formatDate(vaga.dataPublicacao)}
               </Typography>
-              
-              {vaga.dataAtualizacao && (
-                <>
-                  <Typography variant="subtitle2" component="p" sx={{ mt: 1 }}>
-                    Última Atualização
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {new Date(vaga.dataAtualizacao).toLocaleDateString()}
-                  </Typography>
-                </>
-              )}
             </Box>
             
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" component="p">
-                Área de Atuação
+                Áreas de Atuação
               </Typography>
-              <Typography>{vaga.areaAtuacao || 'Não especificada'}</Typography>
+              <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
+                {vaga.areas?.map((area, index) => (
+                  <Chip key={index} label={area} size="small" />
+                ))}
+              </Box>
             </Box>
             
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" component="p">
-                Área de Formação
+                Subáreas
               </Typography>
-              <Typography>{vaga.areaFormacao || 'Não especificada'}</Typography>
+              <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
+                {vaga.subAreas?.map((subArea, index) => (
+                  <Chip key={index} label={subArea} size="small" color="info" />
+                ))}
+              </Box>
             </Box>
             
             <Box sx={{ mb: 3 }}>
@@ -204,13 +252,11 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
               <Typography>{vaga.salario || 'A combinar'}</Typography>
             </Box>
             
-            <Box>
+            <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" component="p">
-                Candidatos
+                Experiência Necessária
               </Typography>
-              <Typography>
-                {vaga.candidatos?.length || 0} candidatos inscritos
-              </Typography>
+              <Typography>{vaga.experiencia || 'Não especificado'}</Typography>
             </Box>
           </Grid>
         </Grid>
@@ -253,15 +299,17 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
 
   const filteredVagas = useMemo(() => {
     if (!searchTerm) return vagas;
-    
+  
     const term = searchTerm.toLowerCase();
     return vagas.filter(vaga =>
       vaga.titulo.toLowerCase().includes(term) ||
-      vaga.descricao.toLowerCase().includes(term) ||
-      (vaga.areaAtuacao?.toLowerCase().includes(term)) ||
-      (vaga.areaFormacao?.toLowerCase().includes(term))
+      (vaga.descricao?.toLowerCase().includes(term)) ||
+      (vaga.empresa?.toLowerCase().includes(term)) ||
+      (vaga.areas?.some(area => area.toLowerCase().includes(term))) ||
+      (vaga.subAreas?.some(subArea => subArea.toLowerCase().includes(term)))
     );
   }, [vagas, searchTerm]);
+  
 
   const handleViewDetails = (vaga) => {
     setSelectedVaga(vaga);
@@ -319,12 +367,11 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
                   <TableCell>Título</TableCell>
                   {!isMobile && (
                     <>
-                      <TableCell>Área</TableCell>
-                      <TableCell>Tipo</TableCell>
+                      <TableCell>Empresa</TableCell>
+                      <TableCell>Áreas</TableCell>
                       <TableCell>Status</TableCell>
                     </>
                   )}
-                  <TableCell>Candidatos</TableCell>
                   <TableCell>Ações</TableCell>
                 </TableRow>
               </TableHead>
@@ -335,25 +382,14 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
                       <Typography fontWeight="500">{vaga.titulo}</Typography>
                       {isMobile && (
                         <Box sx={{ mt: 1 }} display="flex" flexWrap="wrap" gap={1}>
-                          {vaga.areaAtuacao && (
-                            <Chip 
-                              label={vaga.areaAtuacao} 
-                              size="small" 
-                              sx={{ mr: 1 }} 
-                            />
-                          )}
-                          {vaga.areaFormacao && (
-                            <Chip 
-                              label={vaga.areaFormacao} 
-                              size="small" 
-                              color="info" 
-                            />
-                          )}
-                          <Chip 
-                            label={vaga.tipo} 
-                            size="small" 
-                            color="secondary" 
-                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {vaga.empresa}
+                          </Typography>
+                          <Box display="flex" flexWrap="wrap" gap={1}>
+                            {vaga.areas?.slice(0, 2).map((area, index) => (
+                              <Chip key={index} label={area} size="small" />
+                            ))}
+                          </Box>
                           <StatusChip status={vaga.status} />
                         </Box>
                       )}
@@ -362,17 +398,16 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
                     {!isMobile && (
                       <>
                         <TableCell>
-                          <Box display="flex" flexWrap="wrap" gap={1}>
-                            {vaga.areaAtuacao && (
-                              <Chip label={vaga.areaAtuacao} size="small" />
-                            )}
-                            {vaga.areaFormacao && (
-                              <Chip label={vaga.areaFormacao} size="small" color="info" />
-                            )}
-                          </Box>
+                          <Typography variant="body2">
+                            {vaga.empresa}
+                          </Typography>
                         </TableCell>
                         <TableCell>
-                          <Chip label={vaga.tipo} size="small" color="secondary" />
+                          <Box display="flex" flexWrap="wrap" gap={1}>
+                            {vaga.areas?.slice(0, 3).map((area, index) => (
+                              <Chip key={index} label={area} size="small" />
+                            ))}
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <StatusChip status={vaga.status} />
@@ -380,16 +415,6 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
                       </>
                     )}
                     
-                    <TableCell>
-                      <Badge 
-                        badgeContent={vaga.candidatos?.length || 0} 
-                        color="primary"
-                        overlap="rectangular"
-                        aria-label={`${vaga.candidatos?.length || 0} candidatos`}
-                      >
-                        <People color="action" />
-                      </Badge>
-                    </TableCell>
                     <TableCell>
                       <Box display="flex" gap={1}>
                         <Tooltip title="Visualizar">

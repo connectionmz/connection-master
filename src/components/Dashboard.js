@@ -305,12 +305,12 @@ const Dashboard = ({ user }) => {
                 {blogs[0].title}
               </Typography>
               <Typography
-                variant="body2"
-                color="textSecondary"
-                sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }} // Fonte responsiva
-              >
-                {blogs[0].content.substring(0, 100)}...
-              </Typography>
+  variant="body2"
+  color="textSecondary"
+  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+>
+  {blogs[0].content.replace(/<[^>]+>/g, "").substring(0, 100)}...
+</Typography>
             </Link>
             <Button
               component={Link}

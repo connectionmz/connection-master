@@ -168,7 +168,7 @@ const NovaCotacao = ({ user }) => {
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
 
-      window.location="/cotacoes"
+      //window.location="/cotacoes"
 
       // Envio de notificações para empresas do setor
       const empresasRef = ref(db, 'company');
@@ -194,23 +194,25 @@ const NovaCotacao = ({ user }) => {
 
           if (empresa.email) {
             const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
-            await Promise.all(emails.map(email => sendEmail(emails, mailMessage)));
+            await Promise.all(emails.map(email => sendEmail(email, mailMessage))); // Note que agora passamos 'email' em vez de 'emails'
           }
         }
       }
 
       // Reset do formulário
-      setFormData({
+
+       setFormData({
         title: '',
         description: '',
         items: [],
         deadline: '',
         maxProposals: '',
-        proposalLimit: '', // Reseta o campo de limite
+        proposalLimit: '',
         sector: '',
         provincia: [],
         selectedSubsector: [],
       });
+
     } catch (error) {
       console.error('Erro ao publicar a cotação:', error);
       setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');

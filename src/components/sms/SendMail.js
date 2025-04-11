@@ -2,6 +2,9 @@ import axios from 'axios';
 
 const sendEmail = async (to,emailMessage) => {
 
+
+  console.log(to)
+
   const textContent = `
   Um novo pedido de cotação foi publicado para o seu setor.
 
