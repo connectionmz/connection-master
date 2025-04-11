@@ -173,7 +173,7 @@ const CompanyProfile = ({ user }) => {
             message: `Você recebeu uma solicitação de conexão de ${user.nome}`,
             fromUserId: user.id,
             fromUserName: user.nome,
-            link:`https://app.connectionmozambique.com/${user.id}`,
+            link:`https://app.connectionmozambique.com/perfil/${user.id}`,
             timestamp: new Date().toISOString(),
             status: "unread",
         };
