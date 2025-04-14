@@ -325,33 +325,7 @@ const AnunciosDesk = ({ campanhas, user }) => {
                       )}
                     </Box>
                     
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Chip
-                        label={`${daysLeft > 0 ? daysLeft + ' dias' : 'Expirado'}`}
-                        size="small"
-                        icon={<TimeIcon fontSize="small" />}
-                        sx={{ 
-                          backgroundColor: daysLeft > 0 ? 'primary.main' : 'error.main',
-                          color: 'white'
-                        }}
-                      />
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLike(banner.id);
-                        }}
-                        sx={{ 
-                          color: isLiked ? 'error.main' : 'white',
-                          backgroundColor: 'rgba(0,0,0,0.3)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(0,0,0,0.5)'
-                          }
-                        }}
-                      >
-                        {isLiked ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-                      </IconButton>
-                    </Box>
+            
                   </Box>
                 </Box>
               </Box>
