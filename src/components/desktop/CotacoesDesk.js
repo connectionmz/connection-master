@@ -126,47 +126,63 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
         const unsubscribe = onValue(bannersRef, (snapshot) => {
-          const bannersData = snapshot.val();
-          if (bannersData) {
-            const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
-              id,
-              ...banner
-            }));
+            const bannersData = snapshot.val();
+            if (bannersData) {
+                const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
+                    id,
+                    ...banner
+                }));
     
-            const currentDate = new Date();
-            const updatedBanners = bannerList.map(banner => {
-              const expireDate = new Date(banner.expireDate);
-              if (expireDate < currentDate && banner.status !== 'expired') {
-                update(ref(db, `banners/${banner.id}`), { status: 'expired' });
-                return { ...banner, status: 'expired' };
-              }
-              return banner;
-            });
+                const currentDate = new Date();
+                const updatedBanners = bannerList.map(banner => {
+                    // Verifica se o banner está expirado
+                    const expireDate = new Date(banner.expireDate);
+                    const isExpired = expireDate < currentDate;
+                    
+                    // Se expirou e ainda não foi marcado como expirado, atualiza no Firebase
+                    if (isExpired && banner.status !== 'expired') {
+                        update(ref(db, `banners/${banner.id}`), { status: 'expired' });
+                        return { ...banner, status: 'expired' };
+                    }
+                    
+                    return banner;
+                });
     
-            const filteredBanners = updatedBanners.filter(banner => {
-              if (banner.status !== 'active') return false;
-              if (banner.tipoAnuncio !== 'cotacao') return false;
-              const expireDate = new Date(banner.expireDate);
-              if (expireDate < currentDate) return false;
+                const filteredBanners = updatedBanners.filter(banner => {
+                   
+                    
+                    // Verifica se a data de expiração é futura
+                    const expireDate = new Date(banner.expireDate);
+                    if (expireDate < currentDate) return false;
+                    
+                    // Filtra por província e setor do usuário
+                    if (user) {
+                        const matchesProvincia = banner.provincias && 
+                            banner.provincias.some(prov => 
+                                prov.toLowerCase() === user.provincia?.toLowerCase() || 
+                                prov.toLowerCase() === user.provinciaTemp?.toLowerCase()
+                            );
+                        
+                        const matchesSector = banner.sectores && 
+                            banner.sectores.some(sec => 
+                                sec.toLowerCase() === user.sector?.toLowerCase()
+                            );
+                        
+                        return matchesProvincia && matchesSector;
+                    }
+                    
+                    return true;
+                });
     
-              if (user) {
-                const matchesProvincia = banner.provincias.includes(user.provincia);
-                const matchesSector = banner.sectores.includes(user.sector);
-                return matchesProvincia && matchesSector;
-              }
-              
-              return true;
-            });
-    
-            setCampanhasAtivas(filteredBanners);
-          } else {
-            setCampanhasAtivas([]);
-          }
-          setLoading(false);
+                setCampanhasAtivas(filteredBanners);
+            } else {
+                setCampanhasAtivas([]);
+            }
+            setLoading(false);
         });
     
         return () => unsubscribe();
-      }, [user?.provincia, user?.sector, user?.id]);
+    }, [user?.provincia, user?.sector, user?.id]);
 
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {
