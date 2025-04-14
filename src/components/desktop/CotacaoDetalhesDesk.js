@@ -67,6 +67,8 @@ const CotacaoDetalhesDesk = ({ user }) => {
 
         setCotacao(data);
 
+        console.log(data)
+
         if (data?.proposals) {
           const propostasIds = Object.keys(data.proposals);
           const prop = propostasIds.map((propostaId) => ({
@@ -127,6 +129,14 @@ const CotacaoDetalhesDesk = ({ user }) => {
       unsubscribeProposal();
     };
   }, [id, user.id, db]);
+
+
+  const isCotacaoExpirada = () => {
+    const dataLimite = new Date(cotacao.datalimite);
+    const agora = new Date();
+    return dataLimite.getTime() < agora.getTime();
+  };
+  
 
   const handleEnviarProposta = (companyId) => navigate(`/enviar-proposta/${id}/${companyId}`);
   const handleBaixarPedido = () => navigate(`/cotacaoPDF/${id}`);
@@ -231,12 +241,23 @@ const CotacaoDetalhesDesk = ({ user }) => {
                 {cotacao.company.nome}
               </Typography>
               <Chip
-                label={cotacao.status === 'open' ? 'Aberto' : 'Fechada'}
-                color={cotacao.status === 'open' ? 'success' : 'error'}
-                size="small"
-                sx={{ mb: 1 }}
-              />
-              
+                  label={
+                    isCotacaoExpirada()
+                      ? 'Expirada'
+                      : cotacao.status === 'open'
+                        ? 'Aberta'
+                        : 'Fechada'
+                  }
+                  color={
+                    isCotacaoExpirada()
+                      ? 'warning'
+                      : cotacao.status === 'open'
+                        ? 'success'
+                        : 'error'
+                  }
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
               <Box mt={1}>
                 <Grid container spacing={isMobile ? 1 : 2} alignItems="center">
                   <Grid item>
@@ -315,100 +336,106 @@ const CotacaoDetalhesDesk = ({ user }) => {
         
         {/* Actions - Responsive */}
         <CardActions sx={{ p: isMobile ? 1 : 2 }}>
-          <Stack 
-            direction={isMobile ? 'column' : 'row'} 
-            spacing={isMobile ? 1 : 2} 
-            width="100%"
+  <Stack 
+    direction={isMobile ? 'column' : 'row'} 
+    spacing={isMobile ? 1 : 2} 
+    width="100%"
+  >
+    <Button 
+      variant="contained" 
+      color="primary" 
+      onClick={handleBaixarPedido} 
+      startIcon={<FileDownload />}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+      {isMobile ? 'Baixar' : 'Baixar Pedido'}
+    </Button>
+    <Button 
+      variant="outlined" 
+      onClick={handlePartilhar} 
+      startIcon={<Share />}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+      {isMobile ? 'Partilhar' : 'Partilhar'}
+    </Button>
+    <Button 
+      variant="outlined" 
+      color="error" 
+      onClick={handleAbrirDenunciaModal} 
+      startIcon={<Report />}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+      {isMobile ? 'Denunciar' : 'Denunciar'}
+    </Button>
+    
+    {/* Owner-specific actions */}
+    {user.id === cotacao.company.id ? (
+      <>
+        <Button 
+          variant="contained" 
+          color="secondary" 
+          onClick={handleVerPropostas}
+          size={isMobile ? 'small' : 'medium'}
+          fullWidth={isMobile}
+        >
+          {isMobile ? 'Propostas' : 'Ver Propostas'}
+        </Button>
+
+        {cotacao.status === "Fechada" || isCotacaoExpirada() ? (
+          <Typography variant="body2" color="error" align="center" sx={{ display: 'flex', alignItems: 'center' }}>
+            {cotacao.status === "Fechada" ? "Cotação fechada" : "Cotação expirada"}
+          </Typography>
+        ) : (
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleFecharCotacao}
+            size={isMobile ? 'small' : 'medium'}
+            fullWidth={isMobile}
           >
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleBaixarPedido} 
-              startIcon={<FileDownload />}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              {isMobile ? 'Baixar' : 'Baixar Pedido'}
-            </Button>
-            <Button 
-              variant="outlined" 
-              onClick={handlePartilhar} 
-              startIcon={<Share />}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              {isMobile ? 'Partilhar' : 'Partilhar'}
-            </Button>
-            <Button 
-              variant="outlined" 
-              color="error" 
-              onClick={handleAbrirDenunciaModal} 
-              startIcon={<Report />}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              {isMobile ? 'Denunciar' : 'Denunciar'}
-            </Button>
-            
-            {user.id === cotacao.company.id ? (
-              <>
-                <Button 
-                  variant="contained" 
-                  color="secondary" 
-                  onClick={handleVerPropostas}
-                  size={isMobile ? 'small' : 'medium'}
-                  fullWidth={isMobile}
-                >
-                  {isMobile ? 'Propostas' : 'Ver Propostas'}
-                </Button>
-                {cotacao.status !== "Fechada" && (
-                  <Button 
-                    variant="contained" 
-                    color="error" 
-                    onClick={handleFecharCotacao}
-                    size={isMobile ? 'small' : 'medium'}
-                    fullWidth={isMobile}
-                  >
-                    {isMobile ? 'Fechar' : 'Fechar Cotação'}
-                  </Button>
-                )}
-              </>
+            {isMobile ? 'Fechar' : 'Fechar Cotação'}
+          </Button>
+        )}
+      </>
+    ) : (
+      /* Non-owner actions */
+      <>
+        {hasProposal ? (
+          <Button 
+            variant="contained" 
+            color="info" 
+            onClick={handleOpen}
+            size={isMobile ? 'small' : 'medium'}
+            fullWidth={isMobile}
+          >
+            {isMobile ? 'Minha Proposta' : 'Ver Minha Proposta'}
+          </Button>
+        ) : (
+          <>
+            {cotacao.status === "Fechada" || isCotacaoExpirada() ? (
+              <Typography variant="body2" color="error" align="center" sx={{ display: 'flex', alignItems: 'center' }}>
+                {cotacao.status === "Fechada" ? "Cotação fechada" : "Cotação expirada"}
+              </Typography>
             ) : (
-              <>
-                {hasProposal ? (
-                  <Button 
-                    variant="contained" 
-                    color="info" 
-                    onClick={handleOpen}
-                    size={isMobile ? 'small' : 'medium'}
-                    fullWidth={isMobile}
-                  >
-                    {isMobile ? 'Minha Proposta' : 'Ver Minha Proposta'}
-                  </Button>
-                ) : (
-                  <div style={{ width: isMobile ? '100%' : 'auto' }}>
-                    {cotacao.status === "Fechada" ? (
-                      <Typography variant="body2" color="error" align="center">
-                        Cotação fechada
-                      </Typography>
-                    ) : (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleEnviarProposta(cotacao.company.id)}
-                        disabled={hasProposal || cotacao.status === "Fechada"}
-                        size={isMobile ? 'small' : 'medium'}
-                        fullWidth={isMobile}
-                      >
-                        {isMobile ? 'Enviar' : 'Enviar Proposta'}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => handleEnviarProposta(cotacao.company.id)}
+                size={isMobile ? 'small' : 'medium'}
+                fullWidth={isMobile}
+              >
+                {isMobile ? 'Enviar' : 'Enviar Proposta'}
+              </Button>
             )}
-          </Stack>
-        </CardActions>
+          </>
+        )}
+      </>
+    )}
+  </Stack>
+</CardActions>
       </Card>
 
       {/* Description Card */}

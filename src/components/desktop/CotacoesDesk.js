@@ -84,18 +84,37 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val();
             if (cotacoesData) {
-                const cotacoesArray = Object.entries(cotacoesData).map(([id, cotacao]) => ({
-                    id,
-                    ...cotacao,
-                    isClicked: clickedCotacoes[id] || false
-                }));
+                const now = new Date();
+                const cotacoesArray = Object.entries(cotacoesData).map(([id, cotacao]) => {
+                    // Verifica se a cotação expirou
+                    const dataLimite = new Date(cotacao.datalimite);
+                    const isExpired = dataLimite < now && cotacao.status !== 'Fechada';
+                    
+                    // Se expirou e ainda não foi marcada como expirada, atualiza no Firebase
+                    if (isExpired && cotacao.status !== 'Expirada') {
+                        update(ref(db, `cotacoes/${id}`), { status: 'Expirada' });
+                        return {
+                            id,
+                            ...cotacao,
+                            status: 'Expirada',
+                            isClicked: clickedCotacoes[id] || false
+                        };
+                    }
+                    
+                    return {
+                        id,
+                        ...cotacao,
+                        isClicked: clickedCotacoes[id] || false
+                    };
+                });
+                
                 const filteredCotacoes = cotacoesArray.filter((cotacao) =>
                     Array.isArray(cotacao.provincia) &&
                     (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia))
                 );
+                
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 setCotacoes(sortedCotacoes);
-                console.log(sortedCotacoes)
             } else {
                 setCotacoes([]);
             }
