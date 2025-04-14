@@ -224,30 +224,51 @@ const PostInputDesk = ({ user }) => {
 
   return (
     <Paper 
-      sx={{ 
-        p: isMobile ? 2 : 4, 
-        maxWidth: 800, 
-        mx: "auto", 
-        borderRadius: 3,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
-        backgroundColor: 'background.paper'
-      }}
-    >
-      <Box sx={{ width: "100%" }}>
-        <Typography 
-          variant="h5" 
-          component="h2" 
-          sx={{ 
-            mb: 3, 
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          <PhotoLibraryIcon color="primary" />
-          Criar Nova Publicação
+    sx={{ 
+      p: isMobile ? 2 : 4, 
+      maxWidth: 800, 
+      mx: "auto", 
+      borderRadius: 3,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+      backgroundColor: 'background.paper'
+    }}
+  >
+    <Box sx={{ width: "100%" }}>
+      <Typography 
+        variant="h5" 
+        component="h2" 
+        sx={{ 
+          mb: 3, 
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}
+      >
+        <PhotoLibraryIcon color="primary" />
+        Publicar Trabalhos Realizados
+      </Typography>
+
+      {/* ADDED NOTIFICATION BOX */}
+      <Alert 
+        severity="info" 
+        sx={{ 
+          mb: 3,
+          borderRadius: 2,
+          alignItems: 'center',
+          backgroundColor: 'info.light',
+          '& .MuiAlert-icon': {
+            color: 'info.main'
+          }
+        }}
+      >
+        <Typography variant="body2">
+          <strong>Nota:</strong> Esta seção é destinada exclusivamente para compartilhar 
+          <strong> trabalhos realizados</strong> pela sua empresa (projetos concluídos, obras, 
+          serviços prestados). Não é permitido postar produtos à venda, anúncios comerciais 
+          ou conteúdo promocional. Publicações inadequadas serão removidas.
         </Typography>
+      </Alert>
 
         <input
           accept="image/*"

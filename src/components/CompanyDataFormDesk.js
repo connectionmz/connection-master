@@ -259,7 +259,7 @@ const CompanyDataFormDesk = () => {
         await set(ref(db, `company/${user.uid}`), dataToSave);
         await push(ref(db, `subscriptions/${user.uid}`), { status: "active" });
 
-        navigate('/dashboard');
+        navigate('/');
       }
     } catch (error) {
       setErrorMessage("Ocorreu um erro ao salvar os dados. Tente novamente.");
@@ -504,26 +504,26 @@ const CompanyDataFormDesk = () => {
       case 3: // Setor & Capacidade
         return (
           <Box>
-<TextField
-  select
-  label="Setor de Atividade *"
-  name="sector"
-  value={companyData.sector}
-  onChange={handleSectorChange}
-  fullWidth
-  margin="normal"
->
-  <MenuItem value="">Selecione</MenuItem>
-  {sectores.length > 0 ? (
-    sectores.map(s => (
-      <MenuItem key={s.setor} value={s.setor}>
-        {s.setor}
-      </MenuItem>
-    ))
-  ) : (
-    <MenuItem disabled>Carregando setores...</MenuItem>
-  )}
-</TextField>
+              <TextField
+                select
+                label="Setor de Atividade *"
+                name="sector"
+                value={companyData.sector}
+                onChange={handleSectorChange}
+                fullWidth
+                margin="normal"
+              >
+                <MenuItem value="">Selecione</MenuItem>
+                {sectores.length > 0 ? (
+                  sectores.map(s => (
+                    <MenuItem key={s.setor} value={s.setor}>
+                      {s.setor}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>Carregando setores...</MenuItem>
+                )}
+              </TextField>
 
             {subsectores.length > 0 && (
               <TextField

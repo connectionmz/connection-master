@@ -1,7 +1,11 @@
 {
   "name": "votasnap",
   "version": "0.1.0",
+  "description": "Plataforma para pedidos de cotação e gestão de conexões empresariais.",
+  "author": "Mohammad Vicente Saide(Mohvi)",
   "private": true,
+  "homepage": "./",
+  "main": "main.js",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -58,8 +62,32 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "electron-start": "npm run build && electron .",
+    "dist": "electron-builder"
+
   },
+  "build": {
+  "appId": "com.votasnap.app",
+  "productName": "VotaSnap",
+  "files": [
+    "build/**/*",
+    "main.js",
+    "package.json"
+  ],
+  "directories": {
+    "buildResources": "assets"
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "assets/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": true,
+    "allowToChangeInstallationDirectory": true
+  }
+},
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -81,6 +109,9 @@
   "devDependencies": {
     "autoprefixer": "^10.4.20",
     "cypress": "^13.15.0",
+    "electron": "^35.1.5",
+    "electron-builder": "^26.0.12",
+    "electron-is-dev": "^3.0.1",
     "postcss": "^8.4.40",
     "react-app-rewired": "^2.2.1",
     "tailwindcss": "^3.4.7",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ref as createStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../fb';
 import { ref, push, set, onValue, query, orderByChild, equalTo } from 'firebase/database';
@@ -49,14 +49,7 @@ const AnunciarDesk = ({ user }) => {
   const [myAds, setMyAds] = useState([]);
   const [loadingAds, setLoadingAds] = useState(false);
 
-  // Load user's ads when tab changes or component mounts
-  useEffect(() => {
-    if (activeTab === 0) {
-      loadUserAds();
-    }
-  }, [activeTab, user]);
-
-  const loadUserAds = async () => {
+  const loadUserAds = useCallback(async () => {
     if (!user?.id) return;
     
     setLoadingAds(true);
@@ -79,7 +72,13 @@ const AnunciarDesk = ({ user }) => {
     } finally {
       setLoadingAds(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (activeTab === 0) {
+      loadUserAds();
+    }
+  }, [activeTab, user, loadUserAds]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -116,8 +115,8 @@ const MyAdsTab = ({ myAds, loading }) => {
     impressions: 0,
     companiesReached: [],
     performanceBySector: [],
+    loadingStats: true,
   });
-
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -133,25 +132,114 @@ const MyAdsTab = ({ myAds, loading }) => {
     }
   };
 
+  const calculateCTR = (clicks, impressions) => {
+    return impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : 0;
+  };
+
+  const fetchAdStats = useCallback(async (adId) => {
+    setAdStats(prev => ({ ...prev, loadingStats: true }));
+    
+    try {
+      // Buscar cliques e impressões totais
+      const [clicksSnap, impressionsSnap] = await Promise.all([
+        new Promise(resolve => {
+          const clicksRef = ref(db, `anuncios_metrics/${adId}/total_cliques`);
+          onValue(clicksRef, (snapshot) => {
+            resolve(snapshot.val() || 0);
+          }, { onlyOnce: true });
+        }),
+        new Promise(resolve => {
+          const impressionsRef = ref(db, `anuncios_metrics/${adId}/total_impressoes`);
+          onValue(impressionsRef, (snapshot) => {
+            resolve(snapshot.val() || 0);
+          }, { onlyOnce: true });
+        })
+      ]);
+  
+      // Buscar dados detalhados de empresas que visualizaram
+      const [companiesViewedData, companiesClickedData, sectorsData] = await Promise.all([
+        new Promise(resolve => {
+          const companiesViewedRef = ref(db, `anuncios_metrics/${adId}/impressoes`);
+          onValue(companiesViewedRef, (snapshot) => {
+            resolve(snapshot.val() || {});
+          }, { onlyOnce: true });
+        }),
+        new Promise(resolve => {
+          const companiesClickedRef = ref(db, `anuncios_metrics/${adId}/cliques`);
+          onValue(companiesClickedRef, (snapshot) => {
+            resolve(snapshot.val() || {});
+          }, { onlyOnce: true });
+        }),
+        new Promise(resolve => {
+          const sectorsRef = ref(db, 'sectores_de_atividade');
+          onValue(sectorsRef, (snapshot) => {
+            resolve(snapshot.val() || []);
+          }, { onlyOnce: true });
+        })
+      ]);
+  
+      // Processar empresas atingidas
+      const companyIds = new Set([
+        ...Object.keys(companiesViewedData),
+        ...Object.keys(companiesClickedData),
+      ]);
+  
+      const companiesStats = await Promise.all(
+        Array.from(companyIds).map(async (companyId) => {
+          const companyData = await new Promise(resolve => {
+            const companyRef = ref(db, `company/${companyId}`);
+            onValue(companyRef, (snapshot) => {
+              resolve(snapshot.val() || { nome: 'Desconhecida' });
+            }, { onlyOnce: true });
+          });
+          
+          const views = companiesViewedData[companyId] ? Object.keys(companiesViewedData[companyId]).length : 0;
+          const clicks = companiesClickedData[companyId] ? Object.keys(companiesClickedData[companyId]).length : 0;
+          
+          return {
+            id: companyId,
+            name: companyData.nome,
+            impressions: views,
+            clicks: clicks,
+            ctr: calculateCTR(clicks, views),
+          };
+        })
+      );
+  
+      // Processar desempenho por setor
+      const sectorStats = sectorsData.map(sector => {
+        const companiesInSector = companiesStats.filter(company => 
+          company.sector === sector.setor
+        );
+        
+        const sectorImpressions = companiesInSector.reduce((sum, company) => sum + company.impressions, 0);
+        const sectorClicks = companiesInSector.reduce((sum, company) => sum + company.clicks, 0);
+        
+        return {
+          sector: sector.setor,
+          impressions: sectorImpressions,
+          clicks: sectorClicks,
+          ctr: calculateCTR(sectorClicks, sectorImpressions),
+        };
+      }).filter(sector => sector.impressions > 0);
+  
+      setAdStats({
+        clicks: clicksSnap,
+        impressions: impressionsSnap,
+        companiesReached: companiesStats.sort((a, b) => b.impressions - a.impressions),
+        performanceBySector: sectorStats.sort((a, b) => b.impressions - a.impressions),
+        loadingStats: false,
+      });
+    } catch (error) {
+      console.error('Error fetching ad stats:', error);
+      setAdStats(prev => ({ ...prev, loadingStats: false }));
+    }
+  }, []);
+
   const handleViewAd = (ad) => {
     setSelectedAd(ad);
-    // Simular dados de estatísticas (substitua por chamada real ao Firebase)
-    const mockStats = {
-      clicks: Math.floor(Math.random() * 1000),
-      impressions: Math.floor(Math.random() * 5000),
-      companiesReached: [
-        { id: '1', name: 'Empresa A', impressions: 120, clicks: 5 },
-        { id: '2', name: 'Empresa B', impressions: 85, clicks: 3 },
-        { id: '3', name: 'Empresa C', impressions: 64, clicks: 2 },
-      ],
-      performanceBySector: [
-        { sector: 'Tecnologia', impressions: 1200, clicks: 45 },
-        { sector: 'Construção', impressions: 850, clicks: 32 },
-        { sector: 'Saúde', impressions: 640, clicks: 28 },
-      ],
-    };
-    setAdStats(mockStats);
     setOpenDetails(true);
+    fetchAdStats(ad.id);
   };
 
   const handleCloseDetails = () => {
@@ -168,7 +256,7 @@ const MyAdsTab = ({ myAds, loading }) => {
 
   return (
     <>
-    <TableContainer component={Paper}>
+        <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -214,7 +302,7 @@ const MyAdsTab = ({ myAds, loading }) => {
                     variant="outlined"
                     onClick={() => handleViewAd(ad)}
                   >
-                 <BarChartIcon />
+                    <BarChartIcon />
                   </Button>
                 </TableCell>
               </TableRow>
@@ -223,7 +311,6 @@ const MyAdsTab = ({ myAds, loading }) => {
         </Table>
       </TableContainer>
 
-      {/* Dialog com detalhes do anúncio */}
       <Dialog open={openDetails} onClose={handleCloseDetails} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box display="flex" alignItems="center">
@@ -268,68 +355,95 @@ const MyAdsTab = ({ myAds, loading }) => {
               </Grid>
 
               <Grid item xs={12} md={8}>
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>Estatísticas Gerais</Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h4">{adStats.clicks}</Typography>
-                        <Typography variant="subtitle1">Cliques</Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Paper sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="h4">{adStats.impressions}</Typography>
-                        <Typography variant="subtitle1">Impressões</Typography>
-                      </Paper>
-                    </Grid>
-                  </Grid>
-                </Box>
+                {adStats.loadingStats ? (
+                  <Box display="flex" justifyContent="center" py={4}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <>
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="h6" gutterBottom>Estatísticas Gerais</Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Paper sx={{ p: 2, textAlign: 'center' }}>
+                            <Typography variant="h4">{adStats.impressions}</Typography>
+                            <Typography variant="subtitle1">Impressões</Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Paper sx={{ p: 2, textAlign: 'center' }}>
+                            <Typography variant="h4">{adStats.clicks}</Typography>
+                            <Typography variant="subtitle1">Cliques</Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Paper sx={{ p: 2, textAlign: 'center' }}>
+                            <Typography variant="h4">
+                              {calculateCTR(adStats.clicks, adStats.impressions)}%
+                            </Typography>
+                            <Typography variant="subtitle1">Taxa de Clique (CTR)</Typography>
+                          </Paper>
+                        </Grid>
+                      </Grid>
+                    </Box>
 
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>Desempenho por Setor</Typography>
-                  <TableContainer component={Paper}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Setor</TableCell>
-                          <TableCell align="right">Impressões</TableCell>
-                          <TableCell align="right">Cliques</TableCell>
-                          <TableCell align="right">CTR</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {adStats.performanceBySector.map((sector) => (
-                          <TableRow key={sector.sector}>
-                            <TableCell>{sector.sector}</TableCell>
-                            <TableCell align="right">{sector.impressions}</TableCell>
-                            <TableCell align="right">{sector.clicks}</TableCell>
-                            <TableCell align="right">
-                              {((sector.clicks / sector.impressions) * 100).toFixed(2)}%
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="h6" gutterBottom>Desempenho por Setor</Typography>
+                      {adStats.performanceBySector.length > 0 ? (
+                        <TableContainer component={Paper}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Setor</TableCell>
+                                <TableCell align="right">Impressões</TableCell>
+                                <TableCell align="right">Cliques</TableCell>
+                                <TableCell align="right">CTR</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {adStats.performanceBySector.map((sector) => (
+                                <TableRow key={sector.sector}>
+                                  <TableCell>{sector.sector}</TableCell>
+                                  <TableCell align="right">{sector.impressions}</TableCell>
+                                  <TableCell align="right">{sector.clicks}</TableCell>
+                                  <TableCell align="right">{sector.ctr}%</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      ) : (
+                        <Typography variant="body2">Nenhum dado disponível</Typography>
+                      )}
+                    </Box>
 
-                <Box>
-                  <Typography variant="h6" gutterBottom>Empresas Atingidas</Typography>
-                  <List dense>
-                    {adStats.companiesReached.map((company) => (
-                      <React.Fragment key={company.id}>
-                        <ListItem>
-                          <ListItemText
-                            primary={company.name}
-                            secondary={`Impressões: ${company.impressions} | Cliques: ${company.clicks} (CTR: ${((company.clicks / company.impressions) * 100).toFixed(2)}%)`}
-                          />
-                        </ListItem>
-                        <Divider />
-                      </React.Fragment>
-                    ))}
-                  </List>
-                </Box>
+                    <Box>
+                      <Typography variant="h6" gutterBottom>Empresas Atingidas</Typography>
+                      {adStats.companiesReached.length > 0 ? (
+                        <List dense>
+                          {adStats.companiesReached.slice(0, 5).map((company) => (
+                            <React.Fragment key={company.id}>
+                              <ListItem>
+                                <ListItemText
+                                  primary={company.name}
+                                  secondary={`Impressões: ${company.impressions} | Cliques: ${company.clicks} (CTR: ${company.ctr}%)`}
+                                />
+                              </ListItem>
+                              <Divider />
+                            </React.Fragment>
+                          ))}
+                          {adStats.companiesReached.length > 5 && (
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              + {adStats.companiesReached.length - 5} outras empresas
+                            </Typography>
+                          )}
+                        </List>
+                      ) : (
+                        <Typography variant="body2">Nenhuma empresa registrada</Typography>
+                      )}
+                    </Box>
+                  </>
+                )}
               </Grid>
             </Grid>
           )}
