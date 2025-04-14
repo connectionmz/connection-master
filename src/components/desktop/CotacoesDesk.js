@@ -28,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
 import AnunciosDesk from './AnunciosDesk';
-import EditarCotacao from './EditarCotacao'; // Import the edit component
+import EditarCotacao from './EditarCotacao'; 
 
 const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
@@ -95,6 +95,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 );
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 setCotacoes(sortedCotacoes);
+                console.log(sortedCotacoes)
             } else {
                 setCotacoes([]);
             }
@@ -287,21 +288,29 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                 <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" />
                             </ListItemAvatar>
                             <ListItemText
-                                primary={cotacao.title}
-                                secondary={
-                                    <>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
-                                        </Typography>
-                                        <Typography variant="body2" color="error">
-                                            Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            Sector: {cotacao.sector}
-                                        </Typography>
-                                    </>
-                                }
-                            />
+                                        primary={
+                                            <Typography 
+                                                component="span" 
+                                                variant="body1" 
+                                                fontWeight={!cotacao.isClicked ? 'bold' : 'normal'}
+                                            >
+                                                {cotacao.title}
+                                            </Typography>
+                                        }
+                                        secondary={
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
+                                                </Typography>
+                                                <Typography variant="body2" color="error">
+                                                    Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                                </Typography>
+                                                <Typography variant="body2">
+                                                    Sector: {cotacao.sector}
+                                                </Typography>
+                                            </>
+                                        }
+                                    />
                             {cotacao?.company?.id === user?.id && (
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <IconButton
