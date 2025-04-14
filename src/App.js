@@ -9,8 +9,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
 import NonSubscriberRoutesDesktop from './components/routes/NonSubscriberRoutesDesktop';
-import { Analytics } from "@vercel/analytics/react"
-
 const App = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +106,7 @@ const App = () => {
     <Router>
       <div className="App">
         <div className="content">
-            <Analytics/>
+
             <DesktopRoutes user={userData} /> 
         </div>
       </div>
