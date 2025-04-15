@@ -30,4 +30,15 @@ const formatPrice = (value) => {
 };
 
 
-export { formatPrice, formatDateTime };
+const formatarMoeda = (valor) => {
+ if (valor === "" || valor === null || isNaN(valor)) return "";
+
+  const partes = Number(valor).toFixed(2).split(".");
+  const inteiros = partes[0];
+  const decimais = partes[1];
+
+  const comPonto = inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${comPonto},${decimais}`;
+};
+
+export { formatPrice, formatDateTime,formatarMoeda  };

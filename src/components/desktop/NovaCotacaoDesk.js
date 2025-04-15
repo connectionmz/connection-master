@@ -27,6 +27,7 @@ import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUti
 import BackButton from '../BackButton';
 import sendMessage from '../sms/sendMessage';
 import sendEmail from '../sms/SendMail';
+import { formatarMoeda } from '../../utils/utils';
 
 const NovaCotacao = ({ user }) => {
   const theme = useTheme();
@@ -79,6 +80,17 @@ const NovaCotacao = ({ user }) => {
   
     fetchSubsectores();
   }, [formData.sector]);
+
+  const handleChangeInpt = (e) => {
+    const input = e.target.value;
+    const soNumeros = input.replace(/\D/g, ""); // Remove tudo que não for dígito
+    const valor = Number(soNumeros) / 100; // Ex: 100000 => 1000.00
+
+    setFormData((prev) => ({
+      ...prev,
+      maxProposals: valor,
+    }));
+  };
 
   const handleAddItem = () => {
     setFormData(prev => ({
@@ -341,15 +353,16 @@ const NovaCotacao = ({ user }) => {
           
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <TextField
-                label="Valor Máximo de Propostas (MT)"
-                type="number"
-                value={formData.maxProposals}
-                onChange={(e) => setFormData(prev => ({ ...prev, maxProposals: e.target.value }))}
-                fullWidth
-                inputProps={{ min: 1 }}
-                helperText="Defina o valor máximo que está disposto a pagar"
-              />
+            <TextField
+                  label="Valor Máximo de Propostas (MT)"
+                  value={formatarMoeda(formData.maxProposals)}
+                  onChange={handleChangeInpt}
+                  fullWidth
+                  inputProps={{
+                    min: 1
+                  }}
+                  helperText="Defina o valor máximo que está disposto a pagar"
+                />
             </Grid>
             
             <Grid item xs={12} md={6}>
