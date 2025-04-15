@@ -209,22 +209,22 @@ const ProductFormDesk = ({ user }) => {
                 <TableRow>
                   <TableCell sx={{ width: 120 }}>
                     <Box display="flex" alignItems="center">
-                      <Image sx={{ mr: 1 }} /> Imagem
+                  Imagem
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center">
-                      <Description sx={{ mr: 1 }} /> Nome
+                       Nome
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center">
-                      <AttachMoney sx={{ mr: 1 }} /> Preço (MT)
+                       Preço (MT)
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center">
-                      <Category sx={{ mr: 1 }} /> Categoria
+                      Categoria
                     </Box>
                   </TableCell>
                   <TableCell>Ações</TableCell>

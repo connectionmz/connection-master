@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ref, get } from "firebase/database";
+import { ref, get, set, push, increment } from "firebase/database";
 import { db } from "../../fb";
 import {
   Grid,
@@ -21,79 +21,79 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Tooltip,
+  Badge,
+  InputAdornment
 } from "@mui/material";
-import ShareIcon from "@mui/icons-material/Share";
-import VerifiedIcon from "@mui/icons-material/Verified";
+import {
+  Share,
+  Verified,
+  LocalMall,
+  Store,
+  VisibilityOff,
+  Search
+} from "@mui/icons-material";
 import { formatPrice } from "../../utils/utils";
 
-// Improved shuffle function with better randomization
-const shuffleArray = (array, seed = 1) => {
-  const random = (min, max) => {
-    const x = Math.sin(seed++) * 10000;
-    const rand = x - Math.floor(x);
-    return Math.floor(rand * (max - min + 1)) + min;
-  };
-  
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = random(0, i);
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
-};
-
 const StoresDesk = ({ user }) => {
-  const [storesList, setStoresList] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredStores, setFilteredStores] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [shareAnchorEl, setShareAnchorEl] = useState(null);
-  const [shareProductId, setShareProductId] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
-  const handleOpenShareMenu = (event, id) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setShareProductId(id);
-    setShareAnchorEl(event.currentTarget);
-  };
+  // Estados
+  const [stores, setStores] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [shareAnchor, setShareAnchor] = useState(null);
+  const [sharedProduct, setSharedProduct] = useState(null);
 
-  const handleCloseShareMenu = () => {
-    setShareAnchorEl(null);
-    setShareProductId(null);
-  };
+  // Registrar impressão ou clique
+  const trackInteraction = async (type, action, itemId, storeId = null) => {
+    try {
+      const timestamp = Date.now();
+      const date = new Date().toISOString().split('T')[0];
+      const hour = new Date().getHours();
+      const userId = user?.id || 'anonymous';
 
-  const shareOnPlatform = (platform) => {
-    if (!shareProductId) return;
-    
-    const productUrl = `${window.location.origin}/product/${shareProductId}`;
-    let shareUrl = '';
-    
-    switch(platform) {
-      case 'whatsapp':
-        shareUrl = `https://wa.me/?text=Confira este produto: ${productUrl}`;
-        break;
-      case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
-        break;
-      case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}`;
-        break;
-      case 'copy':
-        navigator.clipboard.writeText(productUrl);
-        // Consider adding a toast notification here
-        handleCloseShareMenu();
-        return;
-      default:
-        return;
+      // Dados básicos
+      const interactionData = {
+        type,
+        action,
+        itemId,
+        storeId,
+        userId,
+        timestamp,
+        date,
+        hour,
+        userAgent: navigator.userAgent
+      };
+
+      // Caminho para salvar os dados
+      let path;
+      if (action === 'impression') {
+        path = `impressions/${type}_${itemId}_${userId}`;
+      } else {
+        path = `clicks/${type}_${itemId}_${userId}_${timestamp}`;
+        
+        // Atualizar contador de cliques no produto/loja
+        if (type === 'product') {
+          const productRef = ref(db, `stores/${storeId}/products/${itemId}/clicks`);
+          await set(productRef, increment(1));
+        } else if (type === 'store') {
+          const storeRef = ref(db, `stores/${itemId}/storeClicks`);
+          await set(storeRef, increment(1));
+        }
+      }
+
+      // Salvar no Firebase
+      const interactionRef = ref(db, path);
+      await set(interactionRef, interactionData);
+
+    } catch (error) {
+      console.error("Erro ao registrar interação:", error);
     }
-    
-    window.open(shareUrl, '_blank', 'noopener,noreferrer');
-    handleCloseShareMenu();
   };
 
+  // Buscar lojas
   useEffect(() => {
     const fetchStores = async () => {
       try {
@@ -102,25 +102,27 @@ const StoresDesk = ({ user }) => {
         const snapshot = await get(storesRef);
         
         if (snapshot.exists()) {
-          const data = snapshot.val();
-          const storesArray = Object.entries(data).map(([id, store]) => ({ 
+          const storesData = Object.entries(snapshot.val()).map(([id, store]) => ({ 
             id, 
             ...store,
-            products: store.products || {}
+            products: store.products || {},
+            settings: store.settings || { showPrices: true }
           }));
 
-          const filteredStores = user?.provinciaTemp || user?.provincia
-            ? storesArray.filter(
-                store => store.company?.provincia === (user.provinciaTemp || user.provincia)
-              )
-            : storesArray;
+          // Filtrar por província se disponível
+          const userProvince = user?.provinciaTemp || user?.provincia;
+          const filtered = userProvince 
+            ? storesData.filter(store => store.company?.provincia === userProvince)
+            : storesData;
 
-          const shuffledStores = shuffleArray(filteredStores);
-          setStoresList(shuffledStores);
-          setFilteredStores(shuffledStores);
+          setStores(filtered);
+          
+          // Registrar impressões das lojas visíveis
+          filtered.forEach(store => {
+            trackInteraction('store', 'impression', store.id);
+          });
         } else {
-          setStoresList([]);
-          setFilteredStores([]);
+          setStores([]);
         }
       } catch (error) {
         console.error("Erro ao buscar lojas:", error);
@@ -132,50 +134,188 @@ const StoresDesk = ({ user }) => {
     fetchStores();
   }, [user?.provincia, user?.provinciaTemp]);
 
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const filtered = storesList.filter(store =>
-        store.name.toLowerCase().includes(query) ||
-        Object.values(store.products).some(product => 
-          product.name?.toLowerCase().includes(query)
-        )
-      );
-      setFilteredStores(shuffleArray(filtered));
-    } else {
-      setFilteredStores(shuffleArray([...storesList]));
-    }
-  }, [searchQuery, storesList]);
+  // Produtos com memoização e registro de impressão
+  const products = useMemo(() => {
+    const prods = stores.flatMap(store => 
+      Object.entries(store.products || {}).map(([id, product]) => ({
+        ...product,
+        id,
+        storeId: store.id,
+        storeName: store.name || "Loja Desconhecida",
+        storeLogo: store.company?.logo,
+        storeSettings: store.settings || { showPrices: true }
+      }))
+    ).filter(product => 
+      searchQuery ? 
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.storeName.toLowerCase().includes(searchQuery.toLowerCase())
+      : true
+    );
 
+    // Registrar impressões dos produtos visíveis
+    prods.forEach(product => {
+      trackInteraction('product', 'impression', product.id, product.storeId);
+    });
+
+    return prods;
+  }, [stores, searchQuery]);
+
+  // Lojas em destaque
+  const featuredStores = useMemo(() => {
+    return stores
+      .filter(store => Object.keys(store.products || {}).length > 0)
+      .slice(0, 10);
+  }, [stores]);
+
+  // Manipuladores de compartilhamento
+  const handleShareOpen = (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSharedProduct(productId);
+    setShareAnchor(event.currentTarget);
+  };
+
+  const handleShareClose = () => {
+    setShareAnchor(null);
+    setSharedProduct(null);
+  };
+
+  const shareProduct = (platform) => {
+    if (!sharedProduct) return;
+    
+    const url = `${window.location.origin}/product/${sharedProduct}`;
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=Confira este produto: ${url}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(url);
+        handleShareClose();
+        return;
+      default:
+        return;
+    }
+    
+    window.open(shareUrl, '_blank');
+    handleShareClose();
+  };
+
+  // Calcular desconto
   const calculateDiscount = (price, originalPrice) => {
     if (!originalPrice || originalPrice <= price) return 0;
     return Math.round(((originalPrice - price) / originalPrice) * 100);
   };
 
-  // Memoize product list to avoid unnecessary re-renders
-  const productList = React.useMemo(() => {
-    return shuffleArray(
-      filteredStores.flatMap(store =>
-        Object.entries(store.products).map(([productId, product]) => ({
-          ...product,
-          storeName: store.name || "Loja Desconhecida",
-          storeId: store.id,
-          logo: store.company?.logo || "https://via.placeholder.com/80",
-          id: productId,
-          storeSettings: store.settings || {},
-        }))
-      )
+  // Componente de preço
+  const PriceDisplay = ({ product }) => {
+    if (product.storeSettings.showPrices === false) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <VisibilityOff fontSize="small" color="disabled" />
+          <Typography variant="body2" color="text.secondary">
+            Preço sob consulta
+          </Typography>
+        </Box>
+      );
+    }
+
+    const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+    
+    return (
+      <Box>
+        {hasDiscount ? (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  color: theme.palette.error.main,
+                  fontWeight: 'bold',
+                }}
+              >
+                {formatPrice(product.discountPrice)} MT
+              </Typography>
+              <Chip
+                label={`-${calculateDiscount(product.discountPrice, product.price)}%`}
+                size="small"
+                color="error"
+                sx={{ fontWeight: 'bold' }}
+              />
+            </Box>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+                textDecoration: 'line-through',
+              }}
+            >
+              {formatPrice(product.price)} MT
+            </Typography>
+          </>
+        ) : (
+          <Typography
+            variant="h6"
+            sx={{
+              color: theme.palette.primary.main,
+              fontWeight: 'bold',
+            }}
+          >
+            {formatPrice(product.price || 0)} MT
+          </Typography>
+        )}
+      </Box>
     );
-  }, [filteredStores]);
+  };
+
+  // Componente de Link para produto com tracking
+  const TrackedProductLink = ({ product, children }) => (
+    <Link 
+      to={`/product/${product.id}/store/${product.storeId}`}
+      onClick={(e) => {
+        e.preventDefault();
+        trackInteraction('product', 'click', product.id, product.storeId)
+          .then(() => {
+            window.location.href = `/product/${product.id}/store/${product.storeId}`;
+          });
+      }}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      {children}
+    </Link>
+  );
+
+  // Componente de Link para loja com tracking
+  const TrackedStoreLink = ({ store, children }) => (
+    <Link 
+      to={`/loja/${store.id}`}
+      onClick={(e) => {
+        e.preventDefault();
+        trackInteraction('store', 'click', store.id)
+          .then(() => {
+            window.location.href = `/loja/${store.id}`;
+          });
+      }}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      {children}
+    </Link>
+  );
 
   return (
     <Box sx={{ 
       p: isMobile ? 2 : 4, 
-      width: '100%', 
       backgroundColor: '#f8f8f8',
       minHeight: '100vh'
     }}>
-      {/* Search and Title Section */}
+      {/* Cabeçalho */}
       <Box sx={{ 
         maxWidth: 1400, 
         mx: 'auto', 
@@ -186,12 +326,23 @@ const StoresDesk = ({ user }) => {
         justifyContent: 'space-between',
         gap: 2
       }}>
-        <Typography variant={isMobile ? "h5" : "h4"} sx={{ 
-          fontWeight: "bold",
-          color: theme.palette.primary.main
-        }}>
-          Lojas e Produtos
-        </Typography>
+        <Box>
+          <Typography variant={isMobile ? "h5" : "h4"} sx={{ 
+            fontWeight: "bold",
+            color: theme.palette.primary.main,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <LocalMall fontSize="large" />
+            Lojas e Produtos
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {user?.provinciaTemp || user?.provincia ? 
+              `Mostrando lojas da província de ${user.provinciaTemp || user.provincia}` : 
+              'Mostrando todas lojas disponíveis'}
+          </Typography>
+        </Box>
         
         <TextField
           label="Pesquisar loja ou produto..."
@@ -206,31 +357,36 @@ const StoresDesk = ({ user }) => {
           }}
           size={isMobile ? 'small' : 'medium'}
           InputProps={{
-            type: 'search'
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search color="action" />
+              </InputAdornment>
+            )
           }}
         />
       </Box>
 
-      {/* Stores Carousel */}
-      {storesList.length > 0 && (
+      {/* Lojas em destaque */}
+      {featuredStores.length > 0 && (
         <Box sx={{ 
           maxWidth: 1400,
           mx: 'auto',
           mb: 4,
-          p: 1,
+          p: 2,
           backgroundColor: '#fff',
           borderRadius: 2,
           boxShadow: 1
         }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Store color="primary" />
             Lojas em Destaque
           </Typography>
+          
           <Box sx={{
             display: "flex",
             overflowX: "auto",
             gap: 2,
             py: 1,
-            px: 1,
             '&::-webkit-scrollbar': {
               height: 6,
             },
@@ -239,49 +395,69 @@ const StoresDesk = ({ user }) => {
               borderRadius: 3,
             },
           }}>
-            {storesList.slice(0, 10).map((store) => (
-              <Box
-                key={store.id}
-                sx={{
-                  minWidth: 120,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  textDecoration: 'none',
-                }}
-                component={Link}
-                to={`/loja/${store.id}`}
-              >
-                <Avatar
-                  src={store?.company?.logo || "https://via.placeholder.com/80"}
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    border: `2px solid ${theme.palette.primary.main}`,
-                    marginBottom: 1,
-                  }}
-                />
-                <Typography
-                  variant="body2"
-                  sx={{ 
-                    textAlign: "center", 
-                    fontWeight: 500,
-                    color: theme.palette.text.primary,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: '100%'
-                  }}
-                >
-                  {store.name}
-                </Typography>
-              </Box>
+            {featuredStores.map((store) => (
+              <Tooltip key={store.id} title={store.name} arrow>
+                <TrackedStoreLink store={store}>
+                  <Box sx={{
+                    minWidth: 120,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    p: 1,
+                    borderRadius: 1,
+                    '&:hover': {
+                      backgroundColor: '#f5f5f5'
+                    }
+                  }}>
+                    <Badge
+                      overlap="circular"
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                      badgeContent={
+                        store.company?.verified ? (
+                          <Verified fontSize="small" color="primary" />
+                        ) : null
+                      }
+                    >
+                      <Avatar
+                        src={store.company?.logo}
+                        sx={{
+                          width: 80,
+                          height: 80,
+                          border: `2px solid ${theme.palette.primary.main}`,
+                        }}
+                      >
+                        {store.name.charAt(0)}
+                      </Avatar>
+                    </Badge>
+                    <Typography
+                      variant="body2"
+                      sx={{ 
+                        mt: 1,
+                        fontWeight: 500,
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%'
+                      }}
+                    >
+                      {store.name}
+                    </Typography>
+                    <Chip
+                      label={`${Object.keys(store.products).length} produtos`}
+                      size="small"
+                      color="info"
+                      sx={{ mt: 1 }}
+                    />
+                  </Box>
+                </TrackedStoreLink>
+              </Tooltip>
             ))}
           </Box>
         </Box>
       )}
 
-      {/* Products Grid */}
+      {/* Listagem de produtos */}
       {loading ? (
         <Box sx={{ 
           display: "flex", 
@@ -292,13 +468,10 @@ const StoresDesk = ({ user }) => {
           <CircularProgress size={isMobile ? 40 : 60} />
         </Box>
       ) : (
-        <Box sx={{ 
-          maxWidth: 1400,
-          mx: 'auto'
-        }}>
-          <Grid container spacing={isMobile ? 1 : 3}>
-            {productList.length > 0 ? (
-              productList.map((product) => (
+        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+          {products.length > 0 ? (
+            <Grid container spacing={isMobile ? 1 : 3}>
+              {products.map((product) => (
                 <Grid item xs={6} sm={4} md={3} lg={2.4} key={`${product.storeId}-${product.id}`}>
                   <Card
                     sx={{
@@ -314,26 +487,10 @@ const StoresDesk = ({ user }) => {
                         boxShadow: 3,
                       },
                       position: 'relative',
-                      overflow: 'visible',
                       backgroundColor: '#fff'
                     }}
                   >
-                    {/* Product Labels */}
-                    {product.discountPrice && (
-                      <Chip
-                        label={`-${calculateDiscount(product.discountPrice, product.price)}%`}
-                        color="error"
-                        size="small"
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          left: 8,
-                          fontWeight: 'bold',
-                          zIndex: 1
-                        }}
-                      />
-                    )}
-                    
+                    {/* Badges */}
                     {product.isNew && (
                       <Chip
                         label="Novo"
@@ -349,191 +506,131 @@ const StoresDesk = ({ user }) => {
                       />
                     )}
 
-                    <CardActionArea
-                      sx={{
-                        flexGrow: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                      }}
-                      component={Link}
-                      to={`/product/${product.id}/store/${product.storeId}`}
-                    >
-                      {/* Product Image */}
-                      <Box
-                        sx={{
-                          width: "100%",
-                          height: isMobile ? 120 : 180,
-                          overflow: "hidden",
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          backgroundColor: "#fafafa",
-                          position: 'relative'
-                        }}
-                      >
-                        <CardMedia
-                          component="img"
-                          image={product.imageUrl || "https://via.placeholder.com/150"}
-                          alt={product.name || "Produto sem nome"}
+                    <TrackedProductLink product={product}>
+                      <CardActionArea sx={{ flexGrow: 1 }}>
+                        {/* Imagem do produto */}
+                        <Box
                           sx={{
-                            width: "auto",
-                            height: "80%",
-                            objectFit: "contain",
-                            transition: 'transform 0.3s',
-                            '&:hover': {
-                              transform: 'scale(1.05)'
-                            }
-                          }}
-                          loading="lazy"
-                        />
-                      </Box>
-
-                      {/* Product Details */}
-                      <CardContent
-                        sx={{
-                          flexGrow: 1,
-                          display: "flex",
-                          flexDirection: "column",
-                          p: 2,
-                          pt: 1
-                        }}
-                      >
-                        {/* Product Name */}
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            fontWeight: 500,
-                            fontSize: isMobile ? "0.875rem" : "0.9375rem",
-                            mb: 1,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            minHeight: isMobile ? 40 : 44,
-                            color: theme.palette.text.primary
+                            width: "100%",
+                            height: isMobile ? 120 : 180,
+                            overflow: "hidden",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            backgroundColor: "#fafafa",
+                            position: 'relative'
                           }}
                         >
-                          {product.name || "Produto sem nome"}
-                        </Typography>
-
-                        {/* Store Info */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Avatar 
-                            src={product.logo} 
-                            sx={{ 
-                              width: 20, 
-                              height: 20, 
-                              mr: 1 
-                            }} 
-                          />
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary"
+                          <CardMedia
+                            component="img"
+                            image={product.imageUrl}
+                            alt={product.name}
                             sx={{
-                              whiteSpace: 'nowrap',
+                              width: "auto",
+                              height: "80%",
+                              objectFit: "contain",
+                              transition: 'transform 0.3s',
+                              '&:hover': {
+                                transform: 'scale(1.05)'
+                              }
+                            }}
+                            loading="lazy"
+                          />
+                        </Box>
+
+                        {/* Detalhes do produto */}
+                        <CardContent sx={{ p: 2 }}>
+                          {/* Nome do produto */}
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              fontWeight: 500,
+                              mb: 1,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis'
+                              textOverflow: 'ellipsis',
+                              minHeight: 44
                             }}
                           >
-                            {product.storeName}
+                            {product.name}
                           </Typography>
-                        </Box>
 
-                        {/* Price Section */}
-                        <Box sx={{ mt: 'auto' }}>
-                          {product.storeSettings.showPrice === false ? (
-                            <Typography variant="body2" color="text.secondary">
-                              Preço indisponível
+                          {/* Loja */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Avatar 
+                              src={product.storeLogo} 
+                              sx={{ width: 20, height: 20, mr: 1 }} 
+                            />
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary"
+                              sx={{
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}
+                            >
+                              {product.storeName}
                             </Typography>
-                          ) : (
-                            <>
-                              {product.discountPrice ? (
-                                <>
-                                  <Typography
-                                    variant="h6"
-                                    sx={{
-                                      color: theme.palette.error.main,
-                                      fontWeight: 'bold',
-                                      fontSize: isMobile ? '1rem' : '1.125rem'
-                                    }}
-                                  >
-                                    {formatPrice(product.discountPrice)} MT
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      color: 'text.secondary',
-                                      textDecoration: 'line-through',
-                                      fontSize: '0.75rem'
-                                    }}
-                                  >
-                                    {formatPrice(product.price)} MT
-                                  </Typography>
-                                </>
-                              ) : (
-                                <Typography
-                                  variant="h6"
-                                  sx={{
-                                    color: theme.palette.primary.main,
-                                    fontWeight: 'bold',
-                                    fontSize: isMobile ? '1rem' : '1.125rem'
-                                  }}
-                                >
-                                  {formatPrice(product.price || "0")} MT
-                                </Typography>
-                              )}
-                            </>
-                          )}
-                        </Box>
-                      </CardContent>
-                    </CardActionArea>
+                          </Box>
 
-                    {/* Action Buttons */}
+                          {/* Preço */}
+                          <Box sx={{ mt: 'auto' }}>
+                            <PriceDisplay product={product} />
+                          </Box>
+                        </CardContent>
+                      </CardActionArea>
+                    </TrackedProductLink>
+
+                    {/* Ações */}
                     <Box sx={{ 
                       p: 1, 
                       display: 'flex', 
                       justifyContent: 'flex-end',
                       borderTop: '1px solid #f0f0f0'
                     }}>
-                      <IconButton 
-                        size="small"
-                        onClick={(e) => handleOpenShareMenu(e, product.id)}
-                        aria-label="Compartilhar produto"
-                      >
-                        <ShareIcon fontSize={isMobile ? "small" : "medium"} />
-                      </IconButton>
+                      <Tooltip title="Compartilhar">
+                        <IconButton 
+                          size="small"
+                          onClick={(e) => handleShareOpen(e, product.id)}
+                        >
+                          <Share fontSize={isMobile ? "small" : "medium"} />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </Card>
                 </Grid>
-              ))
-            ) : (
-              <Grid item xs={12}>
-                <Box sx={{ 
-                  width: '100%', 
-                  textAlign: 'center', 
-                  p: 4,
-                }}>
-                  <Typography variant="h6" color="text.secondary">
-                    Nenhum produto encontrado
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    {searchQuery.trim() 
-                      ? "Tente ajustar sua pesquisa" 
-                      : "Nenhuma loja disponível no momento"}
-                  </Typography>
-                </Box>
-              </Grid>
-            )}
-          </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Box sx={{ 
+              width: '100%', 
+              textAlign: 'center', 
+              p: 4,
+              backgroundColor: '#fff',
+              borderRadius: 2,
+              boxShadow: 1
+            }}>
+              <Typography variant="h6" color="text.secondary">
+                {searchQuery ? "Nenhum produto encontrado" : "Nenhum produto disponível"}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {searchQuery 
+                  ? "Tente ajustar sua pesquisa" 
+                  : "As lojas ainda não adicionaram produtos"}
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
 
-      {/* Share Menu */}
+      {/* Menu de compartilhamento */}
       <Menu
-        anchorEl={shareAnchorEl}
-        open={Boolean(shareAnchorEl)}
-        onClose={handleCloseShareMenu}
+        anchorEl={shareAnchor}
+        open={Boolean(shareAnchor)}
+        onClose={handleShareClose}
         anchorOrigin={{
           vertical: 'top',
           horizontal: 'right',
@@ -543,7 +640,7 @@ const StoresDesk = ({ user }) => {
           horizontal: 'right',
         }}
       >
-        <MenuItem onClick={() => shareOnPlatform('whatsapp')}>
+        <MenuItem onClick={() => shareProduct('whatsapp')}>
           <ListItemIcon>
             <img 
               src="https://cdn-icons-png.flaticon.com/512/124/124034.png" 
@@ -554,7 +651,7 @@ const StoresDesk = ({ user }) => {
           </ListItemIcon>
           <ListItemText>WhatsApp</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform('facebook')}>
+        <MenuItem onClick={() => shareProduct('facebook')}>
           <ListItemIcon>
             <img 
               src="https://cdn-icons-png.flaticon.com/512/124/124010.png" 
@@ -565,7 +662,7 @@ const StoresDesk = ({ user }) => {
           </ListItemIcon>
           <ListItemText>Facebook</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform('twitter')}>
+        <MenuItem onClick={() => shareProduct('twitter')}>
           <ListItemIcon>
             <img 
               src="https://cdn-icons-png.flaticon.com/512/124/124021.png" 
@@ -576,9 +673,9 @@ const StoresDesk = ({ user }) => {
           </ListItemIcon>
           <ListItemText>Twitter</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform('copy')}>
+        <MenuItem onClick={() => shareProduct('copy')}>
           <ListItemIcon>
-            <ShareIcon fontSize="small" />
+            <Share fontSize="small" />
           </ListItemIcon>
           <ListItemText>Copiar link</ListItemText>
         </MenuItem>

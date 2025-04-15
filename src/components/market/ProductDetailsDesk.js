@@ -16,7 +16,6 @@ import {
   Chip,
   Divider,
   Stack,
-  Rating,
   useMediaQuery,
   IconButton,
   Avatar,
@@ -29,13 +28,12 @@ import {
   Link
 } from "@mui/material";
 import BackButton from "../BackButton";
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import ShareIcon from '@mui/icons-material/Share';
-import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import StoreIcon from '@mui/icons-material/Store';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { formatPrice } from "../../utils/utils";
 
 const ProductDetailsDesk = () => {
@@ -46,9 +44,8 @@ const ProductDetailsDesk = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [views, setViews] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
-  const IVA_PERCENTAGE = 16;
+  const IVA_PERCENTAGE = 0;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -153,10 +150,6 @@ const ProductDetailsDesk = () => {
     });
   };
 
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
-  };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
@@ -177,6 +170,9 @@ const ProductDetailsDesk = () => {
   const iva = (total * IVA_PERCENTAGE) / 100;
   const totalWithIva = total + iva;
 
+  // Verifica se a loja permite mostrar preços
+  const showPrices = storeInfo?.settings?.showPrices !== false;
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <BackButton sx={{ mb: 2 }} />
@@ -196,7 +192,7 @@ const ProductDetailsDesk = () => {
           
           {/* Product Badges */}
           <Box sx={{ position: 'absolute', top: 16, left: 16, display: 'flex', gap: 1 }}>
-            {product.discountPrice && (
+            {showPrices && product.discountPrice && (
               <Chip
                 label={`-${Math.round(((product.price - product.discountPrice) / product.price) * 100)}%`}
                 color="error"
@@ -214,34 +210,19 @@ const ProductDetailsDesk = () => {
             )}
           </Box>
           
-          {/* Action Buttons */}
-          <Box sx={{ 
-            position: 'absolute', 
-            top: 16, 
-            right: 16, 
-            display: 'flex', 
-            flexDirection: 'column',
-            gap: 1
-          }}>
-            <IconButton 
-              onClick={toggleFavorite}
-              sx={{ 
-                backgroundColor: 'rgba(255,255,255,0.8)',
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
-              }}
-            >
-              <FavoriteBorderIcon color={isFavorite ? "error" : "action"} />
-            </IconButton>
-            <IconButton 
-              onClick={handleOpenShareMenu}
-              sx={{ 
-                backgroundColor: 'rgba(255,255,255,0.8)',
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
-              }}
-            >
-              <ShareIcon />
-            </IconButton>
-          </Box>
+          {/* Share Button - Moved to bottom right */}
+          <IconButton 
+            onClick={handleOpenShareMenu}
+            sx={{ 
+              position: 'absolute', 
+              bottom: 16, 
+              right: 16,
+              backgroundColor: 'rgba(255,255,255,0.8)',
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' }
+            }}
+          >
+            <ShareIcon />
+          </IconButton>
         </Box>
 
         {/* Product Details Section */}
@@ -257,30 +238,44 @@ const ProductDetailsDesk = () => {
                 backgroundColor: '#f9f9f9',
                 borderRadius: 1
               }}>
-                <Avatar 
-                  src={storeInfo.company.logo} 
-                  alt={storeInfo.company.nome}
-                  sx={{ 
-                    width: 40, 
-                    height: 40, 
-                    mr: 2,
-                    border: `1px solid ${theme.palette.divider}`
-                  }}
-                />
+                <Badge
+                  overlap="circular"
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  badgeContent={
+                    storeInfo.company.verified ? (
+                      <VerifiedIcon color="primary" fontSize="small" />
+                    ) : null
+                  }
+                >
+                  <Avatar 
+                    src={storeInfo.company.logo} 
+                    alt={storeInfo.company.nome}
+                    sx={{ 
+                      width: 40, 
+                      height: 40, 
+                      mr: 2,
+                      border: `1px solid ${theme.palette.divider}`
+                    }}
+                  />
+                </Badge>
                 <Box>
                   <Typography variant="subtitle1" fontWeight="bold">
                     {storeInfo.company.nome}
                   </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {storeInfo.company.provincia}
+                  </Typography>
                 </Box>
-                <a 
-                  href={`/loja/${store}`} // ou store.slug, conforme o que usas na rota
+                <Button 
+                  component={Link}
+                  href={`/loja/${store}`}
                   variant="outlined" 
                   size="small" 
                   startIcon={<StoreIcon />}
                   sx={{ ml: 'auto' }}
                 >
                   Ver Loja
-                </a>
+                </Button>
               </Box>
             )}
 
@@ -296,75 +291,115 @@ const ProductDetailsDesk = () => {
             
             {/* Pricing Section */}
             <Box sx={{ mb: 3 }}>
-              {product.discountPrice ? (
-                <>
-                  <Typography variant={isMobile ? "h5" : "h4"} color="error" fontWeight="bold">
-                    {formatPrice(product.discountPrice)} MT
-                  </Typography>
-                  <Typography variant="body1" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
+              {showPrices ? (
+                product.discountPrice ? (
+                  <>
+                    <Typography variant={isMobile ? "h5" : "h4"} color="error" fontWeight="bold">
+                      {formatPrice(product.discountPrice)} MT
+                    </Typography>
+                    <Typography variant="body1" sx={{ textDecoration: 'line-through', color: 'text.secondary' }}>
+                      {formatPrice(product.price)} MT
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography variant={isMobile ? "h5" : "h4"} color="primary" fontWeight="bold">
                     {formatPrice(product.price)} MT
                   </Typography>
-                </>
+                )
               ) : (
-                <Typography variant={isMobile ? "h5" : "h4"} color="primary" fontWeight="bold">
-                  {formatPrice(product.price)} MT
-                </Typography>
-              )}
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {IVA_PERCENTAGE}% IVA incluído
-              </Typography>
-            </Box>
-            
-            {/* Quantity Selector */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Quantidade:
-              </Typography>
-              <TextField
-                type="number"
-                value={quantity}
-                onChange={(e) => {
-                  const value = Math.max(1, Math.min(100, Number(e.target.value)));
-                  setQuantity(value);
-                }}
-                inputProps={{ min: 1, max: 100 }}
-                size="small"
-                sx={{ width: "100px", mr: 2 }}
-              />
-            </Box>
-            
-            {/* Order Summary */}
-            <Box sx={{ 
-              backgroundColor: '#f5f5f5', 
-              p: 2, 
-              borderRadius: 1,
-              mb: 3
-            }}>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                Resumo do Pedido
-              </Typography>
-              
-              <Stack spacing={1}>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body2">Subtotal ({quantity} itens):</Typography>
-                  <Typography variant="body2">{formatPrice(total)} MT</Typography>
-                </Box>
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body2">IVA ({IVA_PERCENTAGE}%):</Typography>
-                  <Typography variant="body2">{formatPrice(iva)} MT</Typography>
-                </Box>
-                <Divider />
-                <Box display="flex" justifyContent="space-between">
-                  <Typography variant="body1" fontWeight="bold">Total:</Typography>
-                  <Typography variant="body1" fontWeight="bold" color="primary">
-                    {formatPrice(totalWithIva)} MT
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VisibilityOffIcon color="disabled" />
+                  <Typography variant="h6" color="text.secondary">
+                    Preço sob consulta
                   </Typography>
                 </Box>
-              </Stack>
+              )}
             </Box>
             
- 
+            {/* Quantity Selector - Only show if prices are visible */}
+            {showPrices && (
+              <>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Quantidade:
+                  </Typography>
+                  <TextField
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => {
+                      const value = Math.max(1, Math.min(100, Number(e.target.value)));
+                      setQuantity(value);
+                    }}
+                    inputProps={{ min: 1, max: 100 }}
+                    size="small"
+                    sx={{ width: "100px", mr: 2 }}
+                  />
+                </Box>
+                
+                {/* Order Summary */}
+                <Box sx={{ 
+                  backgroundColor: '#f5f5f5', 
+                  p: 2, 
+                  borderRadius: 1,
+                  mb: 3
+                }}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    Resumo do Pedido
+                  </Typography>
+                  
+                  <Stack spacing={1}>
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography variant="body2">Subtotal ({quantity} itens):</Typography>
+                      <Typography variant="body2">{formatPrice(total)} MT</Typography>
+                    </Box>
+                  
+                    <Divider />
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography variant="body1" fontWeight="bold">Total:</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="primary">
+                        {formatPrice(totalWithIva)} MT
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              </>
+            )}
+            
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {showPrices ? (
+                <>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<ShoppingCartIcon />}
+                    onClick={addToCart}
+                    sx={{ flex: 1 }}
+                  >
+                    Adicionar ao Carrinho
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<LocalShippingIcon />}
+                    onClick={handlePayment}
+                    sx={{ flex: 1 }}
+                  >
+                    Comprar Agora
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<StoreIcon />}
+                  onClick={() => navigate(`/loja/${store}`)}
+                  sx={{ flex: 1 }}
+                >
+                  Contactar Loja
+                </Button>
+              )}
+            </Box>
           </CardContent>
         </Box>
       </Box>
