@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, query, orderByChild, equalTo, onValue, off, push, set, get, update } from 'firebase/database';
+import { getDatabase, ref, query, orderByChild, equalTo, onValue, off, push, set, get, update, remove } from 'firebase/database';
 import { Alert, Box, Snackbar, Typography, useMediaQuery } from '@mui/material';
 import BuscarCandidatos from '../recrutamento/BuscarCandidatos';
 import VagasPublicadas from '../recrutamento/VagasPublicadas';
@@ -67,7 +67,6 @@ const RecrutamentoDesk = ({ user }) => {
           const vagasArray = data ? Object.entries(data).map(([id, vaga]) => ({ id, ...vaga })) : [];
           setVagas(vagasArray);
           setLoading(prev => ({ ...prev, vagas: false }));
-          console.log(vagasArray)
         });
 
         return () => {
@@ -137,7 +136,6 @@ const RecrutamentoDesk = ({ user }) => {
 
 
   const verificarCompatibilidade = useCallback(async (vagas) => {
-    console.log(vagas)
     const candidatosRef = ref(externalDb, "candidato");
     const snapshot = await get(candidatosRef);
   
@@ -273,12 +271,24 @@ const RecrutamentoDesk = ({ user }) => {
         onAreaBuscaChange={setAreaBusca}
       />
 
-      <VagasPublicadas 
-        vagas={vagas} 
-        loading={loading.vagas} 
-        searchTerm={searchTerm} 
-        onSearchChange={setSearchTerm}
-      />
+<VagasPublicadas 
+  vagas={vagas} 
+  loading={loading.vagas} 
+  searchTerm={searchTerm} 
+  setSearchTerm={setSearchTerm}
+  onDeleteVaga={async (vagaId) => {
+    try {
+      setLoading(prev => ({ ...prev, vagas: true }));
+      await remove(ref(externalDb, `vagas/${vagaId}`));
+      showNotification('Vaga excluída com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro ao excluir vaga:', error);
+      showNotification('Erro ao excluir vaga', 'error');
+    } finally {
+      setLoading(prev => ({ ...prev, vagas: false }));
+    }
+  }}
+/>
 
       <CandidatoDialog 
         candidato={selectedCandidato}

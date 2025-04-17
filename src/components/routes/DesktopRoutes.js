@@ -324,7 +324,7 @@ const DesktopRoutes = ({ user }) => {
             {/* Rotas de concursos e serviços */}
             <Route path="/concursos" element={<ConcursoDesk user={user} />} />
             <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
-            <Route path="/concurso/:id/:companyId" element={<ConcursoDetalhesDesk user={user} />} />
+            <Route path="/concurso/:id" element={<ConcursoDetalhesDesk user={user} />} />
             <Route path="/categoria/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
 
             {/* Rotas de faturação e pagamentos */}

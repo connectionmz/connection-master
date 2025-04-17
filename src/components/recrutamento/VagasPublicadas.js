@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -13,7 +13,6 @@ import {
   Typography,
   Paper,
   Chip,
-  Badge,
   Card,
   Dialog,
   DialogTitle,
@@ -24,22 +23,24 @@ import {
   useMediaQuery,
   Grid,
   useTheme,
-  Avatar
+  Avatar,
+  TablePagination,
+  Skeleton
 } from '@mui/material';
 import { 
   Search as SearchIcon, 
-  People, 
   Edit, 
   Visibility, 
   Delete, 
-  Close 
+  Close,
+  FilterList
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import PropTypes from 'prop-types';
 
-const StatusChip = ({ status }) => {
+const StatusChip = React.memo(({ status }) => {
   const theme = useTheme();
   
   const statusConfig = {
@@ -58,31 +59,33 @@ const StatusChip = ({ status }) => {
       color={color}
       sx={{ 
         color: theme.palette[color]?.contrastText || 'inherit',
-        fontWeight: 500 
+        fontWeight: 500,
+        minWidth: 80,
+        justifyContent: 'center'
       }}
     />
   );
-};
+});
 
 StatusChip.propTypes = {
   status: PropTypes.string.isRequired
 };
 
-const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
-  const navigate = useNavigate();
+const VagaDetailsDialog = React.memo(({ vaga, open, onClose, onEdit }) => {
   const theme = useTheme();
 
-  if (!vaga) return null;
-
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
     onClose();
     onEdit();
-  };
+  }, [onClose, onEdit]);
 
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return 'Não especificada';
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('pt-BR', options);
-  };
+  }, []);
+
+  if (!vaga) return null;
 
   return (
     <Dialog 
@@ -93,57 +96,63 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
       PaperProps={{ sx: { borderRadius: 3 } }}
       aria-labelledby="vaga-details-title"
     >
-      <DialogTitle>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box display="flex" alignItems="center" gap={2}>
-            {vaga.logoEmpresa && (
-              <Avatar 
-                src={vaga.logoEmpresa} 
-                alt={vaga.empresa}
-                sx={{ width: 56, height: 56 }}
-              />
-            )}
-            <Box>
-              <Typography variant="h6" id="vaga-details-title">
+      <DialogTitle sx={{ pb: 2 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+          <Box display="flex" alignItems="flex-start" gap={2} flexGrow={1}>
+            <Avatar 
+              src={vaga.logoEmpresa} 
+              alt={vaga.empresa}
+              sx={{ width: 56, height: 56 }}
+            />
+            <Box flexGrow={1}>
+              <Typography variant="h6" id="vaga-details-title" noWrap>
                 {vaga.titulo}
               </Typography>
               <Typography variant="subtitle2" color="text.secondary">
-                {vaga.empresa}
+                {vaga.empresa || 'Empresa não especificada'}
               </Typography>
+              <Box display="flex" gap={1} mt={1} flexWrap="wrap">
+                <StatusChip status={vaga.status} />
+                {vaga.provincia && (
+                  <Chip 
+                    label={vaga.provincia} 
+                    size="small" 
+                    variant="outlined" 
+                  />
+                )}
+                {vaga.tipoContrato && (
+                  <Chip 
+                    label={vaga.tipoContrato} 
+                    size="small" 
+                    color="secondary" 
+                  />
+                )}
+              </Box>
             </Box>
           </Box>
           <IconButton 
             onClick={onClose} 
             aria-label="fechar detalhes da vaga"
-            sx={{ color: theme.palette.text.secondary }}
+            sx={{ 
+              color: theme.palette.text.secondary,
+              alignSelf: 'flex-start'
+            }}
           >
             <Close />
           </IconButton>
-        </Box>
-        <Box display="flex" gap={1} mt={2} flexWrap="wrap">
-          <StatusChip status={vaga.status} />
-          <Chip 
-            label={vaga.provincia} 
-            size="small" 
-            variant="outlined" 
-          />
-          <Chip 
-            label={vaga.tipoContrato} 
-            size="small" 
-            color="secondary" 
-          />
         </Box>
       </DialogTitle>
       
       <DialogContent dividers>
         <Grid container spacing={3}>
           <Grid item xs={12} md={8}>
-            <Typography variant="subtitle1" gutterBottom component="h3">
+            <Typography variant="subtitle1" gutterBottom fontWeight="600">
               Descrição da Vaga
             </Typography>
             <Box 
               sx={{ 
-                border: '1px solid #eee', 
+                border: '1px solid', 
+                borderColor: 'divider',
                 borderRadius: 1, 
                 p: 2,
                 minHeight: 100,
@@ -158,18 +167,21 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
                   modules={{ toolbar: false }}
                 />
               ) : (
-                <Typography color="text.secondary">Nenhuma descrição fornecida</Typography>
+                <Typography color="text.secondary" fontStyle="italic">
+                  Nenhuma descrição fornecida
+                </Typography>
               )}
             </Box>
             
             {vaga.requisitos && (
               <>
-                <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }} component="h3">
+                <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }} fontWeight="600">
                   Requisitos
                 </Typography>
                 <Box 
                   sx={{ 
-                    border: '1px solid #eee', 
+                    border: '1px solid', 
+                    borderColor: 'divider',
                     borderRadius: 1, 
                     p: 2,
                     backgroundColor: theme.palette.background.paper
@@ -187,12 +199,13 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
 
             {vaga.beneficios && (
               <>
-                <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }} component="h3">
+                <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }} fontWeight="600">
                   Benefícios
                 </Typography>
                 <Box 
                   sx={{ 
-                    border: '1px solid #eee', 
+                    border: '1px solid', 
+                    borderColor: 'divider',
                     borderRadius: 1, 
                     p: 2,
                     backgroundColor: theme.palette.background.paper
@@ -210,59 +223,60 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
           </Grid>
           
           <Grid item xs={12} md={4}>
-            <Typography variant="subtitle1" gutterBottom component="h3">
+            <Typography variant="subtitle1" gutterBottom fontWeight="600">
               Detalhes
             </Typography>
             
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" component="p">
-                Data de Publicação
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {formatDate(vaga.dataPublicacao)}
-              </Typography>
-            </Box>
+            <DetailItem 
+              label="Data de Publicação" 
+              value={formatDate(vaga.dataPublicacao)} 
+            />
             
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" component="p">
-                Áreas de Atuação
-              </Typography>
-              <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-                {vaga.areas?.map((area, index) => (
-                  <Chip key={index} label={area} size="small" />
-                ))}
-              </Box>
-            </Box>
+            <DetailItem 
+              label="Áreas de Atuação" 
+              value={vaga.areas?.length > 0 ? (
+                <Box display="flex" flexWrap="wrap" gap={1} mt={0.5}>
+                  {vaga.areas.map((area, index) => (
+                    <Chip key={index} label={area} size="small" />
+                  ))}
+                </Box>
+              ) : 'Não especificadas'}
+            />
             
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" component="p">
-                Subáreas
-              </Typography>
-              <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-                {vaga.subAreas?.map((subArea, index) => (
-                  <Chip key={index} label={subArea} size="small" color="info" />
-                ))}
-              </Box>
-            </Box>
+            {vaga.subAreas?.length > 0 && (
+              <DetailItem 
+                label="Subáreas" 
+                value={
+                  <Box display="flex" flexWrap="wrap" gap={1} mt={0.5}>
+                    {vaga.subAreas.map((subArea, index) => (
+                      <Chip key={index} label={subArea} size="small" color="info" />
+                    ))}
+                  </Box>
+                }
+              />
+            )}
             
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" component="p">
-                Salário
-              </Typography>
-              <Typography>{vaga.salario || 'A combinar'}</Typography>
-            </Box>
+            <DetailItem 
+              label="Salário" 
+              value={vaga.salario || 'A combinar'} 
+            />
             
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" component="p">
-                Experiência Necessária
-              </Typography>
-              <Typography>{vaga.experiencia || 'Não especificado'}</Typography>
-            </Box>
+            <DetailItem 
+              label="Experiência Necessária" 
+              value={vaga.experiencia || 'Não especificado'} 
+            />
+            
+            {vaga.dataLimite && (
+              <DetailItem 
+                label="Data Limite" 
+                value={formatDate(vaga.dataLimite)} 
+              />
+            )}
           </Grid>
         </Grid>
       </DialogContent>
       
-      <DialogActions sx={{ p: 3 }}>
+      <DialogActions sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider' }}>
         <Button 
           variant="outlined" 
           onClick={onClose}
@@ -281,7 +295,7 @@ const VagaDetailsDialog = ({ vaga, open, onClose, onEdit }) => {
       </DialogActions>
     </Dialog>
   );
-};
+});
 
 VagaDetailsDialog.propTypes = {
   vaga: PropTypes.object,
@@ -290,10 +304,37 @@ VagaDetailsDialog.propTypes = {
   onEdit: PropTypes.func.isRequired
 };
 
-const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVaga }) => {
+const DetailItem = ({ label, value }) => (
+  <Box sx={{ mb: 3 }}>
+    <Typography variant="subtitle2" component="p" fontWeight="500">
+      {label}
+    </Typography>
+    {typeof value === 'string' ? (
+      <Typography variant="body2" color="text.secondary">
+        {value}
+      </Typography>
+    ) : value}
+  </Box>
+);
+
+DetailItem.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired
+};
+
+const VagasPublicadas = ({ 
+  vagas, 
+  loading, 
+  searchTerm, 
+  setSearchTerm, 
+  onDeleteVaga,
+  
+}) => {
   const navigate = useNavigate();
   const [selectedVaga, setSelectedVaga] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const isMobile = useMediaQuery('(max-width:600px)');
   const theme = useTheme();
 
@@ -302,87 +343,120 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
   
     const term = searchTerm.toLowerCase();
     return vagas.filter(vaga =>
-      vaga.titulo.toLowerCase().includes(term) ||
+      (vaga.titulo?.toLowerCase().includes(term)) ||
       (vaga.descricao?.toLowerCase().includes(term)) ||
       (vaga.empresa?.toLowerCase().includes(term)) ||
-      (vaga.areas?.some(area => area.toLowerCase().includes(term))) ||
-      (vaga.subAreas?.some(subArea => subArea.toLowerCase().includes(term)))
+      (vaga.areas?.some(area => area?.toLowerCase().includes(term))) ||
+      (vaga.subAreas?.some(subArea => subArea?.toLowerCase().includes(term)))
     );
   }, [vagas, searchTerm]);
-  
 
-  const handleViewDetails = (vaga) => {
+  const paginatedVagas = useMemo(() => {
+    return filteredVagas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [filteredVagas, page, rowsPerPage]);
+
+  const handleViewDetails = useCallback((vaga) => {
     setSelectedVaga(vaga);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setDialogOpen(false);
     setSelectedVaga(null);
-  };
+  }, []);
 
-  const handleDelete = async (vagaId) => {
+  const handleDelete = useCallback(async (vagaId) => {
     try {
-      if (window.confirm('Tem certeza que deseja excluir esta vaga?')) {
+      if (window.confirm('Tem certeza que deseja excluir esta vaga permanentemente?')) {
         await onDeleteVaga(vagaId);
       }
     } catch (error) {
-      console.error('Error deleting vaga:', error);
+      console.error('Erro ao excluir vaga:', error);
     }
+  }, [onDeleteVaga]);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
   };
 
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleEdit = useCallback((vagaId) => {
+    navigate(`/vagas/editar/${vagaId}`);
+  }, [navigate]);
+
   return (
-    <Card sx={{ p: 3, boxShadow: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold' }} component="h2">
-          Minhas Vagas Publicadas ({vagas.length})
+    <Card sx={{ p: { xs: 2, md: 3 }, boxShadow: 3 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5" fontWeight="bold" component="h2">
+          Minhas Vagas Publicadas
+          <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+            ({vagas.length} {vagas.length === 1 ? 'vaga' : 'vagas'})
+          </Typography>
         </Typography>
-        <TextField
-          placeholder="Buscar vagas..."
-          size="small"
-          InputProps={{ 
-            startAdornment: <SearchIcon color="action" />,
-            'aria-label': 'buscar vagas'
-          }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ width: isMobile ? '100%' : 300 }}
-        />
+        
+        <Box display="flex" gap={2} alignItems="center">
+          <TextField
+            placeholder="Buscar vagas..."
+            size="small"
+            InputProps={{ 
+              startAdornment: <SearchIcon color="action" />,
+              'aria-label': 'buscar vagas'
+            }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ width: isMobile ? '100%' : 300 }}
+          />
+        </Box>
       </Box>
 
-      {loading ? (
-        <Box display="flex" justifyContent="center" p={3}>
-          <CircularProgress aria-label="carregando vagas" />
+      {loading && !vagas.length ? (
+        <Box>
+          {[...Array(5)].map((_, index) => (
+            <Skeleton 
+              key={index} 
+              variant="rectangular" 
+              height={72} 
+              sx={{ mb: 1, borderRadius: 1 }} 
+            />
+          ))}
         </Box>
       ) : filteredVagas.length === 0 ? (
-        <Typography sx={{ p: 2, textAlign: 'center' }} component="p">
-          Nenhuma vaga encontrada
-        </Typography>
+        <Box textAlign="center" py={4}>
+          <Typography variant="body1" color="text.secondary">
+            {searchTerm ? 'Nenhuma vaga encontrada para sua busca' : 'Você ainda não publicou nenhuma vaga'}
+          </Typography>
+        </Box>
       ) : (
         <>
-          <TableContainer component={Paper} elevation={0}>
+          <TableContainer component={Paper} elevation={0} sx={{ mb: 2 }}>
             <Table aria-label="tabela de vagas publicadas">
               <TableHead>
                 <TableRow>
-                  <TableCell>Título</TableCell>
+                  <TableCell sx={{ fontWeight: '600' }}>Título</TableCell>
                   {!isMobile && (
                     <>
-                      <TableCell>Empresa</TableCell>
-                      <TableCell>Áreas</TableCell>
-                      <TableCell>Status</TableCell>
+                      <TableCell sx={{ fontWeight: '600' }}>Empresa</TableCell>
+                      <TableCell sx={{ fontWeight: '600' }}>Áreas</TableCell>
+                      <TableCell sx={{ fontWeight: '600' }}>Status</TableCell>
                     </>
                   )}
-                  <TableCell>Ações</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: '600' }}>Ações</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredVagas.map(vaga => (
+                {paginatedVagas.map(vaga => (
                   <TableRow key={vaga.id} hover>
                     <TableCell component="th" scope="row">
-                      <Typography fontWeight="500">{vaga.titulo}</Typography>
+                      <Typography fontWeight="500" noWrap sx={{ maxWidth: 200 }}>
+                        {vaga.titulo}
+                      </Typography>
                       {isMobile && (
                         <Box sx={{ mt: 1 }} display="flex" flexWrap="wrap" gap={1}>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" noWrap>
                             {vaga.empresa}
                           </Typography>
                           <Box display="flex" flexWrap="wrap" gap={1}>
@@ -398,8 +472,8 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
                     {!isMobile && (
                       <>
                         <TableCell>
-                          <Typography variant="body2">
-                            {vaga.empresa}
+                          <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                            {vaga.empresa || '-'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -415,28 +489,31 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
                       </>
                     )}
                     
-                    <TableCell>
-                      <Box display="flex" gap={1}>
-                        <Tooltip title="Visualizar">
+                    <TableCell align="right">
+                      <Box display="flex" gap={1} justifyContent="flex-end">
+                        <Tooltip title="Visualizar detalhes">
                           <IconButton 
                             onClick={() => handleViewDetails(vaga)}
                             aria-label={`visualizar ${vaga.titulo}`}
+                            size="small"
                           >
                             <Visibility fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Editar">
+                        <Tooltip title="Editar vaga">
                           <IconButton 
-                            onClick={() => navigate(`/vagas/${vaga.id}`)}
+                            onClick={() => handleEdit(vaga.id)}
                             aria-label={`editar ${vaga.titulo}`}
+                            size="small"
                           >
                             <Edit fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Excluir">
+                        <Tooltip title="Excluir vaga">
                           <IconButton 
                             onClick={() => handleDelete(vaga.id)}
                             aria-label={`excluir ${vaga.titulo}`}
+                            size="small"
                           >
                             <Delete fontSize="small" color="error" />
                           </IconButton>
@@ -449,11 +526,24 @@ const VagasPublicadas = ({ vagas, loading, searchTerm, setSearchTerm, onDeleteVa
             </Table>
           </TableContainer>
 
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={filteredVagas.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Vagas por página:"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+            sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+          />
+
           <VagaDetailsDialog
             vaga={selectedVaga}
             open={dialogOpen}
             onClose={handleCloseDialog}
-            onEdit={() => navigate(`/vagas/${selectedVaga?.id}`)}
+            onEdit={() => handleEdit(selectedVaga?.id)}
           />
         </>
       )}
@@ -466,7 +556,8 @@ VagasPublicadas.propTypes = {
   loading: PropTypes.bool.isRequired,
   searchTerm: PropTypes.string.isRequired,
   setSearchTerm: PropTypes.func.isRequired,
-  onDeleteVaga: PropTypes.func.isRequired
+  onDeleteVaga: PropTypes.func.isRequired,
+  onRefresh: PropTypes.func.isRequired
 };
 
-export default VagasPublicadas;
+export default React.memo(VagasPublicadas);

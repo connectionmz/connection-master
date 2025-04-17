@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
     Button,
-    Card,
-    CardContent,
-    CardActions,
     Typography,
     Tabs,
     Tab,
@@ -12,123 +9,192 @@ import {
     Alert,
     Box,
     CircularProgress,
+    List,
+    ListItem,
+    ListItemAvatar,
+    ListItemText,
+    Divider,
+    IconButton,
+    Paper,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    useMediaQuery
 } from '@mui/material';
-import { AccessTime, CheckCircle, History } from '@mui/icons-material';
-import { ref, onValue, remove, update, off } from 'firebase/database';
+import { Delete, AccessTime, CheckCircle, History, Edit } from '@mui/icons-material';
+import { ref, onValue, update, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
 import AnunciosDesk from './AnunciosDesk';
+import EditarConcurso from './EditarConcurso'; 
+import { formatPrice } from '../../utils/utils';
 
-const ConcursoDesk = ({ user, onModuleActivation }) => {
-    const [cotacoes, setCotacoes] = useState([]);
+const ConcursosDesk = ({ user, onModuleActivation }) => {
+    const [concursos, setConcursos] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    const [isPaying, setIsPaying] = useState(false);
+    const [isPaying, setIsPaying] = useState(false);   
     const [loading, setLoading] = useState(true);
     const [campanhasAtivas, setCampanhasAtivas] = useState([]);
+    const [clickedConcursos, setClickedConcursos] = useState({});
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [selectedConcurso, setSelectedConcurso] = useState(null);
 
     const navigate = useNavigate();
+    const isMobile = useMediaQuery('(max-width:600px)');
 
     const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
-    const hasBalance = user?.activeModules?.moduloSMS?.smsCount > 0; // Verifica se o saldo de SMS é maior que 0
+    const hasBalance = user?.activeModules?.moduloSMS?.smsCount > 0;
+
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const loadClickedStatus = async () => {
+            try {
+                const clicksRef = ref(db, 'concursos');
+                onValue(clicksRef, (snapshot) => {
+                    const concursosData = snapshot.val();
+                    const clickedStatus = {};
+
+                    if (concursosData) {
+                        Object.entries(concursosData).forEach(([concursoId, concurso]) => {
+                            if (concurso.views && concurso.views[user.id]) {
+                                clickedStatus[concursoId] = true;
+                            }
+                        });
+                    }
+
+                    setClickedConcursos(clickedStatus);
+                });
+            } catch (error) {
+                console.error('Error loading clicked status:', error);
+            }
+        };
+
+        loadClickedStatus();
+    }, [user?.id]);
 
     useEffect(() => {
         if (!hasModuleSMS) {
             setLoading(false);
             return;
         }
-
-        const cotacoesRef = ref(db, 'concursos');
-        const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
-            const cotacoesData = snapshot.val();
-            if (cotacoesData) {
-                const cotacoesArray = Object.values(cotacoesData);
-                setCotacoes(cotacoesArray);
+        const concursosRef = ref(db, 'concursos');
+        const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
+            const concursosData = snapshot.val();
+            if (concursosData) {
+                const now = new Date();
+                const concursosArray = Object.entries(concursosData).map(([id, concurso]) => {
+                    // Verifica se o concurso expirou
+                    const dataLimite = new Date(concurso.prazo);
+                    const isExpired = dataLimite < now && concurso.status !== 'Fechada';
+                    
+                    // Se expirou e ainda não foi marcado como expirado, atualiza no Firebase
+                    if (isExpired && concurso.status !== 'Expirada') {
+                        update(ref(db, `concursos/${id}`), { status: 'Expirada' });
+                        return {
+                            id,
+                            ...concurso,
+                            status: 'Expirada',
+                            isClicked: clickedConcursos[id] || false
+                        };
+                    }
+                    
+                    return {
+                        id,
+                        ...concurso,
+                        isClicked: clickedConcursos[id] || false
+                    };
+                });
+                
+                // Filtra por província E setor do usuário
+                const filteredConcursos = concursosArray.filter((concurso) =>
+                    concurso.provincia === user.provinciaTemp || 
+                    concurso.provincia === user.provincia
+                );
+                
+                const sortedConcursos = filteredConcursos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                setConcursos(sortedConcursos);
             } else {
-                setCotacoes([]);
+                setConcursos([]);
             }
             setLoading(false);
         });
-
-        return () => unsubscribeCotacoes();
-    }, [hasModuleSMS]);
+        return () => unsubscribeConcursos();
+    }, [hasModuleSMS, user.provincia, clickedConcursos]);
 
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
         const unsubscribe = onValue(bannersRef, (snapshot) => {
-          const bannersData = snapshot.val();
-          if (bannersData) {
-            const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
-              id,
-              ...banner
-            }));
+            const bannersData = snapshot.val();
+            if (bannersData) {
+                const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
+                    id,
+                    ...banner
+                }));
     
-            // Check expiration and update status
-            const currentDate = new Date();
-            const updatedBanners = bannerList.map(banner => {
-              const expireDate = new Date(banner.expireDate);
-              if (expireDate < currentDate && banner.status !== 'expired') {
-                // Update status in Firebase if expired
-                update(ref(db, `banners/${banner.id}`), { status: 'expired' });
-                return { ...banner, status: 'expired' };
-              }
-              return banner;
-            });
+                const currentDate = new Date();
+                const updatedBanners = bannerList.map(banner => {
+                    // Verifica se o banner está expirado
+                    const expireDate = new Date(banner.expireDate);
+                    const isExpired = expireDate < currentDate;
+                    
+                    // Se expirou e ainda não foi marcado como expirado, atualiza no Firebase
+                    if (isExpired && banner.status !== 'expired') {
+                        update(ref(db, `banners/${banner.id}`), { status: 'expired' });
+                        return { ...banner, status: 'expired' };
+                    }
+                    
+                    return banner;
+                });
     
-            // Filter banners based on user profile and type
-            const filteredBanners = updatedBanners.filter(banner => {
-              // Only show active banners
-              if (banner.status !== 'active') return false;
-              
-              // Filter by type (home page banners)
-              if (banner.tipoAnuncio !== 'concurso') return false;
+                const filteredBanners = updatedBanners.filter(banner => {
+                    // Verifica se a data de expiração é futura
+                    const expireDate = new Date(banner.expireDate);
+                    if (expireDate < currentDate) return false;
+                    
+                    // Filtra por província
+                    if (user) {
+                        const matchesProvincia = banner.provincias && 
+                            banner.provincias.some(prov => 
+                                prov.toLowerCase() === user.provincia?.toLowerCase() || 
+                                prov.toLowerCase() === user.provinciaTemp?.toLowerCase()
+                            );
+                        
+                        return matchesProvincia;
+                    }
+                    
+                    return true;
+                });
     
-              // Check if banner has expired
-              const expireDate = new Date(banner.expireDate);
-              if (expireDate < currentDate) return false;
-    
-              // If user exists, filter by province and sector
-              if (user) {
-                const matchesProvincia = banner.provincias.includes(user.provincia);
-                const matchesSector = banner.sectores.includes(user.sector);
-                return matchesProvincia && matchesSector;
-              }
-              
-              // Show all active banners if no user
-              return true;
-            });
-    
-            setCampanhasAtivas(filteredBanners);
-    
-           
-          } else {
-            setCampanhasAtivas([]);
-          }
-          setLoading(false);
+                setCampanhasAtivas(filteredBanners);
+            } else {
+                setCampanhasAtivas([]);
+            }
+            setLoading(false);
         });
     
         return () => unsubscribe();
-      }, [user?.provincia, user?.sector, user?.id]);
-    
-    
-      
-    const handlePublishQuotation = () => {
+    }, [user?.provincia, user?.id]);
+
+    const handlePublishConcurso = () => {
         if (!hasModuleSMS) {
-            setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir concursos.', severity: 'warning' });
+            setSnackbar({ open: true, message: 'Ative o módulo SMS para publicar concursos.', severity: 'warning' });
             return;
         }
         if (!hasBalance) {
-            setSnackbar({ open: true, message: 'Recarregue seu saldo de SMS para emitir concursos.', severity: 'warning' });
+            setSnackbar({ open: true, message: 'Recarregue seu saldo de SMS para publicar concursos.', severity: 'warning' });
             return;
         }
         navigate('/concurso');
     };
 
-    const deleteCotacao = (cotacaoId) => {
+    const deleteConcurso = (concursoId) => {
         if (window.confirm('Tem certeza que deseja excluir este concurso?')) {
-            const cotacaoRef = ref(db, `concursos/${cotacaoId}`);
-            remove(cotacaoRef)
+            const concursoRef = ref(db, `concursos/${concursoId}`);
+            remove(concursoRef)
                 .then(() => {
                     setSnackbar({ open: true, message: 'Concurso excluído com sucesso!', severity: 'success' });
                 })
@@ -139,37 +205,52 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
         }
     };
 
-    const filteredCotacoes = () => {
+    const filteredConcursos = () => {
         const now = new Date();
         switch (activeTab) {
             case 'recentes':
-                return cotacoes.filter((cotacao) => {
-                    const hoje = new Date();
-                    hoje.setHours(0, 0, 0, 0);
-                    const prazo = new Date(cotacao.prazo);
-                    prazo.setHours(0, 0, 0, 0);
-                    return prazo >= hoje && cotacao.status !== 'Fechada';
-                });
+                return concursos.filter(
+                    (concurso) => new Date(concurso.prazo) >= new Date() && concurso.status !== 'Fechada'
+                );
             case 'expiradas':
-                return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.prazo));
+                return concursos.filter((concurso) => new Date() > new Date(concurso.prazo));
             case 'fechada':
-                return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
+                return concursos.filter((concurso) => concurso.status === 'Fechada');
             case 'minhas':
-                return cotacoes.filter((cotacao) => cotacao?.company?.id === user?.id);
+                return concursos.filter((concurso) => concurso?.company?.id === user?.id);
             default:
-                return cotacoes;
+                return concursos;
         }
     };
 
-    const handleCotacaoClick = (id, companyId) => {
-        navigate(`/concurso/${id}/${companyId}`);
+    const handleConcursoClick = async (id) => {
+        try {
+            await set(ref(db, `concursos/${id}/views/${user.id}`), true);
+            setClickedConcursos(prev => ({
+                ...prev,
+                [id]: true
+            }));
+            navigate(`/concurso/${id}`);
+        } catch (error) {
+            console.error('Error recording view:', error);
+            navigate(`/concurso/${id}`);
+        }
+    };
+
+    const handleEditClick = (concurso) => {
+        setSelectedConcurso(concurso);
+        setEditDialogOpen(true);
+    };
+
+    const handleCloseEditDialog = () => {
+        setEditDialogOpen(false);
+        setSelectedConcurso(null);
     };
 
     const handleRecarregarSaldo = () => {
         navigate('/sms');
     };
 
-    // Renderização condicional da lista de concursos
     const renderConcursos = () => {
         if (!hasModuleSMS) {
             return (
@@ -186,7 +267,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                 </Alert>
             );
         }
-
+    
         if (!hasBalance) {
             return (
                 <Alert
@@ -202,7 +283,7 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                 </Alert>
             );
         }
-
+    
         if (loading) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -210,60 +291,104 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                 </Box>
             );
         }
-
-        if (filteredCotacoes().length > 0) {
-            return filteredCotacoes().map((cotacao) => (
-                <Card
-                    key={cotacao.id}
-                    sx={{ mb: 2, backgroundColor: 'white', cursor: 'pointer', boxShadow: 2 }}
-                    onClick={() => handleCotacaoClick(cotacao.id, cotacao.company?.id)}
-                >
-                    <CardContent>
-                        <Box display="flex" alignItems="center" mb={2}>
-                            <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" sx={{ mr: 2 }} />
-                            <Typography variant="h6">{cotacao.company?.nome || 'Empresa'}</Typography>
-                        </Box>
-                        <Typography variant="subtitle1" sx={{ mb: 1 }}>{cotacao.title}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
-                        </Typography>
-                        <Typography variant="body2" color="error">
-                            Data limite: {new Date(cotacao.prazo).toLocaleDateString('pt-PT')}
-                        </Typography>
-                    </CardContent>
-                    <CardActions>
-                        {cotacao?.company?.id === user?.id && (
-                            <>
-                                <Button
-                                    color="error"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        deleteCotacao(cotacao.id);
-                                    }}
-                                >
-                                    Excluir
-                                </Button>
-                                <Button
-                                    color="primary"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/editar-cotacao/${cotacao.id}`);
-                                    }}
-                                >
-                                    Editar
-                                </Button>
-                            </>
-                        )}
-                    </CardActions>
-                </Card>
-            ));
-        } else {
-            return <Typography textAlign="center">Nenhum concurso disponível.</Typography>;
+    
+        const concursosFiltrados = filteredConcursos();
+        if (concursosFiltrados.length === 0) {
+            return (
+                <Typography textAlign="center" sx={{ p: 2 }}>
+                    Nenhum concurso disponível.
+                </Typography>
+            );
         }
+    
+        return (
+            <List>
+                {concursosFiltrados.map((concurso) => (
+                    <Box key={concurso.id}>
+                        <ListItem
+                            alignItems="flex-start"
+                            sx={{ 
+                                cursor: 'pointer', 
+                                '&:hover': { backgroundColor: '#fafafa' },
+                                fontWeight: clickedConcursos[concurso.id] ? 'normal' : 'bold'
+                            }}
+                            onClick={() => handleConcursoClick(concurso.id)}
+                        >
+                            <ListItemAvatar>
+                                <Avatar src={concurso.company?.logoUrl || ''} alt="Logo" />
+                            </ListItemAvatar>
+                            <ListItemText
+                                primary={
+                                    <Typography 
+                                        component="span" 
+                                        variant="body1" 
+                                        fontWeight={!concurso.isClicked ? 'bold' : 'normal'}
+                                    >
+                                        {concurso.titulo}
+                                    </Typography>
+                                }
+                                secondary={
+                                    <>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Nº Ref: {concurso.numeroReferencia}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Publicado em: {new Date(concurso.timestamp).toLocaleDateString('pt-PT')}
+                                        </Typography>
+                                        <Typography variant="body2" color="error">
+                                            Prazo: {new Date(concurso.prazo).toLocaleDateString('pt-PT')}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            Valor: {concurso.valorEstimado ? formatPrice(concurso.valorEstimado) : 'Não especificado'}
+                                        </Typography>
+                                    </>
+                                }
+                            />
+                            {concurso?.company?.id === user?.id && (
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <IconButton
+                                        color="error"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteConcurso(concurso.id);
+                                        }}
+                                    >
+                                        <Delete />
+                                    </IconButton>
+                                    <IconButton
+                                        color="primary"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditClick(concurso);
+                                        }}
+                                    >
+                                        <Edit />
+                                    </IconButton>
+                                </Box>
+                            )}
+                        </ListItem>
+                        <Divider variant="inset" component="li" />
+                    </Box>
+                ))}
+            </List>
+        );
     };
 
     return (
-        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+            {!hasModuleSMS && !isPaying && (
+                <Alert
+                    severity="warning"
+                    action={
+                        <Button color="inherit" size="small" onClick={() => setIsPaying(true)}>
+                            Ativar Módulo SMS
+                        </Button>
+                    }
+                    sx={{ mb: 2 }}
+                >
+                    O módulo SMS está inativo. Para usar este serviço, ative o módulo SMS.
+                </Alert>
+            )}
             {isPaying && (
                 <PaySMSCheckout
                     user={user}
@@ -280,51 +405,71 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
                     }}
                 />
             )}
+            {!isPaying && (
+                <>
+                    <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: 'white' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="h5" fontWeight="bold">Concursos Públicos</Typography>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handlePublishConcurso}
+                                disabled={!hasModuleSMS || !hasBalance}>
+                                Publicar Concurso
+                            </Button>
+                        </Box>
+                    </Paper>
 
-            <Box
-                sx={{
-                    width: '100%',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: 2,
-                    backgroundColor: 'white',
-                    boxShadow: 1,
-                }}
+                    <AnunciosDesk campanhas={campanhasAtivas} />
+
+                    <Paper elevation={1} sx={{ mb: 2, backgroundColor: 'white' }}>
+                        <Tabs
+                            value={activeTab}
+                            onChange={(_, newValue) => setActiveTab(newValue)}
+                            indicatorColor="primary"
+                            textColor="primary"
+                        >
+                            <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
+                            <Tab value="expiradas" label="Expiradas" icon={<History />} />
+                            <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
+                            <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
+                        </Tabs>
+                    </Paper>
+
+                    <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
+                        {renderConcursos()}
+                    </Paper>
+                </>
+            )}
+
+            {/* Edit Dialog */}
+            <Dialog
+                open={editDialogOpen}
+                onClose={handleCloseEditDialog}
+                fullWidth
+                maxWidth="md"
             >
-                <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-                    Concursos
-                </Typography>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handlePublishQuotation}
-                    disabled={!hasModuleSMS || !hasBalance}
-                >
-                    Publicar Concurso
-                </Button>
-            </Box>
-
-            {/* Espaço para "Anunciar Aqui" */}
-            <AnunciosDesk campanhas={campanhasAtivas} />
-
-            <Tabs
-                value={activeTab}
-                onChange={(_, newValue) => setActiveTab(newValue)}
-                indicatorColor="primary"
-                textColor="primary"
-                sx={{ backgroundColor: 'white', boxShadow: 1 }}
-            >
-                <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
-                <Tab value="expiradas" label="Expiradas" icon={<History />} />
-                <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                <Tab value="minhas" label="Meus" icon={<Avatar src={user?.logoUrl} />} />
-            </Tabs>
-
-            {/* Lista de Concursos */}
-            <Box sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
-                {renderConcursos()}
-            </Box>
+                <DialogTitle>Editar Concurso</DialogTitle>
+                <DialogContent>
+                    {selectedConcurso && (
+                        <EditarConcurso 
+                            concurso={selectedConcurso} 
+                            user={user} 
+                            onClose={handleCloseEditDialog}
+                            onSuccess={() => {
+                                setSnackbar({ open: true, message: 'Concurso atualizado com sucesso!', severity: 'success' });
+                                handleCloseEditDialog();
+                            }}
+                            onError={(error) => {
+                                setSnackbar({ open: true, message: `Erro ao atualizar concurso: ${error}`, severity: 'error' });
+                            }}
+                        />
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseEditDialog}>Cancelar</Button>
+                </DialogActions>
+            </Dialog>
 
             <Snackbar
                 open={snackbar.open}
@@ -337,4 +482,4 @@ const ConcursoDesk = ({ user, onModuleActivation }) => {
     );
 };
 
-export default ConcursoDesk;
+export default ConcursosDesk;

@@ -108,20 +108,23 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     };
                 });
                 
+                // Filtra por província E setor do usuário
                 const filteredCotacoes = cotacoesArray.filter((cotacao) =>
                     Array.isArray(cotacao.provincia) &&
-                    (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia))
+                    (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia)) &&
+                    cotacao.sector === user.sector // Adiciona a verificação do setor
                 );
                 
                 const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 setCotacoes(sortedCotacoes);
+                console.log(sortedCotacoes)
             } else {
                 setCotacoes([]);
             }
             setLoading(false);
         });
         return () => unsubscribeCotacoes();
-    }, [hasModuleSMS, user.provincia, clickedCotacoes]);
+    }, [hasModuleSMS, user.provincia, user.sector, clickedCotacoes]); // Adicione user.sector nas dependências
 
     useEffect(() => {
         const bannersRef = ref(db, 'banners');

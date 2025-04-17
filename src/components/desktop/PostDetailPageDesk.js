@@ -26,8 +26,10 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  useTheme
 } from '@mui/material';
+
 import {
   Delete as DeleteIcon,
   Share as ShareIcon,
@@ -42,10 +44,13 @@ import {
   Close as CloseIcon,
   Check as CheckIcon
 } from '@mui/icons-material';
+import ReplyIcon from '@mui/icons-material/Reply';
 import BackButton from '../BackButton';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatDateTime } from '../../utils/utils';
+
+
 
 const PostDetailPageDesk = ({ user }) => {
   const { postId } = useParams();
@@ -60,9 +65,34 @@ const PostDetailPageDesk = ({ user }) => {
   const [editedCommentText, setEditedCommentText] = useState('');
   const [denunciaModalOpen, setDenunciaModalOpen] = useState(false);
   const [motivoDenuncia, setMotivoDenuncia] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+const [showReplies, setShowReplies] = useState({});
   const [anchorEl, setAnchorEl] = useState(null);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const isMobile = useMediaQuery('(max-width:600px)');
+
+
+  const theme = useTheme();
+
+  // Estilo para comentários principais
+const mainCommentStyle = {
+  mb: 2,
+  p: 2,
+  backgroundColor: 'background.paper',
+  borderRadius: 2,
+  border: '1px solid',
+  borderColor: 'divider',
+  position: 'relative'
+};
+
+// Estilo para respostas
+const replyStyle = {
+  mt: 2,
+  ml: 4,
+  pl: 2,
+  borderLeft: `2px solid ${theme.palette.primary.main}`,
+  backgroundColor: theme.palette.action.hover
+};
 
   // Formatador de data
   const formatDate = (dateString) => {
@@ -102,6 +132,8 @@ const PostDetailPageDesk = ({ user }) => {
         const commentsData = Object.values(data.comments || {});
         setComments(
           commentsData.sort((a, b) => {
+            if (a.parentId === b.id) return 1;
+            if (b.parentId === a.id) return -1;
             const dateA = new Date(a.data || 0);
             const dateB = new Date(b.data || 0);
             return dateB - dateA;
@@ -147,25 +179,39 @@ const PostDetailPageDesk = ({ user }) => {
         userAvatar: user.avatar || '',
         comment: commentText,
         data: new Date().toISOString(),
+        ...(replyingTo && { parentId: replyingTo }),
       };
       
       await set(newCommentRef, comment);
       setCommentText('');
+      setReplyingTo(null);
       setSnackbar({ 
         open: true, 
-        message: 'Comentário adicionado!', 
+        message: replyingTo ? 'Resposta enviada!' : 'Comentário adicionado!', 
         severity: 'success' 
       });
     } catch (error) {
       console.error('Erro ao adicionar comentário:', error);
       setSnackbar({ 
         open: true, 
-        message: 'Erro ao adicionar comentário.', 
+        message: replyingTo ? 'Erro ao enviar resposta.' : 'Erro ao adicionar comentário.', 
         severity: 'error' 
       });
     }
   };
 
+  const handleReply = (commentId, userName) => {
+    setReplyingTo(commentId);
+    setCommentText(`@${userName} `);
+    setTimeout(() => document.getElementById('comment-input')?.focus(), 0);
+  };
+  
+  const toggleReplies = (commentId) => {
+    setShowReplies(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
+  };
   const handleLike = async () => {
     if (!checkUserAuth()) return;
     
@@ -428,18 +474,7 @@ const PostDetailPageDesk = ({ user }) => {
               width: '100%'
             }}
           />
-          <Box sx={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            borderRadius: '50%',
-            p: 1
-          }}>
-            <IconButton onClick={handleMenuOpen} sx={{ color: 'white' }}>
-              <MoreVertIcon />
-            </IconButton>
-          </Box>
+         
         </Box>
         
         <CardContent>
@@ -551,76 +586,113 @@ const PostDetailPageDesk = ({ user }) => {
         </Box>
       </Card>
 
-      {/* Comments Section */}
-      <Card sx={{ 
-        boxShadow: 3, 
-        mb: 2,
-        borderRadius: 2
-      }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-            Comentários ({comments.length})
-          </Typography>
-          
+     {/* Comments Section */}
+<Card sx={{ 
+  boxShadow: 3, 
+  mb: 2,
+  borderRadius: 2
+}}>
+  <CardContent>
+    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+      Comentários ({comments.filter(c => !c.parentId).length})
+    </Typography>
+    
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'flex-start',
+      gap: 1,
+      mb: 2
+    }}>
+      <Avatar 
+        src={user?.avatar} 
+        sx={{ 
+          width: 40, 
+          height: 40 
+        }} 
+      />
+      <Box sx={{ flex: 1 }}>
+        {replyingTo && (
           <Box sx={{ 
             display: 'flex', 
-            alignItems: 'flex-start',
-            gap: 1,
-            mb: 2
+            alignItems: 'center',
+            mb: 1,
+            p: 1,
+            backgroundColor: theme.palette.action.selected,
+            borderRadius: 1
           }}>
-            <Avatar 
-              src={user?.avatar} 
-              sx={{ 
-                width: 40, 
-                height: 40 
-              }} 
-            />
-            <TextField
-              label="Escreva um comentário..."
-              multiline
-              rows={2}
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyPress={handleCommentKeyPress}
-              fullWidth
-              variant="outlined"
-              margin="normal"
-              InputProps={{
-                endAdornment: (
-                  <IconButton 
-                    onClick={handleAddComment} 
-                    color="primary"
-                    disabled={!commentText.trim()}
-                  >
-                    <SendIcon />
-                  </IconButton>
-                ),
-              }}
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 4
-                }
-              }}
-            />
-          </Box>
-          
-          <Divider sx={{ my: 2 }} />
-          
-          {comments.length === 0 ? (
             <Typography 
-              variant="body2" 
-              color="textSecondary" 
+              variant="caption" 
               sx={{ 
-                textAlign: 'center',
-                py: 3
+                flexGrow: 1,
+                fontStyle: 'italic'
               }}
             >
-              Seja o primeiro a comentar!
+              Respondendo a um comentário...
             </Typography>
-          ) : (
-            comments.map((comment) => (
+            <Button 
+              size="small" 
+              onClick={() => setReplyingTo(null)}
+              startIcon={<CloseIcon fontSize="small" />}
+            >
+              Cancelar
+            </Button>
+          </Box>
+        )}
+        <TextField
+          id="comment-input"
+          label={replyingTo ? "Escreva sua resposta..." : "Escreva um comentário..."}
+          multiline
+          rows={2}
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          onKeyPress={handleCommentKeyPress}
+          fullWidth
+          variant="outlined"
+          margin="normal"
+          InputProps={{
+            endAdornment: (
+              <IconButton 
+                onClick={handleAddComment} 
+                color="primary"
+                disabled={!commentText.trim()}
+              >
+                <SendIcon />
+              </IconButton>
+            ),
+          }}
+          sx={{ 
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 4
+            }
+          }}
+        />
+      </Box>
+    </Box>
+    
+    <Divider sx={{ my: 2 }} />
+    
+    {comments.filter(c => !c.parentId).length === 0 ? (
+      <Typography 
+        variant="body2" 
+        color="textSecondary" 
+        sx={{ 
+          textAlign: 'center',
+          py: 3
+        }}
+      >
+        Seja o primeiro a comentar!
+      </Typography>
+    ) : (
+      comments
+        .filter(comment => !comment.parentId)
+        .map((comment) => {
+          const replies = comments.filter(c => c.parentId === comment.id);
+          const hasReplies = replies.length > 0;
+          const repliesVisible = showReplies[comment.id] || false;
+
+          return (
+            <React.Fragment key={comment.id}>
               <Box
-                key={comment.id}
                 sx={{
                   mb: 2,
                   p: 2,
@@ -661,10 +733,7 @@ const PostDetailPageDesk = ({ user }) => {
                         variant="caption" 
                         color="text.secondary"
                       >
-                        <Typography variant="caption" color="text.secondary">
-                      {formatDateTime(comment.data)}
-                    </Typography>
-                        
+                        {formatDateTime(comment.data)}
                       </Typography>
                     </Box>
                     
@@ -714,41 +783,177 @@ const PostDetailPageDesk = ({ user }) => {
                   </Box>
                 </Box>
                 
-                {(comment.userId === user?.id || post.companyId === user?.id) && (
-                  <Box sx={{ 
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    display: 'flex',
-                    gap: 0.5
-                  }}>
-                    {comment.userId === user?.id && (
-                      <Tooltip title="Editar">
+                {/* Botões de ação */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mt: 1
+                }}>
+                  <Button
+                    size="small"
+                    startIcon={<ReplyIcon fontSize="small" />}
+                    onClick={() => handleReply(comment.id, comment.userName)}
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    Responder
+                  </Button>
+                  
+                  {(comment.userId === user?.id || post.companyId === user?.id) && (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      {comment.userId === user?.id && (
+                        <Tooltip title="Editar">
+                          <IconButton
+                            onClick={() => handleEditComment(comment.id, comment.comment)}
+                            size="small"
+                            color="primary"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Excluir">
                         <IconButton
-                          onClick={() => handleEditComment(comment.id, comment.comment)}
+                          onClick={() => handleDeleteComment(comment.id)}
                           size="small"
-                          color="primary"
+                          color="error"
                         >
-                          <EditIcon fontSize="small" />
+                          <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                    )}
-                    <Tooltip title="Excluir">
-                      <IconButton
-                        onClick={() => handleDeleteComment(comment.id)}
-                        size="small"
-                        color="error"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                    </Box>
+                  )}
+                </Box>
+                
+                {/* Controle de respostas */}
+                {hasReplies && (
+                  <Box sx={{ mt: 1 }}>
+                    <Button
+                      size="small"
+                      onClick={() => toggleReplies(comment.id)}
+                      sx={{ color: 'blue' }}
+                    >
+                      {repliesVisible ? 'Ocultar respostas' : `Mostrar ${replies.length} resposta${replies.length !== 1 ? 's' : ''}`}
+                    </Button>
                   </Box>
                 )}
+                
+                {/* Lista de respostas */}
+                {repliesVisible && replies.map(reply => (
+                  <Box
+                    key={reply.id}
+                    sx={{
+                      mt: 2,
+                      ml: 4,
+                      pl: 2,
+                      borderLeft: `2px solid ${theme.palette.divider}`
+                    }}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start',
+                      gap: 2
+                    }}>
+                      <Avatar 
+                        src={reply.userAvatar} 
+                        sx={{ 
+                          width: 32, 
+                          height: 32 
+                        }} 
+                      />
+                      
+                      <Box sx={{ flex: 1 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          mb: 0.5
+                        }}>
+                          <Typography 
+                            variant="subtitle2" 
+                            fontWeight="bold"
+                          >
+                            {reply.userName}
+                            <Typography 
+                              component="span" 
+                              variant="caption" 
+                              color="text.secondary"
+                              sx={{ ml: 1 }}
+                            >
+                              respondeu
+                            </Typography>
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                          >
+                            {formatDateTime(reply.data)}
+                          </Typography>
+                        </Box>
+                        
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            whiteSpace: 'pre-line',
+                            wordBreak: 'break-word'
+                          }}
+                        >
+                          {reply.comment}
+                        </Typography>
+                        
+                        {/* Botões de ação para respostas */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'flex-end',
+                          mt: 1,
+                          gap: 0.5
+                        }}>
+                          <Tooltip title="Responder">
+                            <IconButton
+                              onClick={() => handleReply(comment.id, reply.userName)}
+                              size="small"
+                              color="primary"
+                            >
+                              <ReplyIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          
+                          {(reply.userId === user?.id || post.companyId === user?.id) && (
+                            <>
+                              {reply.userId === user?.id && (
+                                <Tooltip title="Editar">
+                                  <IconButton
+                                    onClick={() => handleEditComment(reply.id, reply.comment)}
+                                    size="small"
+                                    color="primary"
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              <Tooltip title="Excluir">
+                                <IconButton
+                                  onClick={() => handleDeleteComment(reply.id)}
+                                  size="small"
+                                  color="error"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+                ))}
               </Box>
-            ))
-          )}
-        </CardContent>
-      </Card>
+            </React.Fragment>
+          );
+        })
+    )}
+  </CardContent>
+</Card>
 
       {/* Menu de Compartilhamento */}
       <Menu
