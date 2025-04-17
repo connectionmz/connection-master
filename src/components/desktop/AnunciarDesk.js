@@ -62,7 +62,16 @@ const AnunciarDesk = ({ user }) => {
             id: key,
             ...adsData[key],
           }));
-          setMyAds(adsArray);
+          
+          // Ordenar por uploadedAt (do mais recente para o mais antigo)
+          const sortedAds = adsArray.sort((a, b) => {
+            // Converter para timestamp para comparação
+            const dateA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+            const dateB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+            return dateB - dateA; // Ordem decrescente
+          });
+          
+          setMyAds(sortedAds);
         } else {
           setMyAds([]);
         }
@@ -72,7 +81,7 @@ const AnunciarDesk = ({ user }) => {
     } finally {
       setLoadingAds(false);
     }
-  }, [user]);
+}, [user]);
 
   useEffect(() => {
     if (activeTab === 0) {

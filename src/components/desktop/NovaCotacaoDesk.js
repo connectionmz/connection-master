@@ -392,104 +392,158 @@ const NovaCotacao = ({ user }) => {
         </Paper>
 
         {/* Seção de Itens */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              Itens da Cotação
-            </Typography>
+        <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+      Itens da Cotação
+    </Typography>
+    <Button
+      variant="contained"
+      startIcon={<Add />}
+      onClick={handleAddItem}
+      size="small"
+    >
+      Adicionar Item
+    </Button>
+  </Box>
+
+  {formData.items.length === 0 && (
+    <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 3 }}>
+      Nenhum item adicionado ainda
+    </Typography>
+  )}
+
+  {formData.items.map((item, index) => (
+    <Paper 
+      key={index} 
+      sx={{ 
+        p: 2, 
+        mb: 2,
+        position: 'relative',
+        borderLeft: '3px solid',
+        borderColor: 'primary.light',
+        borderRadius: 1
+      }}
+    >
+      {/* Botão de eliminar isolado no canto superior direito */}
+      <Box sx={{ 
+        position: 'absolute', 
+        right: 8, 
+        top: 8,
+        zIndex: 1 
+      }}>
+        <IconButton
+          color="error"
+          onClick={() => handleRemoveItem(index)}
+          size="small"
+          sx={{ backgroundColor: 'rgba(255,255,255,0.8)' }}
+        >
+          <Delete fontSize="small" />
+        </IconButton>
+      </Box>
+
+      <Grid container spacing={2}>
+        {/* Nome do Item */}
+        <Grid item xs={12} sm={5}>
+          <TextField
+            label="Nome do Item"
+            value={item.name}
+            onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+            fullWidth
+            required
+            size="small"
+          />
+        </Grid>
+
+        {/* Quantidade */}
+        <Grid item xs={6} sm={2}>
+          <TextField
+            label="Quantidade"
+            type="number"
+            value={item.qtd}
+            onChange={(e) => handleItemChange(index, 'qtd', e.target.value.replace(/\D/g, ''))}
+            fullWidth
+            inputProps={{ min: 1 }}
+            size="small"
+          />
+        </Grid>
+
+        {/* Controle de Imagem */}
+        <Grid item xs={12} sm={5}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Button
               variant="outlined"
-              startIcon={<Add />}
-              onClick={handleAddItem}
+              component="label"
+              startIcon={<ImageIcon />}
+              size="small"
+              sx={{ flex: 1 }}
             >
-              Adicionar Item
+              {item.imageUrl ? 'Alterar Imagem' : 'Adicionar Imagem'}
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(e) => handleImageUpload(index, e.target.files[0])}
+              />
             </Button>
-          </Box>
-          
-          {formData.items.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Nenhum item adicionado ainda
-            </Typography>
-          )}
-          
-          {formData.items.map((item, index) => (
-            <Paper key={index} sx={{ p: 2, mb: 2, position: 'relative' }}>
+            
+            {item.imageUrl && (
               <IconButton
                 color="error"
-                onClick={() => handleRemoveItem(index)}
-                sx={{ position: 'absolute', right: 8, top: 8 }}
+                onClick={() => handleItemChange(index, 'imageUrl', '')}
+                size="small"
               >
-                <Delete />
+                <Delete fontSize="small" />
               </IconButton>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Nome do Item"
-                    value={item.name}
-                    onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                    fullWidth
-                    required
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={2}>
-                  <TextField
-                    label="Quantidade"
-                    type="number"
-                    value={item.qtd}
-                    onChange={(e) => handleItemChange(index, 'qtd', e.target.value.replace(/\D/g, ''))}
-                    fullWidth
-                    inputProps={{ min: 1 }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Descrição"
-                    value={item.description}
-                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                    fullWidth
-                    multiline
-                    rows={2}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={2}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<ImageIcon />}
-                    fullWidth
-                  >
-                    Imagem
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(index, e.target.files[0])}
-                    />
-                  </Button>
-                  
-                  {item.imageUrl && (
-                    <img
-                      src={item.imageUrl}
-                      alt="Pré-visualização"
-                      style={{ 
-                        width: '100%', 
-                        marginTop: 10, 
-                        borderRadius: 5,
-                        maxHeight: 100,
-                        objectFit: 'contain'
-                      }}
-                    />
-                  )}
-                </Grid>
-              </Grid>
-            </Paper>
-          ))}
-        </Paper>
+            )}
+          </Box>
+        </Grid>
 
+        {/* Descrição */}
+        <Grid item xs={12}>
+          <TextField
+            label="Descrição"
+            value={item.description}
+            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+            fullWidth
+            multiline
+            rows={2}
+            size="small"
+          />
+        </Grid>
+
+        {/* Pré-visualização da Imagem */}
+        {item.imageUrl && (
+          <Grid item xs={12}>
+            <Box sx={{ 
+              mt: 1,
+              p: 1,
+              border: '1px dashed',
+              borderColor: 'divider',
+              borderRadius: 1,
+              textAlign: 'center'
+            }}>
+              <Typography variant="caption" display="block" color="text.secondary" gutterBottom>
+                Pré-visualização:
+              </Typography>
+              <img
+                src={item.imageUrl}
+                alt="Pré-visualização do item"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: 150,
+                  borderRadius: 4,
+                  display: 'block',
+                  margin: '0 auto'
+                }}
+              />
+            </Box>
+          </Grid>
+        )}
+      </Grid>
+    </Paper>
+  ))}
+</Paper>
         {/* Botão de Envio */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button
