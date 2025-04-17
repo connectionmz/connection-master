@@ -47,16 +47,45 @@ const BannerDesk = ({ user }) => {
   }, []);
 
   const bannerMatchesUser = useCallback((banner, user) => {
-    if (!user) return true;
-    return (
-      banner.provincias?.includes(user.provincia) &&
-      banner.sectores?.includes(user.sector)
-    );
-  }, []);
+    if (!user) return false; // Se não há usuário, não mostra o banner
+
+    // Verifica se o banner tem filtros de província
+    const hasProvinciaFilter = banner.provincias && banner.provincias.length > 0;
+    // Verifica se o banner tem filtros de setor
+    const hasSectorFilter = banner.sectores && banner.sectores.length > 0;
+
+    // Se não há filtros, o banner é para todos
+    if (!hasProvinciaFilter && !hasSectorFilter) return true;
+
+    // Verifica a província do usuário (se houver filtro)
+    const provinciaMatch = !hasProvinciaFilter || 
+        banner.provincias.some(provincia => 
+            provincia.toLowerCase() === user.provinciaTemp?.toLowerCase() || 
+            provincia.toLowerCase() === user.provincia?.toLowerCase()
+        );
+
+    // Verifica o setor do usuário (se houver filtro)
+    const sectorMatch = !hasSectorFilter || 
+        banner.sectores.some(sector => 
+            sector.toLowerCase() === user.sector?.toLowerCase()
+        );
+
+    return provinciaMatch && sectorMatch;
+}, []);
+
+  // Função para filtrar banners ativos e relevantes
+  const filterBanners = useCallback((bannerList, user) => {
+    return bannerList.filter(banner => (
+        banner.status === 'active' &&
+        banner.tipoAnuncio === 'home' &&
+        !isBannerExpired(banner) &&
+        bannerMatchesUser(banner, user)
+    ));
+}, [isBannerExpired, bannerMatchesUser]);
 
   const registerImpression = useCallback(async (bannerId) => {
     const userId = getUserId();
-    const impressionKey = `${bannerId}-${userId}`;
+    const impressionKey = `${bannerId}_${userId}`;
 
     if (trackedImpressions.has(impressionKey)) return;
 
@@ -83,7 +112,6 @@ const BannerDesk = ({ user }) => {
         total_impressoes: increment(1),
         ultima_impressao: serverTimestamp(),
       });
-
       setTrackedImpressions(prev => new Set(prev).add(impressionKey));
     } catch (error) {
       console.error('Error registering impression:', error);
@@ -122,72 +150,62 @@ const BannerDesk = ({ user }) => {
   }, [getUserId, isMobile]);
 
   useEffect(() => {
+    if (banners.length > 0) {
+        const companyIds = banners.map(banner => banner.companyId).filter(Boolean);
+        companyIds.forEach(fetchCompanyData);
+    }
+}, [banners, fetchCompanyData]);
+
+
+  useEffect(() => {
     const bannersRef = ref(db, 'banners');
     let unsubscribeBanners;
 
-    try {
-      unsubscribeBanners = onValue(bannersRef, async (snapshot) => {
-        const bannersData = snapshot.val();
-        if (!bannersData) {
-          setBanners([]);
-          setLoading(false);
-          return;
-        }
-
-        const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
-          id,
-          ...banner,
-        }));
-
-        // Process banners
-        const processedBanners = await Promise.all(
-          bannerList.map(async (banner) => {
-            if (isBannerExpired(banner) && banner.status !== 'expired') {
-              try {
-                await update(ref(db, `banners/${banner.id}`), {
-                  status: 'expired',
-                  expiredAt: serverTimestamp(),
-                });
-              } catch (error) {
-                console.error('Error updating banner status:', error);
-              }
-              return { ...banner, status: 'expired' };
-            }
-            return banner;
-          })
-        );
-
-        // Filter active banners
-        const filteredBanners = processedBanners.filter((banner) => (
-          banner.status === 'active' &&
-          banner.tipoAnuncio === 'home' &&
-          !isBannerExpired(banner) &&
-          bannerMatchesUser(banner, user)
-        ));
-
-        // Fetch company data
-        await Promise.all(
-          filteredBanners.map((banner) => fetchCompanyData(banner.companyId))
-        );
-
-        setBanners(filteredBanners);
-
-        // Register impressions
-        filteredBanners.forEach((banner) => registerImpression(banner.id));
-        
+    const handleBannersData = async (snapshot) => {
+      const bannersData = snapshot.val();
+      console.log('Dados brutos dos banners:', bannersData);
+      
+      if (!bannersData) {
+        setBanners([]);
         setLoading(false);
+        return;
+      }
+
+      // Converter para array e processar banners
+      const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
+        id,
+        ...banner,
+      }));
+
+      // Filtrar banners ativos e relevantes
+      const filteredBanners = filterBanners(bannerList, user);
+      console.log('Banners filtrados:', filteredBanners);
+
+      // Atualizar estado
+      setBanners(filteredBanners);
+      setLoading(false);
+
+      // Registrar impressões
+      filteredBanners.forEach(banner => {
+        if (!trackedImpressions.has(banner.id)) {
+          registerImpression(banner.id);
+          setTrackedImpressions(prev => new Set(prev).add(banner.id));
+        }
       });
+    };
+
+    try {
+      unsubscribeBanners = onValue(bannersRef, handleBannersData);
     } catch (error) {
       console.error('Error loading banners:', error);
       setLoading(false);
     }
 
     return () => {
-      if (unsubscribeBanners) {
-        unsubscribeBanners();
-      }
+      if (unsubscribeBanners) unsubscribeBanners();
     };
-  }, [user, fetchCompanyData, isBannerExpired, bannerMatchesUser, registerImpression]);
+  }, [user, filterBanners, trackedImpressions]);
+
 
 
   // Configurações do slider...
