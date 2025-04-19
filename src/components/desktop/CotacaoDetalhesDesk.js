@@ -571,7 +571,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
           {proposalDetails ? (
             <div>
               <a
-              href={`/cotacao/${id}/proposta/${user.id}`}
+              href={`/minha_proposta/cotacao/${id}/proposta/${user.id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline"

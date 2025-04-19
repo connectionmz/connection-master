@@ -273,7 +273,7 @@ const notification = {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={() => navigate(`/cotacao/${id}/${companyId}`)}
+                onClick={() => navigate(`/cotacao/${id}`)}
                 sx={{
                   px: 4,
                   py: 1.5,
@@ -282,7 +282,7 @@ const notification = {
                   fontSize: '1rem',
                 }}
               >
-                Ver Detalhes da Proposta
+                Retornar
               </Button>
             </Box>
           </CardContent>

@@ -84,6 +84,7 @@ import 'react-quill/dist/quill.snow.css';
 import CompanyDataFormDesk from '../CompanyDataFormDesk';
 import AuthCreateDesk from '../AuthCreateDesk';
 import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
+import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
 
 const theme = createTheme({
   palette: {
@@ -318,6 +319,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
             <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
             <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk user={user} />} />
+            <Route path="/minha_proposta/cotacao/:id/proposta/:propostaId" element={<MinhaPropostaDesk user={user} />} />
             <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk user={user} />} />
             <Route path="/cotacaoPdf/:id" element={<CotacoesPDF user={user}/>} />
 
