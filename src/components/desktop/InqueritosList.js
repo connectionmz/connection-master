@@ -52,22 +52,22 @@ const InqueritosList = ({ user }) => {
   // Busca os inquéritos respondidos pelo usuário
   useEffect(() => {
     const fetchRespondedSurveys = async () => {
-      if (!user?.id) return;
-      
+      if (!user?.id || !user?.provincia || !user?.sector) return;
+
       try {
         const responsesRef = ref(db, "survey_responses");
-        const snapshot = await get(responsesRef);
-        
-        if (snapshot.exists()) {
-          const responsesData = snapshot.val();
+        const responsesSnapshot = await get(responsesRef);
+
+        if (responsesSnapshot.exists()) {
+          const responsesData = responsesSnapshot.val();
           const respondedIds = new Set();
-          
+
           Object.entries(responsesData).forEach(([surveyId, usersResponses]) => {
             if (usersResponses && usersResponses[user.id]) {
               respondedIds.add(surveyId);
             }
           });
-          
+
           setHasRespondedIds(respondedIds);
         }
       } catch (err) {
@@ -78,10 +78,22 @@ const InqueritosList = ({ user }) => {
     fetchRespondedSurveys();
   }, [user]);
 
-  // Filtra os inquéritos não respondidos
-  const inqueritosNaoRespondidos = inqueritos.filter(
-    inquerito => !hasRespondedIds.has(inquerito.id)
-  );
+  // Filtra os inquéritos: não respondidos E direcionados ao usuário
+  const inqueritosFiltrados = inqueritos.filter(inquerito => {
+    // Verifica se o inquérito é direcionado ao usuário
+    const isForUserProvince = !inquerito.provincias || 
+                             inquerito.provincias.length === 0 || 
+                             inquerito.provincias.includes(user?.provincia);
+    
+    const isForUserSector = !inquerito.sectores || 
+                           inquerito.sectores.length === 0 || 
+                           inquerito.sectores.includes(user?.sector);
+    
+    // Verifica se o usuário já respondeu
+    const notResponded = !hasRespondedIds.has(inquerito.id);
+    
+    return isForUserProvince && isForUserSector && notResponded && user;
+  });
 
   if (!user) {
     return (
@@ -141,13 +153,11 @@ const InqueritosList = ({ user }) => {
       <Typography 
         variant="h6" 
         fontWeight="bold" 
-        mb={2}
-        sx={{ color: theme.palette.text.primary }}
       >
-        Inquéritos Disponíveis ({inqueritosNaoRespondidos.length})
+        Inquéritos ({inqueritosFiltrados.length})
       </Typography>
 
-      {inqueritosNaoRespondidos.length === 0 ? (
+      {inqueritosFiltrados.length === 0 ? (
         <Typography 
           variant="body2" 
           color="text.secondary"
@@ -157,7 +167,7 @@ const InqueritosList = ({ user }) => {
         </Typography>
       ) : (
         <List disablePadding>
-          {inqueritosNaoRespondidos.map((inquerito, index) => (
+          {inqueritosFiltrados.map((inquerito, index) => (
             <React.Fragment key={inquerito.id}>
               <ListItem
                 disableGutters
@@ -201,7 +211,7 @@ const InqueritosList = ({ user }) => {
                   secondaryTypographyProps={{ component: 'div' }}
                 />
               </ListItem>
-              {index < inqueritosNaoRespondidos.length - 1 && (
+              {index < inqueritosFiltrados.length - 1 && (
                 <Divider variant="inset" component="li" />
               )}
             </React.Fragment>

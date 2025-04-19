@@ -108,23 +108,20 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     };
                 });
                 
-                // Filtra por província E setor do usuário
-                const filteredCotacoes = cotacoesArray.filter((cotacao) =>
-                    Array.isArray(cotacao.provincia) &&
-                    (cotacao.provincia.includes(user.provinciaTemp) || cotacao.provincia.includes(user.provincia)) &&
-                    cotacao.sector === user.sector // Adiciona a verificação do setor
-                );
+                // Armazena TODAS as cotações sem filtro
+                setCotacoes(cotacoesArray);
                 
-                const sortedCotacoes = filteredCotacoes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                // Ordena por data
+                const sortedCotacoes = cotacoesArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 setCotacoes(sortedCotacoes);
-                console.log(sortedCotacoes)
             } else {
+                setCotacoes([]);
                 setCotacoes([]);
             }
             setLoading(false);
         });
         return () => unsubscribeCotacoes();
-    }, [hasModuleSMS, user.provincia, user.sector, clickedCotacoes]); // Adicione user.sector nas dependências
+    }, [hasModuleSMS, clickedCotacoes]);
 
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
@@ -215,20 +212,45 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     const filteredCotacoes = () => {
         const now = new Date();
+        let filtered = cotacoes; // Começa com todas as cotações
+        
+        // Aplica filtros com base na aba ativa
         switch (activeTab) {
             case 'recentes':
-                return cotacoes.filter(
-                    (cotacao) => new Date(cotacao.datalimite) >= new Date() && cotacao.status !== 'Fechada'
+                filtered = filtered.filter(
+                    (cotacao) => new Date(cotacao.datalimite) >= now && cotacao.status !== 'Fechada'
                 );
+                break;
             case 'expiradas':
-                return cotacoes.filter((cotacao) => new Date() > new Date(cotacao.datalimite));
+                filtered = filtered.filter((cotacao) => new Date() > new Date(cotacao.datalimite));
+                break;
             case 'fechada':
-                return cotacoes.filter((cotacao) => cotacao.status === 'Fechada');
+                filtered = filtered.filter((cotacao) => cotacao.status === 'Fechada');
+                break;
             case 'minhas':
-                return cotacoes.filter((cotacao) => cotacao?.company?.id === user?.id);
+                filtered = filtered.filter((cotacao) => 
+                    cotacao.company?.id === user?.id || 
+                    cotacao.userId === user?.id ||
+                    cotacao.createdBy === user?.id
+                );
+                break;
             default:
-                return cotacoes;
+                break;
         }
+        
+        // Aplica filtros adicionais de província e setor (se necessário)
+        if (user?.provincia && user?.sector && activeTab !== 'minhas') {
+            filtered = filtered.filter((cotacao) =>
+                (!cotacao.provincia || 
+                 !Array.isArray(cotacao.provincia) || 
+                 cotacao.provincia.length === 0 ||
+                 cotacao.provincia.includes(user.provinciaTemp) || 
+                 cotacao.provincia.includes(user.provincia)) &&
+                (!cotacao.sector || cotacao.sector === user.sector)
+            );
+        }
+        
+        return filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     };
 
     const handleCotacaoClick = async (id) => {
