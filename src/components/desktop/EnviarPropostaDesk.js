@@ -9,6 +9,12 @@ import {
   Alert,
   Snackbar,
   useMediaQuery,
+  Card,
+  CardContent,
+  Paper,
+  Divider,
+  Chip,
+  LinearProgress,
 } from '@mui/material';
 import { ref, set, push, get, onValue } from 'firebase/database';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
@@ -29,8 +35,11 @@ const EnviarPropostaDesk = ({ user }) => {
   const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [hasProposal, setHasProposal] = useState(false);
+  const [successAlert, setSuccessAlert] = useState(false);
+  const [errorAlert, setErrorAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width:600px)'); 
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   const storage = getStorage();
 
@@ -56,6 +65,8 @@ const EnviarPropostaDesk = ({ user }) => {
         }
       } catch (error) {
         console.error('Erro ao buscar produtos:', error);
+        setErrorMessage('Erro ao carregar produtos. Tente novamente.');
+        setErrorAlert(true);
       }
     };
     fetchProducts();
@@ -69,35 +80,41 @@ const EnviarPropostaDesk = ({ user }) => {
           const proposals = snapshot.val();
           const userProposal = Object.values(proposals || []);
           if (userProposal.length > 0) {
-            setHasProposal(true); 
+            setHasProposal(true);
           } else {
-            setHasProposal(false); 
+            setHasProposal(false);
           }
         });
       } catch (error) {
         console.error('Erro ao verificar proposta:', error);
+        setErrorMessage('Erro ao verificar proposta existente.');
+        setErrorAlert(true);
       }
     };
     checkProposal();
     return () => {
-      setHasProposal(false); 
+      setHasProposal(false);
     };
   }, [id, user.id]);
 
   const handleAnexoChange = (e) => {
-    setAnexo(e.target.files[0]);
+    if (e.target.files[0]) {
+      setAnexo(e.target.files[0]);
+    }
   };
 
   const handleSubmitProposal = (e) => {
     e.preventDefault();
 
     if (!user) {
-      alert('Usuário não autenticado. Por favor, faça login.');
+      setErrorMessage('Usuário não autenticado. Por favor, faça login.');
+      setErrorAlert(true);
       return;
     }
 
     if (description.trim() === '' && !anexo) {
-      alert('Por favor, insira uma proposta ou carregue um documento.');
+      setErrorMessage('Por favor, insira uma proposta ou carregue um documento.');
+      setErrorAlert(true);
       return;
     }
 
@@ -116,7 +133,8 @@ const EnviarPropostaDesk = ({ user }) => {
         },
         (error) => {
           console.error('Erro ao carregar o arquivo:', error);
-          alert('Erro ao carregar o arquivo. Por favor, tente novamente.');
+          setErrorMessage('Erro ao carregar o arquivo. Por favor, tente novamente.');
+          setErrorAlert(true);
           setUploading(false);
         },
         () => getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => submitProposal(downloadURL))
@@ -127,58 +145,66 @@ const EnviarPropostaDesk = ({ user }) => {
   };
 
   const submitProposal = async (fileUrl) => {
-    if (!description) {
-      alert('Por favor, preencha todos os campos obrigatórios antes de enviar.');
+    if (!description && !fileUrl) {
+      setErrorMessage('Por favor, preencha todos os campos obrigatórios antes de enviar.');
+      setErrorAlert(true);
       return;
     }
 
     const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
+const newProposalRef = push(proposalsRef);
+const proposalId = newProposalRef.key;
 
-    const newProposal = {
-      cotacaoId: id,
-      from: {
-        nome: user.nome,
-        logo: user.logoUrl,
-        provincia: user.provincia,
-        distrito: user.distrito,
-        id: user.id,
-        email: user.email,
-      },
-      proposal: description,
-      fileUrl,
-      selectedProducts: selectedProducts.map((product) => ({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        url: `/product/${product.id}/store${user.id}`,
-      })),
-      submittedAt: new Date().toISOString(),
-      status: 'wait',
-      url: `/cotacao/${id}/${companyId}`,
-    };
+const newProposal = {
+  id: proposalId,
+  cotacaoId: id,
+  from: {
+    nome: user.nome,
+    logo: user.logoUrl,
+    provincia: user.provincia,
+    distrito: user.distrito,
+    id: user.id,
+    email: user.email,
+  },
+  proposal: description,
+  fileUrl,
+  selectedProducts: selectedProducts.map((product) => ({
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    url: `/product/${product.id}/store/${user.id}`,
+  })),
+  submittedAt: new Date().toISOString(),
+  status: 'wait',
+};
 
-    const notification = {
-      type: 'cotation_reply',
-      message: `${user.nome} enviou uma proposta para você`,
-      fromUserId: user.id,
-      fromUserName: user.nome,
-      timestamp: new Date().toISOString(),
-      status: 'unread',
-      url: `/cotacao/${id}/${companyId}`,
-    };
+const notification = {
+  type: 'cotation_reply',
+  message: `${user.nome} enviou uma proposta para você`,
+  fromUserId: user.id,
+  fromUserName: user.nome,
+  timestamp: new Date().toISOString(),
+  status: 'unread',
+  url: `/cotacao/${id}/proposta/${proposalId}`,
+  cotacaoId: id,
+  proposalId: proposalId,
+};
+
+  // Agora salva a proposta
+  await set(newProposalRef, newProposal);
 
     try {
-      setUploading(true);
       await set(proposalsRef, newProposal);
       saveContentToInbox(companyId, notification);
-      alert('Proposta enviada com sucesso!');
+      setSuccessAlert(true);
       setDescription('');
       setAnexo(null);
       setSelectedProducts([]);
       setHasProposal(true);
     } catch (error) {
       console.error('Erro ao submeter a proposta:', error);
-      alert(error?.message || 'Erro ao submeter a proposta. Por favor, tente novamente.');
+      setErrorMessage(error?.message || 'Erro ao submeter a proposta. Por favor, tente novamente.');
+      setErrorAlert(true);
     } finally {
       setUploading(false);
     }
@@ -188,35 +214,79 @@ const EnviarPropostaDesk = ({ user }) => {
     return (
       <Box
         sx={{
-          width: '100%',
-          maxWidth: isMobile ? '100%' : '800px', 
-          margin: '0 auto',
-          p: isMobile ? 2 : 4, 
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '80vh',
+          px: 2,
         }}
       >
-        <Typography variant="h5" align="center" gutterBottom>
-          Proposta Já Enviada
-        </Typography>
-        <Typography variant="body1" align="center" color="textSecondary" sx={{ mb: 4 }}>
-          Olá, <br />
-          Agradecemos o seu interesse e a proposta enviada para o nosso pedido de cotação.
-          Informamos que a sua proposta está em fase de verificação.
-          <br />
-          Lembre-se de que este é um pedido público e estamos avaliando as melhores propostas.
-          Caso sua cotação seja aprovada, você será notificado, e o status do pedido será atualizado para Fechado.
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate(`/cotacao/${id}/${companyId}`)}
-          fullWidth={!isMobile} 
+        <Card
           sx={{
-            mt: 2,
-            py: isMobile ? 1 : 1.5, 
+            width: '100%',
+            maxWidth: isMobile ? '100%' : '600px',
+            p: 3,
+            boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)',
+            borderRadius: 2,
           }}
         >
-          Ver Proposta Enviada
-        </Button>
+          <CardContent>
+            <Typography
+              variant="h5"
+              align="center"
+              gutterBottom
+              sx={{
+                fontWeight: 'bold',
+                color: 'primary.main',
+                mb: 3,
+              }}
+            >
+              Proposta Enviada com Sucesso!
+            </Typography>
+            
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                mb: 3,
+              }}
+            >
+              <img
+                src="/success-icon.svg"
+                alt="Success"
+                style={{ width: 80, height: 80 }}
+              />
+            </Box>
+            
+            <Typography
+              variant="body1"
+              align="center"
+              color="text.secondary"
+              sx={{ mb: 3, lineHeight: 1.6 }}
+            >
+              Agradecemos o seu interesse e a proposta enviada para o nosso pedido de cotação.
+              <br />
+              Sua proposta está em fase de análise e você será notificado assim que houver uma atualização.
+            </Typography>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => navigate(`/cotacao/${id}/${companyId}`)}
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                }}
+              >
+                Ver Detalhes da Proposta
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
     );
   }
@@ -224,110 +294,225 @@ const EnviarPropostaDesk = ({ user }) => {
   return (
     <Box
       sx={{
-        width: '100%',
-        maxWidth: isMobile ? '100%' : '800px', 
-        margin: '0 auto',
-        p: isMobile ? 2 : 4, 
+        display: 'flex',
+        justifyContent: 'center',
+        p: isMobile ? 2 : 4,
       }}
     >
-      <BackButton sx={{ mb: 2 }} />
-      <Typography
-        variant="h4"
-        align="center"
-        gutterBottom
+      <Paper
+        elevation={3}
         sx={{
-          fontSize: isMobile ? '1.5rem' : '2rem', 
-          fontWeight: 'bold',
+          width: '100%',
+          maxWidth: isMobile ? '100%' : '800px',
+          p: isMobile ? 2 : 4,
+          borderRadius: 2,
         }}
       >
-        Enviar Proposta para Cotação
-      </Typography>
-
-      <form onSubmit={handleSubmitProposal}>
-        <ReactQuill
-          value={description}
-          onChange={setDescription}
-          placeholder="Escreva sua proposta aqui..."
-          modules={{
-            toolbar: [
-              [{ header: [1, 2, false] }],
-              ['bold', 'italic', 'underline'],
-              ['link', 'image'],
-            ],
-          }}
-          formats={['header', 'bold', 'italic', 'underline', 'link', 'image']}
-          style={{
-            height: isMobile ? '150px' : '200px', 
-            marginBottom: '16px',
-          }}
+        <BackButton 
+          onClick={() => navigate(-1)}
+          sx={{ 
+            mb: 3,
+            '&:hover': {
+              backgroundColor: 'action.hover',
+            }
+          }} 
         />
-
-        <Autocomplete
-          multiple
-          options={products}
-          getOptionLabel={(option) => option.name}
-          value={selectedProducts}
-          onChange={(event, newValue) => setSelectedProducts(newValue)}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Buscar Itens"
-              variant="outlined"
-              fullWidth
-              sx={{
-                mb: 2,
-                fontSize: isMobile ? '0.875rem' : '1rem', 
-              }}
-            />
-          )}
-        />
-
-        <Box sx={{ mb: 2 }}>
-          <Button
-            variant="outlined"
-            component="label"
-            fullWidth={!isMobile} 
-            sx={{
-              textTransform: 'none',
-              fontSize: isMobile ? '0.875rem' : '1rem', 
-            }}
-          >
-            Anexar Arquivo
-            <input hidden accept="*" multiple type="file" onChange={handleAnexoChange} />
-          </Button>
-        </Box>
-
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          fullWidth={!isMobile} 
-          disabled={uploading}
+        
+        <Typography
+          variant="h4"
+          align="center"
+          gutterBottom
           sx={{
-            mt: 2,
-            py: isMobile ? 1 : 1.5, 
+            fontSize: isMobile ? '1.5rem' : '2rem',
+            fontWeight: 'bold',
+            color: 'primary.main',
+            mb: 4,
           }}
         >
-          {uploading ? (
-            <CircularProgress size={20} color="inherit" />
-          ) : (
-            'Enviar Proposta'
-          )}
-        </Button>
+          Enviar Proposta para Cotação
+        </Typography>
 
-        {uploadProgress > 0 && (
-          <Typography
-            variant="body1"
-            align="center"
+        <form onSubmit={handleSubmitProposal}>
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
+              Descrição da Proposta *
+            </Typography>
+            <Paper variant="outlined" sx={{ borderRadius: 1 }}>
+              <ReactQuill
+                value={description}
+                onChange={setDescription}
+                placeholder="Descreva sua proposta detalhadamente..."
+                modules={{
+                  toolbar: [
+                    [{ header: [1, 2, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link', 'image'],
+                    ['clean'],
+                  ],
+                }}
+                formats={[
+                  'header',
+                  'bold',
+                  'italic',
+                  'underline',
+                  'strike',
+                  'list',
+                  'bullet',
+                  'link',
+                  'image'
+                ]}
+                style={{
+                  height: isMobile ? '200px' : '250px',
+                  border: 'none',
+                }}
+              />
+            </Paper>
+          </Box>
+
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
+              Produtos Relacionados
+            </Typography>
+            <Autocomplete
+              multiple
+              options={products}
+              getOptionLabel={(option) => option.name}
+              value={selectedProducts}
+              onChange={(event, newValue) => setSelectedProducts(newValue)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Selecione produtos da sua loja"
+                  variant="outlined"
+                  fullWidth
+                />
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={option.id}
+                    label={option.name}
+                    size="small"
+                    sx={{ mr: 1, mb: 1 }}
+                  />
+                ))
+              }
+            />
+          </Box>
+
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
+              Anexar Documento (Opcional)
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{
+                py: 2,
+                borderStyle: 'dashed',
+                '&:hover': {
+                  borderStyle: 'dashed',
+                  backgroundColor: 'action.hover',
+                }
+              }}
+            >
+              <Box sx={{ textAlign: 'center', width: '100%' }}>
+                {anexo ? (
+                  <Typography variant="body2">{anexo.name}</Typography>
+                ) : (
+                  <>
+                    <Typography variant="body1" sx={{ mb: 0.5 }}>
+                      Clique para selecionar um arquivo
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Formatos suportados: PDF, DOC, XLS, JPG, PNG
+                    </Typography>
+                  </>
+                )}
+                <input hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" type="file" onChange={handleAnexoChange} />
+              </Box>
+            </Button>
+            {anexo && (
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => setAnexo(null)}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Remover arquivo
+                </Button>
+              </Box>
+            )}
+          </Box>
+
+          {uploadProgress > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="caption" display="block" gutterBottom>
+                Enviando arquivo: {Math.round(uploadProgress)}%
+              </Typography>
+              <LinearProgress variant="determinate" value={uploadProgress} />
+            </Box>
+          )}
+
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            disabled={uploading}
+            size="large"
             sx={{
+              py: 2,
+              borderRadius: 1,
+              fontSize: '1rem',
+              fontWeight: 'medium',
               mt: 2,
-              fontSize: isMobile ? '0.875rem' : '1rem', 
+              '&:hover': {
+                boxShadow: 2,
+              }
             }}
           >
-            Progresso do upload: {Math.round(uploadProgress)}%
+            {uploading ? (
+              <>
+                <CircularProgress size={24} color="inherit" sx={{ mr: 2 }} />
+                Enviando...
+              </>
+            ) : (
+              'Enviar Proposta'
+            )}
+          </Button>
+
+          <Typography variant="caption" display="block" sx={{ mt: 2, color: 'text.secondary', textAlign: 'center' }}>
+            * Campos obrigatórios
           </Typography>
-        )}
-      </form>
+        </form>
+      </Paper>
+
+      <Snackbar
+        open={successAlert}
+        autoHideDuration={6000}
+        onClose={() => setSuccessAlert(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSuccessAlert(false)} severity="success" sx={{ width: '100%' }}>
+          Proposta enviada com sucesso!
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={errorAlert}
+        autoHideDuration={6000}
+        onClose={() => setErrorAlert(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setErrorAlert(false)} severity="error" sx={{ width: '100%' }}>
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

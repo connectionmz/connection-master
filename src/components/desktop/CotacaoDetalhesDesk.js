@@ -570,16 +570,14 @@ const CotacaoDetalhesDesk = ({ user }) => {
         <DialogContent>
           {proposalDetails ? (
             <div>
-              <Typography variant="h6" gutterBottom>
-                Proposta:
-              </Typography>
-              <div dangerouslySetInnerHTML={{ __html: proposalDetails.proposal }} />
-              <Typography variant="body1" sx={{ mt: 2 }}>
-                Estado: {proposalDetails.status}
-              </Typography>
-              <Typography variant="body1">
-                Nota: {proposalDetails?.nota || 'Ainda sem nota'}
-              </Typography>
+              <a
+              href={`/cotacao/${id}/proposta/${user.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              ABRIR PROPOSTA
+            </a>
             </div>
           ) : (
             <Typography variant="body1">Carregando detalhes...</Typography>

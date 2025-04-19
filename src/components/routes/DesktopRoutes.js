@@ -314,7 +314,7 @@ const DesktopRoutes = ({ user }) => {
             {/* Rotas de cotações e propostas */}
             <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
             <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
-            <Route path="/proposta/:id/:cotId" element={<ProposalDesk />} />
+            <Route path="/proposta/:id/:cotId" element={<ProposalDesk user={user} />} />
             <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
             <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
             <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk user={user} />} />

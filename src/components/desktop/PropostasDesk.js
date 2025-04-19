@@ -27,7 +27,7 @@ import {
 } from '@mui/icons-material';
 import BackButton from '../BackButton';
 
-const PropostasDesk = () => {
+const PropostasDesk = ({user}) => {
   const { id } = useParams();
   const [propostas, setPropostas] = useState([]);
   const [loading, setLoading] = useState(true);
