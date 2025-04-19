@@ -23,6 +23,7 @@ import { auth, db } from '../fb';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
+import { HomeIcon } from 'lucide-react';
 
 const AuthDesk = ({ data }) => {
   // State management
@@ -237,7 +238,7 @@ const AuthDesk = ({ data }) => {
                   }
                 }}
               />
-              
+ 
               <Button
                 type="submit"
                 fullWidth
@@ -261,6 +262,49 @@ const AuthDesk = ({ data }) => {
               >
                 {isLoading ? 'Entrando...' : 'Entrar com Email'}
               </Button>
+              <Button
+  type="button" // Alterado para type="button" já que não está em um formulário
+  fullWidth
+  variant="outlined"
+  size="large"
+  disabled={isLoading}
+  onClick={() => navigate('/')} // Navega para a rota principal
+  startIcon={
+    isLoading ? (
+      <CircularProgress size={20} color="inherit" />
+    ) : (
+      <HomeIcon /> // Ícone mais significativo para "home"
+    )
+  }
+  sx={{
+    mt: 3,
+    mb: 2,
+    py: 1.5,
+    borderRadius: 2, // Bordas mais arredondadas
+    textTransform: 'none',
+    fontSize: '1.1rem', // Texto um pouco maior
+    fontWeight: 500, // Peso médio para o texto
+    letterSpacing: '0.5px', // Pequeno espaçamento entre letras
+    transition: 'all 0.3s ease-in-out',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    '&:hover': {
+      transform: 'translateY(-3px)', // Efeito mais pronunciado
+      boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+      backgroundColor: (theme) => theme.palette.primary.dark // Cor mais escura no hover
+    },
+    '&:active': {
+      transform: 'translateY(0)', // Efeito de clique
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    },
+    '&.Mui-disabled': {
+      opacity: 0.7, // Estilo melhor para estado desabilitado
+      transform: 'none'
+    }
+  }}
+>
+  {isLoading ? 'A entrar...' : 'Entrar como visitante'}
+</Button>
+
               
               <Grid container justifyContent="space-between">
                 <Grid item>
