@@ -403,11 +403,13 @@ const CotacaoDetalhesDesk = ({ user }) => {
     ) : (
       /* Non-owner actions */
       <>
-        {hasProposal ? (
-          <Button 
+            {hasProposal ? (
+            <Button 
             variant="contained" 
             color="info" 
-            onClick={handleOpen}
+            component="a"
+            href={`/minha_proposta/cotacao/${id}/proposta/${user.id}`}
+            rel="noopener noreferrer"
             size={isMobile ? 'small' : 'medium'}
             fullWidth={isMobile}
           >
@@ -564,31 +566,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
         </Box>
       </Modal>
 
-      {/* Proposal Details Modal */}
-      <Dialog open={openModal} onClose={handleClose} fullScreen={isMobile}>
-        <DialogTitle fontWeight="bold">Detalhes da Proposta</DialogTitle>
-        <DialogContent>
-          {proposalDetails ? (
-            <div>
-              <a
-              href={`/minha_proposta/cotacao/${id}/proposta/${user.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              ABRIR PROPOSTA
-            </a>
-            </div>
-          ) : (
-            <Typography variant="body1">Carregando detalhes...</Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
+
 
       {/* Report Modal */}
       <Dialog open={denunciaModalOpen} onClose={handleFecharDenunciaModal} fullScreen={isMobile}>
