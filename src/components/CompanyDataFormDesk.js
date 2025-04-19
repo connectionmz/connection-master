@@ -11,7 +11,8 @@ import {
   CircularProgress,
   Alert,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  ListItemText
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { get, ref, set, push } from 'firebase/database';
@@ -525,84 +526,65 @@ const CompanyDataFormDesk = () => {
                 )}
               </TextField>
 
-            {subsectores.length > 0 && (
-              <TextField
-                select
-                label="Subsetores"
-                name="subsectores"
-                value={companyData.subsectores}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-                SelectProps={{
-                  multiple: true,
-                }}
-              >
-                {subsectores.map(sub => (
-                  <MenuItem key={sub} value={sub}>
-                    {sub}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
+              {subsectores.length > 0 && (
+                <TextField
+                  select
+                  label="Subsetores"
+                  name="subsectores"
+                  value={companyData.subsectores}
+                  onChange={handleChange}
+                  fullWidth
+                  margin="normal"
+                  SelectProps={{
+                    multiple: true,
+                    renderValue: (selected) => selected.join(', '), // mostra os selecionados
+                  }}
+                >
+                  {subsectores.map((sub) => (
+                    <MenuItem key={sub} value={sub}>
+                      <Checkbox checked={companyData.subsectores.includes(sub)} />
+                      <ListItemText primary={sub} />
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
           </Box>
         );
       case 4: // Upload de Logotipo
-        return (
-          <Box>
-            <Typography variant="body1" gutterBottom>
-              Faça carregamento do logotipo da empresa *
-            </Typography>
-            <Button variant="contained" component="label" sx={{ mb: 2 }}>
-              Carregar Logotipo
-              <input
-                type="file"
-                hidden
-                name="logo"
-                accept="image/*"
-                onChange={handleChange}
-                required
-              />
-            </Button>
-            {companyData.logo && (
-              <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <img
-                  src={URL.createObjectURL(companyData.logo)}
-                  alt="Preview do Logotipo"
-                  style={{
-                    maxWidth: '150px',
-                    maxHeight: '150px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                  }}
-                />
-              </Box>
-            )}
-            
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={termsAccepted}
-                  onChange={() => setTermsAccepted(!termsAccepted)}
-                  color="primary"
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Eu concordo com os{' '}
-                  <Link href="/termos" target="_blank" rel="noopener">
-                    Termos de Uso
-                  </Link>{' '}
-                  e{' '}
-                  <Link href="/politica" target="_blank" rel="noopener">
-                    Política de Privacidade
-                  </Link>
-                </Typography>
-              }
-              sx={{ mt: 2 }}
+      return (
+        <Box>
+          <Typography variant="body1" gutterBottom>
+            Faça carregamento do logotipo da empresa <small>(opcional)</small>
+          </Typography>
+          <Button variant="contained" component="label" sx={{ mb: 2 }}>
+            Carregar Logotipo
+            <input
+              type="file"
+              hidden
+              name="logo"
+              accept="image/*"
+              onChange={handleChange}
+              // removido o `required`
             />
-          </Box>
-        );
+          </Button>
+      
+          {companyData.logo && (
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <img
+                src={URL.createObjectURL(companyData.logo)}
+                alt="Preview do Logotipo"
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '150px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                }}
+              />
+            </Box>
+          )}
+        </Box>
+      );
+      
       default:
         return null;
     }

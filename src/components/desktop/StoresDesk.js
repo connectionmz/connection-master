@@ -46,15 +46,18 @@ const StoresDesk = ({ user }) => {
   const [shareAnchor, setShareAnchor] = useState(null);
   const [sharedProduct, setSharedProduct] = useState(null);
 
+
+  // Dados do usuário protegidos
+  const userId = user?.id || 'anonymous';
+  const userProvince = user?.provinciaTemp || user?.provincia || null;
+
   // Registrar impressão ou clique
   const trackInteraction = async (type, action, itemId, storeId = null) => {
     try {
       const timestamp = Date.now();
       const date = new Date().toISOString().split('T')[0];
       const hour = new Date().getHours();
-      const userId = user?.id || 'anonymous';
 
-      // Dados básicos
       const interactionData = {
         type,
         action,
@@ -67,15 +70,13 @@ const StoresDesk = ({ user }) => {
         userAgent: navigator.userAgent
       };
 
-      // Caminho para salvar os dados
       let path;
       if (action === 'impression') {
         path = `impressions/${type}_${itemId}_${userId}`;
       } else {
         path = `clicks/${type}_${itemId}_${userId}_${timestamp}`;
         
-        // Atualizar contador de cliques no produto/loja
-        if (type === 'product') {
+        if (type === 'product' && storeId) {
           const productRef = ref(db, `stores/${storeId}/products/${itemId}/clicks`);
           await set(productRef, increment(1));
         } else if (type === 'store') {
@@ -84,7 +85,6 @@ const StoresDesk = ({ user }) => {
         }
       }
 
-      // Salvar no Firebase
       const interactionRef = ref(db, path);
       await set(interactionRef, interactionData);
 
@@ -108,16 +108,15 @@ const StoresDesk = ({ user }) => {
             products: store.products || {},
             settings: store.settings || { showPrices: true }
           }));
-
-          // Filtrar por província se disponível
-          const userProvince = user?.provinciaTemp || user?.provincia;
-          const filtered = userProvince 
-            ? storesData.filter(store => store.company?.provincia === userProvince)
-            : storesData;
-
+  
+          // Exibe todas as lojas se user não existir
+          const filtered = !user ? storesData : 
+            (userProvince 
+              ? storesData.filter(store => store.company?.provincia === userProvince)
+              : storesData);
+  
           setStores(filtered);
           
-          // Registrar impressões das lojas visíveis
           filtered.forEach(store => {
             trackInteraction('store', 'impression', store.id);
           });
@@ -132,7 +131,7 @@ const StoresDesk = ({ user }) => {
     };
     
     fetchStores();
-  }, [user?.provincia, user?.provinciaTemp]);
+  }, [user, userProvince]); // Adicionei user como dependência
 
   // Produtos com memoização e registro de impressão
   const products = useMemo(() => {
@@ -368,94 +367,94 @@ const StoresDesk = ({ user }) => {
 
       {/* Lojas em destaque */}
       {featuredStores.length > 0 && (
-        <Box sx={{ 
-          maxWidth: 1400,
-          mx: 'auto',
-          mb: 4,
-          p: 2,
-          backgroundColor: '#fff',
-          borderRadius: 2,
-          boxShadow: 1
-        }}>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Store color="primary" />
-            Lojas em Destaque
-          </Typography>
-          
-          <Box sx={{
-            display: "flex",
-            overflowX: "auto",
-            gap: 2,
-            py: 1,
-            '&::-webkit-scrollbar': {
-              height: 6,
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.primary.main,
-              borderRadius: 3,
-            },
-          }}>
-            {featuredStores.map((store) => (
-              <Tooltip key={store.id} title={store.name} arrow>
-                <TrackedStoreLink store={store}>
-                  <Box sx={{
-                    minWidth: 120,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    p: 1,
-                    borderRadius: 1,
-                    '&:hover': {
-                      backgroundColor: '#f5f5f5'
-                    }
-                  }}>
-                    <Badge
-                      overlap="circular"
-                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                      badgeContent={
-                        store.company?.verified ? (
-                          <Verified fontSize="small" color="primary" />
-                        ) : null
-                      }
-                    >
-                      <Avatar
-                        src={store.company?.logo}
-                        sx={{
-                          width: 80,
-                          height: 80,
-                          border: `2px solid ${theme.palette.primary.main}`,
-                        }}
-                      >
-                        {store.name.charAt(0)}
-                      </Avatar>
-                    </Badge>
-                    <Typography
-                      variant="body2"
-                      sx={{ 
-                        mt: 1,
-                        fontWeight: 500,
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: '100%'
-                      }}
-                    >
-                      {store.name}
-                    </Typography>
-                    <Chip
-                      label={`${Object.keys(store.products).length} produtos`}
-                      size="small"
-                      color="info"
-                      sx={{ mt: 1 }}
-                    />
-                  </Box>
-                </TrackedStoreLink>
-              </Tooltip>
-            ))}
-          </Box>
-        </Box>
-      )}
+  <Box sx={{ 
+    maxWidth: 1400,
+    mx: 'auto',
+    mb: 4,
+    p: 2,
+    backgroundColor: '#fff',
+    borderRadius: 2,
+    boxShadow: 1
+  }}>
+    <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Store color="primary" />
+      Lojas em Destaque
+    </Typography>
+    
+    <Box sx={{
+      display: "flex",
+      overflowX: "auto",
+      gap: 2,
+      py: 1,
+      '&::-webkit-scrollbar': { height: 6 },
+      '&::-webkit-scrollbar-thumb': {
+        backgroundColor: theme.palette.primary.main,
+        borderRadius: 3,
+      },
+    }}>
+      {(featuredStores || []).map((store) => (
+        <Tooltip 
+          key={store?.id} 
+          title={store?.name || "Loja sem nome"} 
+          arrow
+        >
+          <TrackedStoreLink store={store}>
+            <Box sx={{
+              minWidth: 120,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              p: 1,
+              borderRadius: 1,
+              '&:hover': { backgroundColor: '#f5f5f5' }
+            }}>
+              <Badge
+                overlap="circular"
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                badgeContent={
+                  store?.company?.verified ? (
+                    <Verified fontSize="small" color="primary" />
+                  ) : null
+                }
+              >
+                <Avatar
+                  src={store?.company?.logo}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    border: `2px solid ${theme.palette.primary.main}`,
+                  }}
+                >
+                  {(store?.name || '').charAt(0)}
+                </Avatar>
+              </Badge>
+              <Typography
+                variant="body2"
+                sx={{ 
+                  mt: 1,
+                  fontWeight: 500,
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '100%'
+                }}
+              >
+                {store?.name || "Loja sem nome"}
+              </Typography>
+              <Chip
+                label={`${Object.keys(store?.products || {}).length} produtos`}
+                size="small"
+                color="info"
+                sx={{ mt: 1 }}
+              />
+            </Box>
+          </TrackedStoreLink>
+        </Tooltip>
+      ))}
+    </Box>
+  </Box>
+)}
 
       {/* Listagem de produtos */}
       {loading ? (

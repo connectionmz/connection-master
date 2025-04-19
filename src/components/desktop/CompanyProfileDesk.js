@@ -51,7 +51,7 @@ const CompanyProfile = ({ user }) => {
     const handleCloseSnackbar = () => {
         setOpenSnackbar(false);
     };
-
+    
     useEffect(() => {
         if (userId) {
 
@@ -93,12 +93,14 @@ const CompanyProfile = ({ user }) => {
                     setModules(companyData.activeModules || {});
                     setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
     
-                    const newVisitRef = push(visitasRef);
-                    await update(newVisitRef, {
-                        visitorId: user?.id || '',
-                        visitorName: user?.nome || 'Visitante Anônimo',
-                        timestamp: new Date().toISOString()
-                    });
+                     if (user) {
+                             const newVisitRef = push(visitasRef);
+                             await update(newVisitRef, {
+                                 visitorId: user.id,
+                                 visitorName: user.nome,
+                                 timestamp: new Date().toISOString()
+                             });
+                         }
     
                     if (socialSnapshot.exists()) {
                         setSocial(socialSnapshot.val());
@@ -132,6 +134,7 @@ const CompanyProfile = ({ user }) => {
     }, [userId, navigate, user]);
 
     useEffect(() => {
+        if (!user) return;
         const connectionRef = ref(db, `connections/${userId}/${user.id}`);
         const unsubscribe = onValue(connectionRef, (snapshot) => {
             if (snapshot.exists()) {
@@ -362,6 +365,7 @@ const CompanyProfile = ({ user }) => {
             <Box textAlign="center" mt={8}>
                 <Typography variant="h5" fontWeight="bold">{userData?.displayName}</Typography>
                 <Typography color="text.secondary" mt={1}>{userData?.bio}</Typography>
+                {user && (
                     <Button
                         variant={
                             connectionStatus === "accepted"
@@ -385,7 +389,7 @@ const CompanyProfile = ({ user }) => {
                             ? "Desconectar"
                             : "Conectar"}
                     </Button>
-
+                )}
                 {/* Ícones de Contato e Redes Sociais */}
                 <Box
                     display="flex"
