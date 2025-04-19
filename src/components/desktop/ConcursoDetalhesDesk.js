@@ -232,7 +232,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
             </Grid>
             <Grid item xs>
             <Typography variant={isMobile ? "h6" : "h5"} gutterBottom fontWeight="bold">
-              {concurso.titulo || 'Concurso sem título'}  // Changed from title to titulo
+              {concurso.titulo || 'Concurso sem título'} 
             </Typography>
               
               <Chip

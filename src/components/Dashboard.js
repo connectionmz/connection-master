@@ -24,87 +24,8 @@ import MarqueeAnuncios from "./MarqueeAnuncios";
 import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
 import CategoriaList from "./desktop/CategoriasList";
+import InqueritosList from "./desktop/InqueritosList";
 
-const InfoBlock = ({ title, items, linkBase, isCategory = false }) => (
-  <Paper sx={{ padding: 2, marginBottom: 2 }}>
-    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-      {title}
-    </Typography>
-    <List>
-      {items.length === 0 ? (
-        <Typography variant="body2" color="textSecondary">
-          Nenhum item disponível no momento.
-        </Typography>
-      ) : (
-        items.map((item) => (
-          <ListItem
-            key={item.id}
-            sx={{
-              marginBottom: "8px",
-              borderRadius: "8px",
-              transition: "all 0.3s ease-in-out",
-              "&:hover": { backgroundColor: "#f5f5f5" },
-            }}
-          >
-            <Box
-              component={Link}
-              to={`${linkBase}/${item.id}`}
-              sx={{
-                textDecoration: "none",
-                color: "black",
-                display: "flex",
-                alignItems: "center",
-                width: "100%",
-                transition: "transform 0.3s ease, color 0.3s",
-                "&:hover": {
-                  color: "#1976d2",
-                  transform: "scale(1.1)",
-                },
-              }}
-            >
-              <ListItemIcon>{/* Ícone removido */}</ListItemIcon>
-              <ListItemText primary={item.title} sx={{ fontWeight: "bold" }} />
-            </Box>
-          </ListItem>
-        ))
-      )}
-    </List>
-    <Divider sx={{ my: 2 }} />
-  </Paper>
-);
-
-const useFirebaseData = (path, limit = 10) => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const dataRef = query(ref(db, path), orderByKey(), limitToFirst(limit));
-    const unsubscribe = onValue(
-      dataRef,
-      (snapshot) => {
-        const rawData = snapshot.val();
-        if (rawData) {
-          const formattedData = Object.keys(rawData).map((key) => ({
-            id: key,
-            ...rawData[key],
-          }));
-          setData(formattedData);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        setError("Erro ao carregar os dados");
-        console.error("Erro ao carregar os dados:", error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [path, limit]);
-
-  return { data, loading, error };
-};
 
 const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
@@ -116,7 +37,6 @@ const Dashboard = ({ user }) => {
   const [hasRequestedDemo, setHasRequestedDemo] = useState(false); 
   const isMobile = useMediaQuery("(max-width:600px)");
 
-  const { data: inqueritos, loading: inqueritosLoading, error: inqueritosError } = useFirebaseData("surveys");
 
   useEffect(() => {
     const blogsRef = ref(db, "blogPost");
@@ -219,10 +139,6 @@ const Dashboard = ({ user }) => {
 
 
 
-  const filteredInqueritos = useMemo(() => {
-    return inqueritos.filter((inquerito) => !hasRespondedIds.has(inquerito.id));
-  }, [inqueritos, hasRespondedIds]);
-
   const requestDemo = async () => {
     // Confirmação antes de enviar a solicitação
     const confirmRequest = window.confirm("Tem certeza que deseja solicitar uma demonstração?");
@@ -257,21 +173,7 @@ const Dashboard = ({ user }) => {
     setOpenSnackbar(false);
   };
 
-  if (inqueritosLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
 
-  if (error || inqueritosError) {
-    return (
-      <Typography color="error" align="center">
-        {error || inqueritosError}
-      </Typography>
-    );
-  }
 
   return (
     <Box>
@@ -340,7 +242,7 @@ const Dashboard = ({ user }) => {
 
           {/* Sidebar Direita */}
           <Grid item xs={12} sm={3}>
-  {/* Seção de Publicidade para PHC CS */}
+  {/* Seção de Publicidade para PHC CS 
   <Paper
     sx={{
       padding: 2,
@@ -381,30 +283,9 @@ const Dashboard = ({ user }) => {
       </Button>
     )}
   </Paper>
-  {/* Outros blocos de informação */}
-  {user ? (
-    <InfoBlock title="Inquéritos" items={filteredInqueritos} linkBase="/inquerito" />
-  ) : (
-    <Paper sx={{ padding: 2, marginBottom: 2 }}>
-      <Typography variant="h6" sx={{ fontWeight: "bold", textAlign: "center", mb: 2 }}>
-        Faça login para ver os inquéritos
-      </Typography>
-      <Button
-        component={Link}
-        to="/auth"
-        variant="contained"
-        fullWidth
-        sx={{
-          backgroundColor: "#1976d2",
-          color: "#ffffff",
-          fontWeight: "bold",
-          "&:hover": { backgroundColor: "#1565c0" },
-        }}
-      >
-        Autenticar
-      </Button>
-    </Paper>
-  )}
+  */}
+  <InqueritosList 
+  user={user} />
 </Grid>
         </Grid>
       </Container>

@@ -163,7 +163,6 @@ const BannerDesk = ({ user }) => {
 
     const handleBannersData = async (snapshot) => {
       const bannersData = snapshot.val();
-      console.log('Dados brutos dos banners:', bannersData);
       
       if (!bannersData) {
         setBanners([]);
@@ -179,7 +178,6 @@ const BannerDesk = ({ user }) => {
 
       // Filtrar banners ativos e relevantes
       const filteredBanners = filterBanners(bannerList, user);
-      console.log('Banners filtrados:', filteredBanners);
 
       // Atualizar estado
       setBanners(filteredBanners);

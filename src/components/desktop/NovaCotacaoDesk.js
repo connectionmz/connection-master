@@ -206,7 +206,8 @@ const NovaCotacao = ({ user }) => {
 
           if (empresa.email) {
             const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
-            await Promise.all(emails.map(email => sendEmail(email, mailMessage))); // Note que agora passamos 'email' em vez de 'emails'
+            console.log(emails)
+            await Promise.all(emails.map(email => sendEmail(email, mailMessage))); 
           }
         }
       }

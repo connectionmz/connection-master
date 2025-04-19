@@ -471,7 +471,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [days, setDays] = useState(1);
+  const [days, setDays] = useState(null);
   const [totalCost, setTotalCost] = useState(30);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -637,7 +637,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     setLink('');
     setFile(null);
     setImageUrl('');
-    setDays(1);
+    setDays(null);
     setPhoneNumber('');
     setSelectedProvincias(user.provincia ? [user.provincia] : []);
     setSelectedSectores(user.sector ? [user.sector] : []);
@@ -757,12 +757,29 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       <Box mb={2}>
         <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
         <TextField
-          type="number"
-          value={days}
-          onChange={(e) => setDays(Math.min(Math.max(Number(e.target.value), 1), 30))}
-          inputProps={{ min: 1, max: 30 }}
-          fullWidth
-        />
+              type="number"
+              value={days}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  setDays('');
+                  return;
+                }
+
+                const numberValue = Number(value);
+                if (numberValue >= 0 && numberValue <= 30) {
+                  setDays(numberValue);
+                }
+              }}
+              onBlur={() => {
+                // Quando sair do input, forçar limite
+                if (days < 1) setDays(1);
+                if (days > 30) setDays(30);
+              }}
+              inputProps={{ min: 1, max: 30 }}
+              fullWidth
+            />
+
       </Box>
 
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>

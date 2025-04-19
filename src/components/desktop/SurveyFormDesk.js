@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, Button, TextField, FormControl, RadioGroup, FormControlLabel, Radio, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import {
+  Box, Paper, Typography, Button, FormControl, RadioGroup,
+  FormControlLabel, Radio, CircularProgress, Dialog, DialogActions,
+  DialogContent, DialogTitle
+} from '@mui/material';
 import { db } from "../../fb";
 import { ref, set, get, push } from "firebase/database";
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../BackButton';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
   const [responses, setResponses] = useState({});
@@ -32,7 +38,6 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
   const sendNotificationToSurveyCreator = async () => {
     if (!surveyData?.company?.id) return;
-    
     const notification = {
       type: "survey_response",
       message: `A empresa ${user.nome} respondeu ao seu inquérito "${surveyData.title}"`,
@@ -44,7 +49,6 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
       surveyId: surveyId,
       surveyTitle: surveyData.title
     };
-
     try {
       const notificationsRef = ref(db, `notifications/${surveyData.company.id}`);
       await push(notificationsRef, notification);
@@ -55,12 +59,9 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
   const handleSubmit = async () => {
     if (loading || isSubmitting) return;
-
     setLoading(true);
     setError(null);
-
     try {
-      // 1. Salvar as respostas
       const surveyRef = ref(db, `survey_responses/${surveyId}/${user.id}`);
       await set(surveyRef, {
         company: {
@@ -73,10 +74,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
         responses: responses,
         submittedAt: Date.now(),
       });
-
-      // 2. Enviar notificação para o criador do inquérito
       await sendNotificationToSurveyCreator();
-
       alert("Respostas enviadas com sucesso!");
       navigate("/dashboard");
     } catch (err) {
@@ -107,23 +105,32 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
       switch (question.tipo) {
         case "aberta":
           return (
-            <Box key={index} sx={{ marginBottom: 2 }}>
-              <Typography variant="body1">{question.texto}</Typography>
-              <TextField
-                fullWidth
-                variant="outlined"
-                multiline
-                rows={4}
-                onChange={(e) => handleChange(question.texto, e.target.value)}
+            <Box key={index} sx={{ marginBottom: 4 }}>
+              <Typography variant="body1" sx={{ marginBottom: 1 }}>
+                {question.texto}
+              </Typography>
+              <ReactQuill
+                theme="snow"
                 value={responses[question.texto] || ""}
+                onChange={(val) => handleChange(question.texto, val)}
+                modules={{
+                  toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link']
+                  ]
+                }}
+                formats={['bold', 'italic', 'underline', 'list', 'bullet', 'link']}
               />
             </Box>
           );
-        
+
         case "multipla_escolha":
           return (
-            <Box key={index} sx={{ marginBottom: 2 }}>
-              <Typography variant="body1">{question.texto}</Typography>
+            <Box key={index} sx={{ marginBottom: 4 }}>
+              <Typography variant="body1" sx={{ marginBottom: 1 }}>
+                {question.texto}
+              </Typography>
               <FormControl fullWidth>
                 <RadioGroup
                   value={responses[question.texto] || ""}
@@ -141,7 +148,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
               </FormControl>
             </Box>
           );
-        
+
         default:
           return null;
       }
@@ -150,7 +157,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
 
   if (hasResponded) {
     return (
-      <Box width="100%" height="100vh"> 
+      <Box width="100%" height="100vh">
         <Paper sx={{ padding: 3 }}>
           <BackButton sx={{ mb: 2 }} />
           <Typography variant="h5">
@@ -162,14 +169,17 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
   }
 
   return (
-    <Box width="100%" height="100vh">    
+    <Box width="100%" height="100vh">
       <Paper sx={{ padding: 3 }}>
         <BackButton sx={{ mb: 2 }} />
 
-        <Typography variant="h5" sx={{ marginBottom: 2 }}>
-          <a href={`/perfil/${surveyData.company.id}`}>{surveyData.company.nome}</a><br/>
-          {surveyData.title}
+        <Typography variant="h5" color='primary' sx={{ marginBottom: 2 }}>
+          <a href={`/perfil/${surveyData.company.id}`}>{surveyData.company.nome}</a><br />
         </Typography>
+        <Typography variant="h5" sx={{ marginBottom: 2 }}>
+        {surveyData.title}
+        </Typography>
+
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
           {surveyData.description}
         </Typography>
@@ -202,12 +212,8 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color="primary">
-            Cancelar
-          </Button>
-          <Button onClick={handleConfirmSubmit} color="primary">
-            Confirmar
-          </Button>
+          <Button onClick={handleCloseConfirmDialog} color="primary">Cancelar</Button>
+          <Button onClick={handleConfirmSubmit} color="primary">Confirmar</Button>
         </DialogActions>
       </Dialog>
     </Box>

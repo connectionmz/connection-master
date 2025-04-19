@@ -29,12 +29,13 @@ import BackButton from '../BackButton';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import sendEmail from '../sms/SendMail';
+import { formatPrice } from '../../utils/utils';
 
 const CriarProformaDesk = ({ user }) => {
   const [cliente, setCliente] = useState(null); // Armazenar o objeto completo do cliente
   const [dataEmissao, setDataEmissao] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');
-  const [itens, setItens] = useState([{ descricao: '', quantidade: 1, preco: 0 }]);
+  const [itens, setItens] = useState([{ descricao: '', quantidade: 1, preco: null }]);
   const [errors, setErrors] = useState({});
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -116,7 +117,7 @@ const CriarProformaDesk = ({ user }) => {
 
     const item = {
       descricao: selectedProduto.name,
-      quantidade: 1,
+      quantidade: null,
       preco: selectedProduto.price,
     };
     setItens([...itens, item]);
@@ -468,7 +469,7 @@ const CriarProformaDesk = ({ user }) => {
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Total: {total} MZN
+            Total: {formatPrice(total)} MZN
           </Typography>
           <Button
             type="submit"
