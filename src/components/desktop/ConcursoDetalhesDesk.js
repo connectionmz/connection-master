@@ -71,6 +71,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
 
       const unsubscribeConcurso = onValue(concursoRef, async (snapshot) => {
         const data = snapshot.val();
+        console.log(data)
         if (!data) {
           setError('Concurso não encontrado');
           setLoading(false);
@@ -80,7 +81,6 @@ const ConcursoDetalhesDesk = ({ user }) => {
         setConcurso(data);
         setLoading(false);
 
-        // Buscar empresas que visualizaram o concurso
         if (data.views) {
           const empresasIds = Object.keys(data.views);
           
@@ -337,73 +337,95 @@ const ConcursoDetalhesDesk = ({ user }) => {
         <Divider />
         
         <CardActions sx={{ p: isMobile ? 1 : 2 }}>
-          <Stack 
-            direction={isMobile ? 'column' : 'row'} 
-            spacing={isMobile ? 1 : 2} 
-            width="100%"
+  <Stack 
+    direction={isMobile ? 'column' : 'row'} 
+    spacing={isMobile ? 1 : 2} 
+    width="100%"
+  >
+    <Button 
+      variant="contained" 
+      color="primary" 
+      onClick={handleBaixarEdital} 
+      startIcon={<FileDownload />}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+      {isMobile ? 'Baixar Edital' : 'Baixar Documento do Edital'}
+    </Button>
+    
+    <Button 
+      variant="outlined" 
+      onClick={handlePartilhar} 
+      startIcon={<Share />}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+      Partilhar
+    </Button>
+
+    <Button 
+      variant="outlined" 
+      color="error" 
+      onClick={handleAbrirDenunciaModal} 
+      startIcon={<Report />}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+      Denunciar
+    </Button>
+
+    {/* Contacto Telefónico */}
+    <Button
+      variant="outlined"
+      color="success"
+      startIcon={<Phone />}
+      href={`tel:${concurso.company?.contacto || ''}`}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+    </Button>
+
+    {/* Email */}
+    <Button
+      variant="outlined"
+      color="info"
+      startIcon={<Email />}
+      href={`mailto:${concurso.company?.email || ''}`}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+    </Button>
+
+    {/* Owner-specific actions */}
+    {user.id === concurso.company?.id && (
+      <>
+        {concurso.status === "Fechada" || isConcursoExpirado() ? (
+          <Typography 
+            variant="body2" 
+            color="error" 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleBaixarEdital} 
-              startIcon={<FileDownload />}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              {isMobile ? 'Baixar Edital' : 'Baixar Documento do Edital'}
-            </Button>
-            
-            <Button 
-              variant="outlined" 
-              onClick={handlePartilhar} 
-              startIcon={<Share />}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              Partilhar
-            </Button>
-            
-            <Button 
-              variant="outlined" 
-              color="error" 
-              onClick={handleAbrirDenunciaModal} 
-              startIcon={<Report />}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              Denunciar
-            </Button>
-            
-            {/* Owner-specific actions */}
-            {user.id === concurso.company?.id && (
-              <>
-                {concurso.status === "Fechada" || isConcursoExpirado() ? (
-                  <Typography 
-                    variant="body2" 
-                    color="error" 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {concurso.status === "Fechada" ? "Concurso fechado" : "Concurso expirado"}
-                  </Typography>
-                ) : (
-                  <Button
-                    variant="contained"
-                    color="error"
-                    onClick={handleFecharConcurso}
-                    size={isMobile ? 'small' : 'medium'}
-                    fullWidth={isMobile}
-                  >
-                    Fechar Concurso
-                  </Button>
-                )}
-              </>
-            )}
-          </Stack>
-        </CardActions>
+            {concurso.status === "Fechada" ? "Concurso fechado" : "Concurso expirado"}
+          </Typography>
+        ) : (
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleFecharConcurso}
+            size={isMobile ? 'small' : 'medium'}
+            fullWidth={isMobile}
+          >
+            Fechar Concurso
+          </Button>
+        )}
+      </>
+    )}
+  </Stack>
+</CardActions>
       </Card>
 <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
   <CardContent>
