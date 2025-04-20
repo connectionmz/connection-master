@@ -411,8 +411,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
             href={`/minha_proposta/cotacao/${id}/proposta/${user.id}`}
             rel="noopener noreferrer"
             size={isMobile ? 'small' : 'medium'}
-            fullWidth={isMobile}
-          >
+            fullWidth={isMobile}>
             {isMobile ? 'Minha Proposta' : 'Ver Minha Proposta'}
           </Button>
         ) : (

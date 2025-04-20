@@ -185,7 +185,7 @@ const notification = {
   fromUserName: user.nome,
   timestamp: new Date().toISOString(),
   status: 'unread',
-  url: `/cotacao/${id}/proposta/${proposalId}`,
+  link: `/cotacao/${id}/proposta/${user.id}`,
   cotacaoId: id,
   proposalId: proposalId,
 };
