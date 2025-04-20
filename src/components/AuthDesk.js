@@ -281,9 +281,9 @@ const AuthDesk = ({ data }) => {
               </Button>
               <Grid container spacing={2} sx={{ mt: 3, mb: 2 }}>
   <Grid item xs={12} sm={6}>
-    <Button
+      <Button
       fullWidth
-      variant="outlined"
+      variant="contained"
       size="large"
       disabled={isLoading}
       onClick={handleGoogleSignIn}
@@ -293,20 +293,16 @@ const AuthDesk = ({ data }) => {
         borderRadius: 1,
         textTransform: 'none',
         fontSize: '1rem',
-        backgroundColor: 'background.paper',
-        color: 'text.primary',
-        borderColor: 'divider',
-        transition: 'all 0.3s',
+        backgroundColor: '#d32f2f', // vermelho
+        color: '#fff',
         '&:hover': {
-          backgroundColor: 'action.hover',
-          borderColor: 'text.secondary'
+          backgroundColor: '#b71c1c', // vermelho mais escuro
         }
       }}
     >
       Google
     </Button>
   </Grid>
-  
   <Grid item xs={12} sm={6}>
     <Button
       type="button"
@@ -331,11 +327,6 @@ const AuthDesk = ({ data }) => {
         letterSpacing: '0.5px',
         transition: 'all 0.3s ease-in-out',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        '&:hover': {
-          transform: 'translateY(-3px)',
-          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-          backgroundColor: (theme) => theme.palette.primary.dark
-        },
         '&:active': {
           transform: 'translateY(0)',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
