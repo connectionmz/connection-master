@@ -12,6 +12,8 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
 const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
+
+
   const [responses, setResponses] = useState({});
   const [hasResponded, setHasResponded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
       message: `A empresa ${user.nome} respondeu ao seu inquérito "${surveyData.title}"`,
       fromUserId: user.id,
       fromUserName: user.nome,
-      link: `https://app.connectionmozambique.com/perfil/${user.id}`,
+      link: `inquerito/${surveyId}`,
       timestamp: new Date().toISOString(),
       status: "unread",
       surveyId: surveyId,
