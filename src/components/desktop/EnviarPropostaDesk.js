@@ -432,7 +432,14 @@ const notification = {
                     </Typography>
                   </>
                 )}
-                <input hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" type="file" onChange={handleAnexoChange} />
+                <input hidden accept=".pdf,.PDF,
+                  .doc,.DOC,
+                  .docx,.DOCX,
+                  .xls,.XLS,
+                  .xlsx,.XLSX,
+                  .jpg,.JPG,
+                  .jpeg,.JPEG,
+                  .png,.PNG" type="file" onChange={handleAnexoChange} />
               </Box>
             </Button>
             {anexo && (
@@ -441,8 +448,7 @@ const notification = {
                   size="small"
                   color="error"
                   onClick={() => setAnexo(null)}
-                  sx={{ textTransform: 'none' }}
-                >
+                  sx={{ textTransform: 'none' }}>
                   Remover arquivo
                 </Button>
               </Box>

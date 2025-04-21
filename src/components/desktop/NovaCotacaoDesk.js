@@ -168,12 +168,23 @@ const NovaCotacao = ({ user }) => {
       await set(ref(db, `cotacoes/${cotacaoId}`), {
         ...formData,
         id: cotacaoId,
-        company: user,
+        company: {
+          nome: user.nome,
+          logoUrl:user.logoUrl,
+          provincia: user.provincia,
+          sector:user.sector,
+          id:user.id, 
+          distrito: user.distrito,
+          morada: user.endereco,
+          nuit:user.nuit || 'N/A', 
+          contacto: user.contacto,
+          email: user.email
+        },
         timestamp: new Date().toISOString(),
         datalimite: new Date(formData.deadline).toISOString(),
         status: 'open',
         link: linkDoPedido,
-        proposalLimit: formData.proposalLimit || null, // Inclui o limite de propostas
+        proposalLimit: formData.proposalLimit || null, 
       });
 
       setSnackbarMessage('Cotação publicada com sucesso!');
@@ -182,7 +193,6 @@ const NovaCotacao = ({ user }) => {
 
       //window.location="/cotacoes"
 
-      // Envio de notificações para empresas do setor
       const empresasRef = ref(db, 'company');
       const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.sector.trim()));
       const empresasSnapshot = await get(setorQuery);

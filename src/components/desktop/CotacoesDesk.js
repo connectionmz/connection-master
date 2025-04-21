@@ -110,6 +110,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 
                 // Armazena TODAS as cotações sem filtro
                 setCotacoes(cotacoesArray);
+
+                console.log(cotacoesArray)
                 
                 // Ordena por data
                 const sortedCotacoes = cotacoesArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -134,43 +136,39 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 }));
     
                 const currentDate = new Date();
+    
                 const updatedBanners = bannerList.map(banner => {
-                    // Verifica se o banner está expirado
                     const expireDate = new Date(banner.expireDate);
                     const isExpired = expireDate < currentDate;
-                    
-                    // Se expirou e ainda não foi marcado como expirado, atualiza no Firebase
+    
                     if (isExpired && banner.status !== 'expired') {
                         update(ref(db, `banners/${banner.id}`), { status: 'expired' });
                         return { ...banner, status: 'expired' };
                     }
-                    
+    
                     return banner;
                 });
-    
                 const filteredBanners = updatedBanners.filter(banner => {
-                   
-                    
-                    // Verifica se a data de expiração é futura
+                    if (banner.status !== 'active' || banner.tipoAnuncio !== 'cotacoes') return false;
+    
                     const expireDate = new Date(banner.expireDate);
                     if (expireDate < currentDate) return false;
-                    
-                    // Filtra por província e setor do usuário
+    
                     if (user) {
                         const matchesProvincia = banner.provincias && 
                             banner.provincias.some(prov => 
                                 prov.toLowerCase() === user.provincia?.toLowerCase() || 
                                 prov.toLowerCase() === user.provinciaTemp?.toLowerCase()
                             );
-                        
+    
                         const matchesSector = banner.sectores && 
                             banner.sectores.some(sec => 
                                 sec.toLowerCase() === user.sector?.toLowerCase()
                             );
-                        
+    
                         return matchesProvincia && matchesSector;
                     }
-                    
+    
                     return true;
                 });
     
@@ -183,6 +181,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     
         return () => unsubscribe();
     }, [user?.provincia, user?.sector, user?.id]);
+    
 
     const handlePublishQuotation = () => {
         if (!hasModuleSMS) {

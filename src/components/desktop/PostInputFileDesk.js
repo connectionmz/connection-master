@@ -1,200 +1,345 @@
 import React, { useState, useEffect } from 'react';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { Alert, Snackbar, Button, Box, Typography, LinearProgress } from '@mui/material';
+import { 
+  Alert, 
+  Snackbar, 
+  Button, 
+  Box, 
+  Typography, 
+  LinearProgress,
+  Card,
+  CardContent,
+  CardMedia,
+  Grid,
+  Paper,
+  IconButton,
+  CircularProgress,
+  Tooltip
+} from '@mui/material';
 import { push, ref, set } from 'firebase/database';
 import { db } from '../../fb';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DescriptionIcon from '@mui/icons-material/Description';
 
-const allowedFileTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+const allowedFileTypes = [
+  'image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp', 
+  'application/pdf', 
+  'application/msword', 
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+  'application/vnd.ms-excel', 
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+];
+
+const fileIcons = {
+  'image/jpeg': '🖼️',
+  'image/png': '🖼️',
+  'image/jpg': '🖼️',
+  'image/gif': '🖼️',
+  'image/webp': '🖼️',
+  'application/pdf': '📄',
+  'application/msword': '📝',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
+  'application/vnd.ms-excel': '📊',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊'
+};
 
 const PostInputFileDesk = ({ user }) => {
-  const [newFiles, setNewFiles] = useState([]);
-  const [filePreviews, setFilePreviews] = useState({});
+  const [files, setFiles] = useState([]);
   const [fileDescriptions, setFileDescriptions] = useState({});
   const [uploadProgress, setUploadProgress] = useState({});
-  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState({}); // 'uploading', 'success', 'error'
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [allUploadsComplete, setAllUploadsComplete] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [isUploading, setIsUploading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSavePublishedFiles = () => {
-    if (!user || !user.id) {
-      console.error('Usuário não definido ou ID do usuário ausente');
+  const handleFileChange = (event) => {
+    const newFiles = Array.from(event.target.files);
+    const validFiles = newFiles.filter(file => allowedFileTypes.includes(file.type));
+    
+    if (validFiles.length !== newFiles.length) {
+      showSnackbar('Alguns arquivos foram rejeitados. Apenas imagens e documentos são permitidos.', 'warning');
+    }
+    
+    // Adiciona os novos arquivos à lista existente
+    setFiles(prevFiles => [...prevFiles, ...validFiles]);
+    
+    // Inicializa descrições para os novos arquivos
+    const newDescriptions = {};
+    validFiles.forEach(file => {
+      newDescriptions[file.name] = fileDescriptions[file.name] || '';
+    });
+    setFileDescriptions(prev => ({ ...prev, ...newDescriptions }));
+  };
+
+  const handleRemoveFile = (fileName) => {
+    setFiles(prevFiles => prevFiles.filter(file => file.name !== fileName));
+    setFileDescriptions(prev => {
+      const newDescriptions = { ...prev };
+      delete newDescriptions[fileName];
+      return newDescriptions;
+    });
+    setUploadProgress(prev => {
+      const newProgress = { ...prev };
+      delete newProgress[fileName];
+      return newProgress;
+    });
+  };
+
+  const handleDescriptionChange = (value, fileName) => {
+    setFileDescriptions(prev => ({ ...prev, [fileName]: value }));
+  };
+
+  const handleUploadFiles = () => {
+    if (!user?.id) {
+      showSnackbar('Usuário não identificado', 'error');
       return;
     }
 
-    if (newFiles.length > 0) {
-      setIsUploading(true);
-      const storage = getStorage();
-      let completedUploads = 0;
+    if (files.length === 0) {
+      showSnackbar('Nenhum arquivo selecionado para upload', 'warning');
+      return;
+    }
 
-      newFiles.forEach((file) => {
-        const filePath = `vitrine/${user.id}/${file.name}`;
-        const fileRef = storageRef(storage, filePath);
-        const uploadTask = uploadBytesResumable(fileRef, file);
+    setIsUploading(true);
+    const storage = getStorage();
+    let completedUploads = 0;
+    let successfulUploads = 0;
 
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress((prevProgress) => ({
-              ...prevProgress,
-              [file.name]: progress,
-            }));
-            setSnackbarOpen(true);
-          },
-          (error) => {
-            console.error('Erro ao carregar arquivo: ', error);
-            setIsUploading(false);
-          },
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref)
-              .then((url) => {
-                const description = fileDescriptions[file.name] || '';
-                const newPostRef = push(ref(db, `vitrine/${user.id}`));
-                const postId = newPostRef.key;
+    files.forEach((file) => {
+      const filePath = `vitrine/${user.id}/${Date.now()}_${file.name}`;
+      const fileRef = storageRef(storage, filePath);
+      const uploadTask = uploadBytesResumable(fileRef, file);
 
-                const postData = {
-                  id: postId,
-                  company: {
-                    id: user.id,
-                    name: user.nome,
-                    logo: user.logoUrl,
-                    sector: user.sector
-                  },
-                  description,
-                  url,
-                  fileType: file.type,
-                  timestamp: Date.now(),
-                };
+      setUploadStatus(prev => ({ ...prev, [file.name]: 'uploading' }));
 
-                set(newPostRef, postData)
-                  .then(() => {
-                    completedUploads++;
-                    if (completedUploads === newFiles.length) {
-                      setAllUploadsComplete(true);
-                      setIsUploading(false);
-                    }
-                  })
-                  .catch((error) => {
-                    console.error('Erro ao salvar dados do post no Firebase: ', error);
-                    setIsUploading(false);
-                  });
-              })
-              .catch((error) => {
-                console.error('Erro ao obter URL do arquivo: ', error);
-                setIsUploading(false);
-              });
-          }
-        );
-      });
-    } else {
-      console.error('Sem arquivos para carregar ou dados do usuário ausentes');
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+        },
+        (error) => {
+          console.error('Erro no upload:', error);
+          setUploadStatus(prev => ({ ...prev, [file.name]: 'error' }));
+          showSnackbar(`Falha no upload de ${file.name}`, 'error');
+          completedUploads++;
+          checkAllUploadsComplete(completedUploads, successfulUploads);
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref)
+            .then((url) => {
+              const description = fileDescriptions[file.name] || '';
+              const newPostRef = push(ref(db, `vitrine/${user.id}`));
+              const postId = newPostRef.key;
+
+              const postData = {
+                id: postId,
+                company: {
+                  id: user.id,
+                  name: user.nome,
+                  logo: user.logoUrl,
+                  sector: user.sector
+                },
+                description,
+                url,
+                fileType: file.type,
+                fileName: file.name,
+                timestamp: Date.now(),
+              };
+
+              return set(newPostRef, postData);
+            })
+            .then(() => {
+              setUploadStatus(prev => ({ ...prev, [file.name]: 'success' }));
+              successfulUploads++;
+              showSnackbar(`${file.name} enviado com sucesso!`, 'success');
+            })
+            .catch((error) => {
+              console.error('Erro ao salvar dados:', error);
+              setUploadStatus(prev => ({ ...prev, [file.name]: 'error' }));
+              showSnackbar(`Erro ao salvar dados de ${file.name}`, 'error');
+            })
+            .finally(() => {
+              completedUploads++;
+              checkAllUploadsComplete(completedUploads, successfulUploads);
+            });
+        }
+      );
+    });
+  };
+
+  const checkAllUploadsComplete = (completed, successful) => {
+    if (completed === files.length) {
+      setIsUploading(false);
+      if (successful > 0) {
+        showSnackbar(`${successful} arquivo(s) enviado(s) com sucesso!`, 'success');
+      }
     }
   };
 
-  useEffect(() => {
-    if (allUploadsComplete) {
-      setSnackbarOpen(true);
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-    }
-  }, [allUploadsComplete]);
+  const showSnackbar = (message, severity) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
 
-  const handleFileChange = (event) => {
-    const files = Array.from(event.target.files);
-    const validFiles = files.filter(file => allowedFileTypes.includes(file.type));
-
-    if (validFiles.length !== files.length) {
-      setErrorMessage('Alguns arquivos foram rejeitados. Apenas imagens e documentos são permitidos.');
-    } else {
-      setErrorMessage('');
-    }
-
-    setNewFiles(validFiles);
-
-    const previews = {};
-    validFiles.forEach((file) => {
-      if (file.type.startsWith('image')) {
-        previews[file.name] = URL.createObjectURL(file);
-      } else {
-        previews[file.name] = null;
-      }
-    });
-
-    setFilePreviews(previews);
-  };
-
-  const handleDescriptionChange = (value, fileName) => {
-    setFileDescriptions((prev) => ({ ...prev, [fileName]: value }));
+  const getFileIcon = (fileType) => {
+    return fileIcons[fileType] || '📁';
   };
 
   return (
-    <div className="p-4">
-      <Box sx={{ width: '100%' }} className="upload-file space-y-4">
-        <input
-          type="file"
-          multiple
-          onChange={handleFileChange}
-          disabled={isUploading}
-          accept=".jpg, .jpeg, .png, .gif, .webp, .pdf, .doc, .docx, .xls, .xlsx"
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
-
-        {errorMessage && <Alert severity="warning">{errorMessage}</Alert>}
-
-        {newFiles.length > 0 && (
-          <div className="file-list space-y-6">
-            {newFiles.map((file, index) => (
-              <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                {filePreviews[file.name] ? (
-                  <img
-                    src={filePreviews[file.name]}
-                    alt={file.name}
-                    className="w-20 h-20 object-cover rounded-lg border border-gray-300 shadow-sm"
-                  />
-                ) : (
-                  <Typography variant="body2" color="textSecondary">
-                    📄 {file.name}
-                  </Typography>
-                )}
-                <Box sx={{ flex: 1, ml: 2 }}>
-                  <ReactQuill
-                    value={fileDescriptions[file.name] || ''}
-                    onChange={(value) => handleDescriptionChange(value, file.name)}
-                    placeholder="Adicionar descrição"
-                    modules={{ toolbar: [['bold', 'italic', 'underline'], ['link']] }}
-                    style={{ marginTop: 16, height: '100px' }}
-                  />
-                  <LinearProgress
-                    variant="determinate"
-                    value={uploadProgress[file.name] || 0}
-                    sx={{ mt: 2 }}
-                  />
-                </Box>
-              </Box>
-            ))}
-          </div>
-        )}
-
+    <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Upload de Arquivos
+      </Typography>
+      
+      <Box sx={{ mb: 3 }}>
         <Button
-          onClick={handleSavePublishedFiles}
+          component="label"
+          variant="contained"
+          startIcon={<CloudUploadIcon />}
+          disabled={isUploading}
+        >
+          Selecionar Arquivos
+          <input
+            type="file"
+            multiple
+            hidden
+            onChange={handleFileChange}
+            accept={allowedFileTypes.join(',')}
+          />
+        </Button>
+      </Box>
+
+      {files.length > 0 && (
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          {files.map((file, index) => (
+            <Grid item xs={12} key={index}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    {file.type.startsWith('image') ? (
+                      <CardMedia
+                        component="img"
+                        sx={{ width: 60, height: 60, mr: 2, objectFit: 'cover' }}
+                        image={URL.createObjectURL(file)}
+                        alt={file.name}
+                      />
+                    ) : (
+                      <Box sx={{ 
+                        width: 60, 
+                        height: 60, 
+                        mr: 2, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        backgroundColor: '#f5f5f5',
+                        borderRadius: 1
+                      }}>
+                        <Typography variant="h4">
+                          {getFileIcon(file.type)}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="subtitle1" noWrap>
+                        {file.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {(file.size / 1024).toFixed(2)} KB
+                      </Typography>
+                    </Box>
+                    
+                    <Tooltip title="Remover arquivo">
+                      <IconButton 
+                        onClick={() => handleRemoveFile(file.name)}
+                        disabled={isUploading}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                  
+                  <Box sx={{ mb: 2 }}>
+                    <ReactQuill
+                      value={fileDescriptions[file.name] || ''}
+                      onChange={(value) => handleDescriptionChange(value, file.name)}
+                      placeholder="Adicionar descrição..."
+                      modules={{
+                        toolbar: [
+                          ['bold', 'italic', 'underline'],
+                          ['link'],
+                          ['clean']
+                        ]
+                      }}
+                      style={{ minHeight: '100px' }}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {uploadStatus[file.name] === 'uploading' && (
+                      <CircularProgress size={20} sx={{ mr: 1 }} />
+                    )}
+                    {uploadStatus[file.name] === 'success' && (
+                      <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+                    )}
+                    
+                    <Box sx={{ width: '100%', ml: 1 }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={uploadProgress[file.name] || 0}
+                        color={
+                          uploadStatus[file.name] === 'success' ? 'success' :
+                          uploadStatus[file.name] === 'error' ? 'error' : 'primary'
+                        }
+                      />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {files.length > 0 && (
+        <Button
+          onClick={handleUploadFiles}
           variant="contained"
           color="primary"
           disabled={isUploading}
-          sx={{ padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', textTransform: 'none' }}
+          startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
+          sx={{ mt: 2 }}
         >
-          {isUploading ? 'Carregando...' : 'Upload de Arquivos'}
+          {isUploading ? 'Enviando...' : 'Iniciar Upload'}
         </Button>
-      </Box>
-    </div>
+      )}
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+    </Paper>
   );
 };
 

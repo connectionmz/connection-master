@@ -51,7 +51,6 @@ const App = () => {
     provincia: ''
   });
 
-  // Função para buscar dados do usuário em tempo real
   const fetchUserDataRealtime = (user) => {
     try {
       const userRef = ref(db, `company/${user.uid}`);
@@ -81,10 +80,6 @@ const App = () => {
     }
   };
 
-  useEffect(() => {
-    const savedLanguage = localStorage.getItem('selectedLanguage') || 'en';
-    // Você pode usar o savedLanguage aqui, se necessário
-  }, []);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {

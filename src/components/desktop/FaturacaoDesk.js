@@ -74,8 +74,20 @@ const FaturacaoDesk = ({ user }) => {
           get(ref(db, `clients/${user.id}`)),
         ]);
 
-        setProformas(invoicesSnapshot.exists() ? Object.values(invoicesSnapshot.val()) : []);
+        // Obter e ordenar as proformas por dataCriacao (mais recente primeiro)
+        const proformasData = invoicesSnapshot.exists() ? Object.values(invoicesSnapshot.val()) : [];
+        const proformasOrdenadas = proformasData.sort((a, b) => b.dataCriacao - a.dataCriacao);
+
+        setProformas(proformasOrdenadas);
         setClients(clientsSnapshot.exists() ? Object.values(clientsSnapshot.val()) : []);
+
+        // DEBUG: Verificar ordenação
+        console.log('Proformas ordenadas:', proformasOrdenadas.map(p => ({
+          numero: p.numeroProforma,
+          criacao: p.dataCriacao,
+          emissao: p.dataEmissao
+        })));
+    
       } catch (err) {
         setError('Erro ao carregar dados.');
         showSnackbar('Erro ao carregar dados.', 'error');
@@ -85,9 +97,8 @@ const FaturacaoDesk = ({ user }) => {
     };
 
     fetchData();
-  }, [user]);
+}, [user]);
 
-  // Busca as conexões do usuário e adiciona as empresas à lista de clientes
   useEffect(() => {
     if (!user) return;
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, set, get } from 'firebase/database';
+import { ref, set, get, serverTimestamp } from 'firebase/database';
 import {
   Snackbar,
   TextField,
@@ -30,6 +30,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import sendEmail from '../sms/SendMail';
 import { formatPrice } from '../../utils/utils';
+import { saveContentToInbox } from '../SaveToInbox';
 
 const CriarProformaDesk = ({ user }) => {
   const [cliente, setCliente] = useState(null); // Armazenar o objeto completo do cliente
@@ -211,18 +212,31 @@ const CriarProformaDesk = ({ user }) => {
       const newProformaRef = ref(db, `invoices/${user.id}/${numeroProforma}`);
       await set(newProformaRef, {
         numeroProforma,
-        cliente: clienteLimpo, // Usar o objeto limpo
+        cliente: clienteLimpo,
         dataEmissao,
         dataVencimento,
         itens,
         total,
         status: 'POR PAGAR',
+        dataCriacao: serverTimestamp() 
       });
-  
 
       const proformaLink = `https://app.connectionmozambique.com/proforma/${numeroProforma}`;
 
-      // Notificar o cliente por e-mail, se houver um e-mail válido
+      const notification = {
+        type: 'invoice_generate',
+        message: `${user.nome}, criou uma Proforma para você`,
+        fromUserId: user.id,
+        fromUserName: user.nome,
+        timestamp: new Date().toISOString(),
+        status: 'unread',
+        link: `/proforma/${numeroProforma}`,
+        proformaId: numeroProforma,
+      };
+
+      saveContentToInbox(cliente.id, notification);
+
+
       if (clienteLimpo && clienteLimpo.email) {
         const title = `Proforma ${numeroProforma}`;
         const finalMessage = `

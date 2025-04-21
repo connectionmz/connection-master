@@ -287,6 +287,7 @@ const PublicarConcursoDesk = ({ user }) => {
                         label="Modalidade de Concurso">
                         <MenuItem value="">Selecione a Modalidade</MenuItem>
                         <MenuItem value="Concurso Público">Concurso Público</MenuItem>
+                        <MenuItem value="Concurso Privado">Concurso Privado</MenuItem>
                     </Select>
                 </FormControl>
                 <TextField

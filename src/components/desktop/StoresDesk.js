@@ -378,7 +378,7 @@ const StoresDesk = ({ user }) => {
   }}>
     <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
       <Store color="primary" />
-      Lojas em Destaque
+      Lojas disponíveis
     </Typography>
     
     <Box sx={{
@@ -442,12 +442,6 @@ const StoresDesk = ({ user }) => {
               >
                 {store?.name || "Loja sem nome"}
               </Typography>
-              <Chip
-                label={`${Object.keys(store?.products || {}).length} produtos`}
-                size="small"
-                color="info"
-                sx={{ mt: 1 }}
-              />
             </Box>
           </TrackedStoreLink>
         </Tooltip>

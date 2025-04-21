@@ -4,8 +4,17 @@ import { db } from '../../fb';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import CircularProgress from '@mui/material/CircularProgress';
-import { Avatar, Box, Typography, useMediaQuery, useTheme } from "@mui/material";
+import {
+  Avatar, Box, Typography, useMediaQuery, useTheme,
+  CircularProgress, Dialog, DialogContent, DialogTitle,
+  IconButton, Divider, Chip, Button, Link
+} from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import PhoneIcon from '@mui/icons-material/Phone';
+import EmailIcon from '@mui/icons-material/Email';
+import LanguageIcon from '@mui/icons-material/Language';
+import BusinessIcon from '@mui/icons-material/Business';
 import anunciar from '../../img/anunciar.gif';
 
 const BannerDesk = ({ user }) => {
@@ -13,6 +22,8 @@ const BannerDesk = ({ user }) => {
   const [companies, setCompanies] = useState({});
   const [loading, setLoading] = useState(true);
   const [trackedImpressions, setTrackedImpressions] = useState(new Set());
+  const [selectedBanner, setSelectedBanner] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -47,41 +58,34 @@ const BannerDesk = ({ user }) => {
   }, []);
 
   const bannerMatchesUser = useCallback((banner, user) => {
-    if (!user) return false; // Se não há usuário, não mostra o banner
-
-    // Verifica se o banner tem filtros de província
+    if (!user) return false;
     const hasProvinciaFilter = banner.provincias && banner.provincias.length > 0;
-    // Verifica se o banner tem filtros de setor
     const hasSectorFilter = banner.sectores && banner.sectores.length > 0;
 
-    // Se não há filtros, o banner é para todos
     if (!hasProvinciaFilter && !hasSectorFilter) return true;
 
-    // Verifica a província do usuário (se houver filtro)
     const provinciaMatch = !hasProvinciaFilter || 
         banner.provincias.some(provincia => 
             provincia.toLowerCase() === user.provinciaTemp?.toLowerCase() || 
             provincia.toLowerCase() === user.provincia?.toLowerCase()
         );
 
-    // Verifica o setor do usuário (se houver filtro)
     const sectorMatch = !hasSectorFilter || 
         banner.sectores.some(sector => 
             sector.toLowerCase() === user.sector?.toLowerCase()
         );
 
     return provinciaMatch && sectorMatch;
-}, []);
+  }, []);
 
-  // Função para filtrar banners ativos e relevantes
   const filterBanners = useCallback((bannerList, user) => {
     return bannerList.filter(banner => (
         banner.status === 'active' &&
-        banner.tipoAnuncio === 'home' &&
+        banner.tipoAnuncio ==='home' &&
         !isBannerExpired(banner) &&
         bannerMatchesUser(banner, user)
     ));
-}, [isBannerExpired, bannerMatchesUser]);
+  }, [isBannerExpired, bannerMatchesUser]);
 
   const registerImpression = useCallback(async (bannerId) => {
     const userId = getUserId();
@@ -98,7 +102,6 @@ const BannerDesk = ({ user }) => {
         screenResolution: `${window.screen.width}x${window.screen.height}`,
       };
 
-      // Use transaction to ensure atomic updates
       await set(ref(db, `anuncios_metrics/${bannerId}/impressoes/${userId}`), impressionData);
 
       if (userId !== 'desconhecido') {
@@ -149,13 +152,22 @@ const BannerDesk = ({ user }) => {
     }
   }, [getUserId, isMobile]);
 
+  const handleBannerClick = (banner) => {
+    setSelectedBanner(banner);
+    setOpenDialog(true);
+    registerClick(banner.id);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
   useEffect(() => {
     if (banners.length > 0) {
-        const companyIds = banners.map(banner => banner.companyId).filter(Boolean);
-        companyIds.forEach(fetchCompanyData);
+      const companyIds = banners.map(banner => banner.companyId).filter(Boolean);
+      companyIds.forEach(fetchCompanyData);
     }
-}, [banners, fetchCompanyData]);
-
+  }, [banners, fetchCompanyData]);
 
   useEffect(() => {
     const bannersRef = ref(db, 'banners');
@@ -170,20 +182,15 @@ const BannerDesk = ({ user }) => {
         return;
       }
 
-      // Converter para array e processar banners
       const bannerList = Object.entries(bannersData).map(([id, banner]) => ({
         id,
         ...banner,
       }));
 
-      // Filtrar banners ativos e relevantes
       const filteredBanners = filterBanners(bannerList, user);
-
-      // Atualizar estado
       setBanners(filteredBanners);
       setLoading(false);
 
-      // Registrar impressões
       filteredBanners.forEach(banner => {
         if (!trackedImpressions.has(banner.id)) {
           registerImpression(banner.id);
@@ -202,11 +209,8 @@ const BannerDesk = ({ user }) => {
     return () => {
       if (unsubscribeBanners) unsubscribeBanners();
     };
-  }, [user, filterBanners, trackedImpressions]);
+  }, [user, filterBanners, trackedImpressions, registerImpression]);
 
-
-
-  // Configurações do slider...
   const settings = {
     dots: true,
     infinite: true,
@@ -253,7 +257,8 @@ const BannerDesk = ({ user }) => {
       width: '100%',
       maxWidth: 'screen-xl',
       mx: 'auto',
-      mb: 4
+      mb: 4,
+      position: 'relative'
     }}>
       {activeBanners.length > 0 ? (
         <Slider {...settings}>
@@ -267,95 +272,78 @@ const BannerDesk = ({ user }) => {
                   width: '100%',
                   overflow: 'hidden',
                   height: isMobile ? '250px' : '600px',
+                  cursor: 'pointer'
                 }}
+                onClick={() => handleBannerClick(banner)}
               >
-                {banner.link ? (
-                  <a
-                    href={banner.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ width: '100%', height: '100%', display: 'block' }}
-                    onClick={() => registerClick(banner.id)}
-                  >
-                    <img
-                      src={banner.imageUrl}
-                      alt={`Banner ${banner.id}`}
-                      onError={(e) => (e.target.src = anunciar)}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  </a>
-                ) : (
-                  <img
-                    src={banner.imageUrl}
-                    alt={`Banner ${banner.id}`}
-                    onError={(e) => (e.target.src = anunciar)}
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'contain',
-                      backgroundColor: 'background.paper'
-                    }}
-                  />
-                )}
-                {/* Company Card */}
-                {company.nome && (
-                  <Box
+                <img
+                  src={banner.imageUrl}
+                  alt={`Banner ${banner.id}`}
+                  onError={(e) => (e.target.src = anunciar)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+                
+                {/* Mini Card de Informação */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    backdropFilter: 'blur(4px)',
+                    borderRadius: 2,
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)'
+                    }
+                  }}
+                >
+                  <Avatar
+                    src={company.logoUrl || ''}
+                    alt={company.nome}
                     sx={{
-                      position: 'absolute',
-                      bottom: 16,
-                      left: 16,
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                      backdropFilter: 'blur(4px)',
-                      boxShadow: 2,
-                      borderRadius: 2,
-                      p: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      maxWidth: isMobile ? '80%' : '50%',
+                      width: 56,
+                      height: 56,
+                      bgcolor: 'grey.100',
                     }}
                   >
-                    <Avatar
-                      src={company.logoUrl || ''}
-                      alt={company.nome}
-                      sx={{
-                        width: 56,
-                        height: 56,
-                        bgcolor: 'grey.100',
+                    {company.nome?.charAt(0)?.toUpperCase()}
+                  </Avatar>
+                  <Box sx={{ overflow: 'hidden' }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        color: 'common.white',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                       }}
                     >
-                      {company.nome.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <Box sx={{ overflow: 'hidden' }}>
-                      <Typography 
-                        variant="subtitle1" 
-                        sx={{ 
-                          fontWeight: 'bold', 
-                          color: 'text.primary',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {company.nome}
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: 'text.secondary',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                        {banner.description || ''}
-                      </Typography>
-                    </Box>
+                      {company.nome || 'Anúncio'}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: 'grey.300',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                      {banner.description || 'Clique para mais informações'}
+                    </Typography>
                   </Box>
-                )}
+                </Box>
               </Box>
             );
           })}
@@ -385,11 +373,151 @@ const BannerDesk = ({ user }) => {
           </a>
         </Box>
       )}
+
+      {/* Dialog com Informações Detalhadas */}
+      {selectedBanner && (
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              overflow: 'hidden'
+            }
+          }}
+        >
+          <DialogTitle sx={{ 
+            bgcolor: 'primary.main', 
+            color: 'common.white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <BusinessIcon />
+              <Typography variant="h6">
+                {companies[selectedBanner.companyId]?.nome || 'Detalhes do Anúncio'}
+              </Typography>
+            </Box>
+            <IconButton onClick={handleCloseDialog} sx={{ color: 'common.white' }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          
+          <DialogContent dividers sx={{ p: 0 }}>
+            <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+              <Box sx={{ 
+                width: isMobile ? '100%' : '60%',
+                height: isMobile ? '250px' : '400px'
+              }}>
+                <img
+                  src={selectedBanner.imageUrl}
+                  alt={`Banner ${selectedBanner.id}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              </Box>
+              
+              <Box sx={{ 
+                width: isMobile ? '100%' : '40%',
+                p: 3
+              }}>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+                  {selectedBanner.title || 'Anúncio'}
+                </Typography>
+                
+                <Typography variant="body1" paragraph>
+                  {selectedBanner.description || 'Este anúncio não possui descrição detalhada.'}
+                </Typography>
+                
+                <Divider sx={{ my: 2 }} />
+                
+                {companies[selectedBanner.companyId] && (
+                  <>
+                    <Typography variant="subtitle1" gutterBottom sx={{ 
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <BusinessIcon color="primary" /> Informações da Empresa
+                    </Typography>
+                    
+                    <Box sx={{ mb: 2 }}>
+                      {companies[selectedBanner.companyId].sector && (
+                        <Chip 
+                          label={companies[selectedBanner.companyId].sector}
+                          size="small"
+                          sx={{ mr: 1, mb: 1 }}
+                        />
+                      )}
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {companies[selectedBanner.companyId].morada && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocationOnIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].morada}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].contacto && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PhoneIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].contacto}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].email && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <EmailIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].email}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].website && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LanguageIcon color="primary" fontSize="small" />
+                          <Link href={companies[selectedBanner.companyId].website} target="_blank">
+                            {companies[selectedBanner.companyId].website}
+                          </Link>
+                        </Typography>
+                      )}
+                    </Box>
+                  </>
+                )}
+                
+                {selectedBanner.link && (
+                  <>
+                    <Divider sx={{ my: 3 }} />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      size="large"
+                      href={selectedBanner.link}
+                      target="_blank"
+                      onClick={() => registerClick(selectedBanner.id)}
+                      sx={{ mt: 2 }}
+                    >
+                      Visitar Site do Anúncio
+                    </Button>
+                  </>
+                )}
+              </Box>
+            </Box>
+          </DialogContent>
+        </Dialog>
+      )}
     </Box>
   );
 };
 
-// Helper function for Firebase increment
 function increment(value) {
   return {
     '.sv': {

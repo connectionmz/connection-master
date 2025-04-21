@@ -137,35 +137,34 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
     
                 const currentDate = new Date();
                 const updatedBanners = bannerList.map(banner => {
-                    // Verifica se o banner está expirado
                     const expireDate = new Date(banner.expireDate);
                     const isExpired = expireDate < currentDate;
-                    
-                    // Se expirou e ainda não foi marcado como expirado, atualiza no Firebase
+    
                     if (isExpired && banner.status !== 'expired') {
                         update(ref(db, `banners/${banner.id}`), { status: 'expired' });
                         return { ...banner, status: 'expired' };
                     }
-                    
+    
                     return banner;
                 });
     
                 const filteredBanners = updatedBanners.filter(banner => {
-                    // Verifica se a data de expiração é futura
+                    // ✅ Só banners ativos e do tipo 'concurso'
+                    if (banner.status !== 'active' || banner.tipoAnuncio !== 'concurso') return false;
+    
                     const expireDate = new Date(banner.expireDate);
                     if (expireDate < currentDate) return false;
-                    
-                    // Filtra por província
+    
                     if (user) {
-                        const matchesProvincia = banner.provincias && 
-                            banner.provincias.some(prov => 
-                                prov.toLowerCase() === user.provincia?.toLowerCase() || 
+                        const matchesProvincia = banner.provincias &&
+                            banner.provincias.some(prov =>
+                                prov.toLowerCase() === user.provincia?.toLowerCase() ||
                                 prov.toLowerCase() === user.provinciaTemp?.toLowerCase()
                             );
-                        
+    
                         return matchesProvincia;
                     }
-                    
+    
                     return true;
                 });
     
@@ -178,6 +177,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
     
         return () => unsubscribe();
     }, [user?.provincia, user?.id]);
+    
 
     const handlePublishConcurso = () => {
         if (!hasModuleSMS) {
