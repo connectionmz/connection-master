@@ -35,6 +35,9 @@ const AuthDesk = ({ data }) => {
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+const [isGuestLoading, setIsGuestLoading] = useState(false);
   
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -75,7 +78,7 @@ const AuthDesk = ({ data }) => {
   // Handle form submission
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
-    
+    setIsEmailLoading(true);
     // Reset errors
     setEmailError(false);
     setPasswordError(false);
@@ -109,6 +112,7 @@ const AuthDesk = ({ data }) => {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await saveUserData(result.user);
       navigate('/');
+
     } catch (error) {
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);
       setErrorMessage(userFriendlyMessage);
@@ -118,12 +122,12 @@ const AuthDesk = ({ data }) => {
       if (error.code.includes('email')) setEmailError(true);
       if (error.code.includes('password')) setPasswordError(true);
     } finally {
-      setIsLoading(false);
+       setIsEmailLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
+    setIsGoogleLoading(true);
     setErrorMessage('');
   
     try {
@@ -135,7 +139,7 @@ const AuthDesk = ({ data }) => {
       setErrorMessage(userFriendlyMessage);
       setShowSnackbar(true);
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
@@ -261,8 +265,8 @@ const AuthDesk = ({ data }) => {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={isLoading}
-                startIcon={isLoading ? <CircularProgress size={20} /> : <Email />}
+                disabled={isEmailLoading || isGoogleLoading || isGuestLoading}
+  startIcon={isEmailLoading ? <CircularProgress size={20} /> : <Email />}
                 sx={{
                   mt: 3,
                   mb: 2,
@@ -277,7 +281,7 @@ const AuthDesk = ({ data }) => {
                   }
                 }}
               >
-                {isLoading ? 'Entrando...' : 'Entrar com Email'}
+                {isEmailLoading ? 'Entrando...' : 'Entrar com Email'}
               </Button>
               <Grid container spacing={2} sx={{ mt: 3, mb: 2 }}>
   <Grid item xs={12} sm={6}>
@@ -285,9 +289,9 @@ const AuthDesk = ({ data }) => {
       fullWidth
       variant="contained"
       size="large"
-      disabled={isLoading}
-      onClick={handleGoogleSignIn}
-      startIcon={<Google />}
+      disabled={isGoogleLoading || isEmailLoading || isGuestLoading}
+  onClick={handleGoogleSignIn}
+  startIcon={isGoogleLoading ? <CircularProgress size={20} /> : <Google />}
       sx={{
         py: 1.5,
         borderRadius: 1,
@@ -300,7 +304,7 @@ const AuthDesk = ({ data }) => {
         }
       }}
     >
-      Google
+     {isGoogleLoading ? 'Entrando...' : 'Google'}
     </Button>
   </Grid>
   <Grid item xs={12} sm={6}>
@@ -309,15 +313,9 @@ const AuthDesk = ({ data }) => {
       fullWidth
       variant="outlined"
       size="large"
-      disabled={isLoading}
+      disabled={isGuestLoading || isEmailLoading || isGoogleLoading}
       onClick={() => navigate('/')}
-      startIcon={
-        isLoading ? (
-          <CircularProgress size={20} color="inherit" />
-        ) : (
-          <HomeIcon />
-        )
-      }
+            startIcon={isGuestLoading ? <CircularProgress size={20} /> : <HomeIcon />}
       sx={{
         py: 1.5,
         borderRadius: 2,
@@ -337,7 +335,7 @@ const AuthDesk = ({ data }) => {
         }
       }}
     >
-      {isLoading ? 'A entrar...' : 'visitante'}
+      {isGuestLoading ? 'Redirecionando...' : 'Visitante'}
     </Button>
   </Grid>
 </Grid>

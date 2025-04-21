@@ -167,6 +167,9 @@ const PublicarConcursoDesk = ({ user }) => {
                 condicoesPagamento: '',
                 observacoes: '',
             });
+
+            window.location="/concursos"
+
         } catch (error) {
             setSnackbarMessage('Erro ao publicar concurso.');
             setSnackbarSeverity('error');

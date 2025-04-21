@@ -71,7 +71,6 @@ const ConcursoDetalhesDesk = ({ user }) => {
 
       const unsubscribeConcurso = onValue(concursoRef, async (snapshot) => {
         const data = snapshot.val();
-        console.log(data)
         if (!data) {
           setError('Concurso não encontrado');
           setLoading(false);
@@ -235,24 +234,24 @@ const ConcursoDetalhesDesk = ({ user }) => {
               {concurso.titulo || 'Concurso sem título'} 
             </Typography>
               
-              <Chip
-                label={
-                  isConcursoExpirado()
-                    ? 'Expirado'
-                    : concurso.status === 'open'
-                      ? 'Aberto'
-                      : 'Fechado'
-                }
-                color={
-                  isConcursoExpirado()
-                    ? 'warning'
-                    : concurso.status === 'open'
-                      ? 'success'
-                      : 'error'
-                }
-                size="small"
-                sx={{ mb: 1 }}
-              />
+            <Chip
+                  label={
+                    concurso.status === 'Fechada' || isConcursoExpirado()
+                      ? isConcursoExpirado() 
+                        ? 'Expirado' 
+                        : 'Fechado'
+                      : 'Aberto'
+                  }
+                  color={
+                    concurso.status === 'Fechada' || isConcursoExpirado()
+                      ? isConcursoExpirado() 
+                        ? 'warning' 
+                        : 'error'
+                      : 'success'
+                  }
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
               
               <Box display="flex" flexWrap="wrap" gap={1} mb={1}>
                 <Typography 

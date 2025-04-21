@@ -349,29 +349,43 @@ const BannerDesk = ({ user }) => {
           })}
         </Slider>
       ) : (
-        <Box
-          sx={{
-            width: '100%',
-            overflow: 'hidden',
-            height: isMobile ? '250px' : '600px',
-            backgroundColor: 'background.paper',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}
-        >
-          <a href="/anunciar" style={{ width: '100%', height: '100%' }}>
-            <img
-              src={anunciar}
-              alt="Anunciar"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              }}
-            />
-          </a>
-        </Box>
+<Box
+  sx={{
+    width: '100%',
+    overflow: 'hidden',
+    height: isMobile ? '250px' : '600px',
+    backgroundColor: 'background.paper',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  }}
+>
+  {user?.id ? (
+    <a href="/anunciar" style={{ width: '100%', height: '100%' }}>
+      <img
+        src={anunciar}
+        alt="Anunciar"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+        }}
+      />
+    </a>
+  ) : (
+    <img
+      src={anunciar}
+      alt="Anunciar (login necessário)"
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain',
+      }}
+      title="Inicie sessão para anunciar"
+    />
+  )}
+</Box>
+
       )}
 
       {/* Dialog com Informações Detalhadas */}

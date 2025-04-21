@@ -14,7 +14,11 @@ import {
   Paper,
   IconButton,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  AlertTitle
 } from '@mui/material';
 import { push, ref, set } from 'firebase/database';
 import { db } from '../../fb';
@@ -24,6 +28,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
+import { InfoIcon } from 'lucide-react';
+import { Expand } from '@mui/icons-material';
 
 const allowedFileTypes = [
   'image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp', 
@@ -201,6 +207,49 @@ const PostInputFileDesk = ({ user }) => {
       <Typography variant="h6" gutterBottom>
         Upload de Arquivos
       </Typography>
+
+      <Accordion defaultExpanded sx={{ mb: 3, borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
+        <AccordionSummary expandIcon={<Expand />}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <InfoIcon color="primary" sx={{ mr: 1 }} />
+            <Typography variant="subtitle1" fontWeight="bold">
+              Política de Upload de Documentos
+            </Typography>
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <AlertTitle>Documentos Permitidos</AlertTitle>
+            Este espaço é destinado exclusivamente para o upload de documentos públicos inerentes à empresa, tais como:
+            <ul>
+              <li>Horário de funcionamento da empresa</li>
+              <li>Manuais, termos de garantia e políticas de troca</li>
+              <li>Documentos fiscais e regulatórios (ANVISA, INMETRO, etc.)</li>
+              <li>Outros que no julgar da empresa poderão ser expostos publicamente</li>
+            </ul>
+          </Alert>
+          
+          <Alert severity="warning">
+            <AlertTitle>Documentos Não Permitidos</AlertTitle>
+            NÃO são permitidos:
+            <ul>
+              <li>Conteúdo promocional (anúncios, banners, brindes)</li>
+              <li>Materiais de marketing (folders, campanhas, concursos)</li>
+              <li>Informações não relacionadas à documentação empresarial</li>
+            </ul>
+          </Alert>
+          
+          <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic' }}>
+            Observações importantes:
+            <ul>
+              <li>Documentos inadequados serão bloqueados ou removidos sem aviso prévio</li>
+              <li>Materiais promocionais devem ser enviados nos espaços específicos da plataforma</li>
+              <li>Em caso de dúvidas, consulte nossas políticas de uso ou entre em contato com o suporte</li>
+            </ul>
+          </Typography>
+        </AccordionDetails>
+      </Accordion>
+
       
       <Box sx={{ mb: 3 }}>
         <Button

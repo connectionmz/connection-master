@@ -12,7 +12,11 @@ import {
   CircularProgress,
   IconButton,
   Chip,
-  Skeleton
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Divider,
+  Link as MuiLink
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { 
@@ -22,7 +26,12 @@ import {
   Business as BusinessIcon,
   Share as ShareIcon,
   Favorite as FavoriteIcon,
-  FavoriteBorder as FavoriteBorderIcon
+  FavoriteBorder as FavoriteBorderIcon,
+  Close as CloseIcon,
+  LocationOn as LocationIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  Language as LanguageIcon
 } from '@mui/icons-material';
 import { ref, onValue, set, update, serverTimestamp } from 'firebase/database';
 import { db } from '../../fb';
@@ -33,10 +42,12 @@ const AnunciosDesk = ({ campanhas, user }) => {
   const [loading, setLoading] = useState(true);
   const [trackedImpressions, setTrackedImpressions] = useState(new Set());
   const [likedBanners, setLikedBanners] = useState({});
+  const [selectedBanner, setSelectedBanner] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Configurações avançadas do slider
+  // Configurações do slider
   const settings = {
     dots: true,
     infinite: true,
@@ -147,6 +158,18 @@ const AnunciosDesk = ({ campanhas, user }) => {
     }
   }, [user, likedBanners]);
 
+  // Abre o popup com detalhes do banner
+  const handleBannerClick = (banner) => {
+    setSelectedBanner(banner);
+    setOpenDialog(true);
+    registerClick(banner.id);
+  };
+
+  // Fecha o popup
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
   // Carrega likes do usuário
   useEffect(() => {
     if (!user?.id) return;
@@ -256,46 +279,23 @@ const AnunciosDesk = ({ campanhas, user }) => {
                   position: 'relative',
                   width: '100%',
                   height: isMobile ? '250px' : '400px',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  cursor: 'pointer'
                 }}
+                onClick={() => handleBannerClick(banner)}
                 onMouseEnter={() => registerImpression(banner.id)}
               >
-                {banner.link ? (
-                  <a
-                    href={banner.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ width: '100%', height: '100%', display: 'block' }}
-                    onClick={() => registerClick(banner.id)}
-                  >
-                    <img
-                      src={banner.imageUrl || placeholderImage}
-                      alt={banner.description || `Banner ${banner.id}`}
-                      onError={(e) => (e.target.src = placeholderImage)}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transition: 'transform 0.5s ease',
-                        ':hover': {
-                          transform: 'scale(1.05)'
-                        }
-                      }}
-                    />
-                  </a>
-                ) : (
-                  <img
+                <img
                   src={banner.imageUrl || placeholderImage}
                   alt={banner.description || `Banner ${banner.id}`}
                   onError={(e) => (e.target.src = placeholderImage)}
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover', // Garante que a imagem cubra o espaço sem distorção
-                    objectPosition: 'center', // Centraliza a imagem dentro do contêiner
+                    objectFit: 'cover',
+                    transition: 'transform 0.5s ease',
                   }}
                 />
-                )}
 
                 {/* Overlay Info */}
                 <Box
@@ -324,8 +324,6 @@ const AnunciosDesk = ({ campanhas, user }) => {
                         </Typography>
                       )}
                     </Box>
-                    
-            
                   </Box>
                 </Box>
               </Box>
@@ -376,6 +374,153 @@ const AnunciosDesk = ({ campanhas, user }) => {
           );
         })}
       </Slider>
+
+      {/* Popup de Detalhes */}
+      {selectedBanner && (
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              overflow: 'hidden'
+            }
+          }}
+        >
+          <DialogTitle sx={{ 
+            bgcolor: 'primary.main', 
+            color: 'common.white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <BusinessIcon />
+              <Typography variant="h6">
+                {companies[selectedBanner.companyId]?.nome || 'Detalhes do Anúncio'}
+              </Typography>
+            </Box>
+            <IconButton onClick={handleCloseDialog} sx={{ color: 'common.white' }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          
+          <DialogContent dividers sx={{ p: 0 }}>
+            <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+              {/* Imagem do Banner */}
+              <Box sx={{ 
+                width: isMobile ? '100%' : '60%',
+                height: isMobile ? '250px' : '400px'
+              }}>
+                <img
+                  src={selectedBanner.imageUrl || placeholderImage}
+                  alt={`Banner ${selectedBanner.id}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              </Box>
+              
+              {/* Informações Detalhadas */}
+              <Box sx={{ 
+                width: isMobile ? '100%' : '40%',
+                p: 3
+              }}>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+                  {selectedBanner.description || 'Anúncio'}
+                </Typography>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <CalendarIcon color="primary" fontSize="small" />
+                  <Typography variant="body2">
+                    Expira em: {new Date(selectedBanner.expireDate).toLocaleDateString()}
+                  </Typography>
+                </Box>
+                
+                <Divider sx={{ my: 2 }} />
+                
+                {companies[selectedBanner.companyId] && (
+                  <>
+                    <Typography variant="subtitle1" gutterBottom sx={{ 
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <BusinessIcon color="primary" /> Informações da Empresa
+                    </Typography>
+                    
+                    <Box sx={{ mb: 2 }}>
+                      {companies[selectedBanner.companyId].sector && (
+                        <Chip 
+                          label={companies[selectedBanner.companyId].sector}
+                          size="small"
+                          sx={{ mr: 1, mb: 1 }}
+                        />
+                      )}
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {companies[selectedBanner.companyId].morada && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocationIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].morada}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].contacto && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PhoneIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].contacto}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].email && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <EmailIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].email}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].website && (
+                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LanguageIcon color="primary" fontSize="small" />
+                          <MuiLink href={companies[selectedBanner.companyId].website} target="_blank">
+                            {companies[selectedBanner.companyId].website}
+                          </MuiLink>
+                        </Typography>
+                      )}
+                    </Box>
+                  </>
+                )}
+                
+                {selectedBanner.link && (
+                  <>
+                    <Divider sx={{ my: 3 }} />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      size="large"
+                      href={selectedBanner.link}
+                      target="_blank"
+                      endIcon={<OpenInNewIcon />}
+                      onClick={() => registerClick(selectedBanner.id)}
+                      sx={{ mt: 2 }}
+                    >
+                      Visitar Site do Anúncio
+                    </Button>
+                  </>
+                )}
+              </Box>
+            </Box>
+          </DialogContent>
+        </Dialog>
+      )}
     </Box>
   );
 };

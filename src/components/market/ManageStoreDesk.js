@@ -23,12 +23,40 @@ import {
   Alert,
   Modal,
   Switch,
+  useMediaQuery,
+  useTheme,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider
 } from '@mui/material';
-import { Search, Edit, Delete, Settings } from '@mui/icons-material';
+import { 
+  Search, 
+  Edit, 
+  Delete, 
+  Settings,
+  MoreVert,
+  Add,
+  Image,
+  Category,
+  Close
+} from '@mui/icons-material';
 import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { formatPrice } from '../../utils/utils';
 
 const ManageStoreDesk = ({ storeId }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+
   // Estados
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,7 +67,7 @@ const ManageStoreDesk = ({ storeId }) => {
   });
   const [pagination, setPagination] = useState({
     page: 0,
-    rowsPerPage: 5
+    rowsPerPage: isMobile ? 3 : 5
   });
   const [sorting, setSorting] = useState({
     order: 'asc',
@@ -52,7 +80,8 @@ const ManageStoreDesk = ({ storeId }) => {
   });
   const [modals, setModals] = useState({
     settings: false,
-    editProduct: false
+    editProduct: false,
+    deleteConfirm: false
   });
   const [storeData, setStoreData] = useState({
     name: '',
@@ -70,6 +99,19 @@ const ManageStoreDesk = ({ storeId }) => {
     description: ''
   });
   const [logoFile, setLogoFile] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+
+  // Menu de ações para mobile
+  const handleMenuOpen = (event, productId) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedProductId(productId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedProductId(null);
+  };
 
   // Buscar dados iniciais
   useEffect(() => {
@@ -125,12 +167,11 @@ const ManageStoreDesk = ({ storeId }) => {
       description: product.description || ''
     });
     toggleModal('editProduct', true);
+    handleMenuClose();
   };
 
   const handleRemoveProduct = async (productId) => {
-    const confirmRemove = window.confirm('Tem certeza que deseja remover este produto?');
-    if (!confirmRemove) return;
-
+    toggleModal('deleteConfirm', false);
     try {
       await remove(ref(db, `stores/${storeId}/products/${productId}`));
       setProducts(prev => prev.filter(([key]) => key !== productId));
@@ -139,6 +180,7 @@ const ManageStoreDesk = ({ storeId }) => {
       console.error('Erro ao remover produto:', error);
       showFeedback('Erro ao remover o produto.', 'error');
     }
+    handleMenuClose();
   };
 
   const handleUpdateProduct = async () => {
@@ -280,53 +322,73 @@ const ManageStoreDesk = ({ storeId }) => {
     });
   };
 
-  return (
-    <Box sx={{ p: 4, bgcolor: 'white' }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Gerir Loja
-      </Typography>
-
-      {/* Barra de pesquisa e ações */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <TextField
-          placeholder="Pesquisar produto..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-          }}
-          fullWidth
-        />
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Button
-            variant="contained"
-            color="primary"
-            component={Link}
-            to={`/addProduct`}
-            sx={{ ml: 2 }}
-          >
-            Adicionar Produto
-          </Button>
-          <IconButton
-            color="primary"
-            sx={{ ml: 2 }}
-            onClick={() => toggleModal('settings', true)}
-          >
-            <Settings />
-          </IconButton>
-        </Box>
-      </Box>
-
-      {/* Tabela de produtos */}
-      {loading.products ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
+  // Renderização condicional para mobile/desktop
+  const renderProducts = () => {
+    if (isMobile) {
+      return (
+        <Grid container spacing={2} sx={{ mt: 2 }}>
+          {sortedProducts
+            .slice(
+              pagination.page * pagination.rowsPerPage,
+              pagination.page * pagination.rowsPerPage + pagination.rowsPerPage
+            )
+            .map(([key, product]) => (
+              <Grid item xs={12} key={key}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
+                        {product?.imageUrl ? (
+                          <CardMedia
+                            component="img"
+                            sx={{ width: 80, height: 80, borderRadius: 1 }}
+                            image={product.imageUrl}
+                            alt={product.name}
+                          />
+                        ) : (
+                          <Box sx={{ 
+                            width: 80, 
+                            height: 80, 
+                            bgcolor: 'grey.100',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 1
+                          }}>
+                            <Image color="disabled" />
+                          </Box>
+                        )}
+                        
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {product?.name || 'Sem nome'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {storeData.settings.showPrices 
+                              ? `${formatPrice(product?.price) || '0.00'} MZN` 
+                              : '--'}
+                          </Typography>
+                          <Typography variant="body2">
+                            {product?.category || 'Sem categoria'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <IconButton
+                        onClick={(e) => handleMenuOpen(e, key)}
+                        aria-label="Ações do produto"
+                      >
+                        <MoreVert />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+        </Grid>
+      );
+    } else {
+      return (
         <TableContainer component={Paper} sx={{ mt: 3 }}>
           <Table>
             <TableHead>
@@ -351,7 +413,7 @@ const ManageStoreDesk = ({ storeId }) => {
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>Categoria</TableCell>
-                <TableCell>Descrição</TableCell>
+                {!isTablet && <TableCell>Descrição</TableCell>}
                 <TableCell>Ações</TableCell>
               </TableRow>
             </TableHead>
@@ -383,11 +445,13 @@ const ManageStoreDesk = ({ storeId }) => {
                         : '--'}
                     </TableCell>
                     <TableCell>{product?.category || 'Sem categoria'}</TableCell>
-                    <TableCell>
-                      {product?.description?.length > 50 
-                        ? `${product.description.substring(0, 50)}...` 
-                        : product?.description || 'Sem descrição'}
-                    </TableCell>
+                    {!isTablet && (
+                      <TableCell>
+                        {product?.description?.length > 50 
+                          ? `${product.description.substring(0, 50)}...` 
+                          : product?.description || 'Sem descrição'}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <IconButton
                         color="primary"
@@ -398,7 +462,10 @@ const ManageStoreDesk = ({ storeId }) => {
                       </IconButton>
                       <IconButton
                         color="error"
-                        onClick={() => handleRemoveProduct(key)}
+                        onClick={() => {
+                          setSelectedProductId(key);
+                          toggleModal('deleteConfirm', true);
+                        }}
                         aria-label="Remover produto"
                       >
                         <Delete />
@@ -408,217 +475,421 @@ const ManageStoreDesk = ({ storeId }) => {
                 ))}
             </TableBody>
           </Table>
+        </TableContainer>
+      );
+    }
+  };
+
+  return (
+    <Box sx={{ p: isMobile ? 2 : 4, bgcolor: 'white' }}>
+      <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ mb: 3, fontWeight: 'bold' }}>
+        Gerir Loja
+      </Typography>
+
+      {/* Barra de pesquisa e ações */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'stretch' : 'center', 
+        gap: isMobile ? 2 : 0,
+        mb: 3 
+      }}>
+        <TextField
+          placeholder="Pesquisar produto..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search />
+              </InputAdornment>
+            ),
+          }}
+          fullWidth
+          size={isMobile ? 'small' : 'medium'}
+          sx={{ 
+            maxWidth: isMobile ? '100%' : '400px',
+            order: isMobile ? 1 : 0
+          }}
+        />
+        
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          gap: 1,
+          order: isMobile ? 0 : 1
+        }}>
+          <Button
+            variant="contained"
+            color="primary"
+            component={Link}
+            to={`/addProduct`}
+            size={isMobile ? 'small' : 'medium'}
+            startIcon={<Add />}
+            sx={{ 
+              whiteSpace: 'nowrap',
+              order: isMobile ? 0 : 1
+            }}
+          >
+            {isMobile ? 'Adicionar' : 'Adicionar Produto'}
+          </Button>
+          
+          <IconButton
+            color="primary"
+            onClick={() => toggleModal('settings', true)}
+            size={isMobile ? 'small' : 'medium'}
+            sx={{ 
+              order: isMobile ? 1 : 0,
+              ml: isMobile ? 0 : 2
+            }}
+          >
+            <Settings fontSize={isMobile ? 'small' : 'medium'} />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Tabela/Lista de produtos */}
+      {loading.products ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          {renderProducts()}
+          
+          {/* Paginação */}
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={isMobile ? [3, 5, 10] : [5, 10, 25]}
             component="div"
             count={filteredProducts.length}
             rowsPerPage={pagination.rowsPerPage}
             page={pagination.page}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage="Itens por página:"
+            labelRowsPerPage={isMobile ? 'Itens:' : 'Itens por página:'}
+            sx={{ 
+              mt: 2,
+              '& .MuiTablePagination-toolbar': {
+                paddingLeft: isMobile ? 0 : undefined
+              }
+            }}
           />
-        </TableContainer>
+        </>
       )}
 
+      {/* Menu de ações para mobile */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={() => {
+          const product = products.find(([id]) => id === selectedProductId)?.[1];
+          if (product) handleEditProduct(selectedProductId, product);
+        }}>
+          <ListItemIcon>
+            <Edit fontSize="small" />
+          </ListItemIcon>
+          <Typography variant="inherit">Editar</Typography>
+        </MenuItem>
+        <MenuItem onClick={() => {
+          setSelectedProductId(selectedProductId);
+          toggleModal('deleteConfirm', true);
+        }}>
+          <ListItemIcon>
+            <Delete fontSize="small" color="error" />
+          </ListItemIcon>
+          <Typography variant="inherit" color="error">Remover</Typography>
+        </MenuItem>
+      </Menu>
+
       {/* Modal de Configurações da Loja */}
-      <Modal
+      <Dialog
         open={modals.settings}
         onClose={() => toggleModal('settings', false)}
-        aria-labelledby="settings-modal-title"
+        fullWidth
+        maxWidth="sm"
       >
-        <Box sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 400,
-          bgcolor: 'background.paper',
-          boxShadow: 24,
-          p: 4,
-          borderRadius: 2,
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          bgcolor: 'primary.main',
+          color: 'white'
         }}>
-          <Typography variant="h6" sx={{ mb: 3 }}>
-            Configurações da Loja
-          </Typography>
-          
-          <TextField
-            fullWidth
-            label="Nome da Loja"
-            value={storeData.name}
-            onChange={(e) => setStoreData(prev => ({ ...prev, name: e.target.value }))}
-            sx={{ mb: 3 }}
-            error={!storeData.name.trim()}
-            helperText={!storeData.name.trim() ? 'Campo obrigatório' : ''}
-          />
+          <Typography variant="h6">Configurações da Loja</Typography>
+          <IconButton onClick={() => toggleModal('settings', false)} sx={{ color: 'white' }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        
+        <DialogContent dividers sx={{ pt: 3 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Nome da Loja"
+                value={storeData.name}
+                onChange={(e) => setStoreData(prev => ({ ...prev, name: e.target.value }))}
+                sx={{ mb: 3 }}
+                error={!storeData.name.trim()}
+                helperText={!storeData.name.trim() ? 'Campo obrigatório' : ''}
+                size={isMobile ? 'small' : 'medium'}
+              />
 
-          <TextField
-            fullWidth
-            label="Descrição da Loja"
-            value={storeData.description}
-            onChange={(e) => setStoreData(prev => ({ ...prev, description: e.target.value }))}
-            multiline
-            rows={3}
-            sx={{ mb: 3 }}
-          />
+              <TextField
+                fullWidth
+                label="Descrição da Loja"
+                value={storeData.description}
+                onChange={(e) => setStoreData(prev => ({ ...prev, description: e.target.value }))}
+                multiline
+                rows={isMobile ? 3 : 4}
+                sx={{ mb: 3 }}
+                size={isMobile ? 'small' : 'medium'}
+              />
 
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body1" sx={{ mb: 1 }}>
-              Logo da Loja
-            </Typography>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleLogoChange}
-              style={{ display: 'none' }}
-              id="logo-upload"
-            />
-            <label htmlFor="logo-upload">
-              <Button variant="contained" component="span">
-                Alterar Logo
-              </Button>
-            </label>
-            {storeData.logo && (
-              <Box sx={{ mt: 2 }}>
-                <img
-                  src={storeData.logo}
-                  alt="Logo da Loja"
-                  style={{ width: '100%', height: 'auto', maxHeight: 200, objectFit: 'contain', borderRadius: 8 }}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="body1">Exibir Preços</Typography>
+                <Switch
+                  checked={storeData.settings.showPrices}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    settings: { ...prev.settings, showPrices: e.target.checked }
+                  }))}
+                  color="primary"
                 />
               </Box>
-            )}
-          </Box>
+            </Grid>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-            <Typography>Exibir Preços dos Produtos</Typography>
-            <Switch
-              checked={storeData.settings.showPrices}
-              onChange={(e) => setStoreData(prev => ({
-                ...prev,
-                settings: { ...prev.settings, showPrices: e.target.checked }
-              }))}
-              color="primary"
-            />
-          </Box>
-
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button 
-              variant="outlined" 
-              onClick={() => toggleModal('settings', false)}
-              disabled={loading.store}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleStoreUpdate}
-              disabled={!storeData.name.trim() || loading.store}
-            >
-              {loading.store ? <CircularProgress size={24} /> : 'Salvar'}
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+            <Grid item xs={12} md={6}>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                Logo da Loja
+              </Typography>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                style={{ display: 'none' }}
+                id="logo-upload"
+              />
+              <label htmlFor="logo-upload">
+                <Button 
+                  variant="contained" 
+                  component="span"
+                  fullWidth
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                >
+                  Alterar Logo
+                </Button>
+              </label>
+              
+              {storeData.logo && (
+                <Box sx={{ 
+                  width: '100%', 
+                  height: isMobile ? 150 : 200,
+                  border: '1px dashed',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <img
+                    src={storeData.logo}
+                    alt="Logo da Loja"
+                    style={{ 
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </Box>
+              )}
+            </Grid>
+          </Grid>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => toggleModal('settings', false)}
+            disabled={loading.store}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleStoreUpdate}
+            disabled={!storeData.name.trim() || loading.store}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            {loading.store ? <CircularProgress size={24} /> : 'Salvar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Modal de Edição de Produto */}
-      <Modal
+      <Dialog
         open={modals.editProduct}
         onClose={() => !loading.productUpdate && toggleModal('editProduct', false)}
-        aria-labelledby="edit-product-modal"
+        fullWidth
+        maxWidth="sm"
       >
-        <Box sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 400,
-          bgcolor: 'background.paper',
-          boxShadow: 24,
-          p: 4,
-          borderRadius: 2,
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          bgcolor: 'primary.main',
+          color: 'white'
         }}>
-          <Typography variant="h6" sx={{ mb: 3 }}>
-            Editar Produto
-          </Typography>
-          
-          <TextField
-            label="Nome do Produto"
-            value={productData.name}
-            onChange={(e) => setProductData(prev => ({ ...prev, name: e.target.value }))}
-            fullWidth
-            sx={{ mb: 2 }}
-            error={!productData.name.trim()}
-            helperText={!productData.name.trim() ? 'Campo obrigatório' : ''}
-          />
-          
-          <TextField
-            label="Preço (MZN)"
-            value={productData.price}
-            onChange={(e) => {
-              const value = e.target.value.replace(/[^0-9.,]/g, '');
-              setProductData(prev => ({ ...prev, price: value }));
-            }}
-            fullWidth
-            sx={{ mb: 2 }}
-            error={isNaN(parseFloat(productData.price.replace(',', '.')))}
-            helperText={
-              isNaN(parseFloat(productData.price.replace(',', '.'))) 
-                ? 'Insira um valor numérico válido' 
-                : ''
+          <Typography variant="h6">Editar Produto</Typography>
+          <IconButton 
+            onClick={() => !loading.productUpdate && toggleModal('editProduct', false)} 
+            sx={{ color: 'white' }}
+            disabled={loading.productUpdate}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        
+        <DialogContent dividers sx={{ pt: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                label="Nome do Produto"
+                value={productData.name}
+                onChange={(e) => setProductData(prev => ({ ...prev, name: e.target.value }))}
+                fullWidth
+                sx={{ mb: 2 }}
+                error={!productData.name.trim()}
+                helperText={!productData.name.trim() ? 'Campo obrigatório' : ''}
+                size={isMobile ? 'small' : 'medium'}
+                
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Preço (MZN)"
+                value={productData.price}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9.,]/g, '');
+                  setProductData(prev => ({ ...prev, price: value }));
+                }}
+                fullWidth
+                sx={{ mb: 2 }}
+                error={isNaN(parseFloat(productData.price.replace(',', '.')))}
+                helperText={
+                  isNaN(parseFloat(productData.price.replace(',', '.'))) 
+                    ? 'Insira um valor numérico válido' 
+                    : ''
+                }
+                size={isMobile ? 'small' : 'medium'}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Categoria"
+                value={productData.category}
+                onChange={(e) => setProductData(prev => ({ ...prev, category: e.target.value }))}
+                fullWidth
+                sx={{ mb: 2 }}
+                size={isMobile ? 'small' : 'medium'}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                label="Descrição"
+                value={productData.description}
+                onChange={(e) => setProductData(prev => ({ ...prev, description: e.target.value }))}
+                multiline
+                rows={isMobile ? 3 : 4}
+                fullWidth
+                sx={{ mb: 2 }}
+                size={isMobile ? 'small' : 'medium'}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => toggleModal('editProduct', false)}
+            disabled={loading.productUpdate}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleUpdateProduct}
+            disabled={
+              !productData.name.trim() || 
+              isNaN(parseFloat(productData.price.replace(',', '.'))) ||
+              loading.productUpdate
             }
-          />
+            size={isMobile ? 'small' : 'medium'}
+          >
+            {loading.productUpdate ? <CircularProgress size={24} /> : 'Salvar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-          <TextField
-            label="Categoria"
-            value={productData.category}
-            onChange={(e) => setProductData(prev => ({ ...prev, category: e.target.value }))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          
-          <TextField
-            label="Descrição"
-            value={productData.description}
-            onChange={(e) => setProductData(prev => ({ ...prev, description: e.target.value }))}
-            multiline
-            rows={3}
-            fullWidth
-            sx={{ mb: 3 }}
-          />
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button 
-              variant="outlined" 
-              onClick={() => toggleModal('editProduct', false)}
-              disabled={loading.productUpdate}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleUpdateProduct}
-              disabled={
-                !productData.name.trim() || 
-                isNaN(parseFloat(productData.price.replace(',', '.'))) ||
-                loading.productUpdate
-              }
-            >
-              {loading.productUpdate ? <CircularProgress size={24} /> : 'Salvar'}
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog
+        open={modals.deleteConfirm}
+        onClose={() => toggleModal('deleteConfirm', false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Confirmar Exclusão</DialogTitle>
+        <DialogContent>
+          <Typography>Tem certeza que deseja remover este produto?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => toggleModal('deleteConfirm', false)}
+            variant="outlined"
+            size={isMobile ? 'small' : 'medium'}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={() => {
+              handleRemoveProduct(selectedProductId);
+              toggleModal('deleteConfirm', false);
+            }}
+            variant="contained"
+            color="error"
+            size={isMobile ? 'small' : 'medium'}
+          >
+            Remover
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar de feedback */}
       <Snackbar
         open={feedback.open}
         autoHideDuration={6000}
         onClose={() => setFeedback(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{
+          vertical: isMobile ? 'bottom' : 'top',
+          horizontal: 'center'
+        }}
       >
         <Alert
           onClose={() => setFeedback(prev => ({ ...prev, open: false }))}
           severity={feedback.severity}
           sx={{ width: '100%' }}
+          variant="filled"
         >
           {feedback.message}
         </Alert>

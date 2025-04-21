@@ -31,42 +31,55 @@ const InboxDesk = ({ user }) => {
   const isSmallMobile = useMediaQuery('(max-width:400px)');
 
   useEffect(() => {
-    const notificationsRef = ref(db, 'notifications');
-    onValue(notificationsRef, (snapshot) => {
+    if (!user?.id) return;
+
+    const notificationsRef = ref(db, `notifications/${user.id}`);
+    setLoading(true);
+
+    const unsubscribe = onValue(notificationsRef, (snapshot) => {
       const data = snapshot.val();
       const userNotifications = [];
-      for (const userId in data) {
-        if (data[userId]) {
-          for (const notificationId in data[userId]) {
-            const notification = data[userId][notificationId];
-            if (userId === user.id) {
-              userNotifications.push({
-                id: notificationId,
-                fromUserId: notification.fromUserId,
-                fromUserName: notification.fromUserName,
-                message: notification.message,
-                status: notification.status,
-                timestamp: notification.timestamp,
-                type: notification.type,
-                link: notification?.link || ''
-              });
-            }
-          }
+
+      if (data) {
+        // Converter o objeto de notificações em array
+        for (const notificationId in data) {
+          const notification = data[notificationId];
+          userNotifications.push({
+            id: notificationId,
+            fromUserId: notification.fromUserId,
+            fromUserName: notification.fromUserName,
+            message: notification.message,
+            status: notification.status || 'unread', // Default para 'unread' se não existir
+            timestamp: notification.timestamp,
+            type: notification.type,
+            link: notification?.link || ''
+          });
         }
+
+        // Ordenar por timestamp (mais recente primeiro)
+        userNotifications.sort((a, b) => {
+          // Converter strings de data para timestamps numéricos
+          const dateA = new Date(a.timestamp).getTime();
+          const dateB = new Date(b.timestamp).getTime();
+          return dateB - dateA; // Ordem decrescente
+        });
+
+        setNotifications(userNotifications);
+      } else {
+        setNotifications([]); // Caso não haja notificações
       }
-      userNotifications.sort((a, b) => {
-        const dateA = new Date(a.timestamp).getTime();
-        const dateB = new Date(b.timestamp).getTime();
-        return dateB - dateA;
-      });
-      setNotifications(userNotifications);
+
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao carregar notificações:", error);
       setLoading(false);
     });
+
     return () => {
-      setNotifications([]);
-      setLoading(true);
+      unsubscribe(); // Limpar o listener quando o componente desmontar
+      setNotifications([]); // Resetar notificações
     };
-  }, [user.id]);
+}, [user.id]);
 
   const markAsRead = (notificationId) => {
     const notificationRef = ref(db, `notifications/${user.id}/${notificationId}`);

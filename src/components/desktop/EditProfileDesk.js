@@ -3,13 +3,14 @@ import { ref, update } from 'firebase/database';
 import { db } from '../../fb';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import { Tabs, Tab, Box, Button, IconButton, TextField, InputAdornment, useMediaQuery } from '@mui/material';
+import { Tabs, Tab, Box, Button, IconButton, TextField, InputAdornment, useMediaQuery, Typography } from '@mui/material';
 import { EditorText } from '../../utils/formUtils';
 import ChangePassword from '../password/ChangePassword';
 import DadosBancarios from '../DadosBancarios';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import PostInputFileDesk from './PostInputFileDesk';
 import BackButton from '../BackButton';
+import ReactQuill from 'react-quill';
 
 const InputField = ({ label, name, value, onChange, type = "text", disabled = false, endAdornment }) => (
   <div className="mb-4">
@@ -90,7 +91,7 @@ const EditProfileDesk = ({ user }) => {
     bio: user?.bio || '',
     contacto: user?.contacto || '',
     endereco: user?.endereco || '',
-    capacidadeDeProducao: user?.capacidadeDeProducao || '', // Campo adicionado
+    capacidadeDeProducao: user?.capacidadeDeProducao || '',
     provincia: user?.provincia || '',
     missaoVisaoValores: user?.missaoVisaoValores || '',
     facebook: user.social?.facebook || '',
@@ -104,7 +105,36 @@ const EditProfileDesk = ({ user }) => {
   const [formData, setFormData] = useState(initialData);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [tabIndex, setTabIndex] = useState(0);
-  const isMobile = useMediaQuery('(max-width:600px)'); // Verifica se a tela é pequena
+  const [bioLength, setBioLength] = useState(initialData.bio ? initialData.bio.length : 0);
+  const isMobile = useMediaQuery('(max-width:600px)');
+
+    // ReactQuill modules configuration
+    const bioModules = {
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ 'list': 'bullet' }],
+        ['link'],
+        ['clean']
+      ],
+    };
+  
+    const bioFormats = [
+      'bold', 'italic', 'underline',
+      'list', 'bullet',
+      'link'
+    ];
+  
+    const MAX_BIO_LENGTH = 300; 
+  
+    const handleBioChange = (content) => {
+      const plainText = content.replace(/<[^>]*>/g, ''); // Remove tags HTML
+      setBioLength(plainText.length); // Atualiza sempre o contador
+    
+      if (plainText.length <= MAX_BIO_LENGTH) {
+        setFormData(prev => ({ ...prev, bio: content }));
+      }
+    };
+    
 
   const handleTabChange = (event, newValue) => setTabIndex(newValue);
 
@@ -174,8 +204,25 @@ const EditProfileDesk = ({ user }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <InputField label="Nome" name="nome" value={formData.nome} onChange={handleInputChange} />
             <InputField label="sigla" name="sigla" value={formData.sigla} onChange={handleInputChange} />
-            <InputField label="Bio" name="bio" value={formData.bio} onChange={handleInputChange} />
-            <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
+            <div className="mb-4">
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Bio (máximo {MAX_BIO_LENGTH} caracteres) - {bioLength}/{MAX_BIO_LENGTH}
+              </Typography>
+              <ReactQuill
+                value={formData.bio}
+                onChange={handleBioChange}
+                modules={bioModules}
+                formats={bioFormats}
+                placeholder="Escreva uma breve descrição sobre sua empresa..."
+                style={{ minHeight: '120px' }}
+              />
+              {bioLength >= MAX_BIO_LENGTH && (
+                <Typography variant="caption" color="error">
+                  Você atingiu o limite máximo de caracteres
+                </Typography>
+              )}
+            </div>         
+               <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
             <InputField label="Endereço" name="endereco" value={formData.endereco} onChange={handleInputChange} />
             <InputField label="Província" name="provincia" value={formData.provincia} onChange={handleInputChange} />
             <InputField

@@ -9,26 +9,44 @@ import {
   Card,
   CardContent,
   useMediaQuery,
+  Button,
+  CardMedia,
+  Chip,
+  Divider,
+  Skeleton,
+  useTheme
 } from '@mui/material';
 import { ref, get } from 'firebase/database';
 import { db } from '../../fb';
 import { useNavigate } from 'react-router-dom';
+import {
+  Business as BusinessIcon,
+  AttachMoney as FinanciadorIcon,
+  Handshake as ParceiroIcon,
+  Star as PatrocinadorIcon
+} from '@mui/icons-material';
 
 const ParceirosInvestidoresDesk = () => {
   const [value, setValue] = useState(0);
   const [parceiros, setParceiros] = useState([]);
   const [financiadores, setFinanciadores] = useState([]);
   const [investidores, setInvestidores] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   // Buscar dados de Parceiros, Financiadores e Investidores
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const parceirosSnapshot = await get(ref(db, 'parceiros'));
-        const financiadoresSnapshot = await get(ref(db, 'financiadores'));
-        const investidoresSnapshot = await get(ref(db, 'investidores'));
+        setLoading(true);
+        const [parceirosSnapshot, financiadoresSnapshot, investidoresSnapshot] = await Promise.all([
+          get(ref(db, 'parceiros')),
+          get(ref(db, 'financiadores')),
+          get(ref(db, 'investidores'))
+        ]);
 
         if (parceirosSnapshot.exists()) {
           setParceiros(Object.values(parceirosSnapshot.val()));
@@ -41,6 +59,8 @@ const ParceirosInvestidoresDesk = () => {
         }
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -52,51 +72,118 @@ const ParceirosInvestidoresDesk = () => {
   };
 
   const handleCompanyClick = (companyId) => {
-    navigate(`/vperfil/${companyId}`);
+    navigate(`/perfil/${companyId}`);
   };
 
-  const renderCard = (item) => (
-    <Grid
-      item
-      xs={12}
-      sm={6}
-      md={4}
-      key={item.companyId}
-    >
+  const getCategoryIcon = (categoryIndex) => {
+    switch (categoryIndex) {
+      case 0: return <ParceiroIcon color="primary" />;
+      case 1: return <FinanciadorIcon color="primary" />;
+      case 2: return <PatrocinadorIcon color="primary" />;
+      default: return <BusinessIcon color="primary" />;
+    }
+  };
+
+  const renderSkeleton = () => (
+    <Grid item xs={12} sm={6} md={4} lg={3}>
+      <Card sx={{ height: '100%' }}>
+        <Skeleton variant="rectangular" width="100%" height={160} />
+        <CardContent>
+          <Skeleton width="60%" />
+          <Skeleton width="40%" />
+          <Skeleton width="80%" />
+        </CardContent>
+      </Card>
+    </Grid>
+  );
+
+  const renderCard = (item, categoryIndex) => (
+    <Grid item xs={12} sm={6} md={4} lg={3} key={item.companyId}>
       <Card
         sx={{
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          padding: 2,
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-5px)',
+            boxShadow: theme.shadows[6],
+            cursor: 'pointer'
+          },
           borderRadius: 2,
-          cursor: 'pointer',
-          transition: '0.3s',
-          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-          '&:hover': { boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)' },
+          overflow: 'hidden',
+          position: 'relative'
         }}
         onClick={() => handleCompanyClick(item.companyId)}
       >
-        <Avatar
-          src={item.logo}
-          alt={item.nome}
+        {/* Banner da empresa */}
+        <CardMedia
+          component="div"
           sx={{
-            width: isMobile ? 60 : 80,
-            height: isMobile ? 60 : 80,
-            marginBottom: 2,
+            height: 100,
+            backgroundColor: theme.palette.primary.light,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
-        />
-        <CardContent sx={{ textAlign: 'center' }}>
+        >
+          {getCategoryIcon(categoryIndex)}
+        </CardMedia>
+
+        {/* Logo da empresa */}
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginTop: '-40px',
+          zIndex: 1
+        }}>
+          <Avatar
+            src={item.logo}
+            alt={item.nome}
+            sx={{
+              width: 80,
+              height: 80,
+              border: `3px solid ${theme.palette.background.paper}`,
+              boxShadow: theme.shadows[3]
+            }}
+          />
+        </Box>
+
+        <CardContent sx={{
+          flexGrow: 1,
+          textAlign: 'center',
+          pt: 6,
+          pb: 2
+        }}>
           <Typography
             variant="h6"
-            color="primary"
             sx={{
-              fontSize: isMobile ? '1rem' : '1.2rem',
               fontWeight: 'bold',
+              mb: 1,
+              color: theme.palette.text.primary,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }}
           >
             {item.nome}
           </Typography>
+
+          {item.sector && (
+            <Chip
+              label={item.sector}
+              size="small"
+              sx={{
+                mb: 1,
+                backgroundColor: theme.palette.action.selected,
+                color: theme.palette.text.secondary
+              }}
+            />
+          )}
+
+          <Divider sx={{ my: 1 }} />
+
+        
         </CardContent>
       </Card>
     </Grid>
@@ -105,75 +192,147 @@ const ParceirosInvestidoresDesk = () => {
   return (
     <Box
       sx={{
-        width: '100%',
-        padding: isMobile ? 1 : 2,
+        maxWidth: 'lg',
+        mx: 'auto',
+        px: isMobile ? 2 : 4,
+        py: 4
       }}
     >
-      {/* Legenda acima das tabs */}
-      <Typography
-        variant="h6"
-        align="center"
-        sx={{
-          marginBottom: 2,
-          fontSize: isMobile ? '1rem' : '1.2rem',
-          fontWeight: 'bold',
-        }}
-      >
-        Selecione uma categoria: Parceiros, Financiadores ou Patrocinadores
-      </Typography>
+      {/* Cabeçalho */}
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography
+          variant={isMobile ? 'h5' : 'h4'}
+          sx={{
+            fontWeight: 'bold',
+            mb: 2,
+            color: theme.palette.primary.main
+          }}
+        >
+          Nossos Parceiros e Apoiadores
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            color: theme.palette.text.secondary,
+            maxWidth: 700,
+            mx: 'auto'
+          }}
+        >
+          Conheça as empresas e organizações que fazem parte da nossa rede de colaboração
+        </Typography>
+      </Box>
 
-      <Tabs
-        value={value}
-        onChange={handleChange}
-        aria-label="parceiros, financiadores e investidores"
-        variant="scrollable"
-        scrollButtons="auto"
-        allowScrollButtonsMobile
-        centered
-        sx={{
-          '& .MuiTabs-scroller': {
-            overflow: 'auto',
-          },
-          '& .MuiTab-root': {
-            fontSize: isMobile ? '0.8rem' : '1rem',
-            padding: isMobile ? '6px 12px' : '8px 16px',
-            minWidth: '80px',
-            whiteSpace: 'nowrap',
-            textTransform: 'capitalize',
-          },
-          '& .MuiTabs-indicator': {
-            height: '3px',
-            backgroundColor: 'primary.main',
-          },
-        }}
-      >
-        <Tab label={isMobile ? 'Parc.' : 'Parceiros'} />
-        <Tab label={isMobile ? 'Finan.' : 'Financiadores'} />
-        <Tab label={isMobile ? 'Pats.' : 'Patrocinadores'} />
-      </Tabs>
+      {/* Tabs */}
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        mb: 4
+      }}>
+        <Tabs
+          value={value}
+          onChange={handleChange}
+          variant={isMobile ? 'scrollable' : 'standard'}
+          scrollButtons={isMobile ? 'auto' : false}
+          allowScrollButtonsMobile
+          sx={{
+            '& .MuiTabs-indicator': {
+              height: 4,
+              borderRadius: 2
+            },
+            '& .MuiTab-root': {
+              minWidth: 'unset',
+              px: 3,
+              py: 1,
+              mx: 1,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 'bold',
+              fontSize: isMobile ? '0.875rem' : '1rem',
+              '&.Mui-selected': {
+                color: theme.palette.primary.contrastText,
+                backgroundColor: theme.palette.primary.main,
+                boxShadow: theme.shadows[2]
+              }
+            }
+          }}
+        >
+          <Tab label="Parceiros" icon={isMobile ? null : <ParceiroIcon />} iconPosition="start" />
+          <Tab label="Financiadores" icon={isMobile ? null : <FinanciadorIcon />} iconPosition="start" />
+          <Tab label="Patrocinadores" icon={isMobile ? null : <PatrocinadorIcon />} iconPosition="start" />
+        </Tabs>
+      </Box>
 
-      <Box
-        sx={{
-          padding: isMobile ? 1 : 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        {value === 0 && (
-          <Grid container spacing={2}>
-            {parceiros.map((parceiro) => renderCard(parceiro))}
+      {/* Conteúdo */}
+      <Box sx={{ mt: 2 }}>
+        {loading ? (
+          <Grid container spacing={3}>
+            {[...Array(8)].map((_, index) => renderSkeleton(index))}
           </Grid>
-        )}
-        {value === 1 && (
-          <Grid container spacing={2}>
-            {financiadores.map((financiador) => renderCard(financiador))}
-          </Grid>
-        )}
-        {value === 2 && (
-          <Grid container spacing={2}>
-            {investidores.map((investidor) => renderCard(investidor))}
-          </Grid>
+        ) : (
+          <>
+            {value === 0 && (
+              <Box>
+                {parceiros.length > 0 ? (
+                  <Grid container spacing={3}>
+                    {parceiros.map((parceiro) => renderCard(parceiro, 0))}
+                  </Grid>
+                ) : (
+                  <Box sx={{
+                    textAlign: 'center',
+                    py: 8,
+                    backgroundColor: theme.palette.background.default,
+                    borderRadius: 2
+                  }}>
+                    <Typography variant="h6" color="textSecondary">
+                      Nenhum parceiro encontrado
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {value === 1 && (
+              <Box>
+                {financiadores.length > 0 ? (
+                  <Grid container spacing={3}>
+                    {financiadores.map((financiador) => renderCard(financiador, 1))}
+                  </Grid>
+                ) : (
+                  <Box sx={{
+                    textAlign: 'center',
+                    py: 8,
+                    backgroundColor: theme.palette.background.default,
+                    borderRadius: 2
+                  }}>
+                    <Typography variant="h6" color="textSecondary">
+                      Nenhum financiador encontrado
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {value === 2 && (
+              <Box>
+                {investidores.length > 0 ? (
+                  <Grid container spacing={3}>
+                    {investidores.map((investidor) => renderCard(investidor, 2))}
+                  </Grid>
+                ) : (
+                  <Box sx={{
+                    textAlign: 'center',
+                    py: 8,
+                    backgroundColor: theme.palette.background.default,
+                    borderRadius: 2
+                  }}>
+                    <Typography variant="h6" color="textSecondary">
+                      Nenhum patrocinador encontrado
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </>
         )}
       </Box>
     </Box>
