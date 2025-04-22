@@ -24,21 +24,59 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Autocomplete,
+  Checkbox,
+  FormControlLabel,
+  FormGroup
 } from '@mui/material';
-import { Edit, Delete, Visibility, ArrowBack, Check, Close } from '@mui/icons-material';
+import { Edit, Delete, Visibility, ArrowBack, Check, Close, FilterList, Sort } from '@mui/icons-material';
+
+// Lista de tipos de inquérito pré-definidos
+const TIPOS_INQUERITO = [
+  'Satisfação do Cliente',
+  'Pesquisa de Mercado',
+  'Avaliação de Produto',
+  'Feedback de Evento',
+  'Outro'
+];
+
+// Lista de províncias (pode ser buscada do banco de dados também)
+const PROVINCIAS = [
+  'Maputo Cidade',
+  'Maputo Província',
+  'Gaza',
+  'Inhambane',
+  'Sofala',
+  'Manica',
+  'Tete',
+  'Zambézia',
+  'Nampula',
+  'Cabo Delgado',
+  'Niassa'
+];
 
 const InqueritosModuleDesk = ({ user }) => {
   const [inqueritos, setInqueritos] = useState([]);
   const [abaAtiva, setAbaAtiva] = useState('inqueritos');
   const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({ title: '', description: '', sector: '' });
+  const [editData, setEditData] = useState({ 
+    title: '', 
+    description: '', 
+    tipoInquerito: '', 
+    provincias: [], 
+    sectores: [] 
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
+  const [selectedTipo, setSelectedTipo] = useState('');
+  const [selectedProvincia, setSelectedProvincia] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
   const [sectores, setSectores] = useState([]);
   const [responsesCount, setResponsesCount] = useState({});
+  const [sortBy, setSortBy] = useState('recentes');
+  const [showFilters, setShowFilters] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
@@ -46,11 +84,21 @@ const InqueritosModuleDesk = ({ user }) => {
     onConfirm: () => {}
   });
 
-  const filteredInqueritos = inqueritos.filter((inq) => {
-    const matchesSearch = inq.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSector = selectedSector ? inq.sector === selectedSector : true;
-    return matchesSearch && matchesSector;
-  });
+  // Filtra e ordena os inquéritos
+  const filteredInqueritos = inqueritos
+    .filter((inq) => {
+      const matchesSearch = inq.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSector = selectedSector ? inq.sectores.includes(selectedSector) : true;
+      const matchesTipo = selectedTipo ? inq.tipoInquerito === selectedTipo : true;
+      const matchesProvincia = selectedProvincia ? inq.provincias.includes(selectedProvincia) : true;
+      return matchesSearch && matchesSector && matchesTipo && matchesProvincia;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'recentes') return b.createdAt - a.createdAt;
+      if (sortBy === 'antigos') return a.createdAt - b.createdAt;
+      if (sortBy === 'titulo') return a.title.localeCompare(b.title);
+      return 0;
+    });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,7 +118,10 @@ const InqueritosModuleDesk = ({ user }) => {
 
       // Fetch sectors
       onValue(ref(db, 'sectores_de_atividade'), (snapshot) => {
-        setSectores(snapshot.val() || []);
+        const sectoresData = snapshot.val();
+        if (sectoresData) {
+          setSectores(sectoresData.map(s => s.setor));
+        }
       });
 
       // Fetch responses count for each survey
@@ -101,7 +152,7 @@ const InqueritosModuleDesk = ({ user }) => {
     setConfirmDialog({
       open: true,
       title: 'Confirmar Exclusão',
-      content: 'Tem certeza que deseja excluir este inquérito? Esta ação não pode ser desfeita.',
+      content: 'Tem certeza que deseja excluir este inquérito? Todas as perguntas e respostas associadas serão perdidas.',
       onConfirm: async () => {
         try {
           await remove(ref(db, `surveys/${id}`));
@@ -121,26 +172,34 @@ const InqueritosModuleDesk = ({ user }) => {
     setEditData({ 
       title: currentData.title, 
       description: currentData.description,
-      sector: currentData.sector
+      tipoInquerito: currentData.tipoInquerito || '',
+      provincias: currentData.provincias || [],
+      sectores: currentData.sectores || []
     });
     setAbaAtiva('editar');
   };
 
   const saveEdit = async () => {
-    if (!editData.title || !editData.description || !editData.sector) {
+    if (!editData.title || !editData.description || editData.sectores.length === 0 || editData.provincias.length === 0) {
       setConfirmDialog({
         open: true,
         title: 'Campos obrigatórios',
-        content: 'Preencha todos os campos antes de salvar.',
+        content: 'Preencha todos os campos obrigatórios antes de salvar (Título, Descrição, Setores e Províncias).',
         onConfirm: () => setConfirmDialog({ ...confirmDialog, open: false })
       });
       return;
     }
 
     try {
-      await update(ref(db, `surveys/${editingId}`), editData);
+      await update(ref(db, `surveys/${editingId}`), {
+        title: editData.title,
+        description: editData.description,
+        tipoInquerito: editData.tipoInquerito,
+        provincias: editData.provincias,
+        sectores: editData.sectores
+      });
       setEditingId(null);
-      setEditData({ title: '', description: '', sector: '' });
+      setEditData({ title: '', description: '', tipoInquerito: '', provincias: [], sectores: [] });
       setAbaAtiva('inqueritos');
     } catch (error) {
       console.error('Erro ao atualizar inquérito:', error);
@@ -150,6 +209,24 @@ const InqueritosModuleDesk = ({ user }) => {
   const visualizarRespostas = (surveyId) => {
     setSelectedSurveyId(surveyId);
     setAbaAtiva('respostas');
+  };
+
+  const toggleProvincia = (provincia) => {
+    setEditData(prev => ({
+      ...prev,
+      provincias: prev.provincias.includes(provincia)
+        ? prev.provincias.filter(p => p !== provincia)
+        : [...prev.provincias, provincia]
+    }));
+  };
+
+  const toggleSector = (sector) => {
+    setEditData(prev => ({
+      ...prev,
+      sectores: prev.sectores.includes(sector)
+        ? prev.sectores.filter(s => s !== sector)
+        : [...prev.sectores, sector]
+    }));
   };
 
   return (
@@ -166,23 +243,44 @@ const InqueritosModuleDesk = ({ user }) => {
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            onClick={() => setAbaAtiva('inqueritos')}
-            variant={abaAtiva === 'inqueritos' ? 'contained' : 'outlined'}
-            startIcon={<Visibility />}
-            sx={{ borderRadius: 2 }}
-          >
-            Meus Inquéritos
-          </Button>
-          <Button
-            onClick={() => setAbaAtiva('novo')}
-            variant={abaAtiva === 'novo' ? 'contained' : 'outlined'}
-            color="success"
-            sx={{ borderRadius: 2 }}
-          >
-            Criar Novo
-          </Button>
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              onClick={() => setAbaAtiva('inqueritos')}
+              variant={abaAtiva === 'inqueritos' ? 'contained' : 'outlined'}
+              startIcon={<Visibility />}
+              sx={{ borderRadius: 2 }}
+            >
+              Meus Inquéritos
+            </Button>
+            <Button
+              onClick={() => setAbaAtiva('novo')}
+              variant={abaAtiva === 'novo' ? 'contained' : 'outlined'}
+              color="success"
+              sx={{ borderRadius: 2 }}
+            >
+              Criar Novo
+            </Button>
+          </Box>
+          {abaAtiva === 'inqueritos' && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                onClick={() => setShowFilters(!showFilters)}
+                startIcon={<FilterList />}
+                variant="outlined"
+                color="info"
+              >
+                Filtros
+              </Button>
+              <Button
+                startIcon={<Sort />}
+                variant="outlined"
+                onClick={() => setSortBy(sortBy === 'recentes' ? 'antigos' : 'recentes')}
+              >
+                {sortBy === 'recentes' ? 'Mais antigos' : 'Mais recentes'}
+              </Button>
+            </Box>
+          )}
         </Box>
       </Box>
 
@@ -197,22 +295,59 @@ const InqueritosModuleDesk = ({ user }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flex: 2 }}
             />
-            <FormControl fullWidth sx={{ flex: 1 }}>
-              <InputLabel>Filtrar por setor</InputLabel>
-              <Select
-                value={selectedSector}
-                onChange={(e) => setSelectedSector(e.target.value)}
-                label="Filtrar por setor"
-              >
-                <MenuItem value="">Todos os setores</MenuItem>
-                {sectores.map((s) => (
-                  <MenuItem key={s.setor} value={s.setor}>
-                    {s.setor}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </Box>
+
+          {showFilters && (
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Setor</InputLabel>
+                <Select
+                  value={selectedSector}
+                  onChange={(e) => setSelectedSector(e.target.value)}
+                  label="Setor"
+                >
+                  <MenuItem value="">Todos os setores</MenuItem>
+                  {sectores.map((s) => (
+                    <MenuItem key={s} value={s}>
+                      {s}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Tipo de Inquérito</InputLabel>
+                <Select
+                  value={selectedTipo}
+                  onChange={(e) => setSelectedTipo(e.target.value)}
+                  label="Tipo de Inquérito"
+                >
+                  <MenuItem value="">Todos os tipos</MenuItem>
+                  {TIPOS_INQUERITO.map((tipo) => (
+                    <MenuItem key={tipo} value={tipo}>
+                      {tipo}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Província</InputLabel>
+                <Select
+                  value={selectedProvincia}
+                  onChange={(e) => setSelectedProvincia(e.target.value)}
+                  label="Província"
+                >
+                  <MenuItem value="">Todas as províncias</MenuItem>
+                  {PROVINCIAS.map((prov) => (
+                    <MenuItem key={prov} value={prov}>
+                      {prov}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          )}
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
@@ -231,17 +366,36 @@ const InqueritosModuleDesk = ({ user }) => {
                       <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                         {inq.title}
                       </Typography>
-                      <Chip 
-                        label={inq.sector} 
-                        color="primary" 
-                        size="small" 
-                        sx={{ ml: 1 }} 
-                      />
+                      <Box>
+                        {inq.tipoInquerito && (
+                          <Chip 
+                            label={inq.tipoInquerito} 
+                            color="info" 
+                            size="small" 
+                            sx={{ ml: 1 }} 
+                          />
+                        )}
+                      </Box>
                     </Box>
+                    
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                       {inq.description}
                     </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 1 }}>
+                      {inq.sectores?.map((sector) => (
+                        <Chip key={sector} label={sector} size="small" />
+                      ))}
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                      {inq.provincias?.map((provincia) => (
+                        <Chip key={provincia} label={provincia} size="small" variant="outlined" />
+                      ))}
+                    </Box>
+                    
                     <Divider sx={{ my: 1 }} />
+                    
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Chip
@@ -249,6 +403,12 @@ const InqueritosModuleDesk = ({ user }) => {
                           variant="outlined"
                           size="small"
                           color={responsesCount[inq.id] ? 'primary' : 'default'}
+                        />
+                        <Chip
+                          label={`${inq.questions?.length || 0} perguntas`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ ml: 1 }}
                         />
                         <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
                           Criado em: {new Date(inq.createdAt).toLocaleDateString()}
@@ -299,6 +459,8 @@ const InqueritosModuleDesk = ({ user }) => {
             user={user} 
             onSuccess={() => setAbaAtiva('inqueritos')} 
             sectores={sectores}
+            provincias={PROVINCIAS}
+            tiposInquerito={TIPOS_INQUERITO}
           />
         </Box>
       )}
@@ -315,14 +477,14 @@ const InqueritosModuleDesk = ({ user }) => {
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 800, mx: 'auto' }}>
             <TextField
-              label="Título do Inquérito"
+              label="Título do Inquérito *"
               variant="outlined"
               fullWidth
               value={editData.title}
               onChange={(e) => setEditData({ ...editData, title: e.target.value })}
             />
             <TextField
-              label="Descrição"
+              label="Descrição *"
               variant="outlined"
               multiline
               rows={4}
@@ -330,20 +492,63 @@ const InqueritosModuleDesk = ({ user }) => {
               value={editData.description}
               onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             />
+            
             <FormControl fullWidth>
-              <InputLabel>Setor de Atividade</InputLabel>
+              <InputLabel>Tipo de Inquérito</InputLabel>
               <Select
-                value={editData.sector}
-                onChange={(e) => setEditData({ ...editData, sector: e.target.value })}
-                label="Setor de Atividade"
+                value={editData.tipoInquerito}
+                onChange={(e) => setEditData({ ...editData, tipoInquerito: e.target.value })}
+                label="Tipo de Inquérito"
               >
-                {sectores.map((s) => (
-                  <MenuItem key={s.setor} value={s.setor}>
-                    {s.setor}
+                <MenuItem value="">Selecione um tipo</MenuItem>
+                {TIPOS_INQUERITO.map((tipo) => (
+                  <MenuItem key={tipo} value={tipo}>
+                    {tipo}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+            
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Províncias * (selecione pelo menos uma)
+              </Typography>
+              <FormGroup row sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {PROVINCIAS.map((provincia) => (
+                  <FormControlLabel
+                    key={provincia}
+                    control={
+                      <Checkbox
+                        checked={editData.provincias.includes(provincia)}
+                        onChange={() => toggleProvincia(provincia)}
+                      />
+                    }
+                    label={provincia}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+            
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Setores de Atividade * (selecione pelo menos um)
+              </Typography>
+              <FormGroup row sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {sectores.map((sector) => (
+                  <FormControlLabel
+                    key={sector}
+                    control={
+                      <Checkbox
+                        checked={editData.sectores.includes(sector)}
+                        onChange={() => toggleSector(sector)}
+                      />
+                    }
+                    label={sector}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+            
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
               <Button
                 onClick={() => setAbaAtiva('inqueritos')}
@@ -358,6 +563,7 @@ const InqueritosModuleDesk = ({ user }) => {
                 variant="contained"
                 color="primary"
                 startIcon={<Check />}
+                disabled={editData.provincias.length === 0 || editData.sectores.length === 0}
               >
                 Salvar Alterações
               </Button>

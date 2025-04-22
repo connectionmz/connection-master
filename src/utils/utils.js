@@ -1,7 +1,6 @@
 const formatPrice = (value) => {
   if (!value) return '0,00';
 
-  // Substitui vírgulas por pontos para conversão correta
   const cleanedValue = String(value).replace(',', '.');
   const number = Number(cleanedValue);
 
@@ -29,7 +28,6 @@ const formatPrice = (value) => {
   return `${formattedDate} às ${formattedTime}`;
 };
 
-
 const formatarMoeda = (valor) => {
  if (valor === "" || valor === null || isNaN(valor)) return "";
 
@@ -41,4 +39,13 @@ const formatarMoeda = (valor) => {
   return `${comPonto},${decimais}`;
 };
 
-export { formatPrice, formatDateTime,formatarMoeda  };
+ const shuffleArray = (array) => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
+
+export { formatPrice, formatDateTime,formatarMoeda, shuffleArray  };

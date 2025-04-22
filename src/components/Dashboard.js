@@ -26,7 +26,6 @@ import StorieListDesk from "./desktop/StorieListDesk";
 import CategoriaList from "./desktop/CategoriasList";
 import InqueritosList from "./desktop/InqueritosList";
 
-
 const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
   const [error, setError] = useState(null);
@@ -195,43 +194,42 @@ const Dashboard = ({ user }) => {
                 alt={blogs[0].title}
                 style={{
                   width: "100%",
-                  height: { xs: "100px", sm: "150px" }, // Altura responsiva
+                  height: { xs: "100px", sm: "150px" }, 
                   objectFit: "cover",
                   borderRadius: "8px",
                 }}
                 />
               <Typography
                 variant="subtitle1"
-                sx={{ fontWeight: "bold", mt: 1, fontSize: { xs: "0.9rem", sm: "1rem" } }} // Fonte responsiva
+                sx={{ fontWeight: "bold", mt: 1, fontSize: { xs: "0.9rem", sm: "1rem" } }} 
               >
                 {blogs[0].title}
               </Typography>
               <Typography
-  variant="body2"
-  color="textSecondary"
-  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
->
-  {blogs[0].content.replace(/<[^>]+>/g, "").substring(0, 100)}...
-</Typography>
-            </Link>
-            <Button
-              component={Link}
-              to="/blog"
-              variant="outlined"
-              fullWidth
-              sx={{ mt: 2, fontSize: { xs: "0.8rem", sm: "0.875rem" } }} // Fonte responsiva
-            >
-              Ver todos os blogs
-            </Button>
-          </Box>
-        ) : (
-          <Typography variant="body2" color="textSecondary">
-            Nenhum blog disponível no momento.
-          </Typography>
-        )}
-      </Paper>
-    </Grid>
-
+                  variant="body2"
+                  color="textSecondary"
+                  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+              >
+              {blogs[0].content.replace(/<[^>]+>/g, "").substring(0, 100)}...
+                  </Typography>
+                        </Link>
+                        <Button
+                          component={Link}
+                          to="/blog"
+                          variant="outlined"
+                          fullWidth
+                          sx={{ mt: 2, fontSize: { xs: "0.8rem", sm: "0.875rem" } }} // Fonte responsiva
+                        >
+                          Ver todos os blogs
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="textSecondary">
+                        Nenhum blog disponível no momento.
+                      </Typography>
+                    )}
+                  </Paper>
+                </Grid>
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
             <MarqueeAnuncios user={user} />
@@ -286,7 +284,7 @@ const Dashboard = ({ user }) => {
   */}
   <InqueritosList 
   user={user} />
-</Grid>
+        </Grid>
         </Grid>
       </Container>
 

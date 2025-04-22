@@ -21,7 +21,6 @@ import {
   TableSortLabel,
   Snackbar,
   Alert,
-  Modal,
   Switch,
   useMediaQuery,
   useTheme,
@@ -49,7 +48,7 @@ import {
   Category,
   Close
 } from '@mui/icons-material';
-import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage';
+import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import { formatPrice } from '../../utils/utils';
 
 const ManageStoreDesk = ({ storeId }) => {
@@ -63,7 +62,8 @@ const ManageStoreDesk = ({ storeId }) => {
   const [loading, setLoading] = useState({
     products: false,
     store: false,
-    productUpdate: false
+    productUpdate: false,
+    imageUpload: false
   });
   const [pagination, setPagination] = useState({
     page: 0,
@@ -96,22 +96,13 @@ const ManageStoreDesk = ({ storeId }) => {
     name: '',
     price: '',
     category: '',
-    description: ''
+    description: '',
+    imageUrl: '',
+    imageFile: null
   });
   const [logoFile, setLogoFile] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
-
-  // Menu de ações para mobile
-  const handleMenuOpen = (event, productId) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedProductId(productId);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedProductId(null);
-  };
 
   // Buscar dados iniciais
   useEffect(() => {
@@ -157,6 +148,17 @@ const ManageStoreDesk = ({ storeId }) => {
     setModals(prev => ({ ...prev, [modalName]: isOpen }));
   };
 
+  // Menu de ações para mobile
+  const handleMenuOpen = (event, productId) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedProductId(productId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedProductId(null);
+  };
+
   // Handlers para produtos
   const handleEditProduct = (productId, product) => {
     setProductData({
@@ -164,7 +166,9 @@ const ManageStoreDesk = ({ storeId }) => {
       name: product.name || '',
       price: product.price ? String(product.price) : '',
       category: product.category || '',
-      description: product.description || ''
+      description: product.description || '',
+      imageUrl: product.imageUrl || '',
+      imageFile: null
     });
     toggleModal('editProduct', true);
     handleMenuClose();
@@ -173,6 +177,17 @@ const ManageStoreDesk = ({ storeId }) => {
   const handleRemoveProduct = async (productId) => {
     toggleModal('deleteConfirm', false);
     try {
+      // Remover imagem do produto se existir
+      const product = products.find(([id]) => id === productId)?.[1];
+      if (product?.imageUrl) {
+        try {
+          const imageRef = storageRef(storage, product.imageUrl);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.warn('Erro ao remover imagem do produto:', error);
+        }
+      }
+
       await remove(ref(db, `stores/${storeId}/products/${productId}`));
       setProducts(prev => prev.filter(([key]) => key !== productId));
       showFeedback('Produto removido com sucesso!');
@@ -183,6 +198,28 @@ const ManageStoreDesk = ({ storeId }) => {
     handleMenuClose();
   };
 
+  // Handler para alterar imagem do produto
+  const handleProductImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProductData(prev => ({ 
+        ...prev, 
+        imageFile: file,
+        imageUrl: URL.createObjectURL(file) 
+      }));
+    }
+  };
+
+  // Handler para remover imagem do produto
+  const handleRemoveProductImage = () => {
+    setProductData(prev => ({ 
+      ...prev, 
+      imageFile: null,
+      imageUrl: '' 
+    }));
+  };
+
+  // Atualizar produto com nova imagem
   const handleUpdateProduct = async () => {
     if (!productData.name.trim()) {
       showFeedback('O nome do produto é obrigatório.', 'error');
@@ -198,11 +235,41 @@ const ManageStoreDesk = ({ storeId }) => {
     try {
       setLoading(prev => ({ ...prev, productUpdate: true }));
 
+      let imageUrl = productData.imageUrl;
+      
+      // Se houver nova imagem para upload
+      if (productData.imageFile) {
+        setLoading(prev => ({ ...prev, imageUpload: true }));
+        
+        // Criar referência para o arquivo no Storage
+        const imageRef = storageRef(
+          storage, 
+          `products/${storeId}/${productData.id}/${productData.imageFile.name}`
+        );
+        
+        // Fazer upload da nova imagem
+        await uploadBytes(imageRef, productData.imageFile);
+        imageUrl = await getDownloadURL(imageRef);
+        
+        // Se havia uma imagem anterior, removê-la
+        if (productData.imageUrl && productData.imageUrl !== imageUrl) {
+          try {
+            const oldImageRef = storageRef(storage, productData.imageUrl);
+            await deleteObject(oldImageRef);
+          } catch (error) {
+            console.warn('Não foi possível remover a imagem antiga:', error);
+          }
+        }
+        
+        setLoading(prev => ({ ...prev, imageUpload: false }));
+      }
+
       const productToUpdate = {
         name: productData.name.trim(),
         price: price,
         category: productData.category.trim(),
         description: productData.description.trim(),
+        imageUrl: imageUrl,
         updatedAt: Date.now()
       };
 
@@ -221,7 +288,11 @@ const ManageStoreDesk = ({ storeId }) => {
       console.error('Erro ao atualizar produto:', error);
       showFeedback('Erro ao atualizar o produto.', 'error');
     } finally {
-      setLoading(prev => ({ ...prev, productUpdate: false }));
+      setLoading(prev => ({ 
+        ...prev, 
+        productUpdate: false,
+        imageUpload: false 
+      }));
     }
   };
 
@@ -758,6 +829,99 @@ const ManageStoreDesk = ({ storeId }) => {
         
         <DialogContent dividers sx={{ pt: 3 }}>
           <Grid container spacing={2}>
+            {/* Seção de Upload de Imagem */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Imagem do Produto
+              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: 2,
+                mb: 3
+              }}>
+                {/* Preview da Imagem */}
+                {(productData.imageUrl || productData.imageFile) && (
+                  <Box sx={{ 
+                    width: isMobile ? '100%' : 150,
+                    height: isMobile ? 150 : 150,
+                    position: 'relative',
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    overflow: 'hidden'
+                  }}>
+                    <img
+                      src={productData.imageUrl || URL.createObjectURL(productData.imageFile)}
+                      alt="Preview"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                    <IconButton
+                      onClick={handleRemoveProductImage}
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0,0,0,0.7)'
+                        }
+                      }}
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
+                
+                {/* Botões de Upload */}
+                <Box sx={{ 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                  flex: 1
+                }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProductImageChange}
+                    style={{ display: 'none' }}
+                    id="product-image-upload"
+                  />
+                  <label htmlFor="product-image-upload">
+                    <Button 
+                      variant="outlined" 
+                      component="span"
+                      fullWidth
+                      startIcon={<Image />}
+                      disabled={loading.imageUpload}
+                    >
+                      {productData.imageUrl ? 'Alterar Imagem' : 'Adicionar Imagem'}
+                    </Button>
+                  </label>
+                  
+                  {productData.imageUrl && (
+                    <Button 
+                      variant="outlined" 
+                      color="error"
+                      onClick={handleRemoveProductImage}
+                      fullWidth
+                      startIcon={<Delete />}
+                      disabled={loading.imageUpload}
+                    >
+                      Remover Imagem
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </Grid>
+            
+            {/* Campos do Produto */}
             <Grid item xs={12}>
               <TextField
                 label="Nome do Produto"
@@ -768,7 +932,6 @@ const ManageStoreDesk = ({ storeId }) => {
                 error={!productData.name.trim()}
                 helperText={!productData.name.trim() ? 'Campo obrigatório' : ''}
                 size={isMobile ? 'small' : 'medium'}
-                
               />
             </Grid>
             
@@ -837,7 +1000,9 @@ const ManageStoreDesk = ({ storeId }) => {
             }
             size={isMobile ? 'small' : 'medium'}
           >
-            {loading.productUpdate ? <CircularProgress size={24} /> : 'Salvar'}
+            {loading.productUpdate ? (
+              <CircularProgress size={24} />
+            ) : 'Salvar Alterações'}
           </Button>
         </DialogActions>
       </Dialog>

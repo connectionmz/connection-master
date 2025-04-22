@@ -1,183 +1,185 @@
 import React, { useEffect, useState } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../../fb';
-import { Box, Typography, Button, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import { Bar, Pie } from 'react-chartjs-2';
-import { saveAs } from 'file-saver'; // Para exportação XLS
-import jsPDF from 'jspdf'; // Para exportação PDF
-import autoTable from 'jspdf-autotable';
+import {
+  Box,
+  Typography,
+  Paper,
+  Divider,
+  List,
+  ListItem,
+  ListItemAvatar,
+  Avatar,
+  ListItemText,
+  CircularProgress,
+  Button,
+  IconButton,
+  Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
+} from '@mui/material';
+import { ArrowBack, ExpandMore, Business, CalendarToday } from '@mui/icons-material';
 
 const VisualizarRespostasDesk = ({ surveyId, onBack }) => {
-  const [respostas, setRespostas] = useState({});
+  const [respostas, setRespostas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedResponse, setExpandedResponse] = useState(null);
 
   useEffect(() => {
     const respostasRef = ref(db, `survey_responses/${surveyId}`);
     setLoading(true);
+    
     onValue(respostasRef, (snapshot) => {
       const data = snapshot.val();
-      setRespostas(data || {});
+      
+      if (data) {
+        // Transformar o objeto de respostas em array e ordenar por data
+        const respostasArray = Object.entries(data).map(([key, value]) => ({
+          id: key,
+          ...value
+        })).sort((a, b) => b.submittedAt - a.submittedAt);
+        
+        setRespostas(respostasArray);
+      } else {
+        setRespostas([]);
+      }
+      
       setLoading(false);
     });
   }, [surveyId]);
 
-  // Funções para análises
-  const calcularEstatisticas = (respostas) => {
-    const categorias = {};
-    Object.values(respostas).forEach((resposta) => {
-      if (resposta.responses) {
-        Object.entries(resposta.responses).forEach(([question, answer]) => {
-          if (!categorias[question]) categorias[question] = {};
-          categorias[question][answer] = (categorias[question][answer] || 0) + 1;
-        });
-      }
-    });
-
-    return { totalRespostas: Object.keys(respostas).length, categorias };
+  const handleExpandResponse = (responseId) => {
+    setExpandedResponse(expandedResponse === responseId ? null : responseId);
   };
 
-  const estatisticas = calcularEstatisticas(respostas);
-
-  // Função para gerar os dados para gráficos
-  const gerarDadosGrafico = (question) => {
-    const dados = estatisticas.categorias[question] || {};
-    return {
-      labels: Object.keys(dados),
-      datasets: [
-        {
-          label: `Distribuição das Respostas para "${question}"`,
-          data: Object.values(dados),
-          backgroundColor: 'rgba(75, 192, 192, 0.6)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1,
-        },
-      ],
-    };
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Data não disponível';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('pt-MZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  // Exportação para XLS
-  const exportarXLS = () => {
-    const linhas = [];
-    Object.entries(respostas).forEach(([userId, resposta]) => {
-      const linha = {
-        Nome: resposta.company?.nome || userId,
-        "Com que frequência você compra online?": resposta.responses["Com que frequência você compra online?"] || '',
-        "Quais destes métodos de pagamento você prefere?": resposta.responses["Quais destes métodos de pagamento você prefere?"] || '',
-        "Qual é o fator mais importante para você ao escolher um produto?": resposta.responses["Qual é o fator mais importante para você ao escolher um produto?"] || '',
-      };
-      linhas.push(linha);
-    });
-
-    const blob = new Blob(
-      [
-        "\ufeff" +
-          Object.keys(linhas[0])
-            .join("\t") +
-          "\n" +
-          linhas
-            .map((linha) => Object.values(linha).join("\t"))
-            .join("\n"),
-      ],
-      { type: "application/vnd.ms-excel" }
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress size={60} />
+      </Box>
     );
+  }
 
-    saveAs(blob, `respostas_${surveyId}.xls`);
-  };
-
-  // Exportação para PDF
-  const exportarPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Respostas do Inquérito", 10, 10);
-
-    const linhas = Object.entries(respostas).map(([userId, resposta]) => [
-      resposta.company?.nome || userId,
-      resposta.responses["Com que frequência você compra online?"] || '',
-      resposta.responses["Quais destes métodos de pagamento você prefere?"] || '',
-      resposta.responses["Qual é o fator mais importante para você ao escolher um produto?"] || '',
-    ]);
-
-    autoTable(doc, {
-      head: [["Nome", "Frequência de Compra", "Método de Pagamento", "Fator Importante"]],
-      body: linhas,
-    });
-
-    doc.save(`respostas_${surveyId}.pdf`);
-  };
+  if (respostas.length === 0) {
+    return (
+      <Paper sx={{ p: 3, mt: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <IconButton onClick={onBack} sx={{ mr: 1 }}>
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h5">Respostas ao Inquérito</Typography>
+        </Box>
+        
+        <Typography variant="body1" sx={{ mt: 2, textAlign: 'center' }}>
+          Nenhuma resposta encontrada para este inquérito.
+        </Typography>
+      </Paper>
+    );
+  }
 
   return (
-    <Box sx={{ padding: 4 }}>
-      <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
-        Respostas do Inquérito
-      </Typography>
+    <Paper sx={{ p: 3, mt: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <IconButton onClick={onBack} sx={{ mr: 1 }}>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h5">Respostas ao Inquérito</Typography>
+        <Chip 
+          label={`${respostas.length} resposta${respostas.length !== 1 ? 's' : ''}`} 
+          color="primary" 
+          sx={{ ml: 2 }} 
+        />
+      </Box>
 
-      <Button onClick={onBack} variant="outlined" sx={{ marginBottom: 2 }}>
-        Voltar
-      </Button>
-
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Total de Respostas: {estatisticas.totalRespostas}
-          </Typography>
-
-          <Button variant="contained" color="primary" onClick={exportarPDF} sx={{ marginRight: 2 }}>
-            Exportar PDF
-          </Button>
-          <Button variant="contained" color="secondary" onClick={exportarXLS}>
-            Exportar XLS
-          </Button>
-
-          {/* Exibição dos Gráficos */}
-          {Object.keys(estatisticas.categorias).map((question, index) => (
-            <Box key={index} sx={{ marginBottom: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                {question}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 4 }}>
-                <Box sx={{ flex: 1, minWidth: 300 }}>
-                  <Bar data={gerarDadosGrafico(question)} options={{ responsive: true, maintainAspectRatio: false }} />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 300 }}>
-                  <Pie data={gerarDadosGrafico(question)} options={{ responsive: true, maintainAspectRatio: false }} />
-                </Box>
-              </Box>
-            </Box>
-          ))}
-
-          {/* Tabela de Respostas por Empresas */}
-          <Box sx={{ marginTop: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Respostas por Empresa
-            </Typography>
-
-            <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Empresa</TableCell>
-                    <TableCell>Frequência de Compra</TableCell>
-                    <TableCell>Método de Pagamento</TableCell>
-                    <TableCell>Fator Importante</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {Object.entries(respostas).map(([userId, resposta]) => (
-                    <TableRow key={userId}>
-                      <TableCell>{resposta.company?.nome || userId}</TableCell>
-                      <TableCell>{resposta.responses["Com que frequência você compra online?"] || ''}</TableCell>
-                      <TableCell>{resposta.responses["Quais destes métodos de pagamento você prefere?"] || ''}</TableCell>
-                      <TableCell>{resposta.responses["Qual é o fator mais importante para você ao escolher um produto?"] || ''}</TableCell>
+      <List sx={{ width: '100%' }}>
+        {respostas.map((resposta) => (
+          <Accordion 
+            key={resposta.id}
+            expanded={expandedResponse === resposta.id}
+            onChange={() => handleExpandResponse(resposta.id)}
+            elevation={2}
+            sx={{ mb: 2 }}
+          >
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <ListItem sx={{ p: 0 }}>
+                <ListItemAvatar>
+                  <Avatar 
+                    src={resposta.company?.logo} 
+                    alt={resposta.company?.nome}
+                  >
+                    {!resposta.company?.logo && <Business />}
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={resposta.company?.nome || 'Empresa não identificada'}
+                  secondary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                      <CalendarToday fontSize="small" sx={{ mr: 0.5 }} />
+                      <Typography variant="caption">
+                        {formatDate(resposta.submittedAt)}
+                      </Typography>
+                      {resposta.company?.provincia && (
+                        <Chip 
+                          label={resposta.company.provincia} 
+                          size="small" 
+                          sx={{ ml: 1 }} 
+                        />
+                      )}
+                    </Box>
+                  }
+                />
+              </ListItem>
+            </AccordionSummary>
+            
+            <AccordionDetails>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Pergunta</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Resposta</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        </Box>
-      )}
-    </Box>
+                  </TableHead>
+                  <TableBody>
+                    {Object.entries(resposta.responses || {}).map(([pergunta, respostaTexto]) => (
+                      <TableRow key={pergunta}>
+                        <TableCell>{pergunta}</TableCell>
+                        <TableCell>
+                          {typeof respostaTexto === 'string' && respostaTexto.startsWith('<p>') ? (
+                            <div dangerouslySetInnerHTML={{ __html: respostaTexto }} />
+                          ) : (
+                            respostaTexto
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </AccordionDetails>
+          </Accordion>
+        ))}
+      </List>
+    </Paper>
   );
 };
 
