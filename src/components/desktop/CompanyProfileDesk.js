@@ -51,6 +51,10 @@ const CompanyProfile = ({ user }) => {
     const handleCloseSnackbar = () => {
         setOpenSnackbar(false);
     };
+
+    if(userId === user.id){
+        window.location='/perfil'
+    }
     
     useEffect(() => {
         if (userId) {

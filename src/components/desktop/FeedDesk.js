@@ -2,12 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { ref, onValue, remove } from 'firebase/database';
 import { db } from '../../fb';
 import { useNavigate } from 'react-router-dom';
-import { Grid, Card, CardMedia, CardContent, Typography, Avatar, Box, IconButton } from '@mui/material';
+import { 
+  Grid, 
+  Card, 
+  CardMedia, 
+  CardContent, 
+  Typography, 
+  Avatar, 
+  Box, 
+  IconButton,
+  useTheme,
+  useMediaQuery
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 const FeedDesk = ({ user }) => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     const postsRef = ref(db, 'posts');
@@ -46,6 +59,7 @@ const FeedDesk = ({ user }) => {
   };
 
   const formatTimestamp = (timestamp) => {
+    if (!timestamp) return '';
     const date = new Date(timestamp);
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
@@ -57,7 +71,8 @@ const FeedDesk = ({ user }) => {
     return isToday ? `Às ${formattedTime}` : date.toLocaleDateString('pt-BR') + ' ' + formattedTime;
   };
 
-  const handleDelete = (postId) => {
+  const handleDelete = (postId, e) => {
+    e.stopPropagation();
     const isConfirmed = window.confirm("Tem certeza de que deseja excluir este post?");
     if (isConfirmed) {
       const postRef = ref(db, 'posts/' + postId);
@@ -67,27 +82,47 @@ const FeedDesk = ({ user }) => {
     }
   };
 
+  // Função para truncar texto longo
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
   return (
-    <Box sx={{ width: '100%', p: 2, bgcolor: '#f5f5f5' }}>
+    <Box sx={{ 
+      width: '100%', 
+      p: { xs: 1, sm: 2 },
+      bgcolor: theme.palette.background.default,
+      minHeight: 'calc(100vh - 64px)'
+    }}>
       {posts.length === 0 ? (
-        <Box sx={{ width: '100%', textAlign: 'center', mt: 4 }}>
-          <Typography variant="body1" color="text.secondary">
-            Nenhuma publicação encontrada.
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '60vh'
+        }}>
+          <Typography variant="h6" color="text.secondary">
+            Nenhuma publicação encontrada na sua região.
           </Typography>
         </Box>
       ) : (
-        <Grid container spacing={2}>
+        <Grid container spacing={isSmallScreen ? 1 : 2}>
           {posts.map((post) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={post.id}>
               <Card
                 sx={{
                   position: 'relative',
                   cursor: 'pointer',
-                  transition: 'transform 0.3s',
+                  transition: 'transform 0.3s, box-shadow 0.3s',
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  '&:hover': { transform: 'scale(1.02)' },
+                  '&:hover': { 
+                    transform: 'translateY(-4px)',
+                    boxShadow: theme.shadows[6]
+                  },
                 }}
                 onClick={() => handleClick(post.id)}
               >
@@ -99,13 +134,31 @@ const FeedDesk = ({ user }) => {
                     width: '100%',
                   }}
                   image={post.url || 'https://via.placeholder.com/300'}
-                  alt={`Post ${post.id}`}
+                  alt={`Post de ${post.companyName}`}
                 />
-                <CardContent sx={{ flexGrow: 1 }}>
+                
+                <CardContent sx={{ 
+                  flexGrow: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 120,
+                  maxHeight: 120,
+                  overflow: 'hidden'
+                }}>
                   <Typography
                     variant="body2"
                     color="text.secondary"
-                    dangerouslySetInnerHTML={{ __html: post.description || 'Sem descrição' }}
+                    sx={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      mb: 1
+                    }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: truncateText(post.description, 150) || 'Sem descrição' 
+                    }}
                   />
                 </CardContent>
 
@@ -114,30 +167,63 @@ const FeedDesk = ({ user }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    bgcolor: '#000',
-                    color: '#fff',
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
                     px: 2,
                     py: 1,
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar src={post.logoUrl} sx={{ width: 32, height: 32, mr: 1 }} />
-                    <Typography variant="caption">{post.companyName}</Typography>
-                  </Box>
-                  <Typography variant="caption">{formatTimestamp(post.timestamp)}</Typography>
-
-                  {post.companyId === user?.id && (
-                    <IconButton
-                      size="small"
-                      sx={{ color: '#ff4d4d' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(post.id);
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    maxWidth: '60%'
+                  }}>
+                    <Avatar 
+                      src={post.logoUrl} 
+                      sx={{ 
+                        width: 32, 
+                        height: 32, 
+                        mr: 1,
+                        border: `2px solid ${theme.palette.background.paper}`
+                      }} 
+                    />
+                    <Typography 
+                      variant="caption" 
+                      noWrap
+                      sx={{
+                        fontWeight: 500
                       }}
                     >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  )}
+                      {post.companyName}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        mr: post.companyId === user?.id ? 1 : 0,
+                        fontSize: '0.7rem'
+                      }}
+                    >
+                      {formatTimestamp(post.timestamp)}
+                    </Typography>
+
+                    {post.companyId === user?.id && (
+                      <IconButton
+                        size="small"
+                        sx={{ 
+                          color: 'error.light',
+                          '&:hover': {
+                            color: 'error.main'
+                          }
+                        }}
+                        onClick={(e) => handleDelete(post.id, e)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
                 </Box>
               </Card>
             </Grid>

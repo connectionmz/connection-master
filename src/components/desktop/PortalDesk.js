@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ref, push, get, set, remove } from 'firebase/database';
 import { db, storage } from '../../fb';
 import { uploadBytes, getDownloadURL, ref as storageRef } from 'firebase/storage';
@@ -24,10 +24,23 @@ import {
   Alert,
   IconButton,
   Button,
+  Tabs,
+  Tab,
+  CardMedia,
+  Avatar,
+  Chip,
+  Divider,
+  useTheme
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon,
+  AttachFile as AttachFileIcon,
+  Image as ImageIcon,
+  CalendarToday,
+  Business
+} from '@mui/icons-material';
 import BackButton from '../BackButton';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,7 +49,8 @@ const PortalDesk = ({ user }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [validity, setValidity] = useState('');
-  const [file, setFile] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [attachmentFile, setAttachmentFile] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -47,13 +61,14 @@ const PortalDesk = ({ user }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const modules = {
     toolbar: [
       [{ header: [1, 2, 3, false] }],
       ['bold', 'italic', 'underline', 'strike'],
       [{ list: 'ordered' }, { list: 'bullet' }],
-      ['link'],
+      ['link', 'image'],
       ['clean'],
     ],
   };
@@ -67,10 +82,15 @@ const PortalDesk = ({ user }) => {
     'list',
     'bullet',
     'link',
+    'image'
   ];
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
   const handleSubmit = async (e) => {
@@ -82,23 +102,33 @@ const PortalDesk = ({ user }) => {
 
     setLoading(true);
     try {
-      let fileUrl = '';
-      let fileFormat = '';
+      let imageUrl = '';
+      let attachmentUrl = '';
+      let attachmentFormat = '';
 
-      if (file) {
-        const fileNameParts = file.name.split('.');
-        fileFormat = fileNameParts[fileNameParts.length - 1].toLowerCase();
-        const storageReference = storageRef(storage, `announcements/${file.name}`);
-        await uploadBytes(storageReference, file);
-        fileUrl = await getDownloadURL(storageReference);
+      // Upload da imagem
+      if (imageFile) {
+        const imageRef = storageRef(storage, `announcements/images/${imageFile.name}`);
+        await uploadBytes(imageRef, imageFile);
+        imageUrl = await getDownloadURL(imageRef);
+      }
+
+      // Upload do anexo
+      if (attachmentFile) {
+        const fileNameParts = attachmentFile.name.split('.');
+        attachmentFormat = fileNameParts[fileNameParts.length - 1].toLowerCase();
+        const attachmentRef = storageRef(storage, `announcements/attachments/${attachmentFile.name}`);
+        await uploadBytes(attachmentRef, attachmentFile);
+        attachmentUrl = await getDownloadURL(attachmentRef);
       }
 
       const newAnnouncement = {
         title,
         content,
         validity,
-        fileUrl,
-        fileFormat,
+        imageUrl,
+        attachmentUrl,
+        attachmentFormat,
         company: {
           nome: user.nome,
           logo: user.photoURL,
@@ -115,10 +145,13 @@ const PortalDesk = ({ user }) => {
 
       await set(ref(db, `publicAnnouncements/${announcementId}`), newAnnouncement);
 
+      // Reset form
       setTitle('');
       setContent('');
-      setFile(null);
       setValidity('');
+      setImageFile(null);
+      setAttachmentFile(null);
+      
       showSnackbar('Anúncio publicado com sucesso!');
       fetchAnnouncements();
     } catch (error) {
@@ -129,7 +162,7 @@ const PortalDesk = ({ user }) => {
     }
   };
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
     try {
       const snapshot = await get(ref(db, 'publicAnnouncements'));
@@ -137,8 +170,11 @@ const PortalDesk = ({ user }) => {
         const data = snapshot.val();
         const filteredData = Object.entries(data)
           .filter(([id, anuncio]) => anuncio.company.id === user.id)
-          .map(([id, value]) => ({ id, ...value }));
+          .map(([id, value]) => ({ id, ...value }))
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
         setAnnouncements(filteredData);
+      } else {
+        setAnnouncements([]);
       }
     } catch (error) {
       console.error('Erro ao carregar anúncios:', error);
@@ -146,11 +182,11 @@ const PortalDesk = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id]);
 
   const confirmAction = (action, announcement) => {
     setModalAction(action);
-    setSelectedAnnouncement(announcement.id);
+    setSelectedAnnouncement(announcement);
     setOpenModal(true);
   };
 
@@ -176,7 +212,8 @@ const PortalDesk = ({ user }) => {
         title: selectedAnnouncement.title,
         content: selectedAnnouncement.content,
         validity: selectedAnnouncement.validity,
-        fileUrl: selectedAnnouncement.fileUrl,
+        imageUrl: selectedAnnouncement.imageUrl,
+        attachmentUrl: selectedAnnouncement.attachmentUrl,
       });
       setActiveTab('edit');
       setOpenModal(false);
@@ -187,25 +224,42 @@ const PortalDesk = ({ user }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      let fileUrl = editingData.fileUrl;
+      let imageUrl = editingData.imageUrl;
+      let attachmentUrl = editingData.attachmentUrl;
+      let attachmentFormat = selectedAnnouncement?.attachmentFormat || '';
 
-      if (file) {
-        const storageReference = storageRef(storage, `announcements/${file.name}`);
-        await uploadBytes(storageReference, file);
-        fileUrl = await getDownloadURL(storageReference);
+      // Upload da nova imagem se fornecida
+      if (imageFile) {
+        const imageRef = storageRef(storage, `announcements/images/${imageFile.name}`);
+        await uploadBytes(imageRef, imageFile);
+        imageUrl = await getDownloadURL(imageRef);
+      }
+
+      // Upload do novo anexo se fornecido
+      if (attachmentFile) {
+        const fileNameParts = attachmentFile.name.split('.');
+        attachmentFormat = fileNameParts[fileNameParts.length - 1].toLowerCase();
+        const attachmentRef = storageRef(storage, `announcements/attachments/${attachmentFile.name}`);
+        await uploadBytes(attachmentRef, attachmentFile);
+        attachmentUrl = await getDownloadURL(attachmentRef);
       }
 
       const updatedAnnouncement = {
         ...editingData,
-        fileUrl,
+        imageUrl,
+        attachmentUrl,
+        attachmentFormat,
         date: new Date().toISOString(),
       };
 
       await set(ref(db, `publicAnnouncements/${editingId}`), updatedAnnouncement);
       showSnackbar('Anúncio atualizado com sucesso!');
+      
+      // Reset states
       setEditingId(null);
       setEditingData({});
-      setFile(null);
+      setImageFile(null);
+      setAttachmentFile(null);
       setActiveTab('view');
       fetchAnnouncements();
     } catch (error) {
@@ -220,58 +274,89 @@ const PortalDesk = ({ user }) => {
     navigate(`/anuncio/${id}`);
   };
 
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return '';
+    }
+  };
+
   const filteredAnnouncements = announcements.filter(announcement =>
     announcement.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
     fetchAnnouncements();
-  }, []);
+  }, [fetchAnnouncements]);
 
   return (
-    <Box className="container mx-auto p-6" sx={{ backgroundColor: '#f5f5f5' }}>
-      <BackButton sx={{ mb: 2 }} />
-      <Typography variant="h4" gutterBottom>
-        Setor Público - Anúncios
+    <Box sx={{ 
+      width: '100%', 
+      p: 3,
+      bgcolor: theme.palette.background.default,
+      minHeight: 'calc(100vh - 64px)'
+    }}>
+      <BackButton sx={{ mb: 3 }} />
+      
+      <Typography variant="h4" component="h1" sx={{ 
+        mb: 3,
+        fontWeight: 600,
+        color: theme.palette.text.primary
+      }}>
+        Portal de Anúncios Públicos
       </Typography>
-      <Box display="flex" mb={4}>
-        <Button
-          variant={activeTab === 'publish' ? 'contained' : 'outlined'}
-          onClick={() => setActiveTab('publish')}
-          sx={{ marginRight: 2 }}
-        >
-          Publicar Anúncio
-        </Button>
-        <Button
-          variant={activeTab === 'view' ? 'contained' : 'outlined'}
-          onClick={() => setActiveTab('view')}
-        >
-          Ver Anúncios
-        </Button>
-      </Box>
+
+      <Tabs 
+        value={activeTab} 
+        onChange={handleTabChange}
+        sx={{ mb: 3 }}
+        indicatorColor="primary"
+        textColor="primary"
+      >
+        <Tab label="Publicar Anúncio" value="publish" />
+        <Tab label="Meus Anúncios" value="view" />
+        {editingId && <Tab label="Editar Anúncio" value="edit" />}
+      </Tabs>
 
       {activeTab === 'publish' && (
-        <form onSubmit={handleSubmit}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 800 }}>
           <TextField
-            label="Título do Anúncio"
+            label="Título do Anúncio *"
             variant="outlined"
             fullWidth
             margin="normal"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            sx={{ mb: 2 }}
           />
-          <Box sx={{ marginBottom: 2 }}>
+          
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Conteúdo *
+            </Typography>
             <ReactQuill
               value={content}
               onChange={setContent}
               modules={modules}
               formats={formats}
-              placeholder="Escreva aqui..."
+              placeholder="Escreva o conteúdo do anúncio aqui..."
+              style={{ 
+                height: '200px',
+                backgroundColor: theme.palette.background.paper,
+                borderRadius: '4px'
+              }}
             />
           </Box>
+          
           <TextField
-            label="Validade"
+            label="Validade *"
             type="date"
             InputLabelProps={{ shrink: true }}
             fullWidth
@@ -282,42 +367,194 @@ const PortalDesk = ({ user }) => {
               min: new Date().toISOString().split("T")[0],
             }}
             required
+            sx={{ mb: 2 }}
           />
-          <Button
-            variant="contained"
-            component="label"
-            sx={{ marginBottom: 2 }}
-          >
-            Carregar Arquivo
-            <input
-              type="file"
-              hidden
-              onChange={(e) => setFile(e.target.files[0])}
-            />
-          </Button>
-          <Box>
-            {file && (
-              <Typography variant="body2" color="textSecondary">
-                {file.name}
-              </Typography>
-            )}
-          </Box>
+          
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6}>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<ImageIcon />}
+                fullWidth
+              >
+                Imagem da Notícia
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files[0])}
+                />
+              </Button>
+              {imageFile && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  {imageFile.name}
+                </Typography>
+              )}
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<AttachFileIcon />}
+                fullWidth
+              >
+                Anexar Arquivo
+                <input
+                  type="file"
+                  hidden
+                  onChange={(e) => setAttachmentFile(e.target.files[0])}
+                />
+              </Button>
+              {attachmentFile && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  {attachmentFile.name}
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
+          
           <Button
             variant="contained"
             color="primary"
             type="submit"
-            sx={{ marginTop: 2 }}
             disabled={loading}
+            sx={{ minWidth: 200 }}
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : 'Publicar Anúncio'}
           </Button>
-        </form>
+        </Box>
+      )}
+
+      {activeTab === 'edit' && (
+        <Box component="form" onSubmit={handleUpdate} sx={{ maxWidth: 800 }}>
+          <TextField
+            label="Título do Anúncio *"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={editingData.title}
+            onChange={(e) => setEditingData({...editingData, title: e.target.value})}
+            required
+            sx={{ mb: 2 }}
+          />
+          
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Conteúdo *
+            </Typography>
+            <ReactQuill
+              value={editingData.content}
+              onChange={(value) => setEditingData({...editingData, content: value})}
+              modules={modules}
+              formats={formats}
+              placeholder="Escreva o conteúdo do anúncio aqui..."
+              style={{ 
+                height: '200px',
+                backgroundColor: theme.palette.background.paper,
+                borderRadius: '4px'
+              }}
+            />
+          </Box>
+          
+          <TextField
+            label="Validade *"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+            margin="normal"
+            value={editingData.validity}
+            onChange={(e) => setEditingData({...editingData, validity: e.target.value})}
+            inputProps={{
+              min: new Date().toISOString().split("T")[0],
+            }}
+            required
+            sx={{ mb: 2 }}
+          />
+          
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6}>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<ImageIcon />}
+                fullWidth
+              >
+                {editingData.imageUrl ? 'Alterar Imagem' : 'Adicionar Imagem'}
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files[0])}
+                />
+              </Button>
+              {editingData.imageUrl && !imageFile && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Imagem atual: <a href={editingData.imageUrl} target="_blank" rel="noopener noreferrer">Visualizar</a>
+                </Typography>
+              )}
+              {imageFile && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Nova imagem: {imageFile.name}
+                </Typography>
+              )}
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<AttachFileIcon />}
+                fullWidth
+              >
+                {editingData.attachmentUrl ? 'Alterar Anexo' : 'Adicionar Anexo'}
+                <input
+                  type="file"
+                  hidden
+                  onChange={(e) => setAttachmentFile(e.target.files[0])}
+                />
+              </Button>
+              {editingData.attachmentUrl && !attachmentFile && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Anexo atual: <a href={editingData.attachmentUrl} target="_blank" rel="noopener noreferrer">Visualizar</a>
+                </Typography>
+              )}
+              {attachmentFile && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Novo anexo: {attachmentFile.name}
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              type="submit"
+              disabled={loading}
+              sx={{ minWidth: 200 }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Atualizar Anúncio'}
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => {
+                setActiveTab('view');
+                setEditingId(null);
+                setEditingData({});
+              }}
+            >
+              Cancelar
+            </Button>
+          </Box>
+        </Box>
       )}
 
       {activeTab === 'view' && (
-        <Box mt={4}>
+        <Box>
           <TextField
-            label="Buscar Anúncio"
+            label="Buscar anúncios"
             variant="outlined"
             fullWidth
             margin="normal"
@@ -330,74 +567,163 @@ const PortalDesk = ({ user }) => {
                 </InputAdornment>
               ),
             }}
+            sx={{ mb: 3, maxWidth: 400 }}
           />
-          <Grid container spacing={3}>
-            {loading ? (
-              <CircularProgress />
-            ) : filteredAnnouncements.length > 0 ? (
-              filteredAnnouncements.map((announcement) => (
+          
+          {loading ? (
+            <Box display="flex" justifyContent="center" my={4}>
+              <CircularProgress size={60} />
+            </Box>
+          ) : filteredAnnouncements.length > 0 ? (
+            <Grid container spacing={3}>
+              {filteredAnnouncements.map((announcement) => (
                 <Grid item xs={12} sm={6} md={4} key={announcement.id}>
-                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <CardContent onClick={() => handleViewDetails(announcement.id)} style={{ cursor: 'pointer' }}>
+                  <Card
+                    sx={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'transform 0.3s, box-shadow 0.3s',
+                      '&:hover': { 
+                        transform: 'translateY(-4px)',
+                        boxShadow: theme.shadows[6]
+                      },
+                    }}
+                  >
+                    {announcement.imageUrl && (
+                      <CardMedia
+                        component="img"
+                        height="160"
+                        image={announcement.imageUrl}
+                        alt={announcement.title}
+                        onClick={() => handleViewDetails(announcement.id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    )}
+                    
+                    <CardContent 
+                      sx={{ flexGrow: 1, cursor: 'pointer' }}
+                      onClick={() => handleViewDetails(announcement.id)}
+                    >
                       <Typography variant="h6" gutterBottom>
                         {announcement.title}
                       </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        <div dangerouslySetInnerHTML={{ __html: announcement.content }} />
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Empresa: {announcement.company.nome}
-                      </Typography>
-                      {announcement.fileUrl && (
-                        <Typography variant="body2" color="textSecondary">
-                          <a href={announcement.fileUrl} target="_blank" rel="noopener noreferrer">
-                            Ver Arquivo
-                          </a>
+                      
+                      <Box
+                        sx={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          minHeight: '72px',
+                          mb: 2
+                        }}
+                        dangerouslySetInnerHTML={{ __html: announcement.content }}
+                      />
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Avatar 
+                          src={announcement.company?.logo} 
+                          sx={{ 
+                            width: 32, 
+                            height: 32, 
+                            mr: 1,
+                            bgcolor: 'primary.main',
+                            color: 'primary.contrastText'
+                          }}
+                        >
+                          <Business fontSize="small" />
+                        </Avatar>
+                        <Typography variant="body2">
+                          {announcement.company?.nome}
                         </Typography>
-                      )}
+                      </Box>
+                      
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        <CalendarToday sx={{ fontSize: '0.8rem', verticalAlign: 'middle', mr: 0.5 }} />
+                        {formatDate(announcement.date)}
+                      </Typography>
                     </CardContent>
-                    <CardActions>
-                      <Tooltip title="Editar">
-                        <IconButton onClick={() => confirmAction('edit', announcement)}>
-                          <EditIcon color="primary" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton onClick={() => confirmAction('delete', announcement)}>
-                          <DeleteIcon color="error" />
-                        </IconButton>
-                      </Tooltip>
+                    
+                    <CardActions sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText'
+                    }}>
+                      {announcement.attachmentUrl && (
+                        <Button
+                          size="small"
+                          color="inherit"
+                          startIcon={<AttachFileIcon />}
+                          href={announcement.attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Anexo
+                        </Button>
+                      )}
+                      
+                      <Box>
+                        <Tooltip title="Editar">
+                          <IconButton 
+                            size="small" 
+                            color="inherit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmAction('edit', announcement);
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Excluir">
+                          <IconButton 
+                            size="small" 
+                            color="inherit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmAction('delete', announcement);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </CardActions>
                   </Card>
                 </Grid>
-              ))
-            ) : (
-              <Typography variant="body2" color="textSecondary">
-                Nenhum anúncio publicado.
-              </Typography>
-            )}
-          </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Nenhum anúncio encontrado {searchQuery ? 'com o termo buscado' : ''}.
+            </Alert>
+          )}
         </Box>
       )}
+
       <Dialog open={openModal} onClose={() => setOpenModal(false)}>
         <DialogTitle>
-          {modalAction === 'delete' ? 'Excluir Anúncio' : 'Editar Anúncio'}
+          {modalAction === 'delete' ? 'Confirmar Exclusão' : 'Editar Anúncio'}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
             {modalAction === 'delete'
-              ? 'Você tem certeza que deseja excluir este anúncio?'
-              : 'Você tem certeza que deseja editar este anúncio?'}
+              ? 'Tem certeza que deseja excluir este anúncio permanentemente?'
+              : 'Deseja editar este anúncio?'}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenModal(false)} color="default">
+          <Button onClick={() => setOpenModal(false)} color="inherit">
             Cancelar
           </Button>
           <Button
-            color="primary"
+            onClick={modalAction === 'delete' ? handleDelete : handleEdit}
+            color={modalAction === 'delete' ? 'error' : 'primary'}
+            variant="contained"
           >
-            Confirmar
+            {modalAction === 'delete' ? 'Excluir' : 'Editar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -406,8 +732,13 @@ const PortalDesk = ({ user }) => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}>
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

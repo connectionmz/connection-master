@@ -55,10 +55,12 @@ const Explore = React.memo(({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const empresasList = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
+          const empresasList = Object.keys(data)
+            .map((key) => ({
+              id: key,
+              ...data[key],
+            }))
+            .filter((empresa) => empresa.id !== user.id); 
           setCompanies(empresasList);
         }
       } catch (error) {
@@ -67,6 +69,7 @@ const Explore = React.memo(({ user }) => {
         setLoading(false);
       }
     };
+    
 
     onValue(ref(db, 'provincias'), (snapshot) => {
       setProvincias(snapshot.val() || []);
