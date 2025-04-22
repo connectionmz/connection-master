@@ -257,7 +257,6 @@ const RecrutamentoDesk = ({ user }) => {
         user={user} 
         areasFormacao={areasFormacao} 
         areasAtuacao={areas} 
-        candidatos={perfis}
         loading={loading.vagas} 
         onPublicarVaga={publicarVaga} 
       />
