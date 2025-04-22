@@ -4,27 +4,22 @@ import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
 import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery, Modal } from '@mui/material';
-import LanguageIcon from '@mui/icons-material/Language';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
 import ApxDesk from '../desktop/ApxDesk';
 import PagamentoModulo from '../PagamentoModulo';
-import Profile from '../Profile';
 import FaturacaoDesk from '../desktop/FaturacaoDesk';
 import CriarProformaDesk from '../desktop/CriarProformaDesk';
 import FaturaDesk from '../desktop/FaturaDesk';
-import Market from '../Market';
 import MarketDesk from '../desktop/MarketDesk';
 import ProductFormDesk from '../market/ProductFormDesk';
 import AnunciarDesk from '../desktop/AnunciarDesk';
 import PostInputDesk from '../desktop/PostInputDesk';
 import Sms from '../sms/Sms';
 import SmsDesk from '../sms/SmsDesk';
-import CallCenterModule from '../CallCenterModule';
-import LogisticaModule from '../LogisticaModule';
-import InqueritosModule from '../InqueritosModule';
+
 import CallCenterModuleDesk from '../desktop/CallCenterModuleDesk';
 import InqueritosModuleDesk from '../desktop/InqueritosModuleDesk';
 import LogisticaModuleDesk from '../desktop/LogisticaModuleDesk';
@@ -265,17 +260,18 @@ const DesktopRoutes = ({ user }) => {
       >
    {/* Renderiza o HeaderDesk apenas para rotas que não estão em fullScreenRoutes */}
    {!isFullScreenRoute && <HeaderDesk user={user} />}
-    <Box
-      sx={{
-        flex: 1,
-        width: '100%',
-        maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px', // Ajuste aqui
-        margin: '0 auto',
-        padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px', // Ajuste aqui
-        boxSizing: 'border-box',
-        minHeight: isFullScreenRoute ? '100vh' : 'auto', // Garante altura total para telas cheias
-      }}
-    >
+   <Box
+    component="main"
+    sx={{
+      flex: 1,
+      width: '100%',
+      maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px',
+      margin: '0 auto',
+      padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px',
+      boxSizing: 'border-box',
+      pb: 4, // Adiciona padding na parte inferior para evitar sobreposição com o footer
+    }}
+  >
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
 
@@ -369,7 +365,10 @@ const DesktopRoutes = ({ user }) => {
           </Routes>
         </Box>
 
-        <FooterDesk />
+        {!isFullScreenRoute && <FooterDesk sx={{ 
+  flexShrink: 0,
+  marginTop: 'auto' 
+}} />}
 
         {/* Botão flutuante de feedback */}
         <Fab

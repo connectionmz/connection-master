@@ -11,9 +11,7 @@ import BackButton from '../BackButton';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
-const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
-
-
+const SurveyFormDesk = ({ surveyData, user, surveyId, isMobile, isTablet }) => {
   const [responses, setResponses] = useState({});
   const [hasResponded, setHasResponded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -123,6 +121,10 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
                   ]
                 }}
                 formats={['bold', 'italic', 'underline', 'list', 'bullet', 'link']}
+                style={{ 
+                  height: isMobile ? '150px' : '200px',
+                  marginBottom: isMobile ? '20px' : '40px'
+                }}
               />
             </Box>
           );
@@ -155,12 +157,15 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
           return null;
       }
     });
-  }, [surveyData.questions, responses, handleChange]);
+  }, [surveyData.questions, responses, handleChange, isMobile]);
 
   if (hasResponded) {
     return (
-      <Box width="100%" height="100vh">
-        <Paper sx={{ padding: 3 }}>
+      <Box sx={{ width: '100%', flex: 1 }}>
+        <Paper sx={{ 
+          padding: isMobile ? 2 : 3,
+          marginBottom: 4
+        }}>
           <BackButton sx={{ mb: 2 }} />
           <Typography variant="h5">
             Você já respondeu a este inquérito.
@@ -171,15 +176,23 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
   }
 
   return (
-    <Box width="100%" height="100vh">
-      <Paper sx={{ padding: 3 }}>
+    <Box sx={{ 
+      width: '100%',
+      flex: 1,
+      minHeight: isMobile ? 'auto' : 'calc(100vh - 200px)'
+    }}>
+      <Paper sx={{ 
+        padding: isMobile ? 2 : 3,
+        marginBottom: 4
+      }}>
         <BackButton sx={{ mb: 2 }} />
 
         <Typography variant="h5" color='primary' sx={{ marginBottom: 2 }}>
-          <a href={`/perfil/${surveyData.company.id}`}>{surveyData.company.nome}</a><br />
+          <a href={`/perfil/${surveyData.company.id}`}>{surveyData.company.nome}</a>
         </Typography>
+        
         <Typography variant="h5" sx={{ marginBottom: 2 }}>
-        {surveyData.title}
+          {surveyData.title}
         </Typography>
 
         <Typography variant="body1" sx={{ marginBottom: 2 }}>
@@ -194,19 +207,31 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
           </Typography>
         )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          marginTop: 3,
+          marginBottom: 2
+        }}>
           <Button
             variant="contained"
             color="primary"
             onClick={handleOpenConfirmDialog}
             disabled={loading || isSubmitting}
+            size={isMobile ? 'medium' : 'large'}
           >
-            {loading || isSubmitting ? <CircularProgress size={24} color="inherit" /> : "Enviar Respostas"}
+            {loading || isSubmitting ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : "Enviar Respostas"}
           </Button>
         </Box>
       </Paper>
 
-      <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
+      <Dialog 
+        open={openConfirmDialog} 
+        onClose={handleCloseConfirmDialog}
+        fullScreen={isMobile}
+      >
         <DialogTitle>Confirmar Envio</DialogTitle>
         <DialogContent>
           <Typography>
@@ -214,8 +239,12 @@ const SurveyFormDesk = ({ surveyData, user, surveyId }) => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color="primary">Cancelar</Button>
-          <Button onClick={handleConfirmSubmit} color="primary">Confirmar</Button>
+          <Button onClick={handleCloseConfirmDialog} color="primary">
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirmSubmit} color="primary" autoFocus>
+            Confirmar
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
