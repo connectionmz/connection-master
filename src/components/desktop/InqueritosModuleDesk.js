@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ref, onValue, remove, update, get } from 'firebase/database';
+import { ref, onValue, remove, update } from 'firebase/database';
 import { db } from '../../fb';
 import CriarInqueritoDesk from './CriarInqueritoDesk';
 import VisualizarRespostasDesk from './VisualizarRespostasDesk';
@@ -25,12 +25,27 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Autocomplete,
   Checkbox,
   FormControlLabel,
-  FormGroup
+  FormGroup,
+  useMediaQuery,
+  useTheme,
+  Grid,
+  Tabs,
+  Tab,
+  Stack
 } from '@mui/material';
-import { Edit, Delete, Visibility, ArrowBack, Check, Close, FilterList, Sort } from '@mui/icons-material';
+import { 
+  Edit, 
+  Delete, 
+  Visibility, 
+  ArrowBack, 
+  Check, 
+  Close, 
+  FilterList, 
+  Sort,
+  Add
+} from '@mui/icons-material';
 
 // Lista de tipos de inquérito pré-definidos
 const TIPOS_INQUERITO = [
@@ -41,7 +56,7 @@ const TIPOS_INQUERITO = [
   'Outro'
 ];
 
-// Lista de províncias (pode ser buscada do banco de dados também)
+// Lista de províncias
 const PROVINCIAS = [
   'Maputo Cidade',
   'Maputo Província',
@@ -57,6 +72,10 @@ const PROVINCIAS = [
 ];
 
 const InqueritosModuleDesk = ({ user }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  
   const [inqueritos, setInqueritos] = useState([]);
   const [abaAtiva, setAbaAtiva] = useState('inqueritos');
   const [editingId, setEditingId] = useState(null);
@@ -229,64 +248,110 @@ const InqueritosModuleDesk = ({ user }) => {
     }));
   };
 
+  const renderMobileTabs = () => (
+    <Tabs
+      value={abaAtiva}
+      onChange={(e, newValue) => setAbaAtiva(newValue)}
+      variant="fullWidth"
+      indicatorColor="primary"
+      textColor="primary"
+      sx={{ mb: 2 }}
+    >
+      <Tab 
+        value="inqueritos" 
+        label={isMobile ? "Lista" : "Meus Inquéritos"} 
+        icon={isMobile ? <Visibility /> : null} 
+      />
+      <Tab 
+        value="novo" 
+        label={isMobile ? "Novo" : "Criar Novo"} 
+        icon={isMobile ? <Add /> : null} 
+      />
+    </Tabs>
+  );
+
   return (
-    <Paper elevation={3} sx={{ p: 4, borderRadius: 3, backgroundColor: '#fff' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+    <Paper elevation={3} sx={{ 
+      p: isMobile ? 2 : 4, 
+      borderRadius: 3, 
+      backgroundColor: '#fff',
+      minHeight: '70vh'
+    }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, flexDirection: isMobile ? 'column' : 'row' }}>
+        <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ 
+          fontWeight: 'bold', 
+          color: 'primary.main',
+          mb: isMobile ? 1 : 0
+        }}>
           Painel de Inquéritos
         </Typography>
         <Chip 
           label={user.companyName} 
           color="secondary" 
-          sx={{ ml: 2, fontSize: '0.875rem', height: 28 }} 
+          sx={{ 
+            ml: isMobile ? 0 : 2, 
+            mt: isMobile ? 1 : 0,
+            fontSize: '0.875rem', 
+            height: 28 
+          }} 
         />
       </Box>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              onClick={() => setAbaAtiva('inqueritos')}
-              variant={abaAtiva === 'inqueritos' ? 'contained' : 'outlined'}
-              startIcon={<Visibility />}
-              sx={{ borderRadius: 2 }}
-            >
-              Meus Inquéritos
-            </Button>
-            <Button
-              onClick={() => setAbaAtiva('novo')}
-              variant={abaAtiva === 'novo' ? 'contained' : 'outlined'}
-              color="success"
-              sx={{ borderRadius: 2 }}
-            >
-              Criar Novo
-            </Button>
-          </Box>
-          {abaAtiva === 'inqueritos' && (
+      {isMobile ? (
+        renderMobileTabs()
+      ) : (
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
-                onClick={() => setShowFilters(!showFilters)}
-                startIcon={<FilterList />}
-                variant="outlined"
-                color="info"
+                onClick={() => setAbaAtiva('inqueritos')}
+                variant={abaAtiva === 'inqueritos' ? 'contained' : 'outlined'}
+                startIcon={<Visibility />}
+                sx={{ borderRadius: 2 }}
               >
-                Filtros
+                Meus Inquéritos
               </Button>
               <Button
-                startIcon={<Sort />}
-                variant="outlined"
-                onClick={() => setSortBy(sortBy === 'recentes' ? 'antigos' : 'recentes')}
+                onClick={() => setAbaAtiva('novo')}
+                variant={abaAtiva === 'novo' ? 'contained' : 'outlined'}
+                color="success"
+                startIcon={<Add />}
+                sx={{ borderRadius: 2 }}
               >
-                {sortBy === 'recentes' ? 'Mais antigos' : 'Mais recentes'}
+                Criar Novo
               </Button>
             </Box>
-          )}
+            {abaAtiva === 'inqueritos' && (
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  startIcon={<FilterList />}
+                  variant="outlined"
+                  color="info"
+                >
+                  Filtros
+                </Button>
+                <Button
+                  startIcon={<Sort />}
+                  variant="outlined"
+                  onClick={() => setSortBy(sortBy === 'recentes' ? 'antigos' : 'recentes')}
+                >
+                  {sortBy === 'recentes' ? 'Mais antigos' : 'Mais recentes'}
+                </Button>
+              </Box>
+            )}
+          </Box>
         </Box>
-      </Box>
+      )}
 
       {abaAtiva === 'inqueritos' && (
         <Box>
-          <Box sx={{ display: 'flex', gap: 2, mb: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            mb: 3, 
+            flexDirection: isMobile ? 'column' : 'row' 
+          }}>
             <TextField
               label="Pesquisar inquéritos..."
               variant="outlined"
@@ -295,16 +360,44 @@ const InqueritosModuleDesk = ({ user }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flex: 2 }}
             />
+            {isMobile && (
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  startIcon={<FilterList />}
+                  variant="outlined"
+                  color="info"
+                  fullWidth
+                >
+                  Filtros
+                </Button>
+                <Button
+                  startIcon={<Sort />}
+                  variant="outlined"
+                  onClick={() => setSortBy(sortBy === 'recentes' ? 'antigos' : 'recentes')}
+                  fullWidth
+                >
+                  {sortBy === 'recentes' ? 'Antigos' : 'Recentes'}
+                </Button>
+              </Box>
+            )}
           </Box>
 
-          {showFilters && (
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              <FormControl sx={{ minWidth: 200 }}>
+          {(showFilters || !isMobile) && (
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              mb: 3, 
+              flexWrap: 'wrap',
+              flexDirection: isMobile ? 'column' : 'row'
+            }}>
+              <FormControl sx={{ minWidth: isMobile ? '100%' : 200, flex: isMobile ? 1 : 'initial' }}>
                 <InputLabel>Setor</InputLabel>
                 <Select
                   value={selectedSector}
                   onChange={(e) => setSelectedSector(e.target.value)}
                   label="Setor"
+                  size={isMobile ? 'small' : 'medium'}
                 >
                   <MenuItem value="">Todos os setores</MenuItem>
                   {sectores.map((s) => (
@@ -315,12 +408,13 @@ const InqueritosModuleDesk = ({ user }) => {
                 </Select>
               </FormControl>
 
-              <FormControl sx={{ minWidth: 200 }}>
+              <FormControl sx={{ minWidth: isMobile ? '100%' : 200, flex: isMobile ? 1 : 'initial' }}>
                 <InputLabel>Tipo de Inquérito</InputLabel>
                 <Select
                   value={selectedTipo}
                   onChange={(e) => setSelectedTipo(e.target.value)}
                   label="Tipo de Inquérito"
+                  size={isMobile ? 'small' : 'medium'}
                 >
                   <MenuItem value="">Todos os tipos</MenuItem>
                   {TIPOS_INQUERITO.map((tipo) => (
@@ -331,12 +425,13 @@ const InqueritosModuleDesk = ({ user }) => {
                 </Select>
               </FormControl>
 
-              <FormControl sx={{ minWidth: 200 }}>
+              <FormControl sx={{ minWidth: isMobile ? '100%' : 200, flex: isMobile ? 1 : 'initial' }}>
                 <InputLabel>Província</InputLabel>
                 <Select
                   value={selectedProvincia}
                   onChange={(e) => setSelectedProvincia(e.target.value)}
                   label="Província"
+                  size={isMobile ? 'small' : 'medium'}
                 >
                   <MenuItem value="">Todas as províncias</MenuItem>
                   {PROVINCIAS.map((prov) => (
@@ -361,18 +456,28 @@ const InqueritosModuleDesk = ({ user }) => {
             <List sx={{ width: '100%' }}>
               {filteredInqueritos.map((inq) => (
                 <Paper key={inq.id} elevation={2} sx={{ mb: 2, borderRadius: 2 }}>
-                  <ListItem sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  <ListItem sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'stretch',
+                    p: isMobile ? 2 : 3
+                  }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      width: '100%',
+                      flexDirection: isMobile ? 'column' : 'row'
+                    }}>
+                      <Typography variant={isMobile ? 'subtitle1' : 'h6'} sx={{ fontWeight: 'bold' }}>
                         {inq.title}
                       </Typography>
-                      <Box>
+                      <Box sx={{ mt: isMobile ? 1 : 0 }}>
                         {inq.tipoInquerito && (
                           <Chip 
                             label={inq.tipoInquerito} 
                             color="info" 
                             size="small" 
-                            sx={{ ml: 1 }} 
+                            sx={{ ml: isMobile ? 0 : 1 }} 
                           />
                         )}
                       </Box>
@@ -382,13 +487,25 @@ const InqueritosModuleDesk = ({ user }) => {
                       {inq.description}
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 1 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: 1, 
+                      my: 1,
+                      justifyContent: isMobile ? 'center' : 'flex-start'
+                    }}>
                       {inq.sectores?.map((sector) => (
                         <Chip key={sector} label={sector} size="small" />
                       ))}
                     </Box>
                     
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: 1, 
+                      mb: 1,
+                      justifyContent: isMobile ? 'center' : 'flex-start'
+                    }}>
                       {inq.provincias?.map((provincia) => (
                         <Chip key={provincia} label={provincia} size="small" variant="outlined" />
                       ))}
@@ -396,8 +513,20 @@ const InqueritosModuleDesk = ({ user }) => {
                     
                     <Divider sx={{ my: 1 }} />
                     
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      width: '100%',
+                      flexDirection: isMobile ? 'column' : 'row',
+                      alignItems: isMobile ? 'center' : 'flex-start'
+                    }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        mb: isMobile ? 1 : 0,
+                        flexWrap: 'wrap',
+                        justifyContent: isMobile ? 'center' : 'flex-start'
+                      }}>
                         <Chip
                           label={`${responsesCount[inq.id] || 0} respostas`}
                           variant="outlined"
@@ -410,30 +539,40 @@ const InqueritosModuleDesk = ({ user }) => {
                           size="small"
                           sx={{ ml: 1 }}
                         />
-                        <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                        <Typography variant="caption" sx={{ 
+                          ml: 1, 
+                          color: 'text.secondary',
+                          mt: isMobile ? 1 : 0
+                        }}>
                           Criado em: {new Date(inq.createdAt).toLocaleDateString()}
                         </Typography>
                       </Box>
-                      <Box>
+                      <Box sx={{
+                        display: 'flex',
+                        justifyContent: isMobile ? 'center' : 'flex-end'
+                      }}>
                         <IconButton
                           onClick={() => startEdit(inq.id, inq)}
                           color="primary"
                           disabled={!canEditSurvey(inq.id)}
                           title={!canEditSurvey(inq.id) ? "Não é possível editar inquéritos com respostas" : "Editar"}
+                          size={isMobile ? 'small' : 'medium'}
                         >
-                          <Edit />
+                          <Edit fontSize={isMobile ? 'small' : 'medium'} />
                         </IconButton>
                         <IconButton
                           onClick={() => handleDelete(inq.id)}
                           color="error"
+                          size={isMobile ? 'small' : 'medium'}
                         >
-                          <Delete />
+                          <Delete fontSize={isMobile ? 'small' : 'medium'} />
                         </IconButton>
                         <IconButton
                           onClick={() => visualizarRespostas(inq.id)}
                           color="secondary"
+                          size={isMobile ? 'small' : 'medium'}
                         >
-                          <Visibility />
+                          <Visibility fontSize={isMobile ? 'small' : 'medium'} />
                         </IconButton>
                       </Box>
                     </Box>
@@ -451,7 +590,7 @@ const InqueritosModuleDesk = ({ user }) => {
             <IconButton onClick={() => setAbaAtiva('inqueritos')} sx={{ mr: 1 }}>
               <ArrowBack />
             </IconButton>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+            <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ fontWeight: 'bold' }}>
               Criar Novo Inquérito
             </Typography>
           </Box>
@@ -461,6 +600,7 @@ const InqueritosModuleDesk = ({ user }) => {
             sectores={sectores}
             provincias={PROVINCIAS}
             tiposInquerito={TIPOS_INQUERITO}
+            isMobile={isMobile}
           />
         </Box>
       )}
@@ -471,15 +611,23 @@ const InqueritosModuleDesk = ({ user }) => {
             <IconButton onClick={() => setAbaAtiva('inqueritos')} sx={{ mr: 1 }}>
               <ArrowBack />
             </IconButton>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+            <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ fontWeight: 'bold' }}>
               Editar Inquérito
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 800, mx: 'auto' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 3, 
+            maxWidth: 800, 
+            mx: 'auto',
+            p: isMobile ? 1 : 0
+          }}>
             <TextField
               label="Título do Inquérito *"
               variant="outlined"
               fullWidth
+              size={isMobile ? 'small' : 'medium'}
               value={editData.title}
               onChange={(e) => setEditData({ ...editData, title: e.target.value })}
             />
@@ -489,11 +637,12 @@ const InqueritosModuleDesk = ({ user }) => {
               multiline
               rows={4}
               fullWidth
+              size={isMobile ? 'small' : 'medium'}
               value={editData.description}
               onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             />
             
-            <FormControl fullWidth>
+            <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
               <InputLabel>Tipo de Inquérito</InputLabel>
               <Select
                 value={editData.tipoInquerito}
@@ -513,7 +662,12 @@ const InqueritosModuleDesk = ({ user }) => {
               <Typography variant="subtitle2" gutterBottom>
                 Províncias * (selecione pelo menos uma)
               </Typography>
-              <FormGroup row sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <FormGroup row sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 1,
+                justifyContent: isMobile ? 'center' : 'flex-start'
+              }}>
                 {PROVINCIAS.map((provincia) => (
                   <FormControlLabel
                     key={provincia}
@@ -521,9 +675,11 @@ const InqueritosModuleDesk = ({ user }) => {
                       <Checkbox
                         checked={editData.provincias.includes(provincia)}
                         onChange={() => toggleProvincia(provincia)}
+                        size={isMobile ? 'small' : 'medium'}
                       />
                     }
                     label={provincia}
+                    sx={{ minWidth: isMobile ? '40%' : 'auto' }}
                   />
                 ))}
               </FormGroup>
@@ -533,7 +689,12 @@ const InqueritosModuleDesk = ({ user }) => {
               <Typography variant="subtitle2" gutterBottom>
                 Setores de Atividade * (selecione pelo menos um)
               </Typography>
-              <FormGroup row sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <FormGroup row sx={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: 1,
+                justifyContent: isMobile ? 'center' : 'flex-start'
+              }}>
                 {sectores.map((sector) => (
                   <FormControlLabel
                     key={sector}
@@ -541,20 +702,30 @@ const InqueritosModuleDesk = ({ user }) => {
                       <Checkbox
                         checked={editData.sectores.includes(sector)}
                         onChange={() => toggleSector(sector)}
+                        size={isMobile ? 'small' : 'medium'}
                       />
                     }
                     label={sector}
+                    sx={{ minWidth: isMobile ? '40%' : 'auto' }}
                   />
                 ))}
               </FormGroup>
             </Box>
             
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              justifyContent: 'flex-end', 
+              mt: 2,
+              flexDirection: isMobile ? 'column' : 'row'
+            }}>
               <Button
                 onClick={() => setAbaAtiva('inqueritos')}
                 variant="outlined"
                 color="inherit"
                 startIcon={<Close />}
+                fullWidth={isMobile}
+                size={isMobile ? 'small' : 'medium'}
               >
                 Cancelar
               </Button>
@@ -564,6 +735,8 @@ const InqueritosModuleDesk = ({ user }) => {
                 color="primary"
                 startIcon={<Check />}
                 disabled={editData.provincias.length === 0 || editData.sectores.length === 0}
+                fullWidth={isMobile}
+                size={isMobile ? 'small' : 'medium'}
               >
                 Salvar Alterações
               </Button>
@@ -576,22 +749,32 @@ const InqueritosModuleDesk = ({ user }) => {
         <VisualizarRespostasDesk
           surveyId={selectedSurveyId}
           onBack={() => setAbaAtiva('inqueritos')}
+          isMobile={isMobile}
         />
       )}
 
       <Dialog
         open={confirmDialog.open}
         onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        fullScreen={isMobile}
       >
         <DialogTitle>{confirmDialog.title}</DialogTitle>
         <DialogContent>
           <Typography>{confirmDialog.content}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}>
+          <Button 
+            onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+            size={isMobile ? 'large' : 'medium'}
+          >
             Cancelar
           </Button>
-          <Button onClick={confirmDialog.onConfirm} color="primary" autoFocus>
+          <Button 
+            onClick={confirmDialog.onConfirm} 
+            color="primary" 
+            autoFocus
+            size={isMobile ? 'large' : 'medium'}
+          >
             Confirmar
           </Button>
         </DialogActions>
