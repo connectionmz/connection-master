@@ -432,40 +432,53 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 />
             )}
             {!isPaying && (
-                <>
-                    <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: 'white' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h5" fontWeight="bold">Pedidos de Cotações</Typography>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={handlePublishQuotation}
-                                disabled={!hasModuleSMS || !hasBalance}>
-                                Fazer pedido
-                            </Button>
-                        </Box>
-                    </Paper>
-
-                    <AnunciosDesk campanhas={campanhasAtivas} />
-
-                    <Paper elevation={1} sx={{ mb: 2, backgroundColor: 'white' }}>
-                        <Tabs
-                            value={activeTab}
-                            onChange={(_, newValue) => setActiveTab(newValue)}
-                            indicatorColor="primary"
-                            textColor="primary"
-                        >
-                            <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
-                            <Tab value="expiradas" label="Expiradas" icon={<History />} />
-                            <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                            <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
-                        </Tabs>
-                    </Paper>
-
-                    <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
-                        {renderCotacoes()}
-                    </Paper>
-                </>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 2, 
+                position: 'relative',
+                zIndex: 1 // Garante que os elementos fiquem na ordem correta
+              }}>
+                <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: 'white' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" fontWeight="bold">Pedidos de Cotações</Typography>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handlePublishQuotation}
+                      disabled={!hasModuleSMS || !hasBalance}>
+                      Fazer pedido
+                    </Button>
+                  </Box>
+                </Paper>
+              
+                <Box sx={{ 
+                  position: 'relative',
+                  width: '100%',
+                  mb: 2,
+                  zIndex: 1
+                }}>
+                  <AnunciosDesk campanhas={campanhasAtivas} />
+                </Box>
+              
+                <Paper elevation={1} sx={{ mb: 2, backgroundColor: 'white' }}>
+                  <Tabs
+                    value={activeTab}
+                    onChange={(_, newValue) => setActiveTab(newValue)}
+                    indicatorColor="primary"
+                    textColor="primary"
+                  >
+                    <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
+                    <Tab value="expiradas" label="Expiradas" icon={<History />} />
+                    <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
+                    <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
+                  </Tabs>
+                </Paper>
+              
+                <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
+                  {renderCotacoes()}
+                </Paper>
+              </Box>
             )}
 
             {/* Edit Dialog */}

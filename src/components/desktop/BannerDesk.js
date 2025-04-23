@@ -481,18 +481,41 @@ const BannerDesk = ({ user }) => {
                       )}
                       
                       {companies[selectedBanner.companyId].contacto && (
-                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PhoneIcon color="primary" fontSize="small" />
-                          {companies[selectedBanner.companyId].contacto}
-                        </Typography>
-                      )}
-                      
-                      {companies[selectedBanner.companyId].email && (
-                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <EmailIcon color="primary" fontSize="small" />
-                          {companies[selectedBanner.companyId].email}
-                        </Typography>
-                      )}
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 1,
+                          '&:hover': {
+                            textDecoration: 'underline',
+                            cursor: 'pointer'
+                          } 
+                        }}
+                        onClick={() => window.location.href = `tel:${companies[selectedBanner.companyId].contacto}`}
+                      >
+                        <PhoneIcon color="primary" fontSize="small" />
+                        {companies[selectedBanner.companyId].contacto}
+                      </Typography>
+                    )}
+                    {companies[selectedBanner.companyId].email && (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 1,
+                          '&:hover': {
+                            textDecoration: 'underline',
+                            cursor: 'pointer'
+                          }
+                        }}
+                        onClick={() => window.location.href = `mailto:${companies[selectedBanner.companyId].email}`}
+                      >
+                        <EmailIcon color="primary" fontSize="small" />
+                        {companies[selectedBanner.companyId].email}
+                      </Typography>
+                    )}
                       
                       {companies[selectedBanner.companyId].website && (
                         <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
