@@ -1,216 +1,388 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ref, get, push, update, remove } from 'firebase/database';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { db } from '../../fb';
+import { ref, onValue, push, set, remove, update, get } from 'firebase/database';
 import {
-  Container,
-  Typography,
-  TextField,
-  Button,
-  CircularProgress,
-  Alert,
-  Divider,
   Box,
-  IconButton,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Avatar,
-  Chip,
+  Button,
   Card,
   CardContent,
-  CardActions,
-  useTheme,
+  CardMedia,
+  Typography,
+  TextField,
+  Divider,
+  Snackbar,
+  Alert,
+  IconButton,
+  useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Avatar,
+  CircularProgress,
+  Tooltip,
   Badge,
-  Tooltip
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  useTheme,
+  Chip,
+  Link
 } from '@mui/material';
-import BackButton from '../BackButton';
+
 import {
-  Edit as EditIcon,
   Delete as DeleteIcon,
-  Login as LoginIcon,
   Share as ShareIcon,
-  Download as DownloadIcon,
-  CalendarToday,
-  Business,
-  Comment as CommentIcon,
-  MoreVert
+  ThumbUp as ThumbUpIcon,
+  Report as ReportIcon,
+  ThumbUpOutlined as ThumbUpOutlinedIcon,
+  ShareOutlined as ShareOutlinedIcon,
+  FlagOutlined as FlagOutlinedIcon,
+  Send as SendIcon,
+  Edit as EditIcon,
+  MoreVert as MoreVertIcon,
+  Close as CloseIcon,
+  Check as CheckIcon,
+  PictureAsPdf as PdfIcon,
+  InsertDriveFile as FileIcon
 } from '@mui/icons-material';
+import ReplyIcon from '@mui/icons-material/Reply';
+import BackButton from '../BackButton';
+import { formatDistanceToNow } from 'date-fns';
+import { pt } from 'date-fns/locale';
+import { formatDateTime } from '../../utils/utils';
 
 const NoticiaDetalheDesk = ({ user }) => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const [noticia, setNoticia] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [comment, setComment] = useState('');
+  const [likes, setLikes] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
   const [comments, setComments] = useState([]);
-  const [sending, setSending] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [announcement, setAnnouncement] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedCommentText, setEditedCommentText] = useState('');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [commentToDelete, setCommentToDelete] = useState(null);
-  const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [denunciaModalOpen, setDenunciaModalOpen] = useState(false);
+  const [motivoDenuncia, setMotivoDenuncia] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [showReplies, setShowReplies] = useState({});
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
+  const isMobile = useMediaQuery('(max-width:600px)');
 
+  const theme = useTheme();
+
+  // Carregar dados do anúncio
   useEffect(() => {
-    const fetchNoticia = async () => {
-      try {
-        const snapshot = await get(ref(db, `publicAnnouncements/${id}`));
-        if (snapshot.exists()) {
-          setNoticia(snapshot.val());
+    setLoading(true);
+    const announcementRef = ref(db, `publicAnnouncements/${id}`);
+    
+    const unsubscribe = onValue(announcementRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setAnnouncement({
+          id: id,
+          title: data.title || '',
+          content: data.content || '',
+          imageUrl: data.imageUrl || '',
+          attachmentUrl: data.attachmentUrl || '',
+          attachmentFormat: data.attachmentFormat || '',
+          companyName: data.company?.nome || 'Empresa Desconhecida',
+          logoUrl: data.company?.logo || 'https://via.placeholder.com/150',
+          companyId: data.company?.id,
+          date: data.date || new Date().toISOString(),
+          validity: data.validity || '',
+          category: data.category || 'public'
+        });
+        
+        // Verificar se o usuário atual já curtiu
+        if (user?.id && data.likes && data.likes[user.id]) {
+          setHasLiked(true);
         } else {
-          setError(true);
+          setHasLiked(false);
         }
-      } catch (err) {
-        console.error('Erro ao buscar notícia:', err);
-        setError(true);
-      } finally {
-        setLoading(false);
+        
+        setLikes(Object.keys(data.likes || {}).length || 0);
+        
+        // Ordenar comentários por data (mais recentes primeiro)
+        const commentsData = Object.values(data.comments || {});
+        setComments(
+          commentsData.sort((a, b) => {
+            if (a.parentId === b.id) return 1;
+            if (b.parentId === a.id) return -1;
+            const dateA = new Date(a.data || 0);
+            const dateB = new Date(b.data || 0);
+            return dateB - dateA;
+          })
+        );
+      } else {
+        setAnnouncement(null);
       }
-    };
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao carregar anúncio:", error);
+      setSnackbar({ open: true, message: 'Erro ao carregar anúncio', severity: 'error' });
+      setLoading(false);
+    });
 
-    const fetchComments = async () => {
-      try {
-        const snapshot = await get(ref(db, `publicAnnouncements/${id}/comments`));
-        if (snapshot.exists()) {
-          const commentsData = snapshot.val();
-          const commentsArray = Object.keys(commentsData).map((key) => ({
-            id: key,
-            ...commentsData[key],
-          }));
-          setComments(commentsArray);
-        }
-      } catch (err) {
-        console.error('Erro ao buscar comentários:', err);
+    return () => unsubscribe();
+  }, [id, user?.id]);
+
+  const checkUserAuth = useCallback(() => {
+    if (!user || !user.id) {
+      setSnackbar({ 
+        open: true, 
+        message: 'Você precisa estar logado para realizar esta ação', 
+        severity: 'error' 
+      });
+      return false;
+    }
+    return true;
+  }, [user]);
+
+  const handleAddComment = async () => {
+    if (!checkUserAuth() || !commentText.trim()) return;
+    
+    try {
+      const commentRef = ref(db, `publicAnnouncements/${id}/comments`);
+      const newCommentRef = push(commentRef);
+      
+      const comment = {
+        id: newCommentRef.key,
+        userId: user.id,
+        userName: user.nome,
+        userAvatar: user.avatar || '',
+        comment: commentText,
+        data: new Date().toISOString(),
+        ...(replyingTo && { parentId: replyingTo }),
+      };
+      
+      await set(newCommentRef, comment);
+      setCommentText('');
+      setReplyingTo(null);
+      setSnackbar({ 
+        open: true, 
+        message: replyingTo ? 'Resposta enviada!' : 'Comentário adicionado!', 
+        severity: 'success' 
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar comentário:', error);
+      setSnackbar({ 
+        open: true, 
+        message: replyingTo ? 'Erro ao enviar resposta.' : 'Erro ao adicionar comentário.', 
+        severity: 'error' 
+      });
+    }
+  };
+
+  const handleReply = (commentId, userName) => {
+    setReplyingTo(commentId);
+    setCommentText(`@${userName} `);
+    setTimeout(() => document.getElementById('comment-input')?.focus(), 0);
+  };
+  
+  const toggleReplies = (commentId) => {
+    setShowReplies(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
+  };
+
+  const handleLike = async () => {
+    if (!checkUserAuth()) return;
+    
+    try {
+      const announcementRef = ref(db, `publicAnnouncements/${id}/likes/${user.id}`);
+      
+      if (hasLiked) {
+        await remove(announcementRef);
+        setHasLiked(false);
+        setLikes(prev => prev - 1);
+      } else {
+        await set(announcementRef, true);
+        setHasLiked(true);
+        setLikes(prev => prev + 1);
+        setSnackbar({ 
+          open: true, 
+          message: 'Curtido!', 
+          severity: 'success' 
+        });
       }
-    };
+    } catch (error) {
+      console.error('Erro ao curtir:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Erro ao curtir.', 
+        severity: 'error' 
+      });
+    }
+  };
 
-    fetchNoticia();
-    fetchComments();
-  }, [id]);
+  const handleShare = (event) => {
+    setShareAnchorEl(event.currentTarget);
+  };
 
-  const handleCommentSubmit = async () => {
-    if (!user) {
-      setAuthDialogOpen(true);
+  const handleCloseShareMenu = () => {
+    setShareAnchorEl(null);
+  };
+
+  const shareOnPlatform = (platform) => {
+    const announcementUrl = `${window.location.origin}/announcement/${id}`;
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=Confira este anúncio: ${announcementUrl}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${announcementUrl}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${announcementUrl}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(announcementUrl);
+        setSnackbar({ 
+          open: true, 
+          message: 'Link copiado para a área de transferência!', 
+          severity: 'success' 
+        });
+        break;
+      default:
+        return;
+    }
+    
+    if (platform !== 'copy') {
+      window.open(shareUrl, '_blank');
+    }
+    
+    handleCloseShareMenu();
+  };
+
+  const handleReport = () => {
+    if (!checkUserAuth()) return;
+    setDenunciaModalOpen(true);
+  };
+
+  const handleDenunciar = async () => {
+    if (!checkUserAuth() || !motivoDenuncia.trim()) {
+      setSnackbar({ 
+        open: true, 
+        message: 'Por favor, insira um motivo para a denúncia.', 
+        severity: 'error' 
+      });
       return;
     }
-
-    if (comment.trim()) {
-      setSending(true);
-      try {
-        const newCommentRef = ref(db, `publicAnnouncements/${id}/comments`);
-        const newComment = {
-          text: comment,
-          userId: user.id,
-          userEmail: user.email,
-          userPhoto: user.photoURL,
+  
+    try {
+      const denunciaUsuarioRef = ref(db, `denuncias/announcements/${id}/${user.id}`);
+      const snapshot = await get(denunciaUsuarioRef);
+      
+      if (snapshot.exists()) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Você já denunciou este anúncio.', 
+          severity: 'error' 
+        });
+      } else {
+        const novaDenunciaRef = push(denunciaUsuarioRef);
+        await set(novaDenunciaRef, {
+          motivo: motivoDenuncia,
           timestamp: new Date().toISOString(),
-        };
-        await push(newCommentRef, newComment);
-        setComment('');
-        // Atualização otimista
-        setComments(prev => [...prev, { ...newComment, id: `temp-${Date.now()}` }]);
-      } catch (err) {
-        console.error('Erro ao enviar comentário:', err);
-      } finally {
-        setSending(false);
+          userId: user.id,
+          announcementId: id,
+          status: 'pending'
+        });
+        
+        setSnackbar({ 
+          open: true, 
+          message: 'Denúncia enviada com sucesso!', 
+          severity: 'success' 
+        });
       }
+    } catch (error) {
+      console.error('Erro ao enviar denúncia:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Erro ao enviar denúncia.', 
+        severity: 'error' 
+      });
+    } finally {
+      setDenunciaModalOpen(false);
+      setMotivoDenuncia('');
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!checkUserAuth()) return;
+    
+    try {
+      const commentRef = ref(db, `publicAnnouncements/${id}/comments/${commentId}`);
+      await remove(commentRef);
+      setSnackbar({ 
+        open: true, 
+        message: 'Comentário excluído!', 
+        severity: 'success' 
+      });
+    } catch (error) {
+      console.error('Erro ao excluir comentário:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Erro ao excluir comentário.', 
+        severity: 'error' 
+      });
     }
   };
 
   const handleEditComment = (commentId, currentText) => {
-    if (!user) {
-      setAuthDialogOpen(true);
-      return;
-    }
+    if (!checkUserAuth()) return;
     setEditingCommentId(commentId);
     setEditedCommentText(currentText);
   };
 
   const handleSaveEdit = async (commentId) => {
-    if (editedCommentText.trim()) {
-      try {
-        const commentRef = ref(db, `publicAnnouncements/${id}/comments/${commentId}`);
-        await update(commentRef, { text: editedCommentText });
-        setEditingCommentId(null);
-        setEditedCommentText('');
-        // Atualização otimista
-        setComments(prev => prev.map(c => 
-          c.id === commentId ? {...c, text: editedCommentText} : c
-        ));
-      } catch (err) {
-        console.error('Erro ao editar comentário:', err);
-      }
-    }
-  };
-
-  const confirmDeleteComment = (commentId) => {
-    if (!user) {
-      setAuthDialogOpen(true);
-      return;
-    }
-    setCommentToDelete(commentId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteComment = async () => {
+    if (!checkUserAuth() || !editedCommentText.trim()) return;
+    
     try {
-      const commentRef = ref(db, `publicAnnouncements/${id}/comments/${commentToDelete}`);
-      await remove(commentRef);
-      setComments(prev => prev.filter(c => c.id !== commentToDelete));
-    } catch (err) {
-      console.error('Erro ao eliminar comentário:', err);
-    } finally {
-      setDeleteDialogOpen(false);
-      setCommentToDelete(null);
-    }
-  };
-
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('pt-PT', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      const commentRef = ref(db, `publicAnnouncements/${id}/comments/${commentId}`);
+      await update(commentRef, { 
+        comment: editedCommentText,
+        editedAt: new Date().toISOString() 
       });
-    } catch {
-      return '';
+      
+      setEditingCommentId(null);
+      setEditedCommentText('');
+      setSnackbar({ 
+        open: true, 
+        message: 'Comentário atualizado!', 
+        severity: 'success' 
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar comentário:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Erro ao atualizar comentário.', 
+        severity: 'error' 
+      });
     }
   };
 
-  const handleLoginRedirect = () => {
-    navigate('/login', { state: { from: `/noticia/${id}` } });
-  };
-
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: noticia.title,
-          text: noticia.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...',
-          url: window.location.href,
-        });
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        setShareDialogOpen(true);
-        setTimeout(() => setShareDialogOpen(false), 2000);
-      }
-    } catch (err) {
-      console.error('Erro ao compartilhar:', err);
+  const handleCommentKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAddComment();
     }
   };
 
-  const handleDownload = () => {
-    if (noticia.attachmentUrl) {
-      window.open(noticia.attachmentUrl, '_blank');
-    }
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   if (loading) {
@@ -219,323 +391,693 @@ const NoticiaDetalheDesk = ({ user }) => {
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center', 
-        minHeight: '100vh',
-        bgcolor: theme.palette.background.default
+        height: '100vh' 
       }}>
         <CircularProgress size={60} />
       </Box>
     );
   }
 
-  if (error || !noticia) {
+  if (!announcement) {
     return (
-      <Container maxWidth="md" sx={{ py: 4, bgcolor: theme.palette.background.default }}>
-        <Alert severity="error" sx={{ width: '100%' }}>
-          Notícia não encontrada ou erro ao carregar.
-        </Alert>
-      </Container>
+      <Box sx={{ 
+        textAlign: 'center', 
+        mt: 4,
+        p: 3 
+      }}>
+        <Typography variant="h6" color="error">
+          Anúncio não encontrado ou foi removido!
+        </Typography>
+        <Button 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.history.back()}
+        >
+          Voltar
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4, bgcolor: theme.palette.background.default }}>
+    <Box
+      sx={{
+        width: isMobile ? '100%' : '60%',
+        maxWidth: '800px',
+        margin: '0 auto',
+        p: isMobile ? 1 : 2,
+        pb: 6
+      }}
+    >
       <BackButton sx={{ mb: 2 }} />
       
-      {/* Diálogos */}
-      <Dialog open={authDialogOpen} onClose={() => setAuthDialogOpen(false)}>
-        <DialogTitle>Autenticação Necessária</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Você precisa estar logado para realizar esta ação.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAuthDialogOpen(false)}>Cancelar</Button>
-          <Button 
-            onClick={handleLoginRedirect} 
-            color="primary"
-            startIcon={<LoginIcon />}
-          >
-            Fazer Login
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirmar Exclusão</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleDeleteComment} color="error">
-            Excluir
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)}>
-        <DialogContent>
-          <DialogContentText>
-            Link copiado para a área de transferência!
-          </DialogContentText>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cabeçalho da Notícia */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 3
+      {/* Announcement Card */}
+      <Card sx={{ 
+        boxShadow: 3, 
+        mb: 2,
+        borderRadius: 2,
+        overflow: 'hidden'
       }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-          {noticia.title || 'Sem título'}
-        </Typography>
-        
-        <Box>
-          {noticia.attachmentUrl && (
-            <Tooltip title="Download anexo" arrow>
-              <IconButton onClick={handleDownload} sx={{ ml: 1 }}>
-                <DownloadIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-          <Tooltip title="Compartilhar" arrow>
-            <IconButton onClick={handleShare} sx={{ ml: 1 }}>
-              <ShareIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-
-      {/* Metadados da Notícia */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        mb: 3,
-        gap: 2
-      }}>
-        <Avatar 
-          src={noticia.company?.logo} 
-          sx={{ 
-            width: 40, 
-            height: 40,
-            bgcolor: theme.palette.primary.main,
-            color: theme.palette.primary.contrastText
-          }}
-        >
-          {!noticia.company?.logo && <Business />}
-        </Avatar>
-        
-        <Box>
-          <Typography variant="subtitle1">
-            {noticia.company?.nome || 'Desconhecido'}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {formatDate(noticia.date)}
-            </Typography>
-            {noticia.company?.provincia && (
-              <Chip 
-                label={noticia.company.provincia} 
-                size="small" 
-                variant="outlined"
-              />
-            )}
+        {announcement.imageUrl && (
+          <Box sx={{ position: 'relative' }}>
+            <CardMedia
+              component="img"
+              height={isMobile ? 250 : 400}
+              image={announcement.imageUrl}
+              alt={announcement.title}
+              sx={{ 
+                objectFit: 'cover',
+                width: '100%'
+              }}
+            />
           </Box>
-        </Box>
-      </Box>
-
-      {/* Imagem da Notícia */}
-      {noticia.imageUrl && (
-        <Box sx={{ 
-          mb: 3, 
-          borderRadius: 2,
-          overflow: 'hidden',
-          boxShadow: theme.shadows[2]
-        }}>
-          <img
-            src={noticia.imageUrl}
-            alt={noticia.title}
-            style={{ 
-              width: '100%', 
-              maxHeight: '500px',
-              objectFit: 'cover'
-            }}
-          />
-        </Box>
-      )}
-
-      {/* Conteúdo da Notícia */}
-      <Card sx={{ mb: 4 }}>
+        )}
+        
         <CardContent>
-          <Box
-            sx={{
-              '& p': { mb: 2 },
-              '& img': { maxWidth: '100%', height: 'auto' }
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            mb: 2 
+          }}>
+            <Avatar 
+              src={announcement.logoUrl} 
+              sx={{ 
+                width: 40, 
+                height: 40, 
+                mr: 2 
+              }} 
+            />
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold">
+                {announcement.companyName}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {new Date(announcement.date).toLocaleDateString('pt-PT', {
+                  day: '2-digit',
+                  month: 'long',
+                }) + ' às ' + 
+                new Date(announcement.date).toLocaleTimeString('pt-PT', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                })}
+              </Typography>
+            </Box>
+          </Box>
+          
+          <Typography variant="h5" component="h1" gutterBottom>
+            {announcement.title}
+          </Typography>
+          
+          
+          <Typography 
+            variant="body1"
+            sx={{ 
+              mb: 2,
+              lineHeight: 1.6
             }}
-            dangerouslySetInnerHTML={{ 
-              __html: noticia.content || 'Sem conteúdo disponível.' 
-            }}
+            dangerouslySetInnerHTML={{ __html: announcement.content }}
           />
+          
+          {announcement.attachmentUrl && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Anexo:
+              </Typography>
+              <Button
+                component={Link}
+                href={announcement.attachmentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                startIcon={
+                  announcement.attachmentFormat === 'pdf' ? 
+                    <PdfIcon color="error" /> : 
+                    <FileIcon color="primary" />
+                }
+                sx={{ textTransform: 'none' }}
+              >
+                {announcement.attachmentFormat === 'pdf' ? 
+                  'Visualizar PDF' : 
+                  'Baixar Anexo'}
+              </Button>
+            </Box>
+          )}
         </CardContent>
         
-        {noticia.validity && (
-          <CardActions sx={{ 
-            bgcolor: 'action.hover',
-            justifyContent: 'flex-end'
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              Validade: {new Date(noticia.validity).toLocaleDateString('pt-PT')}
-            </Typography>
-          </CardActions>
-        )}
-      </Card>
-
-      {/* Seção de Comentários */}
-      <Divider sx={{ my: 3 }}>
-        <Chip 
-          icon={<CommentIcon />}
-          label={
-            <Badge badgeContent={comments.length} color="primary" sx={{ mr: 1 }}>
-              <Typography variant="subtitle1">Comentários</Typography>
-            </Badge>
-          } 
-        />
-      </Divider>
-      
-      {/* Formulário de Comentário */}
-      <Box sx={{ 
-        mb: 3, 
-        p: 2, 
-        bgcolor: 'background.paper',
-        borderRadius: 1,
-        boxShadow: theme.shadows[1]
-      }}>
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          placeholder={user ? "Escreva seu comentário..." : "Faça login para comentar"}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          sx={{ mb: 2 }}
-          disabled={sending || !user}
-        />
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          {!user && (
-            <Button 
-              variant="outlined" 
-              onClick={() => setAuthDialogOpen(true)}
-              startIcon={<LoginIcon />}
-            >
-              Login
-            </Button>
-          )}
-          <Button 
-            variant="contained" 
-            onClick={handleCommentSubmit} 
-            disabled={sending || !comment.trim() || !user}
-            sx={{ minWidth: 120 }}
-          >
-            {sending ? <CircularProgress size={24} /> : 'Comentar'}
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Lista de Comentários */}
-      <Box>
-        {comments.length > 0 ? (
-          comments.map((c) => (
-            <Card 
-              key={c.id} 
+        {/* Interaction Buttons */}
+        <Box
+          sx={{
+            px: 2,
+            pb: 1,
+            display: 'flex',
+            gap: 1,
+            justifyContent: 'space-between',
+            borderTop: '1px solid #eee'
+          }}
+        >
+          <Tooltip title="Curtir">
+            <Button
+              startIcon={hasLiked ? <ThumbUpIcon color="primary" /> : <ThumbUpOutlinedIcon />}
+              onClick={handleLike}
+              variant="text"
+              color="inherit"
               sx={{ 
-                mb: 2,
-                bgcolor: 'background.paper'
+                textTransform: 'none',
+                minWidth: 'auto'
               }}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Avatar 
-                    src={c.userPhoto} 
+              <Badge 
+                badgeContent={likes} 
+                color="primary" 
+                sx={{ 
+                  '& .MuiBadge-badge': {
+                    right: -5,
+                    top: 5
+                  }
+                }}
+              />
+            </Button>
+          </Tooltip>
+          
+          <Tooltip title="Compartilhar">
+            <Button
+              startIcon={<ShareOutlinedIcon />}
+              onClick={handleShare}
+              variant="text"
+              color="inherit"
+              sx={{ 
+                textTransform: 'none',
+                minWidth: 'auto'
+              }}
+            >
+              Compartilhar
+            </Button>
+          </Tooltip>
+          
+          <Tooltip title="Denunciar">
+            <Button
+              startIcon={<FlagOutlinedIcon />}
+              onClick={handleReport}
+              variant="text"
+              color="inherit"
+              sx={{ 
+                textTransform: 'none',
+                minWidth: 'auto'
+              }}
+            >
+              Denunciar
+            </Button>
+          </Tooltip>
+        </Box>
+      </Card>
+
+      {/* Comments Section */}
+      <Card sx={{ 
+        boxShadow: 3, 
+        mb: 2,
+        borderRadius: 2
+      }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+            Comentários ({comments.filter(c => !c.parentId).length})
+          </Typography>
+          
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'flex-start',
+            gap: 1,
+            mb: 2
+          }}>
+            <Avatar 
+              src={user?.avatar} 
+              sx={{ 
+                width: 40, 
+                height: 40 
+              }} 
+            />
+            <Box sx={{ flex: 1 }}>
+              {replyingTo && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  mb: 1,
+                  p: 1,
+                  backgroundColor: theme.palette.action.selected,
+                  borderRadius: 1
+                }}>
+                  <Typography 
+                    variant="caption" 
                     sx={{ 
-                      width: 32, 
-                      height: 32, 
-                      mr: 1,
-                      bgcolor: theme.palette.primary.main
+                      flexGrow: 1,
+                      fontStyle: 'italic'
                     }}
-                  />
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle2">
-                      {c.userEmail || 'Usuário anônimo'}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(c.timestamp)}
-                    </Typography>
-                  </Box>
-                  
-                  {user && c.userId === user.id && (
-                    <Box>
-                      <IconButton 
-                        onClick={() => handleEditComment(c.id, c.text)}
-                        size="small"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton 
-                        onClick={() => confirmDeleteComment(c.id)}
-                        size="small"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  )}
-                </Box>
-                
-                {editingCommentId === c.id ? (
-                  <Box sx={{ mt: 2 }}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      value={editedCommentText}
-                      onChange={(e) => setEditedCommentText(e.target.value)}
-                      sx={{ mb: 2 }}
-                    />
-                    <Button 
-                      variant="contained" 
-                      onClick={() => handleSaveEdit(c.id)}
-                      disabled={!editedCommentText.trim()}
-                      size="small"
-                    >
-                      Salvar
-                    </Button>
-                    <Button 
-                      variant="outlined" 
-                      onClick={() => setEditingCommentId(null)} 
-                      size="small"
-                      sx={{ ml: 1 }}
-                    >
-                      Cancelar
-                    </Button>
-                  </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    {c.text}
+                  >
+                    Respondendo a um comentário...
                   </Typography>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <Alert severity="info" sx={{ width: '100%' }}>
-            Nenhum comentário ainda. Seja o primeiro a comentar!
-          </Alert>
-        )}
-      </Box>
-    </Container>
+                  <Button 
+                    size="small" 
+                    onClick={() => setReplyingTo(null)}
+                    startIcon={<CloseIcon fontSize="small" />}
+                  >
+                    Cancelar
+                  </Button>
+                </Box>
+              )}
+              <TextField
+                id="comment-input"
+                label={replyingTo ? "Escreva sua resposta..." : "Escreva um comentário..."}
+                multiline
+                rows={2}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyPress={handleCommentKeyPress}
+                fullWidth
+                variant="outlined"
+                margin="normal"
+                InputProps={{
+                  endAdornment: (
+                    <IconButton 
+                      onClick={handleAddComment} 
+                      color="primary"
+                      disabled={!commentText.trim()}
+                    >
+                      <SendIcon />
+                    </IconButton>
+                  ),
+                }}
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 4
+                  }
+                }}
+              />
+            </Box>
+          </Box>
+          
+          <Divider sx={{ my: 2 }} />
+          
+          {comments.filter(c => !c.parentId).length === 0 ? (
+            <Typography 
+              variant="body2" 
+              color="textSecondary" 
+              sx={{ 
+                textAlign: 'center',
+                py: 3
+              }}
+            >
+              Seja o primeiro a comentar!
+            </Typography>
+          ) : (
+            comments
+              .filter(comment => !comment.parentId)
+              .map((comment) => {
+                const replies = comments.filter(c => c.parentId === comment.id);
+                const hasReplies = replies.length > 0;
+                const repliesVisible = showReplies[comment.id] || false;
+
+                return (
+                  <React.Fragment key={comment.id}>
+                    <Box
+                      sx={{
+                        mb: 2,
+                        p: 2,
+                        backgroundColor: 'background.paper',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        position: 'relative'
+                      }}
+                    >
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start',
+                        gap: 2
+                      }}>
+                        <Avatar 
+                          src={comment.userAvatar} 
+                          sx={{ 
+                            width: 40, 
+                            height: 40 
+                          }} 
+                        />
+                        
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 0.5
+                          }}>
+                            <Typography 
+                              variant="subtitle2" 
+                              fontWeight="bold"
+                            >
+                              {comment.userName}
+                            </Typography>
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary"
+                            >
+                              {formatDateTime(comment.data)}
+                            </Typography>
+                          </Box>
+                          
+                          {editingCommentId === comment.id ? (
+                            <Box sx={{ mt: 1 }}>
+                              <TextField
+                                fullWidth
+                                multiline
+                                value={editedCommentText}
+                                onChange={(e) => setEditedCommentText(e.target.value)}
+                                sx={{ mb: 1 }}
+                              />
+                              <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'flex-end',
+                                gap: 1
+                              }}>
+                                <Button 
+                                  variant="outlined" 
+                                  size="small"
+                                  onClick={() => setEditingCommentId(null)}
+                                  startIcon={<CloseIcon />}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button 
+                                  variant="contained" 
+                                  size="small"
+                                  onClick={() => handleSaveEdit(comment.id)}
+                                  startIcon={<CheckIcon />}
+                                >
+                                  Salvar
+                                </Button>
+                              </Box>
+                            </Box>
+                          ) : (
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                whiteSpace: 'pre-line',
+                                wordBreak: 'break-word'
+                              }}
+                            >
+                              {comment.comment}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                      
+                      {/* Botões de ação */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mt: 1
+                      }}>
+                        <Button
+                          size="small"
+                          startIcon={<ReplyIcon fontSize="small" />}
+                          onClick={() => handleReply(comment.id, comment.userName)}
+                          sx={{ color: 'text.secondary' }}
+                        >
+                          Responder
+                        </Button>
+                        
+                        {(comment.userId === user?.id || announcement.companyId === user?.id) && (
+                          <Box sx={{ display: 'flex', gap: 0.5 }}>
+                            {comment.userId === user?.id && (
+                              <Tooltip title="Editar">
+                                <IconButton
+                                  onClick={() => handleEditComment(comment.id, comment.comment)}
+                                  size="small"
+                                  color="primary"
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            <Tooltip title="Excluir">
+                              <IconButton
+                                onClick={() => handleDeleteComment(comment.id)}
+                                size="small"
+                                color="error"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        )}
+                      </Box>
+                      
+                      {/* Controle de respostas */}
+                      {hasReplies && (
+                        <Box sx={{ mt: 1 }}>
+                          <Button
+                            size="small"
+                            onClick={() => toggleReplies(comment.id)}
+                            sx={{ color: 'blue' }}
+                          >
+                            {repliesVisible ? 'Ocultar respostas' : `Mostrar ${replies.length} resposta${replies.length !== 1 ? 's' : ''}`}
+                          </Button>
+                        </Box>
+                      )}
+                      
+                      {/* Lista de respostas */}
+                      {repliesVisible && replies.map(reply => (
+                        <Box
+                          key={reply.id}
+                          sx={{
+                            mt: 2,
+                            ml: 4,
+                            pl: 2,
+                            borderLeft: `2px solid ${theme.palette.divider}`
+                          }}
+                        >
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start',
+                            gap: 2
+                          }}>
+                            <Avatar 
+                              src={reply.userAvatar} 
+                              sx={{ 
+                                width: 32, 
+                                height: 32 
+                              }} 
+                            />
+                            
+                            <Box sx={{ flex: 1 }}>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                mb: 0.5
+                              }}>
+                                <Typography 
+                                  variant="subtitle2" 
+                                  fontWeight="bold"
+                                >
+                                  {reply.userName}
+                                  <Typography 
+                                    component="span" 
+                                    variant="caption" 
+                                    color="text.secondary"
+                                    sx={{ ml: 1 }}
+                                  >
+                                    respondeu
+                                  </Typography>
+                                </Typography>
+                                <Typography 
+                                  variant="caption" 
+                                  color="text.secondary"
+                                >
+                                  {formatDateTime(reply.data)}
+                                </Typography>
+                              </Box>
+                              
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  whiteSpace: 'pre-line',
+                                  wordBreak: 'break-word'
+                                }}
+                              >
+                                {reply.comment}
+                              </Typography>
+                              
+                              {/* Botões de ação para respostas */}
+                              <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'flex-end',
+                                mt: 1,
+                                gap: 0.5
+                              }}>
+                                <Tooltip title="Responder">
+                                  <IconButton
+                                    onClick={() => handleReply(comment.id, reply.userName)}
+                                    size="small"
+                                    color="primary"
+                                  >
+                                    <ReplyIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                
+                                {(reply.userId === user?.id || announcement.companyId === user?.id) && (
+                                  <>
+                                    {reply.userId === user?.id && (
+                                      <Tooltip title="Editar">
+                                        <IconButton
+                                          onClick={() => handleEditComment(reply.id, reply.comment)}
+                                          size="small"
+                                          color="primary"
+                                        >
+                                          <EditIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                    <Tooltip title="Excluir">
+                                      <IconButton
+                                        onClick={() => handleDeleteComment(reply.id)}
+                                        size="small"
+                                        color="error"
+                                      >
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </>
+                                )}
+                              </Box>
+                            </Box>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </React.Fragment>
+                );
+              })
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Menu de Compartilhamento */}
+      <Menu
+        anchorEl={shareAnchorEl}
+        open={Boolean(shareAnchorEl)}
+        onClose={handleCloseShareMenu}
+      >
+        <MenuItem onClick={() => shareOnPlatform('whatsapp')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124034.png" 
+              alt="WhatsApp" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>WhatsApp</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('facebook')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124010.png" 
+              alt="Facebook" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>Facebook</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('twitter')}>
+          <ListItemIcon>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/124/124021.png" 
+              alt="Twitter" 
+              width={24} 
+              height={24} 
+            />
+          </ListItemIcon>
+          <ListItemText>Twitter</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => shareOnPlatform('copy')}>
+          <ListItemIcon>
+            <ShareIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Copiar link</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Modal de Denúncia */}
+      <Dialog 
+        open={denunciaModalOpen} 
+        onClose={() => setDenunciaModalOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 'bold' }}>
+          Denunciar Anúncio
+          <IconButton
+            aria-label="close"
+            onClick={() => setDenunciaModalOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body1" gutterBottom>
+            Por favor, descreva o motivo da sua denúncia. Nossa equipe irá analisar o conteúdo.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Motivo da Denúncia"
+            value={motivoDenuncia}
+            onChange={(e) => setMotivoDenuncia(e.target.value)}
+            sx={{ mt: 2 }}
+            helperText="Seja específico para nos ajudar a entender o problema"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDenunciaModalOpen(false)}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleDenunciar} 
+            color="error"
+            variant="contained"
+            disabled={!motivoDenuncia.trim()}
+          >
+            Enviar Denúncia
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for Feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 
