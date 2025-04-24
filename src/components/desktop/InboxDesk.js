@@ -284,33 +284,32 @@ const InboxDesk = ({ user }) => {
               </Typography>
                     </Box>
                     <ListItemText
-                     onClick={() => markAsRead(notification.id)}
-                      primary={
-                        <Link
-                          href={notification.link || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{
-                            textDecoration: 'none',
-                            color: 'inherit',
-                            '&:hover': {
-                              textDecoration: 'underline',
-                            },
-                          }}
-                        >
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontSize: isMobile ? '0.875rem' : '1rem',
-                              fontWeight: notification.status === 'unread' ? '600' : '400',
-                              wordBreak: 'break-word',
-                            }}
-                          >
-                            {notification.message}
-                          </Typography>
-                        </Link>
-                      }
-                    />
+                          onClick={() => markAsRead(notification.id)}
+                          primary={
+                            <Link
+                              href={notification.link || '#'}
+                              // Remova target="_blank" para navegar na mesma aba
+                              sx={{
+                                textDecoration: 'none',
+                                color: 'inherit',
+                                '&:hover': {
+                                  textDecoration: 'underline',
+                                },
+                              }}
+                            >
+                              <Typography
+                                variant="body1"
+                                sx={{
+                                  fontSize: isMobile ? '0.875rem' : '1rem',
+                                  fontWeight: notification.status === 'unread' ? '600' : '400',
+                                  wordBreak: 'break-word',
+                                }}
+                              >
+                                {notification.message}
+                              </Typography>
+                            </Link>
+                          }
+                      />
                   </Box>
                   
                   <ListItemSecondaryAction

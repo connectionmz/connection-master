@@ -25,6 +25,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import BackButton from '../BackButton';
 import sendEmail from '../sms/SendMail';
 import { saveContentToInbox } from '../SaveToInbox';
+import { CheckCircle } from '@mui/icons-material';
 
 const EnviarPropostaDesk = ({ user }) => {
   const { id, companyId } = useParams();
@@ -251,10 +252,11 @@ const notification = {
                 mb: 3,
               }}
             >
-              <img
-                src="/success-icon.svg"
-                alt="Success"
-                style={{ width: 80, height: 80 }}
+              <CheckCircle
+                sx={{ 
+                  fontSize: 80,
+                  color: 'success.main', // ou 'primary.main' se preferir
+                }}
               />
             </Box>
             
@@ -333,42 +335,44 @@ const notification = {
         </Typography>
 
         <form onSubmit={handleSubmitProposal}>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
-              Descrição da Proposta *
-            </Typography>
-            <Paper variant="outlined" sx={{ borderRadius: 1 }}>
-              <ReactQuill
-                value={description}
-                onChange={setDescription}
-                placeholder="Descreva sua proposta detalhadamente..."
-                modules={{
-                  toolbar: [
-                    [{ header: [1, 2, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ list: 'ordered' }, { list: 'bullet' }],
-                    ['link', 'image'],
-                    ['clean'],
-                  ],
-                }}
-                formats={[
-                  'header',
-                  'bold',
-                  'italic',
-                  'underline',
-                  'strike',
-                  'list',
-                  'bullet',
-                  'link',
-                  'image'
-                ]}
-                style={{
-                  height: isMobile ? '200px' : '250px',
-                  border: 'none',
-                }}
-              />
-            </Paper>
-          </Box>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
+            Descrição da Proposta *
+          </Typography>
+          <Paper variant="outlined" sx={{ borderRadius: 1, overflow: 'hidden' }}>
+            <ReactQuill
+              value={description}
+              onChange={setDescription}
+              placeholder="Descreva sua proposta detalhadamente..."
+              modules={{
+                toolbar: [
+                  [{ header: [1, 2, false] }],
+                  ['bold', 'italic', 'underline', 'strike'],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  ['link', 'image'],
+                  ['clean'],
+                ],
+              }}
+              formats={[
+                'header',
+                'bold',
+                'italic',
+                'underline',
+                'strike',
+                'list',
+                'bullet',
+                'link',
+                'image'
+              ]}
+              style={{
+                minHeight: isMobile ? '200px' : '250px',
+                height: 'auto',
+                border: 'none',
+              }}
+              className="custom-quill-editor"
+            />
+          </Paper>
+        </Box>
 
           <Box sx={{ mb: 4 }}>
             <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
