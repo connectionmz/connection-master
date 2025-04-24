@@ -46,6 +46,7 @@ import {
   Sort,
   Add
 } from '@mui/icons-material';
+import BackButton from '../BackButton';
 
 // Lista de tipos de inquérito pré-definidos
 const TIPOS_INQUERITO = [
@@ -277,24 +278,16 @@ const InqueritosModuleDesk = ({ user }) => {
       backgroundColor: '#fff',
       minHeight: '70vh'
     }}>
+              <BackButton/>
+
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, flexDirection: isMobile ? 'column' : 'row' }}>
         <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ 
           fontWeight: 'bold', 
           color: 'primary.main',
           mb: isMobile ? 1 : 0
         }}>
-          Painel de Inquéritos
+          Inquéritos
         </Typography>
-        <Chip 
-          label={user.companyName} 
-          color="secondary" 
-          sx={{ 
-            ml: isMobile ? 0 : 2, 
-            mt: isMobile ? 1 : 0,
-            fontSize: '0.875rem', 
-            height: 28 
-          }} 
-        />
       </Box>
 
       {isMobile ? (

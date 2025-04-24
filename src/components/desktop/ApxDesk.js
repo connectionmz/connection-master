@@ -183,13 +183,9 @@ const ApxDesk = ({ user }) => {
           p: 3,
           backgroundColor: theme.palette.background.paper
         }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Seus Módulos
-          </Typography>
           <ModuleGrid activeModules={userData.activeModules || []} />
         </Box>
       </Card>
-
       {/* Receipts Section */}
       <Card sx={{ 
         mb: 3,

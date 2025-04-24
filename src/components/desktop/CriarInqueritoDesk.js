@@ -93,6 +93,15 @@ const CriarInqueritoDesk = ({ user }) => {
   };
 
   const salvarInquerito = async () => {
+    if (perguntas.length === 0) {
+      setSnackbar({
+        open: true,
+        message: 'Adicione pelo menos uma pergunta ao inquérito.',
+        severity: 'warning',
+      });
+      return;
+    }
+  
     if (
       perguntas.some((p) => !p.texto || (p.tipo === 'multipla_escolha' && p.opcoes.some((o) => !o)))
     ) {
@@ -379,7 +388,6 @@ const CriarInqueritoDesk = ({ user }) => {
           </Button>
         </Grid>
       </Grid>
-
       {/* Botão Salvar */}
       <Button
         onClick={salvarInquerito}
@@ -387,11 +395,10 @@ const CriarInqueritoDesk = ({ user }) => {
         color="success"
         fullWidth
         sx={{ mt: 4 }}
-        disabled={loading}
+        disabled={loading || perguntas.length === 0} // Desativa se não houver perguntas
       >
         {loading ? <CircularProgress size={24} color="inherit" /> : 'Salvar Inquérito'}
       </Button>
-
       {/* Snackbar para mensagens */}
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">

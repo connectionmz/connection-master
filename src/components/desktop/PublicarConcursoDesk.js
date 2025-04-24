@@ -17,8 +17,13 @@ import {
     Typography,
     Box,
     CircularProgress,
+    ListItemIcon,
+    Checkbox,
+    Divider,
+    ListItemText,
 } from '@mui/material';
 import BackButton from '../BackButton';
+import { Close } from '@mui/icons-material';
 
 const PublicarConcursoDesk = ({ user }) => {
     const [formData, setFormData] = useState({
@@ -61,6 +66,8 @@ const PublicarConcursoDesk = ({ user }) => {
     const [provincias, setProvincias] = useState([]);
     const [sectores, setSectores] = useState([]);
     const [tiposEntidades, setTiposEntidades] = useState([]);
+    const [openProvinciaSelect, setOpenProvinciaSelect] = useState(false);
+    const [selectedProvincias, setSelectedProvincias] = useState([]);
 
     useEffect(() => {
         const provinciasRef = ref(db, 'provincias');
@@ -99,6 +106,38 @@ const PublicarConcursoDesk = ({ user }) => {
             anexos: [...prevState.anexos, ...files],
         }));
     };
+    const handleProvinciaChange = (event) => {
+        const value = event.target.value;
+        
+        // Se selecionou "Todas"
+        if (value.includes("all")) {
+            if (selectedProvincias.length === provincias.length) {
+                setSelectedProvincias([]);
+            } else {
+                setSelectedProvincias(provincias.map(p => p.provincia));
+            }
+            return;
+        }
+        
+        setSelectedProvincias(value);
+    };
+
+    const handleCloseProvinciaSelect = () => {
+        setOpenProvinciaSelect(false);
+    };
+
+    const handleOpenProvinciaSelect = () => {
+        setOpenProvinciaSelect(true);
+    };
+
+    // Atualize o formData quando selectedProvincias mudar
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            provincia: selectedProvincias.join(', ')
+        }));
+    }, [selectedProvincias]);
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -309,21 +348,53 @@ const PublicarConcursoDesk = ({ user }) => {
                     required
                     margin="normal"/>
                 <FormControl fullWidth margin="normal">
-                    <InputLabel>Província</InputLabel>
+                    <InputLabel>Província(s)</InputLabel>
                     <Select
+                        multiple
                         name="provincia"
-                        value={formData.provincia}
-                        onChange={handleChange}
-                        label="Província"
-                        required>
-                        <MenuItem value="">Selecione a Província</MenuItem>
+                        value={selectedProvincias}
+                        onChange={handleProvinciaChange}
+                        onClose={handleCloseProvinciaSelect}
+                        onOpen={handleOpenProvinciaSelect}
+                        open={openProvinciaSelect}
+                        label="Província(s)"
+                        required
+                        renderValue={(selected) => selected.join(', ')}
+                    >
+                        {/* Opção "Todas" */}
+                        <MenuItem value="all">
+                            <ListItemIcon>
+                                <Checkbox
+                                    checked={selectedProvincias.length === provincias.length}
+                                    indeterminate={
+                                        selectedProvincias.length > 0 && 
+                                        selectedProvincias.length < provincias.length
+                                    }
+                                />
+                            </ListItemIcon>
+                            <ListItemText primary="Todas as Províncias" />
+                        </MenuItem>
+
+                        {/* Opção "Fechar" */}
+                        <MenuItem onClick={handleCloseProvinciaSelect}>
+                            <ListItemIcon>
+                                <Close fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Fechar" />
+                        </MenuItem>
+
+                        <Divider />
+
+                        {/* Lista de províncias */}
                         {provincias.map((provinciaObj, index) => (
                             <MenuItem key={index} value={provinciaObj.provincia}>
-                                {provinciaObj.provincia}
+                                <Checkbox checked={selectedProvincias.includes(provinciaObj.provincia)} />
+                                <ListItemText primary={provinciaObj.provincia} />
                             </MenuItem>
                         ))}
                     </Select>
                 </FormControl>
+
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Setor de Atividade</InputLabel>
                     <Select
