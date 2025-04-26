@@ -405,7 +405,7 @@ const CompanyProfile = ({ user }) => {
                     {/* Loja */}
                     <Tooltip title="Ir para a Loja" arrow>
                         <IconButton
-                            onClick={() => userId && navigate(`/stores/${userId}`)}
+                            onClick={() => userId && navigate(`/loja/${userId}`)}
                             color="success"
                         >
                             <Store />

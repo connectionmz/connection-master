@@ -297,35 +297,7 @@ const AnunciosDesk = ({ campanhas, user }) => {
                   }}
                 />
 
-                {/* Overlay Info */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)',
-                    p: 2,
-                    color: 'white'
-                  }}
-                >
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-end'
-                  }}>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {banner.description || 'Anúncio'}
-                      </Typography>
-                      {company.nome && (
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                          Por: {company.nome}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Box>
-                </Box>
+               
               </Box>
 
               {/* Company Info (Desktop) */}
@@ -346,26 +318,12 @@ const AnunciosDesk = ({ campanhas, user }) => {
                     boxShadow: 1
                   }}
                 >
-                  <Avatar
-                    src={company.logoUrl || ''}
-                    alt={company.nome}
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      bgcolor: 'grey.100',
-                    }}
-                  >
-                    {company.nome.charAt(0).toUpperCase()}
-                  </Avatar>
                   <Box>
                     <Typography 
                       variant="subtitle1" 
                       sx={{ fontWeight: 'bold' }}
                     >
                       {company.nome}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {banner.provincias?.join(', ') || 'Todas províncias'}
                     </Typography>
                   </Box>
                 </Box>
@@ -473,18 +431,26 @@ const AnunciosDesk = ({ campanhas, user }) => {
                       )}
                       
                       {companies[selectedBanner.companyId].contacto && (
-                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PhoneIcon color="primary" fontSize="small" />
-                          {companies[selectedBanner.companyId].contacto}
-                        </Typography>
-                      )}
-                      
-                      {companies[selectedBanner.companyId].email && (
-                        <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <EmailIcon color="primary" fontSize="small" />
-                          {companies[selectedBanner.companyId].email}
-                        </Typography>
-                      )}
+                          <Typography 
+                            variant="body2" 
+                            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+                            onClick={() => window.open(`tel:${companies[selectedBanner.companyId].contacto}`)}
+                          >
+                            <PhoneIcon color="primary" fontSize="small" />
+                            {companies[selectedBanner.companyId].contacto}
+                          </Typography>
+                        )}
+
+                        {companies[selectedBanner.companyId].email && (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+                            onClick={() => window.open(`mailto:${companies[selectedBanner.companyId].email}`)}
+                          >
+                            <EmailIcon color="primary" fontSize="small" />
+                            {companies[selectedBanner.companyId].email}
+                          </Typography>
+                        )}
                       
                       {companies[selectedBanner.companyId].website && (
                         <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

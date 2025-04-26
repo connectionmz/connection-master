@@ -20,9 +20,11 @@ import {
   ListItemText,
   FormHelperText,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  ListItemIcon,
+  Divider
 } from '@mui/material';
-import { Add, Delete, Image as ImageIcon } from '@mui/icons-material';
+import { Add, Close, Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUtils';
 import BackButton from '../BackButton';
 import sendMessage from '../sms/sendMessage';
@@ -51,10 +53,9 @@ const NovaCotacao = ({ user }) => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [proposalLimitError, setProposalLimitError] = useState('');
-
-  const provinciasList = [
-    'Maputo', 'Gaza', 'Inhambane', 'Sofala', 'Manica', 'Tete', 'Zambézia', 'Nampula', 'Cabo Delgado', 'Niassa'
-  ];
+  const [openProvinciaSelect, setOpenProvinciaSelect] = useState(false);
+  const [selectedProvincias, setSelectedProvincias] = useState([]);
+  const [provincias, setProvincias] = useState([]);
 
   useEffect(() => {
     const fetchSubsectores = async () => {
@@ -63,7 +64,11 @@ const NovaCotacao = ({ user }) => {
         setFormData(prev => ({ ...prev, selectedSubsector: [] }));
         return;
       }
-  
+      const provinciasRef = ref(db, 'provincias');
+      onValue(provinciasRef, (snapshot) => {
+        const provinciasData = snapshot.val() || [];
+        setProvincias(provinciasData);
+    });
       const sectorRef = ref(db, `sectores_de_atividade`);
       onValue(sectorRef, (snapshot) => {
         const data = snapshot.val();
@@ -91,7 +96,29 @@ const NovaCotacao = ({ user }) => {
       maxProposals: valor,
     }));
   };
+  const handleProvinciaChange = (event) => {
+    const value = event.target.value;
+    
+    // Se selecionou "Todas"
+    if (value.includes("all")) {
+        if (selectedProvincias.length === provincias.length) {
+            setSelectedProvincias([]);
+        } else {
+            setSelectedProvincias(provincias.map(p => p.provincia));
+        }
+        return;
+    }
+    
+    setSelectedProvincias(value);
+};
 
+const handleCloseProvinciaSelect = () => {
+    setOpenProvinciaSelect(false);
+};
+
+const handleOpenProvinciaSelect = () => {
+    setOpenProvinciaSelect(true);
+};
   const handleAddItem = () => {
     setFormData(prev => ({
       ...prev,
@@ -335,23 +362,53 @@ const NovaCotacao = ({ user }) => {
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Províncias</InputLabel>
-                <Select
-                  multiple
-                  value={formData.provincia}
-                  onChange={(e) => setFormData(prev => ({ ...prev, provincia: e.target.value }))}
-                  renderValue={(selected) => selected.join(', ')}
-                  label="Províncias"
-                >
-                  {provinciasList.map((prov) => (
-                    <MenuItem key={prov} value={prov}>
-                      <Checkbox checked={formData.provincia.includes(prov)} />
-                      <ListItemText primary={prov} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            <FormControl fullWidth margin="normal">
+                    <InputLabel>Província(s)</InputLabel>
+                    <Select
+                        multiple
+                        name="provincia"
+                        value={selectedProvincias}
+                        onChange={handleProvinciaChange}
+                        onClose={handleCloseProvinciaSelect}
+                        onOpen={handleOpenProvinciaSelect}
+                        open={openProvinciaSelect}
+                        label="Província(s)"
+                        required
+                        renderValue={(selected) => selected.join(', ')}
+                    >
+                        {/* Opção "Todas" */}
+                        <MenuItem value="all">
+                            <ListItemIcon>
+                                <Checkbox
+                                    checked={selectedProvincias.length === provincias.length}
+                                    indeterminate={
+                                        selectedProvincias.length > 0 && 
+                                        selectedProvincias.length < provincias.length
+                                    }
+                                />
+                            </ListItemIcon>
+                            <ListItemText primary="Todas as Províncias" />
+                        </MenuItem>
+
+                        {/* Opção "Fechar" */}
+                        <MenuItem onClick={handleCloseProvinciaSelect}>
+                            <ListItemIcon>
+                                <Close fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Fechar" />
+                        </MenuItem>
+
+                        <Divider />
+
+                        {/* Lista de províncias */}
+                        {provincias.map((provinciaObj, index) => (
+                            <MenuItem key={index} value={provinciaObj.provincia}>
+                                <Checkbox checked={selectedProvincias.includes(provinciaObj.provincia)} />
+                                <ListItemText primary={provinciaObj.provincia} />
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
             </Grid>
           </Grid>
         </Paper>
