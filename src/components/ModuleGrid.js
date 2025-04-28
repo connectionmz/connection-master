@@ -42,7 +42,7 @@ const ModuleGrid = ({ activeModules }) => {
   return (
     <div className="mt-6">
       <h2 className="text-gray-700 text-lg font-semibold">Módulos Disponíveis</h2>
-      <div className="grid grid-cols-4 gap-4 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mt-4">
         {allModules.map((module) => (
           <div
             key={module.name}
@@ -52,7 +52,7 @@ const ModuleGrid = ({ activeModules }) => {
             onClick={() => handleModuleClick(module)}
           >
             <div className="bg-gray-100 p-4 rounded-md">{module.icon}</div>
-            <p className="mt-2 text-sm text-gray-600">{module.name}</p>
+            <p className="mt-2 text-sm text-center text-gray-600">{module.name}</p>
           </div>
         ))}
       </div>
