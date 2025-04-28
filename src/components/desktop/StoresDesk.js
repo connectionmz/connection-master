@@ -23,7 +23,8 @@ import {
   ListItemText,
   Tooltip,
   Badge,
-  InputAdornment
+  InputAdornment,
+  Button
 } from "@mui/material";
 import {
   Share,
@@ -32,7 +33,9 @@ import {
   Store,
   VisibilityOff,
   Search,
-  ShoppingCartCheckout
+  ShoppingCartCheckout,
+  Add,
+  AddShoppingCart
 } from "@mui/icons-material";
 import { formatPrice } from "../../utils/utils";
 import MyCart from "./ShoppingCart";
@@ -706,26 +709,61 @@ const StoresDesk = ({ user }) => {
                           <Box sx={{ mt: 'auto' }}>
                             <PriceDisplay product={product} />
                           </Box>
+                         
                         </CardContent>
                       </CardActionArea>
                     </TrackedProductLink>
 
-                    {/* Ações */}
-                    <Box sx={{ 
-                      p: 1, 
-                      display: 'flex', 
-                      justifyContent: 'flex-end',
-                      borderTop: '1px solid #f0f0f0'
-                    }}>
-                      <Tooltip title="Compartilhar">
-                        <IconButton 
-                          size="small"
-                          onClick={(e) => handleShareOpen(e, product.id)}
-                        >
-                          <Share fontSize={isMobile ? "small" : "medium"} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
+{/* Ações do Produto */}
+<Box sx={{ 
+  p: 1, 
+  display: 'flex', 
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  borderTop: '1px solid #f0f0f0',
+  backgroundColor: '#fafafa'
+}}>
+  {/* Botão de Adicionar ao Carrinho */}
+  <Tooltip title="Adicionar ao carrinho">
+    <Button
+      variant="contained"
+      size="small"
+      color="primary"
+      startIcon={<AddShoppingCart fontSize={isMobile ? "small" : "medium"} />}
+      onClick={(e) => {
+        e.stopPropagation();
+        addToCart(product);
+      }}
+      sx={{
+        ml: 1,
+        textTransform: 'none',
+        fontSize: isMobile ? '0.75rem' : '0.875rem'
+      }}
+    >
+      {isMobile ? 'Adicionar' : 'Adicionar ao carrinho'}
+    </Button>
+  </Tooltip>
+
+  {/* Botão de Compartilhar */}
+  <Tooltip title="Compartilhar">
+    <IconButton 
+      size="small"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleShareOpen(e, product.id);
+      }}
+      sx={{
+        color: theme.palette.primary.main,
+        '&:hover': {
+          backgroundColor: theme.palette.primary.light,
+          color: theme.palette.primary.dark
+        }
+      }}
+    >
+      <Share fontSize={isMobile ? "small" : "medium"} />
+    </IconButton>
+  </Tooltip>
+</Box>
                   </Card>
                 </Grid>
               ))}

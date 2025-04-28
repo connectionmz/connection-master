@@ -140,7 +140,7 @@ const MyCart = ({
             sx={{ mt: 2 }}
             onClick={onClose}
           >
-            Continuar Comprando
+          Adicionar Itens
           </Button>
         </Box>
       ) : (
