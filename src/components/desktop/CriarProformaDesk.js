@@ -343,23 +343,26 @@ const CriarProformaDesk = ({ user }) => {
             Dados da Proforma
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-              label="Cliente (Opcional)"
-              fullWidth
-              select
-              value={cliente ? cliente.nome : ''}
-              onChange={(e) => {
-                const selectedCliente = clientes.find((c) => c.nome === e.target.value);
-                setCliente(selectedCliente);
-              }}
-            >
-              <MenuItem value="">Selecione um cliente</MenuItem>
-              {clientes.map((c, index) => (
-                <MenuItem key={index} value={c.nome}>
-                  {c.nome}
-                </MenuItem>
-              ))}
-            </TextField>
+          <TextField
+  label="Cliente (Opcional)"
+  fullWidth
+  select
+  value={cliente ? cliente.nome : ''}
+  onChange={(e) => {
+    const selectedCliente = clientes.find((c) => c.nome === e.target.value);
+    setCliente(selectedCliente);
+  }}
+  error={Boolean(errors.dataEmissao)} // Display error if any
+  helperText={errors.dataEmissao} // Show specific error message
+>
+  <MenuItem value="">Selecione um cliente</MenuItem>
+  {clientes.map((c, index) => (
+    <MenuItem key={index} value={c.nome}>
+      {c.nome}
+    </MenuItem>
+  ))}
+</TextField>
+
           </Box>
           {cliente && (
             <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
@@ -462,6 +465,10 @@ const CriarProformaDesk = ({ user }) => {
                         onChange={(e) => handleItemChange(index, 'preco', parseFloat(e.target.value))}
                         error={!!errors[`item-preco-${index}`]}
                         helperText={errors[`item-preco-${index}`]}
+                        inputProps={{ 
+                          maxLength: 20,
+                          inputMode: 'numeric',
+                      }}
                       />
                     </TableCell>
                     <TableCell>

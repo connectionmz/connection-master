@@ -12,9 +12,15 @@ import {
   Box, 
   IconButton,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  AlertTitle,
+  Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { Expand, InfoIcon } from 'lucide-react';
 
 const FeedDesk = ({ user }) => {
   const navigate = useNavigate();
@@ -96,6 +102,23 @@ const FeedDesk = ({ user }) => {
       bgcolor: theme.palette.background.default,
       minHeight: 'calc(100vh - 64px)'
     }}>
+            <Accordion defaultExpanded sx={{ mb: 3, borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
+        <AccordionSummary expandIcon={<Expand />}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <InfoIcon color="primary" sx={{ mr: 1 }} />
+            <Typography variant="subtitle1" fontWeight="bold">
+            Evidencie trabalhos feitos e transmita credibilidade.
+            </Typography>
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Alert severity="info" sx={{ mb: 2 }}>
+          Histórias que constroem confiança. Conheça os projetos que destacam a competência e o compromisso das empresas que fazem parte da Connection Mozambique.
+                    </Alert>
+          
+
+        </AccordionDetails>
+      </Accordion>
       {posts.length === 0 ? (
         <Box sx={{ 
           display: 'flex', 

@@ -48,27 +48,31 @@ const CotacaoDetalhesDesk = ({ user }) => {
     const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
 
     const fetchCotacao = () => {
-      onValue(viewsRef, async (snapshot) => {
-        if (!snapshot.exists()) {
-          try {
-            await update(cotacaoRef, {
-              [`views/${user.id}`]: true,
-              viewCount: increment(1),
-            });
-          } catch (error) {
-            console.error("Erro ao atualizar visualizações:", error);
-          }
+      // Verifica se o usuário NÃO é o dono da cotação antes de registrar a visualização
+      onValue(cotacaoRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.company.id !== user.id) {
+          onValue(viewsRef, async (snapshot) => {
+            if (!snapshot.exists()) {
+              try {
+                await update(cotacaoRef, {
+                  [`views/${user.id}`]: true,
+                  viewCount: increment(1),
+                });
+              } catch (error) {
+                console.error("Erro ao atualizar visualizações:", error);
+              }
+            }
+          }, { onlyOnce: true });
         }
       }, { onlyOnce: true });
-
+  
       const unsubscribeCotacao = onValue(cotacaoRef, async (snapshot) => {
         const data = snapshot.val();
         if (!data) return;
-
+  
         setCotacao(data);
-
-        console.log(data)
-
+  
         if (data?.proposals) {
           const propostasIds = Object.keys(data.proposals);
           const prop = propostasIds.map((propostaId) => ({
@@ -76,9 +80,8 @@ const CotacaoDetalhesDesk = ({ user }) => {
             ...data.proposals[propostaId],
           }));
           setPropostas(prop);
-        
         }
-
+  
         if (data?.views) {
           const empresasIds = Object.keys(data.views);
         
@@ -103,7 +106,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
           setEmpresasQueVisualizaram(empresas);
         }
       });
-
+  
       return unsubscribeCotacao;
     };
 
@@ -452,8 +455,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
       <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom fontWeight="bold">
-           Valor maximo de propostas: {formatPrice(cotacao?.maxProposals || "0")}MT
-
+           Valor maximo de propostas: {cotacao?.valor || cotacao?.maxProposals}MT
           </Typography>
           <Typography variant="h6" gutterBottom fontWeight="bold">
            Limite de propostas: {cotacao?.proposalLimit || 'N/A'}

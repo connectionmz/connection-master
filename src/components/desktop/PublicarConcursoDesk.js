@@ -98,6 +98,29 @@ const PublicarConcursoDesk = ({ user }) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
+    const formatCurrency = (value) => {
+        if (!value) return '';
+        
+        // Remove qualquer caractere que não seja número
+        const numericValue = value.replace(/\D/g, '');
+      
+        // Converte para número float dividido por 100
+        const floatValue = parseFloat(numericValue) / 100;
+      
+        // Formata para estilo português (pt-PT)
+        return floatValue.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      };
+
+    const handleValorChange = (e) => {
+        const { name, value } = e.target;
+      
+        const formattedValue = formatCurrency(value);
+      
+        setFormData((prevFormData) => ({
+          ...prevFormData,
+          [name]: formattedValue,
+        }));
+      };
 
     const handleFileUpload = (e) => {
         const files = Array.from(e.target.files);
@@ -438,19 +461,19 @@ const PublicarConcursoDesk = ({ user }) => {
                     required
                     margin="normal"
                     InputLabelProps={{ shrink: true }}/>
-                <TextField
-                fullWidth
-                label="Valor Estimado do Contrato"
-                type="number"
-                name="valorEstimado"
-                value={formData.valorEstimado}
-                onChange={handleChange}
-                required
-                margin="normal"
-                inputProps={{ 
-                    maxLength: 20,  
-                    inputMode: 'numeric',  
-                }}/>
+               <TextField
+                    fullWidth
+                    label="Valor Estimado do Contrato"
+                    name="valorEstimado"
+                    value={formData.valorEstimado}
+                    onChange={handleValorChange}
+                    required
+                    margin="normal"
+                    inputProps={{ 
+                        maxLength: 20,
+                        inputMode: 'numeric',
+                    }}
+                    />
                 <Typography variant="h6" gutterBottom>
                     Objeto do Concurso
                 </Typography>

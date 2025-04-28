@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { ref, get, set, push, increment } from "firebase/database";
+import { Link, useNavigate } from "react-router-dom";
+import { ref, get, set, push, increment, onValue, update, remove } from "firebase/database";
 import { db } from "../../fb";
 import {
   Grid,
@@ -31,9 +31,11 @@ import {
   LocalMall,
   Store,
   VisibilityOff,
-  Search
+  Search,
+  ShoppingCartCheckout
 } from "@mui/icons-material";
 import { formatPrice } from "../../utils/utils";
+import MyCart from "./ShoppingCart";
 
 const StoresDesk = ({ user }) => {
   const theme = useTheme();
@@ -45,8 +47,13 @@ const StoresDesk = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [shareAnchor, setShareAnchor] = useState(null);
   const [sharedProduct, setSharedProduct] = useState(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
-
+  const navigate = useNavigate();
   // Dados do usuário protegidos
   const userId = user?.id || 'anonymous';
   const userProvince = user?.provinciaTemp || user?.provincia || null;
@@ -132,6 +139,117 @@ const StoresDesk = ({ user }) => {
     
     fetchStores();
   }, [user, userProvince]); // Adicionei user como dependência
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const cartRef = ref(db, `cart/${user.id}`);
+    const unsubscribe = onValue(cartRef, (snapshot) => {
+      const data = snapshot.val();
+      const count = data 
+        ? Object.values(data).reduce((sum, item) => sum + item.quantity, 0)
+        : 0;
+      setCartItemCount(count);
+    });
+
+    return () => unsubscribe();
+  }, [user?.id]);
+
+  // Função para adicionar ao carrinho
+  const addToCart = async (product) => {
+    try {
+      const cartRef = ref(db, `cart/${user.id}/${product.id}`);
+      
+      // Verificar se o item já existe no carrinho
+      const snapshot = await get(cartRef);
+      
+      if (snapshot.exists()) {
+        // Atualizar quantidade se já existir
+        const currentQuantity = snapshot.val().quantity || 1;
+        await update(cartRef, {
+          quantity: currentQuantity + 1
+        });
+      } else {
+        // Adicionar novo item ao carrinho
+        await set(cartRef, {
+          productId: product.id,
+          storeId: product.storeId,
+          name: product.name,
+          imageUrl: product.imageUrl,
+          price: product.price,
+          discountPrice: product.discountPrice || null,
+          storeName: product.storeName,
+          quantity: 1,
+          addedAt: new Date().toISOString()
+        });
+      }
+      
+      // Atualizar contador de cliques para o produto
+      const productRef = ref(db, `stores/${product.storeId}/products/${product.id}/cartAdds`);
+      await set(productRef, increment(1));
+      
+      // Feedback para o usuário
+      setSnackbarMessage(`${product.name} adicionado ao carrinho!`);
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+      
+    } catch (error) {
+      console.error("Erro ao adicionar ao carrinho:", error);
+      setSnackbarMessage('Erro ao adicionar ao carrinho');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    }
+  };
+
+  // Função de checkout
+  const handleCheckout = async () => {
+    try {
+      // 1. Criar pedido
+      const orderRef = push(ref(db, 'orders'));
+      const orderId = orderRef.key;
+      
+      // 2. Obter itens do carrinho
+      const cartSnapshot = await get(ref(db, `cart/${user.id}`));
+      const cartItems = cartSnapshot.val() || {};
+      
+      // 3. Salvar dados do pedido
+      await set(orderRef, {
+        id: orderId,
+        userId: user.id,
+        storeId: Object.values(cartItems)[0]?.storeId, // Assumindo um pedido por loja
+        items: Object.entries(cartItems).reduce((acc, [id, item]) => {
+          acc[id] = {
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.discountPrice || item.price
+          };
+          return acc;
+        }, {}),
+        total: Object.values(cartItems).reduce((sum, item) => {
+          return sum + ((item.discountPrice || item.price) * item.quantity);
+        }, 0),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      
+      // 4. Limpar carrinho
+      await remove(ref(db, `cart/${user.id}`));
+      
+      // 5. Feedback e redirecionamento
+      setSnackbarMessage('Pedido realizado com sucesso!');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+      navigate(`/order/${orderId}`);
+      setCartOpen(false);
+      
+    } catch (error) {
+      console.error("Erro ao finalizar pedido:", error);
+      setSnackbarMessage('Erro ao finalizar pedido');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    }
+  };
 
   // Produtos com memoização e registro de impressão
   const products = useMemo(() => {
@@ -314,6 +432,7 @@ const StoresDesk = ({ user }) => {
       backgroundColor: '#f8f8f8',
       minHeight: '100vh'
     }}>
+
       {/* Cabeçalho */}
       <Box sx={{ 
         maxWidth: 1400, 
@@ -343,28 +462,42 @@ const StoresDesk = ({ user }) => {
           </Typography>
         </Box>
         
-        <TextField
-          label="Pesquisar loja ou produto..."
-          variant="outlined"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          fullWidth
-          sx={{ 
-            maxWidth: 600,
-            backgroundColor: '#fff',
-            borderRadius: 1
-          }}
-          size={isMobile ? 'small' : 'medium'}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search color="action" />
-              </InputAdornment>
-            )
-          }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <TextField
+            label="Pesquisar loja ou produto..."
+            variant="outlined"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            fullWidth
+            sx={{ 
+              maxWidth: 600,
+              backgroundColor: '#fff',
+              borderRadius: 1
+            }}
+            size={isMobile ? 'small' : 'medium'}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search color="action" />
+                </InputAdornment>
+              )
+            }}
+          />
+          <Tooltip title="Carrinho de Compras">
+            <IconButton 
+              onClick={() => setCartOpen(true)}
+              sx={{ position: 'relative' }}
+            >
+              <Badge 
+                badgeContent={cartItemCount} 
+                color="primary"
+              >
+                <ShoppingCartCheckout />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
-
       {/* Lojas em destaque */}
       {featuredStores.length > 0 && (
   <Box sx={{ 
@@ -673,6 +806,12 @@ const StoresDesk = ({ user }) => {
           <ListItemText>Copiar link</ListItemText>
         </MenuItem>
       </Menu>
+      <MyCart
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        userId={user?.id}
+        onCheckout={handleCheckout}
+      />
     </Box>
   );
 };

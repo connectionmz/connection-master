@@ -68,7 +68,7 @@ const CotacoesPDF = ({ user }) => {
           <Text>{cot?.company?.morada}</Text>
           <Text>Nuit: {cot?.company?.nuit}</Text>
           <Text>Sector: {cot?.company?.sector}</Text>
-          <Text>Valor Máximo de Propostas: {formatPrice(cot?.maxProposals || "0")}MT</Text>
+          <Text>Valor Máximo de Propostas:{cot?.valor || cot?.maxProposals}MT</Text>
           
         </View>
 
@@ -212,7 +212,7 @@ const CotacoesPDF = ({ user }) => {
             <Typography variant="body2">{cot.company?.morada}</Typography>
             <Typography variant="body2">Nuit: {cot.company?.nuit}</Typography>
             <Typography variant="body2">Sector: {cot.company?.sector}</Typography>
-            <Typography variant="body2">Valor Máximo de Propostas:{formatPrice(cot?.maxProposals || "0")}MT</Typography>
+            <Typography variant="body2">Valor Máximo de Propostas:{cot?.valor || cot?.maxProposals}MT</Typography>
           </Stack>
 
           <Divider sx={{ my: 2 }} />

@@ -48,4 +48,17 @@ const formatarMoeda = (valor) => {
   return newArray;
 };
 
-export { formatPrice, formatDateTime,formatarMoeda, shuffleArray  };
+const formatCurrency = (value) => {
+  // Remove tudo que não for número
+  let numericValue = value.replace(/\D/g, "");
+  
+  // Adiciona vírgula para separar os centavos
+  numericValue = numericValue.slice(0, -2) + "," + numericValue.slice(-2);
+  
+  // Adiciona ponto para separar milhar
+  numericValue = numericValue.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+
+  return numericValue;
+};
+
+export { formatPrice, formatDateTime,formatarMoeda, shuffleArray, formatCurrency  };
