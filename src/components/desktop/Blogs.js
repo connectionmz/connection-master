@@ -1,43 +1,91 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ref, get } from 'firebase/database';
 import { db } from '../../fb';
-import {
-  AppBar,
-  Toolbar,
+import { 
+  Box,
   Typography,
-  Container,
   Grid,
   Card,
   CardContent,
   CardMedia,
-  Button,
   CircularProgress,
   Alert,
-  Box,
-  IconButton
+  IconButton,
+  Avatar,
+  Chip,
+  useTheme,
+  useMediaQuery,
+  TextField,
+  InputAdornment,
+  Button,
+  Badge,
+  Divider,
+  Tooltip,
+  Collapse,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText
 } from '@mui/material';
-import { FaFileDownload, FaArrowRight } from 'react-icons/fa';
+import { 
+  CalendarToday, 
+  Business, 
+  Search,
+  Download,
+  Share,
+  FilterList,
+  Sort,
+  InsertDriveFile,
+  Comment,
+  ExpandMore,
+  ExpandLess
+} from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import BackButton from '../BackButton';
 
 const Blogs = () => {
   const [posts, setPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
+  const [expandedPost, setExpandedPost] = useState(null);
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const fetchPosts = async () => {
+  // Categorias baseadas na estrutura de dados
+  const categories = [
+    { id: 'all', name: 'Todos' },
+    { id: 'public', name: 'Avisos Públicos' },
+    { id: 'government', name: 'Governo' },
+    { id: 'business', name: 'Empresas' },
+    { id: 'events', name: 'Eventos' }
+  ];
+
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
-      const snapshot = await get(ref(db, 'blogPost')); // Ajuste o caminho conforme necessário
+      const snapshot = await get(ref(db, 'blogPost'));
       if (snapshot.exists()) {
         const data = snapshot.val();
         const postsArray = Object.keys(data).map((key) => ({
           id: key,
           ...data[key],
+          // Garante que cada post tenha uma categoria válida
+          category: data[key].category || 'public',
+          // Processa os comentários se existirem
+          comments: data[key].comments ? Object.entries(data[key].comments).map(([commentId, comment]) => ({
+            id: commentId,
+            ...comment
+          })) : []
         }));
         setPosts(postsArray);
+        setFilteredPosts(postsArray);
       } else {
         setPosts([]);
+        setFilteredPosts([]);
       }
     } catch (err) {
       console.error('Erro ao buscar posts:', err);
@@ -45,122 +93,292 @@ const Blogs = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Filtra e ordena os posts
+  useEffect(() => {
+    let result = [...posts];
+    
+    // Filtro por pesquisa
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(post => 
+        post.title.toLowerCase().includes(query) || 
+        (post.content && post.content.toLowerCase().includes(query)) ||
+        (post.comments && post.comments.some(comment => 
+          comment.comment.toLowerCase().includes(query) ||
+          (comment.user && comment.user.nome.toLowerCase().includes(query))
+        )
+      ))
+    }
+    
+    // Filtro por categoria
+    if (selectedCategory !== 'all') {
+      result = result.filter(post => post.category === selectedCategory);
+    }
+    
+    // Ordenação
+    if (sortBy === 'recent') {
+      result.sort((a, b) => {
+        const dateA = new Date(`${a.date} ${a.time || '00:00:00'}`);
+        const dateB = new Date(`${b.date} ${b.time || '00:00:00'}`);
+        return dateB - dateA;
+      });
+    } else if (sortBy === 'oldest') {
+      result.sort((a, b) => {
+        const dateA = new Date(`${a.date} ${a.time || '00:00:00'}`);
+        const dateB = new Date(`${b.date} ${b.time || '00:00:00'}`);
+        return dateA - dateB;
+      });
+    } else if (sortBy === 'title') {
+      result.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    
+    setFilteredPosts(result);
+  }, [posts, searchQuery, selectedCategory, sortBy]);
+
+  const formatDate = (dateString, timeString) => {
+    try {
+      if (!dateString) return '';
+      const [day, month, year] = dateString.split('/');
+      const date = new Date(`${year}-${month}-${day}`);
+      
+      if (timeString) {
+        const [hours, minutes, seconds] = timeString.split(':');
+        date.setHours(hours, minutes, seconds);
+      }
+      
+      return date.toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        ...(timeString && { hour: '2-digit', minute: '2-digit' })
+      });
+    } catch {
+      return dateString || '';
+    }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-PT', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+  const handleShare = async (post) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: post.title,
+          text: post.content ? post.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : '',
+          url: `${window.location.origin}/blog/${post.id}`
+        });
+      } else {
+        await navigator.clipboard.writeText(`${window.location.origin}/blog/${post.id}`);
+        alert('Link copiado para a área de transferência!');
+      }
+    } catch (err) {
+      console.error('Erro ao compartilhar:', err);
+    }
+  };
+
+  const toggleComments = (postId) => {
+    setExpandedPost(expandedPost === postId ? null : postId);
   };
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [fetchPosts]);
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
       >
-        <CircularProgress />
-      </div>
+        <CircularProgress size={60} />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          padding: '20px',
-        }}
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+        p={3}
       >
-        <Alert severity="error">
+        <Alert severity="error" sx={{ width: '100%', maxWidth: 600 }}>
           Ocorreu um erro ao carregar os posts. Tente novamente mais tarde.
         </Alert>
-      </div>
+      </Box>
     );
   }
 
   return (
-    <Box style={{ width: '100%', minHeight: '100vh' }}>
-      <BackButton sx={{ mb: 2 }} />
-      <Container>
-        {posts.length === 0 ? (
-          <Alert severity="info">Nenhum post disponível no momento.</Alert>
-        ) : (
-          <Grid container spacing={3}>
-            {posts.map((post) => (
-              <Grid item xs={12} sm={6} md={4} key={post.id}>
-                <Card
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                    transition: 'transform 0.3s, box-shadow 0.3s',
-                    '&:hover': {
-                      transform: 'scale(1.03)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-                    },
-                  }}
+    <Box sx={{ 
+      width: '100%', 
+      p: { xs: 1, sm: 3 },
+      bgcolor: theme.palette.background.default,
+      minHeight: 'calc(100vh - 64px)'
+    }}>
+      <BackButton sx={{ mb: 3 }} />
+      
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between',
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        mb: 3,
+        gap: 2
+      }}>
+        <Typography variant="h4" component="h1" sx={{ 
+          fontWeight: 600,
+          color: theme.palette.text.primary
+        }}>
+          Blog
+        </Typography>
+      </Box>
+
+      {filteredPosts.length === 0 ? (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '60vh'
+        }}>
+          <Alert severity="info" sx={{ width: '100%', maxWidth: 600 }}>
+            Nenhum post encontrado com os critérios selecionados.
+          </Alert>
+        </Box>
+      ) : (
+        <Grid container spacing={isSmallScreen ? 1 : 3}>
+          {filteredPosts.map((post) => (
+            <Grid item xs={12} sm={6} md={4} key={post.id}>
+              <Card
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  transition: 'transform 0.3s, box-shadow 0.3s',
+                  '&:hover': { 
+                    transform: 'translateY(-4px)',
+                    boxShadow: theme.shadows[6]
+                  },
+                }}
+              >
+                <Link
+                  to={`/blog/${post.id}`}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
                 >
-                  <Link
-                    to={`/blog/${post.id}`}
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                  >
+                  {post.imageUrl && (
                     <CardMedia
                       component="img"
-                      height="160"
-                      image={post.imageURL || '/images/default-placeholder.png'}
-                      alt={post.title || 'Imagem do post'}
-                      sx={{ objectFit: 'cover' }}
+                      image={post.imageUrl}
+                      alt={post.title}
+                      sx={{ 
+                        height: 180,
+                        width: '100%',
+                        objectFit: 'cover'
+                      }}
                     />
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" gutterBottom>
-                        {post.title || 'Sem título'}
+                  )}
+
+                  <CardContent sx={{ 
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(post.date, post.time)}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        paragraph
-                      >
-                        {post.content?.length > 100
-                          ? `${post.content.substring(0, 100)}...`
-                          : post.content || 'Sem descrição disponível.'}
-                      </Typography>
-                      <Typography variant="caption" display="block" gutterBottom>
-                        Data: {formatDate(post.date)}
-                      </Typography>
-                    </CardContent>
-                  </Link>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: 2 }}>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      endIcon={<FaArrowRight />}
-                      component={Link}
-                      to={`/blog/${post.id}`}>
-                      Ver mais
-                    </Button>
+                      <Chip 
+                        label={post.category || 'Geral'} 
+                        size="small" 
+                        sx={{ 
+                          fontSize: '0.6rem',
+                          height: 24,
+                          bgcolor: 'primary.light',
+                          color: 'primary.contrastText'
+                        }} 
+                      />
+                    </Box>
+                    
+                    <Typography 
+                      variant="h6" 
+                      gutterBottom
+                      sx={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        minHeight: '64px',
+                        fontWeight: 600,
+                        color: theme.palette.text.primary
+                      }}
+                    >
+                      {post.title || 'Sem título'}
+                    </Typography>
+                    
+                    <Box
+                      sx={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        minHeight: '72px',
+                        mb: 2,
+                        color: theme.palette.text.secondary
+                      }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: post.content || 'Sem conteúdo disponível.' 
+                      }}
+                    />
+                  </CardContent>
+                </Link>
+
+                
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    px: 2,
+                    py: 1,
+                  }}
+                >
+                  <Tooltip title="Compartilhar" arrow>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        color: 'primary.contrastText',
+                        '&:hover': { color: 'secondary.light' }
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleShare(post);
+                      }}
+                    >
+                      <Share fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {post.comments && post.comments.length > 0 && (
+                      <Badge badgeContent={post.comments.length} color="secondary">
+                        <Comment fontSize="small" />
+                      </Badge>
+                    )}
                   </Box>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        )}
-      </Container>
+                </Box>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Box>
   );
 };
+
 export default Blogs;

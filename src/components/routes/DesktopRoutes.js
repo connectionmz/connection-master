@@ -19,7 +19,6 @@ import AnunciarDesk from '../desktop/AnunciarDesk';
 import PostInputDesk from '../desktop/PostInputDesk';
 import Sms from '../sms/Sms';
 import SmsDesk from '../sms/SmsDesk';
-
 import CallCenterModuleDesk from '../desktop/CallCenterModuleDesk';
 import InqueritosModuleDesk from '../desktop/InqueritosModuleDesk';
 import LogisticaModuleDesk from '../desktop/LogisticaModuleDesk';

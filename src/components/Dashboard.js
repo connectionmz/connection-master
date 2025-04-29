@@ -189,6 +189,7 @@ const Dashboard = ({ user }) => {
         {blogs.length > 0 ? (
           <Box>
             <Link to={`/blog/${blogs[0].id}`} style={{ textDecoration: "none", color: "inherit" }}>
+            {blogs[0].imageUrl && (
               <img
                 src={blogs[0].imageURL}
                 alt={blogs[0].title}
@@ -199,6 +200,7 @@ const Dashboard = ({ user }) => {
                   borderRadius: "8px",
                 }}
                 />
+              )}
               <Typography
                 variant="subtitle1"
                 sx={{ fontWeight: "bold", mt: 1, fontSize: { xs: "0.9rem", sm: "1rem" } }} 
