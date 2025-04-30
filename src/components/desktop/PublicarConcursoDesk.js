@@ -39,9 +39,9 @@ const PublicarConcursoDesk = ({ user }) => {
         valorEstimado: '',
         condicoesPagamento: '',
         observacoes: '',
-        provincia: '',
+        provincia: [],
         setor: '',
-        tipoEntidade: '',
+        tipoEntidade: [],
         company: user,
         anexos: [],
         timestamp: new Date().toISOString(),
@@ -157,14 +157,71 @@ const PublicarConcursoDesk = ({ user }) => {
     useEffect(() => {
         setFormData(prev => ({
             ...prev,
-            provincia: selectedProvincias.join(', ')
+            provincia: selectedProvincias
         }));
     }, [selectedProvincias]);
 
+    const handleTipoEntidadeChange = (event) => {
+        const value = event.target.value;
+        setFormData(prev => ({
+            ...prev,
+            tipoEntidade: Array.isArray(value) ? value : [value]
+        }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+    
+        // Validação dos campos obrigatórios
+        if (!formData.titulo || !formData.prazo || !formData.localEntrega || !formData.setor || !formData.modalidade) {
+            setSnackbarMessage('Por favor, preencha todos os campos obrigatórios.');
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            setLoading(false);
+            return;
+        }
+
+        // Validação das províncias
+        if (!formData.provincia || formData.provincia.length === 0) {
+            setSnackbarMessage('Por favor, selecione pelo menos uma província.');
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            setLoading(false);
+            return;
+        }
+
+        // Validação do tipo de entidade
+        if (!formData.tipoEntidade || formData.tipoEntidade.length === 0) {
+            setSnackbarMessage('Por favor, selecione pelo menos um tipo de entidade.');
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            setLoading(false);
+            return;
+        }
+
+        // Validação da data do prazo
+        const prazoDate = new Date(formData.prazo);
+        const hoje = new Date();
+        if (prazoDate <= hoje) {
+            setSnackbarMessage('O prazo deve ser uma data futura.');
+            setSnackbarSeverity('error');
+            setOpenSnackbar(true);
+            setLoading(false);
+            return;
+        }
+
+        // Validação do valor estimado
+        if (formData.valorEstimado) {
+            const valorNumerico = parseFloat(formData.valorEstimado.replace(/[^\d,]/g, '').replace(',', '.'));
+            if (isNaN(valorNumerico) || valorNumerico <= 0) {
+                setSnackbarMessage('O valor estimado deve ser um número positivo.');
+                setSnackbarSeverity('error');
+                setOpenSnackbar(true);
+                setLoading(false);
+                return;
+            }
+        }
     
         const sanitizedData = Object.fromEntries(
             Object.entries({
@@ -172,26 +229,51 @@ const PublicarConcursoDesk = ({ user }) => {
                 ...richTextData,
                 user: user?.uid,
                 dataCriacao: new Date().toISOString(),
-            }).filter(([_, v]) => v !== undefined)
+                timestamp: new Date().toISOString(),
+                status: 'Aberta',
+                company: {
+                    id: user?.id,
+                    nome: user?.nome,
+                    logoUrl: user?.logoUrl
+                },
+                provincia: Array.isArray(formData.provincia) ? formData.provincia : [formData.provincia],
+                tipoEntidade: Array.isArray(formData.tipoEntidade) ? formData.tipoEntidade : [formData.tipoEntidade]
+            }).filter(([_, v]) => v !== undefined && v !== null && v !== '')
         );
+
+        console.log('Dados a serem salvos:', sanitizedData);
     
         try {
             const concursosRef = ref(db, 'concursos');
             const newConcursoRef = push(concursosRef);
     
-            // Obtendo o ID gerado automaticamente para o novo concurso
             const concursoId = newConcursoRef.key;
     
-            // Adicionando o ID ao objeto de dados
             const concursoWithId = {
                 ...sanitizedData,
-                id: concursoId,  // Adiciona o ID do concurso aos dados
+                id: concursoId,
             };
+    
+            console.log('Tentando salvar concurso com ID:', concursoId);
     
             // Salvando o concurso com o ID no banco de dados
             await set(newConcursoRef, concursoWithId);
+            console.log('Concurso salvo com sucesso');
     
-            await notifySectorCompanies(formData.setor, formData.titulo, richTextData.objeto, formData.prazo, formData.valorEstimado, formData.localEntrega);
+            // Notificar empresas do setor
+            try {
+                await notifySectorCompanies(
+                    formData.setor, 
+                    formData.titulo, 
+                    richTextData.objeto, 
+                    formData.prazo, 
+                    formData.valorEstimado, 
+                    formData.localEntrega
+                );
+            } catch (notifyError) {
+                console.error('Erro ao notificar empresas:', notifyError);
+                // Não interrompe o fluxo se a notificação falhar
+            }
     
             setSnackbarMessage('Concurso publicado com sucesso!');
             setSnackbarSeverity('success');
@@ -211,9 +293,9 @@ const PublicarConcursoDesk = ({ user }) => {
                 valorEstimado: '',
                 condicoesPagamento: '',
                 observacoes: '',
-                provincia: '',
+                provincia: [],
                 setor: '',
-                tipoEntidade: '',
+                tipoEntidade: [],
                 company: user,
                 anexos: [],
                 requisitosTecnicos: '',
@@ -230,13 +312,16 @@ const PublicarConcursoDesk = ({ user }) => {
                 observacoes: '',
             });
 
-            window.location="/concursos"
+            // Redirecionar após 2 segundos para dar tempo do usuário ver a mensagem de sucesso
+            setTimeout(() => {
+                window.location.href = "/concursos";
+            }, 2000);
 
         } catch (error) {
-            setSnackbarMessage('Erro ao publicar concurso.');
+            console.error('Erro detalhado ao publicar concurso:', error);
+            setSnackbarMessage(`Erro ao publicar concurso: ${error.message || 'Erro desconhecido'}`);
             setSnackbarSeverity('error');
             setOpenSnackbar(true);
-            console.error('Erro ao publicar concurso:', error);
         } finally {
             setLoading(false);
         }
@@ -437,15 +522,18 @@ const PublicarConcursoDesk = ({ user }) => {
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Tipo de Entidade</InputLabel>
                     <Select
+                        multiple
                         name="tipoEntidade"
                         value={formData.tipoEntidade}
-                        onChange={handleChange}
+                        onChange={handleTipoEntidadeChange}
                         label="Tipo de Entidade"
-                        required>
-                        <MenuItem value="">Selecione o Tipo de Entidade</MenuItem>
+                        required
+                        renderValue={(selected) => selected.join(', ')}
+                    >
                         {tiposEntidades.map((tipoObj, index) => (
                             <MenuItem key={index} value={tipoObj.tipo}>
-                                {tipoObj.tipo}
+                                <Checkbox checked={formData.tipoEntidade.includes(tipoObj.tipo)} />
+                                <ListItemText primary={tipoObj.tipo} />
                             </MenuItem>
                         ))}
                     </Select>
