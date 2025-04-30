@@ -76,48 +76,48 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
         loadClickedStatus();
     }, [user?.id]);
 
-    useEffect(() => {
-        if (!hasModuleSMS) {
-            setLoading(false);
-            return;
-        }
-        const concursosRef = ref(db, 'concursos');
-        const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
-            const concursosData = snapshot.val();
-            
-            if (concursosData) {
-                const now = new Date();
-                const concursosArray = Object.entries(concursosData).map(([id, concurso]) => {
-                    const dataLimite = new Date(concurso.prazo);
-                    const isExpired = dataLimite < now && concurso.status !== 'Fechada';
-                    
-                    if (isExpired && concurso.status !== 'Expirada') {
-                        update(ref(db, `concursos/${id}`), { status: 'Expirada' });
-                        return {
-                            id,
-                            ...concurso,
-                            status: 'Expirada',
-                            isClicked: clickedConcursos[id] || false
-                        };
-                    }
-                    
+useEffect(() => {
+    if (!hasModuleSMS) {
+        setLoading(false);
+        return;
+    }
+    const concursosRef = ref(db, 'concursos');
+    const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
+        const concursosData = snapshot.val();
+        
+        if (concursosData) {
+            const now = new Date();
+            const concursosArray = Object.entries(concursosData).map(([id, concurso]) => {
+                const dataLimite = new Date(concurso.prazo);
+                const isExpired = dataLimite < now && concurso.status !== 'Fechada';
+                
+                if (isExpired && concurso.status !== 'Expirada') {
+                    update(ref(db, `concursos/${id}`), { status: 'Expirada' });
                     return {
                         id,
                         ...concurso,
+                        status: 'Expirada',
                         isClicked: clickedConcursos[id] || false
                     };
-                });
+                }
                 
-                // Remove o filtro por província aqui
-                const sortedConcursos = concursosArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                setConcursos(sortedConcursos);
-            } else {
-                setConcursos([]);
-            }
-            setLoading(false);
-        });
-        return () => unsubscribeConcursos();
-    }, [hasModuleSMS, user?.id, clickedConcursos]); // Removi as dependências de província
+                return {
+                    id,
+                    ...concurso,
+                    isClicked: clickedConcursos[id] || false
+                };
+            });
+            
+            // Remove o filtro por província aqui
+            const sortedConcursos = concursosArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            setConcursos(sortedConcursos);
+        } else {
+            setConcursos([]);
+        }
+        setLoading(false);
+    });
+    return () => unsubscribeConcursos();
+}, [hasModuleSMS, user?.id, clickedConcursos]); // Removi as dependências de província
 
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
@@ -426,7 +426,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                             <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
                             <Tab value="expiradas" label="Expiradas" icon={<History />} />
                             <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                            <Tab value="minhas" label="Meus" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
+                            <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
                         </Tabs>
                     </Paper>
 
