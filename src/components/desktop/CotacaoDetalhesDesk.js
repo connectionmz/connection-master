@@ -232,17 +232,23 @@ const CotacaoDetalhesDesk = ({ user }) => {
       <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item>
-              <Avatar
-                src={cotacao.company.logoUrl || 'default-logo.png'}
-                alt={cotacao.company.nome}
-                sx={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64 }}
-              />
+          <Grid item>
+              <Link to={`/perfil/${cotacao.company.id}`}>
+                <Avatar
+                  src={cotacao.company.logoUrl || 'default-logo.png'}
+                  alt={cotacao.company.nome}
+                  sx={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64 }}
+                />
+              </Link>
             </Grid>
             <Grid item xs>
+            <Link to={`/perfil/${cotacao.company.id}`}>
+
               <Typography variant={isMobile ? "h6" : "h5"} gutterBottom fontWeight="bold">
                 {cotacao.company.nome}
               </Typography>
+              </Link>
+
               <Chip
                   label={
                     isCotacaoExpirada()

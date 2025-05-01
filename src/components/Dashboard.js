@@ -16,7 +16,7 @@ import {
   ListItemText,
   Divider,
 } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { get, limitToFirst, onValue, orderByKey, query, ref, set } from "firebase/database";
 import { db } from "../fb";
 import MarqueeParceiros from "./MarqueeParceiros";
@@ -25,6 +25,7 @@ import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
 import CategoriaList from "./desktop/CategoriasList";
 import InqueritosList from "./desktop/InqueritosList";
+import LatestBlogPost from "./desktop/LatestBlogPost";
 
 const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
@@ -34,40 +35,20 @@ const Dashboard = ({ user }) => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [hasRequestedDemo, setHasRequestedDemo] = useState(false); 
+  const [latestBlog, setLatestBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
   const isMobile = useMediaQuery("(max-width:600px)");
 
 
-  useEffect(() => {
-    const blogsRef = ref(db, "blogPost");
-    onValue(
-      blogsRef,
-      (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          const blogsArray = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
-  
-          // Ordenar blogs pela data e hora combinadas
-          blogsArray.sort((a, b) => {
-            // Combina `date` e `time` para criar um timestamp
-            const dateTimeA = `${a.date} ${a.time}`;
-            const dateTimeB = `${b.date} ${b.time}`;
-  
-            // Converte para objetos Date e compara
-            return new Date(dateTimeB) - new Date(dateTimeA);
-          });
-          setBlogs(blogsArray);
-        }
-      },
-      (error) => {
-        setError("Erro ao carregar os blogs.");
-        console.error("Erro ao carregar blogs:", error);
-      }
-    );
-  }, []);
+  const navigate = useNavigate();
 
+  const handleNavigateToBlog = (id) => {
+    navigate(`/blog/${id}`);
+  };
+
+  const handleNavigateToAllBlogs = () => {
+    navigate('/blog');
+  };
   // Verificar se a empresa já solicitou uma demo
   useEffect(() => {
     if (!user?.id) return;
@@ -136,8 +117,6 @@ const Dashboard = ({ user }) => {
     fetchRespondedInqueritos();
   }, [user]);
 
-
-
   const requestDemo = async () => {
     // Confirmação antes de enviar a solicitação
     const confirmRequest = window.confirm("Tem certeza que deseja solicitar uma demonstração?");
@@ -172,8 +151,6 @@ const Dashboard = ({ user }) => {
     setOpenSnackbar(false);
   };
 
-
-
   return (
     <Box>
       <Container sx={{ marginTop: 10 }}>
@@ -181,57 +158,7 @@ const Dashboard = ({ user }) => {
         <CategoriaList />
         <StorieListDesk user={user} />
         <Grid container spacing={2}>
-  <Grid item xs={12} sm={3}>
-      <Paper sx={{ padding: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
-          Último Blog
-        </Typography>
-        {blogs.length > 0 ? (
-          <Box>
-            <Link to={`/blog/${blogs[0].id}`} style={{ textDecoration: "none", color: "inherit" }}>
-            {blogs[0].imageUrl && (
-              <img
-                src={blogs[0].imageURL}
-                alt={blogs[0].title}
-                style={{
-                  width: "100%",
-                  height: { xs: "100px", sm: "150px" }, 
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                }}
-                />
-              )}
-              <Typography
-                variant="subtitle1"
-                sx={{ fontWeight: "bold", mt: 1, fontSize: { xs: "0.9rem", sm: "1rem" } }} 
-              >
-                {blogs[0].title}
-              </Typography>
-              <Typography
-                  variant="body2"
-                  color="textSecondary"
-                  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
-              >
-              {blogs[0].content.replace(/<[^>]+>/g, "").substring(0, 100)}...
-                  </Typography>
-                        </Link>
-                        <Button
-                          component={Link}
-                          to="/blog"
-                          variant="outlined"
-                          fullWidth
-                          sx={{ mt: 2, fontSize: { xs: "0.8rem", sm: "0.875rem" } }} // Fonte responsiva
-                        >
-                          Ver todos os blogs
-                        </Button>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="textSecondary">
-                        Nenhum blog disponível no momento.
-                      </Typography>
-                    )}
-                  </Paper>
-                </Grid>
+        <LatestBlogPost/>
           {/* Feed Central */}
           <Grid item xs={12} sm={6}>
             <MarqueeAnuncios user={user} />

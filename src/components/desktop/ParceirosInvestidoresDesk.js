@@ -9,7 +9,6 @@ import {
   Card,
   CardContent,
   useMediaQuery,
-  Button,
   CardMedia,
   Chip,
   Divider,
@@ -26,56 +25,11 @@ import {
   Star as PatrocinadorIcon
 } from '@mui/icons-material';
 
-const ParceirosInvestidoresDesk = () => {
-  const [value, setValue] = useState(0);
-  const [parceiros, setParceiros] = useState([]);
-  const [financiadores, setFinanciadores] = useState([]);
-  const [investidores, setInvestidores] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+// Componente para exibir um card de empresa
+const CompanyCard = ({ item, categoryIndex, onClick }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-
-  // Buscar dados de Parceiros, Financiadores e Investidores
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [parceirosSnapshot, financiadoresSnapshot, investidoresSnapshot] = await Promise.all([
-          get(ref(db, 'parceiros')),
-          get(ref(db, 'financiadores')),
-          get(ref(db, 'investidores'))
-        ]);
-
-        if (parceirosSnapshot.exists()) {
-          setParceiros(Object.values(parceirosSnapshot.val()));
-        }
-        if (financiadoresSnapshot.exists()) {
-          setFinanciadores(Object.values(financiadoresSnapshot.val()));
-        }
-        if (investidoresSnapshot.exists()) {
-          setInvestidores(Object.values(investidoresSnapshot.val()));
-        }
-      } catch (error) {
-        console.error('Erro ao buscar dados:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-  };
-
-  const handleCompanyClick = (companyId) => {
-    navigate(`/perfil/${companyId}`);
-  };
-
-  const getCategoryIcon = (categoryIndex) => {
+  
+  const getCategoryIcon = () => {
     switch (categoryIndex) {
       case 0: return <ParceiroIcon color="primary" />;
       case 1: return <FinanciadorIcon color="primary" />;
@@ -84,21 +38,8 @@ const ParceirosInvestidoresDesk = () => {
     }
   };
 
-  const renderSkeleton = () => (
+  return (
     <Grid item xs={12} sm={6} md={4} lg={3}>
-      <Card sx={{ height: '100%' }}>
-        <Skeleton variant="rectangular" width="100%" height={160} />
-        <CardContent>
-          <Skeleton width="60%" />
-          <Skeleton width="40%" />
-          <Skeleton width="80%" />
-        </CardContent>
-      </Card>
-    </Grid>
-  );
-
-  const renderCard = (item, categoryIndex) => (
-    <Grid item xs={12} sm={6} md={4} lg={3} key={item.companyId}>
       <Card
         sx={{
           height: '100%',
@@ -114,9 +55,8 @@ const ParceirosInvestidoresDesk = () => {
           overflow: 'hidden',
           position: 'relative'
         }}
-        onClick={() => handleCompanyClick(item.companyId)}
+        onClick={onClick}
       >
-        {/* Banner da empresa */}
         <CardMedia
           component="div"
           sx={{
@@ -127,10 +67,9 @@ const ParceirosInvestidoresDesk = () => {
             justifyContent: 'center'
           }}
         >
-          {getCategoryIcon(categoryIndex)}
+          {getCategoryIcon()}
         </CardMedia>
 
-        {/* Logo da empresa */}
         <Box sx={{
           display: 'flex',
           justifyContent: 'center',
@@ -182,12 +121,148 @@ const ParceirosInvestidoresDesk = () => {
           )}
 
           <Divider sx={{ my: 1 }} />
-
-        
         </CardContent>
       </Card>
     </Grid>
   );
+};
+
+// Componente para exibir skeleton loading
+const CompanySkeleton = () => (
+  <Grid item xs={12} sm={6} md={4} lg={3}>
+    <Card sx={{ height: '100%' }}>
+      <Skeleton variant="rectangular" width="100%" height={160} />
+      <CardContent>
+        <Skeleton width="60%" />
+        <Skeleton width="40%" />
+        <Skeleton width="80%" />
+      </CardContent>
+    </Card>
+  </Grid>
+);
+
+// Componente para exibir quando não há dados
+const EmptyState = ({ message }) => {
+  const theme = useTheme();
+  
+  return (
+    <Box sx={{
+      textAlign: 'center',
+      py: 8,
+      backgroundColor: theme.palette.background.default,
+      borderRadius: 2
+    }}>
+      <Typography variant="h6" color="textSecondary">
+        {message}
+      </Typography>
+    </Box>
+  );
+};
+
+// Componente principal
+const ParceirosInvestidoresDesk = () => {
+  const [value, setValue] = useState(0);
+  const [companies, setCompanies] = useState({
+    parceiros: [],
+    financiadores: [],
+    patrocinadores: []
+  });
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setLoading(true);
+        const snapshot = await get(ref(db, 'parceiros'));
+        
+        if (snapshot.exists()) {
+          const allCompanies = Object.values(snapshot.val());
+          
+          setCompanies({
+            parceiros: allCompanies.filter(c => c.tipo === 'Parceiro'),
+            financiadores: allCompanies.filter(c => c.tipo === 'Financiador'),
+            patrocinadores: allCompanies.filter(c => c.tipo === 'Patrocinador' || c.tipo === 'Investidor')
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  const handleTabChange = (event, newValue) => {
+    setValue(newValue);
+  };
+
+  const handleCompanyClick = (companyId) => {
+    navigate(`/perfil/${companyId}`);
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <Grid container spacing={3}>
+          {[...Array(8)].map((_, index) => (
+            <CompanySkeleton key={index} />
+          ))}
+        </Grid>
+      );
+    }
+
+    switch (value) {
+      case 0:
+        return companies.parceiros.length > 0 ? (
+          <Grid container spacing={3}>
+            {companies.parceiros.map((parceiro) => (
+              <CompanyCard
+                key={parceiro.companyId}
+                item={parceiro}
+                categoryIndex={0}
+                onClick={() => handleCompanyClick(parceiro.companyId)}
+              />
+            ))}
+          </Grid>
+        ) : <EmptyState message="Nenhum parceiro encontrado" />;
+      
+      case 1:
+        return companies.financiadores.length > 0 ? (
+          <Grid container spacing={3}>
+            {companies.financiadores.map((financiador) => (
+              <CompanyCard
+                key={financiador.companyId}
+                item={financiador}
+                categoryIndex={1}
+                onClick={() => handleCompanyClick(financiador.companyId)}
+              />
+            ))}
+          </Grid>
+        ) : <EmptyState message="Nenhum financiador encontrado" />;
+      
+      case 2:
+        return companies.patrocinadores.length > 0 ? (
+          <Grid container spacing={3}>
+            {companies.patrocinadores.map((patrocinador) => (
+              <CompanyCard
+                key={patrocinador.companyId}
+                item={patrocinador}
+                categoryIndex={2}
+                onClick={() => handleCompanyClick(patrocinador.companyId)}
+              />
+            ))}
+          </Grid>
+        ) : <EmptyState message="Nenhum patrocinador encontrado" />;
+      
+      default:
+        return null;
+    }
+  };
 
   return (
     <Box
@@ -223,14 +298,10 @@ const ParceirosInvestidoresDesk = () => {
       </Box>
 
       {/* Tabs */}
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        mb: 4
-      }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
         <Tabs
           value={value}
-          onChange={handleChange}
+          onChange={handleTabChange}
           variant={isMobile ? 'scrollable' : 'standard'}
           scrollButtons={isMobile ? 'auto' : false}
           allowScrollButtonsMobile
@@ -264,76 +335,7 @@ const ParceirosInvestidoresDesk = () => {
 
       {/* Conteúdo */}
       <Box sx={{ mt: 2 }}>
-        {loading ? (
-          <Grid container spacing={3}>
-            {[...Array(8)].map((_, index) => renderSkeleton(index))}
-          </Grid>
-        ) : (
-          <>
-            {value === 0 && (
-              <Box>
-                {parceiros.length > 0 ? (
-                  <Grid container spacing={3}>
-                    {parceiros.map((parceiro) => renderCard(parceiro, 0))}
-                  </Grid>
-                ) : (
-                  <Box sx={{
-                    textAlign: 'center',
-                    py: 8,
-                    backgroundColor: theme.palette.background.default,
-                    borderRadius: 2
-                  }}>
-                    <Typography variant="h6" color="textSecondary">
-                      Nenhum parceiro encontrado
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-
-            {value === 1 && (
-              <Box>
-                {financiadores.length > 0 ? (
-                  <Grid container spacing={3}>
-                    {financiadores.map((financiador) => renderCard(financiador, 1))}
-                  </Grid>
-                ) : (
-                  <Box sx={{
-                    textAlign: 'center',
-                    py: 8,
-                    backgroundColor: theme.palette.background.default,
-                    borderRadius: 2
-                  }}>
-                    <Typography variant="h6" color="textSecondary">
-                      Nenhum financiador encontrado
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-
-            {value === 2 && (
-              <Box>
-                {investidores.length > 0 ? (
-                  <Grid container spacing={3}>
-                    {investidores.map((investidor) => renderCard(investidor, 2))}
-                  </Grid>
-                ) : (
-                  <Box sx={{
-                    textAlign: 'center',
-                    py: 8,
-                    backgroundColor: theme.palette.background.default,
-                    borderRadius: 2
-                  }}>
-                    <Typography variant="h6" color="textSecondary">
-                      Nenhum patrocinador encontrado
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            )}
-          </>
-        )}
+        {renderContent()}
       </Box>
     </Box>
   );

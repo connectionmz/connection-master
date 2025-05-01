@@ -269,12 +269,9 @@ const DesktopRoutes = ({ user }) => {
       padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px',
       boxSizing: 'border-box',
       pb: 4, // Adiciona padding na parte inferior para evitar sobreposição com o footer
-    }}
-  >
+    }}>
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
-
-            
             {/* Rotas públicas */}
             <Route path="/" element={<DashboardComponent user={user} />} />
             <Route path="/feed" element={<FeedDesk user={user} />} />
@@ -289,7 +286,6 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/market" element={<MarketDesk user={user} />} />
             <Route path="/addProduct" element={<ProductFormDesk user={user} />} />
             <Route path="/recibos" element={<ReceiptsPage user={user} />} />
-            
             <Route path="/lojas" element={<StoresDesk user={user} />} />
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
             <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />

@@ -53,7 +53,6 @@ const ProductDetailsDesk = ({user}) => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -303,16 +302,17 @@ const ProductDetailsDesk = ({user}) => {
                     }}
                   />
                 </Badge>
-                <Box>
                 <Link to={`/perfil/${storeInfo.company.id}`} style={{ textDecoration: 'none', cursor:'pointer' }}>
+                <Box>
                   <Typography variant="subtitle1" fontWeight="bold" color="primary">
                     {storeInfo.company.nome}
                   </Typography>
-                </Link>
                 <Typography variant="body2" color="text.secondary">
                   {storeInfo.company.provincia}
                 </Typography>
               </Box>
+              </Link>
+
                 <Button 
                   component={Link}
                   href={`/loja/${store}`}
