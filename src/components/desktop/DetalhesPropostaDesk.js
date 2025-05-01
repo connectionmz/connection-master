@@ -120,7 +120,7 @@ const DetalhesPropostaDesk = ({ user }) => {
         fromUserName: user.nome,
         timestamp: new Date().toISOString(),
         status: 'unread',
-        url: `/cotacao/${id}/proposta/${propostaId}`,
+        link: `minha_proposta/cotacao/${id}/proposta/${propostaId}`,
       };
       await saveContentToInbox(recipientId, notification);
     } catch (error) {
@@ -229,7 +229,6 @@ const DetalhesPropostaDesk = ({ user }) => {
       handleError(error, 'Erro ao processar a aceitação');
     }
   };
-
   const handleRejectProposal = async () => {
     try {
       await updateProposalStatus('Recusada');
@@ -241,7 +240,6 @@ const DetalhesPropostaDesk = ({ user }) => {
       handleError(error, 'Erro ao recusar proposta');
     }
   };
-
   const handleCancelApproval = async () => {
     try {
       await updateProposalStatus('Pendente');
@@ -249,14 +247,12 @@ const DetalhesPropostaDesk = ({ user }) => {
       handleError(error, 'Erro ao cancelar aprovação');
     }
   };
-
   // Note handlers
   const handleNotaSubmit = async () => {
     if (!nota.trim()) {
       showMessage('A nota não pode estar vazia.', 'error');
       return;
     }
-
     try {
       await update(ref(db, `cotacoes/${id}/proposals/${propostaId}`), { nota });
       showMessage('Nota enviada com sucesso!');
@@ -597,9 +593,6 @@ const DetalhesPropostaDesk = ({ user }) => {
         <DialogTitle sx={{ fontWeight: 600 }}>{confirmDialog.title}</DialogTitle>
         <DialogContent>
           <Typography>{confirmDialog.content}</Typography>
-          <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 500 }}>
-            Atenção: Esta ação não pode ser desfeita!
-          </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button

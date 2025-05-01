@@ -24,7 +24,8 @@ import {
   Chip,
   Divider,
   CircularProgress,
-  IconButton
+  IconButton,
+  Link
 } from '@mui/material';
 import { ref, onValue, remove } from 'firebase/database';
 import { db } from '../../fb';
@@ -36,10 +37,12 @@ import {
   Edit,
   Delete,
   Business,
-  Phone,
+  Email,
+  LocationOn,
+  AttachMoney,
+  ArrowBack,
   Description,
-  AttachFile,
-  ArrowBack
+  AccessTime
 } from '@mui/icons-material';
 
 const MinhaPropostaDesk = ({ user }) => {
@@ -55,7 +58,16 @@ const MinhaPropostaDesk = ({ user }) => {
   const statusColors = {
     'Aceite': 'success',
     'Recusada': 'error',
-    'Pendente': 'warning'
+    'Pendente': 'warning',
+    'wait': 'warning' // Adicionando mapeamento para status 'wait'
+  };
+
+  // Status labels
+  const statusLabels = {
+    'Aceite': 'Aceite',
+    'Recusada': 'Recusada',
+    'Pendente': 'Pendente',
+    'wait': 'Pendente' // Mapeando 'wait' para 'Pendente'
   };
 
   // Fetch proposal data
@@ -63,7 +75,12 @@ const MinhaPropostaDesk = ({ user }) => {
     const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
     const unsubscribe = onValue(propostaRef, (snapshot) => {
       if (snapshot.exists()) {
-        setProposta(snapshot.val());
+        const data = snapshot.val();
+        setProposta({
+          ...data,
+          // Calcula o preço total se houver produtos selecionados
+          totalPrice: data.selectedProducts?.reduce((sum, product) => sum + (product.price || 0), 0) || 0
+        });
       } else {
         setProposta(null);
       }
@@ -88,6 +105,15 @@ const MinhaPropostaDesk = ({ user }) => {
     } finally {
       setDeleteDialog(false);
     }
+  };
+
+  // Format currency
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-MZ', { 
+      style: 'currency', 
+      currency: 'MZN',
+      minimumFractionDigits: 2
+    }).format(value);
   };
 
   // Loading and error states
@@ -156,12 +182,15 @@ const MinhaPropostaDesk = ({ user }) => {
         flexDirection: isMobile ? 'column' : 'row'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
-            <Business fontSize="medium" />
+          <Avatar 
+            src={proposta.from?.logo} 
+            sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}
+          >
+            {!proposta.from?.logo && <Business fontSize="medium" />}
           </Avatar>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Minha Proposta
+              {proposta.from?.nome || 'Minha Proposta'}
             </Typography>
             <Typography variant="subtitle2" color="text.secondary">
               ID: {propostaId.slice(0, 8)}...
@@ -171,7 +200,7 @@ const MinhaPropostaDesk = ({ user }) => {
 
         <Chip
           icon={<CheckCircle fontSize="small" />}
-          label={proposta.status || 'Pendente'}
+          label={statusLabels[proposta.status] || 'Pendente'}
           color={statusColors[proposta.status] || 'default'}
           variant="outlined"
           sx={{ 
@@ -185,15 +214,62 @@ const MinhaPropostaDesk = ({ user }) => {
 
       <Divider sx={{ my: 3 }} />
 
+      {/* Company Info */}
+      <Card sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Business color="primary" /> Informações da Empresa
+          </Typography>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Nome
+              </Typography>
+              <Typography variant="body1">
+                {proposta.from?.nome || 'Não especificado'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Email
+              </Typography>
+              <Typography variant="body1">
+                <Link href={`mailto:${proposta.from?.email}`} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Email fontSize="small" /> {proposta.from?.email || 'Não especificado'}
+                </Link>
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Localização
+              </Typography>
+              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <LocationOn fontSize="small" />
+                {proposta.from?.distrito && proposta.from?.provincia 
+                  ? `${proposta.from.distrito}, ${proposta.from.provincia}`
+                  : 'Não especificado'}
+              </Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
       {/* Proposal Content */}
       <Card sx={{ mb: 3, borderRadius: 2 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description color="primary" /> Conteúdo da Proposta
+            <Description color="primary" /> Resposta
           </Typography>
           
+          {proposta.nota && (
+            <Typography paragraph sx={{ mb: 3,  color: 'text.secondary' }}>
+              {proposta.nota}
+            </Typography>
+          )}
+          
           <Box 
-            dangerouslySetInnerHTML={{ __html: proposta.proposal }}
+            dangerouslySetInnerHTML={{ __html: proposta.proposal || '<p>Nenhum conteúdo detalhado fornecido.</p>' }}
             sx={{
               '& p': { mb: 2 },
               '& ul, & ol': { pl: 3, mb: 2 },
@@ -201,18 +277,6 @@ const MinhaPropostaDesk = ({ user }) => {
               lineHeight: 1.6
             }}
           />
-
-          {proposta.fileUrl && (
-            <Button
-              href={proposta.fileUrl}
-              target="_blank"
-              startIcon={<AttachFile />}
-              variant="outlined"
-              sx={{ mt: 2 }}
-            >
-              Baixar Arquivo Anexado
-            </Button>
-          )}
         </CardContent>
       </Card>
 
@@ -220,33 +284,55 @@ const MinhaPropostaDesk = ({ user }) => {
       <Card sx={{ mb: 3, borderRadius: 2 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description color="primary" /> Produtos/Serviços Oferecidos
+            <AttachMoney color="primary" /> Produtos/Serviços Oferecidos
           </Typography>
           
           {proposta.selectedProducts?.length > 0 ? (
-            <TableContainer sx={{ 
-              maxHeight: 400,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1
-            }}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Nome</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Preço (MT)</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {proposta.selectedProducts.map((product, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.price}</TableCell>
+            <>
+              <TableContainer sx={{ 
+                maxHeight: 400,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                mb: 2
+              }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600 }}>Produto</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }} align="right">Preço</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {proposta.selectedProducts.map((product, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>
+                          <Typography>{product.name}</Typography>
+                          {product.url && (
+                            <Link 
+                              href={product.url} 
+                              target="_blank" 
+                              variant="body2" 
+                              color="text.secondary"
+                              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}
+                            >
+                              Ver detalhes
+                            </Link>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">{formatCurrency(product.price)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Total: {formatCurrency(proposta.totalPrice || 0)}
+                </Typography>
+              </Box>
+            </>
           ) : (
             <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
               Nenhum produto/serviço selecionado nesta proposta
@@ -259,7 +345,7 @@ const MinhaPropostaDesk = ({ user }) => {
       <Card sx={{ mb: 3, borderRadius: 2 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description color="primary" /> Informações de Envio
+            <AccessTime color="primary" /> Informações de Envio
           </Typography>
           
           <Grid container spacing={2}>
@@ -282,15 +368,23 @@ const MinhaPropostaDesk = ({ user }) => {
                 Status
               </Typography>
               <Typography variant="body1">
-                {proposta.status || 'Pendente'}
+                {statusLabels[proposta.status] || 'Pendente'}
               </Typography>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
-      {/* Delete Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      {/* Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 4 }}>
+        <Button
+          onClick={() => navigate(-1)}
+          startIcon={<ArrowBack />}
+          variant="outlined"
+          sx={{ px: 4, py: 1.5, borderRadius: 2 }}
+        >
+          Voltar
+        </Button>
         <Button
           onClick={() => setDeleteDialog(true)}
           startIcon={<Delete />}
