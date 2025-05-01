@@ -159,7 +159,6 @@ const CompanyDataFormDesk = () => {
           companyData.nuel && companyData.nuel.length >= 9 &&
           companyData.nrContriuinte && companyData.nrContriuinte.length >= 9
         );
-        
         return companyData.nome && fiscalFieldsValid;
       case 2: // Endereço & Contacto
         return (
@@ -192,10 +191,7 @@ const CompanyDataFormDesk = () => {
   const handleBack = () => setActiveStep(prevActiveStep => prevActiveStep - 1);
 
   const handleSubmit = async () => {
-    if (!validateStep(activeStep)) {
-      setErrorMessage("Por favor, preencha todos os campos obrigatórios e aceite os termos.");
-      return;
-    }
+    
     
     setIsLoading(true);
     try {

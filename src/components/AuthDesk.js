@@ -62,7 +62,7 @@ const [isGuestLoading, setIsGuestLoading] = useState(false);
     try {
       const snapshot = await get(companyRef);
       if (!snapshot.exists()) {
-        console.log('Dados da empresa não encontrados.');
+       window.location='setup'
       }
     } catch (error) {
       console.error('Erro ao buscar dados da empresa:', error.message);

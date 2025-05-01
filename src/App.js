@@ -179,7 +179,6 @@ const App = () => {
           <DesktopRoutes user={userData} />
         </div>
 
-        {/* Modal para visitante */}
         <Dialog 
           open={showVisitorModal} 
           onClose={() => setShowVisitorModal(false)}

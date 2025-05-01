@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
@@ -109,10 +109,12 @@ const DesktopRoutes = ({ user }) => {
     feedback: ''
   });
 
+  const navigate = useNavigate();
+
+
   const currentLocation = useLocation(); // Rename to avoid conflicts
 
   const isMobile = useMediaQuery('(max-width:600px)');
-
 
   const fullScreenRoutes = [
     '/auth',
@@ -246,6 +248,12 @@ const DesktopRoutes = ({ user }) => {
   const handleCloseReferrerModal = () => {
     setShowReferrerModal(false);
   };
+
+  useEffect(() => {
+    if (user===null) {
+    }
+  }, [user, navigate]);
+  
 
   return (
     <ThemeProvider theme={theme}>
