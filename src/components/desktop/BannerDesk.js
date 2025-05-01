@@ -262,64 +262,68 @@ const BannerDesk = ({ user }) => {
     }}>
       {activeBanners.length > 0 ? (
         <Slider {...settings}>
-          {activeBanners.map((banner) => {
-            const company = companies[banner.companyId] || {};
-            return (
-              <Box
-                key={banner.id}
-                sx={{
-                  position: 'relative',
-                  width: '100%',
-                  overflow: 'hidden',
-                  height: isMobile ? '250px' : '600px',
-                  cursor: 'pointer'
-                }}
-                onClick={() => handleBannerClick(banner)}
-              >
-                <img
-                  src={banner.imageUrl}
-                  alt={`Banner ${banner.id}`}
-                  onError={(e) => (e.target.src = anunciar)}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+  {activeBanners.map((banner) => {
+    const company = companies[banner.companyId] || {};
+    return (
+      <Box
+        key={banner.id}
+        sx={{
+          position: 'relative',
+          width: '100%',
+          overflow: 'hidden',
+          height: isMobile ? '250px' : '600px',
+          cursor: 'pointer'
+        }}
+        onClick={() => handleBannerClick(banner)}
+      >
+        <img
+          src={banner.imageUrl}
+          alt={`Banner ${banner.id}`}
+          onError={(e) => (e.target.src = anunciar)}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+        
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 16,
+            left: 16,
+            right: 16,
+            borderRadius: 2,
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
+          }}>
+              <Link to={`/perfil/${company.id}`} style={{ textDecoration: 'none' }}>
+                <Avatar
+                  src={company.logoUrl || ''}
+                  alt={company.nome}
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    bgcolor: 'grey.100',
+                    transition: 'transform 0.2s',
+                    '&:hover': {
+                      transform: 'scale(1.05)',
+                      cursor: 'pointer',
+                    }
                   }}
-                />
-                
-                {/* Mini Card de Informação */}
-          {/* Mini Card de Informação apenas com o logo */}
-<Box
-  sx={{
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-    right: 16,
-    borderRadius: 2,
-    p: 2,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-    maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
-  }}
->
-  <Avatar
-    src={company.logoUrl || ''}
-    alt={company.nome}
-    sx={{
-      width: 56,
-      height: 56,
-      bgcolor: 'grey.100',
-    }}
-  >
-    {company.nome?.charAt(0)?.toUpperCase()}
-  </Avatar>
-</Box>
+                >
+                  {company.nome?.charAt(0)?.toUpperCase()}
+                </Avatar>
+              </Link>
 
-              </Box>
-            );
-          })}
-        </Slider>
+        </Box>
+      </Box>
+    );
+  })}
+</Slider>
       ) : (
 <Box
   sx={{
@@ -414,7 +418,7 @@ const BannerDesk = ({ user }) => {
                 p: 3
               }}>
                 <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  {selectedBanner.title || 'Anúncio'}
+                  {selectedBanner.title}
                 </Typography>
                 
                 <Typography variant="body1" paragraph>

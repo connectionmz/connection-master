@@ -266,11 +266,6 @@ const AnunciosDesk = ({ campanhas, user }) => {
       <Slider {...settings}>
         {campanhas.map((banner) => {
           const company = companies[banner.companyId] || {};
-          const isLiked = likedBanners[banner.id] || false;
-          const daysLeft = Math.ceil(
-            (new Date(banner.expireDate) - new Date()) / (1000 * 60 * 60 * 24)
-          );
-
           return (
             <Box key={banner.id} sx={{ position: 'relative' }}>
               {/* Banner Image */}
@@ -305,27 +300,30 @@ const AnunciosDesk = ({ campanhas, user }) => {
                 <Box
                   sx={{
                     position: 'absolute',
-                    top: 16,
+                    bottom: 16,
                     left: 16,
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    backdropFilter: 'blur(4px)',
+                    right: 16,
                     borderRadius: 2,
                     p: 2,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 2,
-                    maxWidth: '40%',
-                    boxShadow: 1
+                    maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
                   }}
                 >
-                  <Box>
-                    <Typography 
-                      variant="subtitle1" 
-                      sx={{ fontWeight: 'bold' }}
+                  <Link to={`/perfil/${company.id}`} style={{ textDecoration: 'none' }}>
+                    <Avatar
+                      src={company.logoUrl || ''}
+                      alt={company.nome}
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        bgcolor: 'grey.100',
+                      }}
                     >
-                      {company.nome}
-                    </Typography>
-                  </Box>
+                      {company.nome?.charAt(0)?.toUpperCase()}
+                    </Avatar>
+                  </Link>
                 </Box>
               )}
             </Box>
