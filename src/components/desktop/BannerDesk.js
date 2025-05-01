@@ -288,62 +288,34 @@ const BannerDesk = ({ user }) => {
                 />
                 
                 {/* Mini Card de Informação */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                    backdropFilter: 'blur(4px)',
-                    borderRadius: 2,
-                    p: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)'
-                    }
-                  }}
-                >
-                  <Avatar
-                    src={company.logoUrl || ''}
-                    alt={company.nome}
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      bgcolor: 'grey.100',
-                    }}
-                  >
-                    {company.nome?.charAt(0)?.toUpperCase()}
-                  </Avatar>
-                  <Box sx={{ overflow: 'hidden' }}>
-                    <Typography 
-                      variant="subtitle1" 
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        color: 'common.white',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}
-                    >
-                      {company.nome || 'Anúncio'}
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: 'grey.300',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                      {banner.description || 'Clique para mais informações'}
-                    </Typography>
-                  </Box>
-                </Box>
+          {/* Mini Card de Informação apenas com o logo */}
+<Box
+  sx={{
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    borderRadius: 2,
+    p: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
+  }}
+>
+  <Avatar
+    src={company.logoUrl || ''}
+    alt={company.nome}
+    sx={{
+      width: 56,
+      height: 56,
+      bgcolor: 'grey.100',
+    }}
+  >
+    {company.nome?.charAt(0)?.toUpperCase()}
+  </Avatar>
+</Box>
+
               </Box>
             );
           })}

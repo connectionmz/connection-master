@@ -16,15 +16,16 @@ import { PhotoCamera } from '@mui/icons-material';
 const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
   const [store, setStore] = useState({
     name: '',
-    description: '', // Campo opcional para descrição
+    description: '',
     company: {
       nome: user?.nome || '',
       provincia: user?.provincia || '',
       distrito: user?.distrito || '',
-      logo: user?.logoUrl || '', // Logo padrão do usuário
+      logo: user?.logoUrl || '', 
+      id:user?.id || ''
     },
   });
-  const [logoFile, setLogoFile] = useState(null); // Armazena o arquivo de logo selecionado
+  const [logoFile, setLogoFile] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
@@ -40,7 +41,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         ...store,
         company: {
           ...store.company,
-          logo: URL.createObjectURL(file), // Atualiza a visualização do logo
+          logo: URL.createObjectURL(file), 
         },
       });
     }
@@ -50,8 +51,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
     setIsLoading(true);
 
     try {
-      // Simulação de pagamento (substitua por lógica real)
-      return true; // Retorne true se o pagamento for bem-sucedido
+      return true;
     } catch (error) {
       alert('A transação falhou. Por favor, tente novamente.');
       console.error('Erro no pagamento:', error.message);
@@ -80,31 +80,28 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
   
     if (paymentSuccessful) {
       try {
-        let logoUrl = store.company.logo; // Mantém a URL atual (pode ser a URL temporária ou a padrão do usuário)
+        let logoUrl = store.company.logo;
   
-        // Upload da imagem para o Firebase Storage, se houver um arquivo de logo
         if (logoFile) {
           const logoStorageRef = storageRef(storage, `store-logos/${storeId}/${logoFile.name}`);
           await uploadBytes(logoStorageRef, logoFile);
           logoUrl = await getDownloadURL(logoStorageRef); // Obtém a URL do Firebase Storage
   
-          // Atualiza o estado com a URL do Firebase Storage
           setStore((prevStore) => ({
             ...prevStore,
             company: {
               ...prevStore.company,
-              logo: logoUrl, // Atualiza com a URL do Firebase Storage
+              logo: logoUrl, 
             },
           }));
         }
   
-        // Salva os dados da loja no Firebase Realtime Database
         const storeRef = dbRef(db, `stores/${storeId}`);
         await set(storeRef, {
           ...store,
           company: {
             ...store.company,
-            logo: logoUrl, // Garante que a URL do Firebase Storage seja salva
+            logo: logoUrl, 
           },
         });
   
@@ -130,8 +127,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         backgroundColor: '#fff',
         boxShadow: 3,
         borderRadius: 2,
-      }}
-    >
+      }}>
       <Alert severity="info" sx={{ marginBottom: 2 }}>
         <Typography variant="body2">
           <strong>Nota:</strong> A subscrição de uma loja online requer o pagamento único de{' '}
@@ -165,16 +161,13 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         onChange={handleInputChange}
         multiline
         rows={3}
-        sx={{ marginBottom: 2 }}
-      />
+        sx={{ marginBottom: 2 }}/>
 
-      {/* Upload de Logo (Opcional) */}
       <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
         <IconButton
           color="primary"
           component="label"
-          sx={{ marginRight: 1 }}
-        >
+          sx={{ marginRight: 1 }}>
           <PhotoCamera />
           <input
             type="file"
@@ -194,8 +187,6 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
           </Box>
         )}
       </Box>
-
-      {/* Botão de Criação */}
       <Button
         variant="contained"
         color="primary"

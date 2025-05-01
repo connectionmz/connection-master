@@ -391,16 +391,7 @@ const AnunciosDesk = ({ campanhas, user }) => {
                 <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
                   {selectedBanner.description || 'Anúncio'}
                 </Typography>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <CalendarIcon color="primary" fontSize="small" />
-                  <Typography variant="body2">
-                    Expira em: {new Date(selectedBanner.expireDate).toLocaleDateString()}
-                  </Typography>
-                </Box>
-                
                 <Divider sx={{ my: 2 }} />
-                
                 {companies[selectedBanner.companyId] && (
                   <>
                     <Typography variant="subtitle1" gutterBottom sx={{ 

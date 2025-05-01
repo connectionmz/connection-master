@@ -65,6 +65,7 @@ const ProductDetailsDesk = ({user}) => {
         
         if (productSnapshot.exists()) {
           const productData = productSnapshot.val();
+          console.log(productData)
           setProduct(productData);
           setViews(productData.views || 0);
           
@@ -78,6 +79,7 @@ const ProductDetailsDesk = ({user}) => {
           const storeSnapshot = await get(storeRef);
           if (storeSnapshot.exists()) {
             setStoreInfo(storeSnapshot.val());
+            console.log(storeSnapshot.val())
           }
         } else {
           setProduct(null);
@@ -302,13 +304,15 @@ const ProductDetailsDesk = ({user}) => {
                   />
                 </Badge>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight="bold">
+                <Link to={`/perfil/${storeInfo.company.id}`} style={{ textDecoration: 'none', cursor:'pointer' }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary">
                     {storeInfo.company.nome}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {storeInfo.company.provincia}
-                  </Typography>
-                </Box>
+                </Link>
+                <Typography variant="body2" color="text.secondary">
+                  {storeInfo.company.provincia}
+                </Typography>
+              </Box>
                 <Button 
                   component={Link}
                   href={`/loja/${store}`}
