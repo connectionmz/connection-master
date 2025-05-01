@@ -52,6 +52,7 @@ const PropostasDesk = ({user}) => {
           return (b.timestamp || 0) - (a.timestamp || 0);
         });
         setPropostas(propostasArray);
+        console.log(propostasArray)
       } else {
         setPropostas([]);
       }
@@ -155,7 +156,7 @@ const PropostasDesk = ({user}) => {
           {propostas.map((proposta) => (
             <Card
               key={proposta.id}
-              onClick={() => handlePropostaClick(proposta.id)}
+              onClick={() => handlePropostaClick(proposta.from.id)}
               sx={{
                 cursor: 'pointer',
                 borderRadius: 2,
@@ -203,17 +204,7 @@ const PropostasDesk = ({user}) => {
                     >
                       {proposta.from.nome || 'Empresa não identificada'}
                     </Typography>
-                    <Typography 
-                      variant="body2" 
-                      color="text.secondary"
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5
-                      }}
-                    >
-                      {new Date(proposta.timestamp).toLocaleString()}
-                    </Typography>
+                  
                   </Box>
 
                   <Box sx={{ 

@@ -292,7 +292,7 @@ const DesktopRoutes = ({ user }) => {
             
             <Route path="/lojas" element={<StoresDesk user={user} />} />
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
-            <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk />} />
+            <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
             <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
             <Route path="/website" element={<LandingPage />} />
 

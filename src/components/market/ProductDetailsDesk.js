@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";  
-import { ref, get, update, increment } from "firebase/database";
+import { ref, get, update, increment, set } from "firebase/database";
 import { db } from "../../fb";
 import {
   Container,
@@ -25,7 +25,8 @@ import {
   ListItemIcon,
   ListItemText,
   Badge,
-  Link
+  Link,
+  Snackbar
 } from "@mui/material";
 import BackButton from "../BackButton";
 import ShareIcon from '@mui/icons-material/Share';
@@ -36,7 +37,7 @@ import StoreIcon from '@mui/icons-material/Store';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { formatPrice } from "../../utils/utils";
 
-const ProductDetailsDesk = () => {
+const ProductDetailsDesk = ({user}) => {
   const { productId, store } = useParams();
   const navigate = useNavigate();  
   const [product, setProduct] = useState(null);
@@ -48,6 +49,10 @@ const ProductDetailsDesk = () => {
   const IVA_PERCENTAGE = 0;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,15 +127,53 @@ const ProductDetailsDesk = () => {
     handleCloseShareMenu();
   };
 
-  const addToCart = () => {
-    if (product) {
-      alert(
-        `${quantity} x ${product.name} foi adicionado ao carrinho por um total de ${(product.price * quantity).toFixed(
-          2
-        )} MT (sem IVA).`
-      );
+  const addToCart = async () => {
+    if (!product) return;
+  
+    try {
+      const cartRef = ref(db, `cart/${user.id}/${product.id}`);
+      
+      // Verificar se o item já existe no carrinho
+      const snapshot = await get(cartRef);
+      
+      if (snapshot.exists()) {
+        // Atualizar quantidade se já existir
+        const currentQuantity = snapshot.val().quantity || 1;
+        await update(cartRef, {
+          quantity: currentQuantity + quantity // Usando a quantidade selecionada
+        });
+      } else {
+        // Adicionar novo item ao carrinho
+        await set(cartRef, {
+          productId: product.id,
+          storeId: store,
+          name: product.name,
+          imageUrl: product.imageUrl,
+          price: product.price,
+          discountPrice: product.discountPrice || null,
+          storeName: storeInfo?.company?.nome || "Loja Desconhecida",
+          quantity: quantity, // Usando a quantidade selecionada
+          addedAt: new Date().toISOString()
+        });
+      }
+      
+      // Atualizar contador de cliques para o produto
+      const productRef = ref(db, `stores/${store}/products/${product.id}/cartAdds`);
+      await set(productRef, increment(1));
+      
+      // Feedback para o usuário
+      setSnackbarMessage(`${quantity} x ${product.name} adicionado ao carrinho!`);
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+      
+    } catch (error) {
+      console.error("Erro ao adicionar ao carrinho:", error);
+      setSnackbarMessage('Erro ao adicionar ao carrinho');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
     }
   };
+  
 
   const handlePayment = () => {
     const total = product.price * quantity;
@@ -369,24 +412,16 @@ const ProductDetailsDesk = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               {showPrices ? (
                 <>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<ShoppingCartIcon />}
-                    onClick={addToCart}
-                    sx={{ flex: 1 }}
-                  >
-                    Adicionar ao Carrinho
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<LocalShippingIcon />}
-                    onClick={handlePayment}
-                    sx={{ flex: 1 }}
-                  >
-                    Comprar Agora
-                  </Button>
+            <Button
+            variant="contained"
+            color="primary"
+            startIcon={<ShoppingCartIcon />}
+            onClick={addToCart} // Chamada permanece a mesma
+            sx={{ flex: 1 }}
+          >
+            Adicionar ao Carrinho
+          </Button>
+                
                 </>
               ) : (
                 <Button
@@ -403,7 +438,20 @@ const ProductDetailsDesk = () => {
           </CardContent>
         </Box>
       </Box>
-
+<Snackbar
+  open={openSnackbar}
+  autoHideDuration={6000}
+  onClose={() => setOpenSnackbar(false)}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert 
+    onClose={() => setOpenSnackbar(false)} 
+    severity={snackbarSeverity}
+    sx={{ width: '100%' }}
+  >
+    {snackbarMessage}
+  </Alert>
+</Snackbar>
       {/* Share Menu */}
       <Menu
         anchorEl={shareAnchorEl}
