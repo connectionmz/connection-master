@@ -26,6 +26,8 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { onValue, ref } from 'firebase/database';
+import { db } from '../../fb';
 
 const PublicarVaga = ({ 
   user, 
@@ -40,8 +42,8 @@ const PublicarVaga = ({
     descricao: '',
     areas: [],
     areasFormacao: [],
-    provincia: '',
-    distrito: '',
+    provincias: [],
+    distritos: [],
     tipo: 'Tempo Integral',
     dataLimite: null,
     tipoContrato: '',
@@ -53,6 +55,9 @@ const PublicarVaga = ({
   const [availableSubAreas, setAvailableSubAreas] = useState([]);
   const [provincias, setProvincias] = useState([]);
   const [distritos, setDistritos] = useState([]);
+  const [loadingProvincias, setLoadingProvincias] = useState(false);
+  const [loadingDistritos, setLoadingDistritos] = useState(false);
+  const [distritosEnabled, setDistritosEnabled] = useState(false);
 
   // Quill editor modules
   const quillModules = {
@@ -74,57 +79,78 @@ const PublicarVaga = ({
     ],
   };
 
-  // Buscar dados iniciais
   useEffect(() => {
     const buscarProvincias = async () => {
-      const provinciasMock = [
-        { id: '1', nome: 'Maputo' },
-        { id: '2', nome: 'Gaza' },
-        { id: '3', nome: 'Inhambane' },
-        { id: '4', nome: 'Sofala' },
-        { id: '5', nome: 'Manica' },
-        { id: '6', nome: 'Tete' },
-        { id: '7', nome: 'Zambézia' },
-        { id: '8', nome: 'Nampula' },
-        { id: '9', nome: 'Cabo Delgado' },
-        { id: '10', nome: 'Niassa' }
-      ];
-      setProvincias(provinciasMock);
+      setLoadingProvincias(true);
+      try {
+        const provinciasRef = ref(db, 'provincias');
+        onValue(provinciasRef, (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            const provinciasArray = data.map((provincia, index) => ({
+              id: index.toString(),
+              nome: provincia.provincia
+            }));
+            setProvincias(provinciasArray);
+          } else {
+            setProvincias([]);
+          }
+          setLoadingProvincias(false);
+        });
+      } catch (error) {
+        console.error('Erro ao buscar províncias:', error);
+        setProvincias([]);
+        setLoadingProvincias(false);
+      }
     };
 
     buscarProvincias();
   }, []);
 
-  // Buscar distritos quando a provínia é selecionada
   useEffect(() => {
-    if (vagaData.provincia) {
+    if (vagaData.provincias.length === 1) {
+      setDistritosEnabled(true);
       const buscarDistritos = async () => {
-        const distritosMock = {
-          '1': [
-            { id: '101', nome: 'Cidade de Maputo' },
-            { id: '102', nome: 'Matola' },
-            { id: '103', nome: 'Marracuene' }
-          ],
-          '2': [
-            { id: '201', nome: 'Xai-Xai' },
-            { id: '202', nome: 'Chókwè' },
-            { id: '203', nome: 'Bilene' }
-          ]
-        };
-        
-        setDistritos(distritosMock[vagaData.provincia] || []);
-        setVagaData(prev => ({ ...prev, distrito: '' }));
+        setLoadingDistritos(true);
+        try {
+          const provinciasRef = ref(db, 'provincias');
+          onValue(provinciasRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              const provinciaId = vagaData.provincias[0];
+              const provincia = data[provinciaId];
+              const distritosArray = provincia?.distritos?.map((distrito, index) => ({
+                id: `${provinciaId}-${index}`,
+                nome: distrito,
+                provinciaId: provinciaId
+              })) || [];
+              setDistritos(distritosArray);
+            } else {
+              setDistritos([]);
+            }
+            setLoadingDistritos(false);
+          });
+        } catch (error) {
+          console.error('Erro ao buscar distritos:', error);
+          setDistritos([]);
+          setLoadingDistritos(false);
+        }
       };
-
       buscarDistritos();
+    } else if (vagaData.provincias.length > 1) {
+      setDistritosEnabled(false);
+      setDistritos([]);
+      setVagaData(prev => ({ ...prev, distritos: [] }));
+    } else {
+      setDistritosEnabled(false);
+      setDistritos([]);
+      setVagaData(prev => ({ ...prev, distritos: [] }));
     }
-  }, [vagaData.provincia]);
+  }, [vagaData.provincias]);
 
-  // Atualiza as subáreas disponíveis quando a área principal é selecionada
   useEffect(() => {
     if (selectedArea && areasAtuacao[selectedArea]) {
       setAvailableSubAreas(areasAtuacao[selectedArea]);
-      // Limpa as subáreas selecionadas quando muda a área principal
       setVagaData(prev => ({ ...prev, subAreas: [] }));
     } else {
       setAvailableSubAreas([]);
@@ -134,14 +160,13 @@ const PublicarVaga = ({
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    // Reset form when closing
     setVagaData({
       titulo: '',
       descricao: '',
       areas: [],
       areasFormacao: [],
-      provincia: '',
-      distrito: '',
+      provincias: [],
+      distritos: [],
       tipo: 'Tempo Integral',
       dataLimite: null,
       tipoContrato: '',
@@ -161,13 +186,35 @@ const PublicarVaga = ({
       const newValues = currentValues.includes(itemValue)
         ? currentValues.filter(v => v !== itemValue)
         : [...currentValues, itemValue];
-      
       return { ...prev, [field]: newValues };
     });
   };
 
+  const handleProvinciaChange = (e) => {
+    const value = e.target.value;
+    if (value[value.length - 1] === 'select-all') {
+      setVagaData(prev => ({
+        ...prev,
+        provincias: prev.provincias.length === provincias.length ? [] : provincias.map(p => p.id)
+      }));
+      return;
+    }
+    setVagaData(prev => ({ ...prev, provincias: value }));
+  };
+
+  const handleDistritoChange = (e) => {
+    const value = e.target.value;
+    if (value[value.length - 1] === 'select-all') {
+      setVagaData(prev => ({
+        ...prev,
+        distritos: prev.distritos.length === distritos.length ? [] : distritos.map(d => d.id)
+      }));
+      return;
+    }
+    setVagaData(prev => ({ ...prev, distritos: value }));
+  };
+
   const handleSubmit = () => {
-    // Combine áreas principais e subáreas selecionadas
     const areasCompletas = [
       ...vagaData.areas,
       ...vagaData.subAreas
@@ -203,7 +250,6 @@ const PublicarVaga = ({
         
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
-            {/* Basic Information Section */}
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               Informações Básicas
             </Typography>
@@ -230,7 +276,6 @@ const PublicarVaga = ({
               />
             </Box>
 
-            {/* Job Details Section */}
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               Detalhes da Vaga
             </Typography>
@@ -272,46 +317,104 @@ const PublicarVaga = ({
               placeholder="Ex: 20.000,00 MZN"
             />
 
-            {/* Location Section */}
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               Localização
             </Typography>
 
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Província *</InputLabel>
-                  <Select
-                    value={vagaData.provincia}
-                    onChange={(e) => handleChange('provincia', e.target.value)}
-                    label="Província"
-                  >
-                    {provincias.map((provincia) => (
-                      <MenuItem key={provincia.id} value={provincia.id}>
-                        {provincia.nome}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Distrito *</InputLabel>
-                  <Select
-                    value={vagaData.distrito}
-                    onChange={(e) => handleChange('distrito', e.target.value)}
-                    label="Distrito"
-                    disabled={!vagaData.provincia}
-                  >
+            <FormControl fullWidth size="small">
+              <InputLabel>Províncias *</InputLabel>
+              <Select
+                multiple
+                value={vagaData.provincias}
+                onChange={handleProvinciaChange}
+                input={<OutlinedInput label="Províncias *" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => {
+                      const provincia = provincias.find(p => p.id === value);
+                      return <Chip key={value} label={provincia?.nome || value} size="small" />;
+                    })}
+                  </Box>
+                )}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                      width: 250,
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="select-all" sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>
+                  <Checkbox
+                    checked={vagaData.provincias.length === provincias.length}
+                    indeterminate={
+                      vagaData.provincias.length > 0 && 
+                      vagaData.provincias.length < provincias.length
+                    }
+                  />
+                  <ListItemText primary="Selecionar todos" />
+                </MenuItem>
+                {provincias.map((provincia) => (
+                  <MenuItem key={provincia.id} value={provincia.id}>
+                    <Checkbox checked={vagaData.provincias.indexOf(provincia.id) > -1} />
+                    <ListItemText primary={provincia.nome} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Distritos {vagaData.provincias.length === 1 ? '*' : '(selecione apenas uma província)'}</InputLabel>
+              <Select
+                multiple
+                value={vagaData.distritos}
+                onChange={handleDistritoChange}
+                input={<OutlinedInput label={`Distritos ${vagaData.provincias.length === 1 ? '*' : '(selecione apenas uma província)'}`} />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => {
+                      const distrito = distritos.find(d => d.id === value);
+                      return <Chip key={value} label={distrito?.nome || value} size="small" />;
+                    })}
+                  </Box>
+                )}
+                disabled={!distritosEnabled || loadingDistritos}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                      width: 250,
+                    },
+                  },
+                }}
+              >
+                {vagaData.provincias.length > 1 ? (
+                  <MenuItem disabled>
+                    Selecione apenas uma província para escolher distritos específicos
+                  </MenuItem>
+                ) : (
+                  <>
+                    <MenuItem value="select-all" sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>
+                      <Checkbox
+                        checked={vagaData.distritos.length === distritos.length}
+                        indeterminate={
+                          vagaData.distritos.length > 0 && 
+                          vagaData.distritos.length < distritos.length
+                        }
+                      />
+                      <ListItemText primary="Selecionar todos" />
+                    </MenuItem>
                     {distritos.map((distrito) => (
                       <MenuItem key={distrito.id} value={distrito.id}>
-                        {distrito.nome}
+                        <Checkbox checked={vagaData.distritos.indexOf(distrito.id) > -1} />
+                        <ListItemText primary={distrito.nome} />
                       </MenuItem>
                     ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+                  </>
+                )}
+              </Select>
+            </FormControl>
 
             <Box sx={{ mt: 1 }}>
               <DatePicker
@@ -324,13 +427,12 @@ const PublicarVaga = ({
                     fullWidth
                     size="small"
                     label="Data Limite (opcional)"
-                    onFocus={(e) => e.target.blur()} // Prevent keyboard on mobile
+                    onFocus={(e) => e.target.blur()}
                   />
                 }
               />
             </Box>
 
-            {/* Areas Section */}
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               Áreas Relacionadas
             </Typography>
@@ -365,6 +467,14 @@ const PublicarVaga = ({
                       ))}
                     </Box>
                   )}
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300,
+                        width: 250,
+                      },
+                    },
+                  }}
                 >
                   {availableSubAreas.map((subArea) => (
                     <MenuItem key={subArea} value={subArea}>
@@ -401,7 +511,6 @@ const PublicarVaga = ({
               }
             />
 
-            {/* Education Section */}
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
               Formação Requerida
             </Typography>
@@ -434,7 +543,14 @@ const PublicarVaga = ({
           <Button 
             onClick={handleSubmit}
             variant="contained" 
-            disabled={loading || !vagaData.titulo || !vagaData.descricao || !vagaData.provincia || !vagaData.distrito || !selectedArea}
+            disabled={
+              loading || 
+              !vagaData.titulo || 
+              !vagaData.descricao || 
+              vagaData.provincias.length === 0 || 
+              (distritosEnabled && vagaData.distritos.length === 0) || 
+              !selectedArea
+            }
             size="medium"
             startIcon={<Work />}
           >

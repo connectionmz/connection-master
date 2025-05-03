@@ -570,18 +570,22 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     }
   };
 
-  const validateForm = () => {
-    if (!file) {
-      showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
-      return false;
-    }
-    if (!phoneNumber) {
-      showSnackbar('Por favor, insira um número de telefone.', 'error');
-      return false;
-    }
-    return true;
-  };
-
+const validateForm = () => {
+  if (!file) {
+    showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
+    return false;
+  }
+  if (!phoneNumber) {
+    showSnackbar('Por favor, insira um número de telefone.', 'error');
+    return false;
+  }
+  // A descrição só é obrigatória para tipos diferentes de "Destacar Perfil"
+  if (!isDestacarPerfil && !description) {
+    showSnackbar('Por favor, insira uma descrição para o anúncio.', 'error');
+    return false;
+  }
+  return true;
+};
   const handlePublish = async () => {
     if (!validateForm()) return;
     setUploading(true);
@@ -609,11 +613,9 @@ const CreateAdTab = ({ user, onAdCreated }) => {
 
     const expireDate = calculateExpireDate(days);
 
-    await set(anuncioRef, {
+    const anuncioData = {
       id: idAnuncio,
-      description,
       imageUrl: url,
-      link,
       uploadedAt: new Date().toISOString(),
       expireDate,
       companyId: user.id,
@@ -624,9 +626,17 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       tipoAnuncio,
       phoneNumber,
       status: 'active'
-    });
-  };
+    };
 
+    if (!isDestacarPerfil) {
+      anuncioData.description = description;
+      anuncioData.link = link;
+    } else {
+      anuncioData.description = `Perfil destacado de ${user.nome}`;
+      anuncioData.link = `/perfil/${user.id}`;
+    }
+    await set(anuncioRef, anuncioData);
+  };
   const calculateExpireDate = (days) => {
     const currentDate = new Date();
     const expireDate = new Date(currentDate);
@@ -812,15 +822,14 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         sx={{ mb: 2 }}
       />
 
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handlePublish}
-        disabled={!file || !phoneNumber || uploading}
-        sx={{ mb: 2 }}
-      >
-        {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
-      </Button>
+<Button
+  variant="contained"
+  color="primary"
+  onClick={handlePublish}
+  sx={{ mb: 2 }}
+>
+  {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
+</Button>
 
       <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
