@@ -41,7 +41,7 @@ const EnviarPropostaDesk = ({ user }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
-
+  
   const storage = getStorage();
 
   useEffect(() => {
@@ -153,31 +153,32 @@ const EnviarPropostaDesk = ({ user }) => {
     }
 
     const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
-const newProposalRef = push(proposalsRef);
-const proposalId = newProposalRef.key;
+    const newProposalRef = push(proposalsRef);
+    const proposalId = newProposalRef.key;
 
-const newProposal = {
-  id: proposalId,
-  cotacaoId: id,
-  from: {
-    nome: user.nome,
-    logo: user.logoUrl,
-    provincia: user.provincia,
-    distrito: user.distrito,
-    id: user.id,
-    email: user.email,
-  },
-  proposal: description,
-  fileUrl,
-  selectedProducts: selectedProducts.map((product) => ({
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    url: `/product/${product.id}/store/${user.id}`,
-  })),
-  submittedAt: new Date().toISOString(),
-  status: 'wait',
-};
+    const newProposal = {
+      id: proposalId,
+      cotacaoId: id,
+      from: {
+        nome: user.nome,
+        logo: user.logoUrl,
+        provincia: user.provincia,
+        distrito: user.distrito,
+        id: user.id,
+        email: user.email,
+        contacto:user.contacto,
+      },
+      proposal: description,
+      fileUrl,
+      selectedProducts: selectedProducts.map((product) => ({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        url: `/product/${product.id}/store/${user.id}`,
+      })),
+      submittedAt: new Date().toISOString(),
+      status: 'wait',
+    };
 
 const notification = {
   type: 'cotation_reply',

@@ -48,7 +48,6 @@ const CotacaoDetalhesDesk = ({ user }) => {
     const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
 
     const fetchCotacao = () => {
-      // Verifica se o usuário NÃO é o dono da cotação antes de registrar a visualização
       onValue(cotacaoRef, (snapshot) => {
         const data = snapshot.val();
         if (data && data.company.id !== user.id) {

@@ -64,6 +64,14 @@ const LatestBlogPost = () => {
     navigate('/blog');
   };
 
+  const getTextPreviewAsHtml = (html) => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const textOnly = div.textContent || div.innerText || '';
+    const preview = textOnly.length > 100 ? textOnly.substring(0, 100) + '...' : textOnly;
+    return preview.replace(/\n/g, "<br>"); // se quiseres preservar quebras de linha
+  };
+
   if (loading) {
     return (
       <Grid item xs={12} sm={3}>
@@ -136,18 +144,13 @@ const LatestBlogPost = () => {
               >
                 {latestBlog.title}
               </Typography>
-              
               <Typography
                 variant="body2"
-                color="textSecondary"
+                color="text.secondary"
                 sx={{ fontSize: isMobile ? "0.8rem" : "0.875rem" }}
-              >
-                {latestBlog.content 
-                  ? latestBlog.content.replace(/<[^>]+>/g, "").substring(0, 100) + '...'
-                  : 'Sem conteúdo disponível'}
-              </Typography>
-            </Box>
-            
+                dangerouslySetInnerHTML={{ __html: getTextPreviewAsHtml(latestBlog.content || '') }}
+              />
+            </Box>     
             <Button
               onClick={handleNavigateToAllBlogs}
               variant="outlined"
@@ -159,8 +162,7 @@ const LatestBlogPost = () => {
                   backgroundColor: 'primary.main',
                   color: 'white'
                 }
-              }}
-            >
+              }}>
               Ver todos os blogs
             </Button>
           </Box>

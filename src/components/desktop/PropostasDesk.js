@@ -44,6 +44,8 @@ const PropostasDesk = ({user}) => {
         const propostasArray = Object.entries(data).map(([key, value]) => ({
           id: key,
           ...value,
+          // Normalizar o status para o formato esperado
+          status: normalizeStatus(value.status)
         }));
         // Ordenar por status (wait primeiro) e depois por timestamp
         propostasArray.sort((a, b) => {
@@ -52,13 +54,22 @@ const PropostasDesk = ({user}) => {
           return (b.timestamp || 0) - (a.timestamp || 0);
         });
         setPropostas(propostasArray);
-        console.log(propostasArray)
       } else {
         setPropostas([]);
       }
       setLoading(false);
     });
   }, [id]);
+
+  // Função para normalizar os status recebidos
+  const normalizeStatus = (status) => {
+    if (!status) return 'wait';
+    
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('aceit') || statusLower === 'accepted') return 'accepted';
+    if (statusLower.includes('recus') || statusLower.includes('rejeit') || statusLower === 'rejected') return 'rejected';
+    return 'wait'; // padrão para qualquer outro caso
+  };
 
   const handlePropostaClick = (propostaId) => {
     navigate(`/cotacao/${id}/proposta/${propostaId}`);
@@ -156,7 +167,7 @@ const PropostasDesk = ({user}) => {
           {propostas.map((proposta) => (
             <Card
               key={proposta.id}
-              onClick={() => handlePropostaClick(proposta.from.id)}
+              onClick={() => handlePropostaClick(proposta.from.id)}  
               sx={{
                 cursor: 'pointer',
                 borderRadius: 2,
@@ -181,6 +192,7 @@ const PropostasDesk = ({user}) => {
                   <Tooltip title="Ver perfil da empresa">
                     <Avatar
                       onClick={(e) => handleEmpresaClick(e, proposta.from.id)}
+                      src={proposta.from.logo}  // Adicionado para mostrar o logo da empresa
                       sx={{ 
                         width: 40, 
                         height: 40,
@@ -204,7 +216,19 @@ const PropostasDesk = ({user}) => {
                     >
                       {proposta.from.nome || 'Empresa não identificada'}
                     </Typography>
-                  
+                    {proposta.nota && (
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {proposta.nota}
+                      </Typography>
+                    )}
                   </Box>
 
                   <Box sx={{ 

@@ -30,7 +30,7 @@ import { ref, onValue, update, get } from 'firebase/database';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
 import { saveContentToInbox } from '../SaveToInbox';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   CheckCircle,
   Cancel,
@@ -75,6 +75,7 @@ const DetalhesPropostaDesk = ({ user }) => {
     const unsubscribe = onValue(propostaRef, (snapshot) => {
       if (snapshot.exists()) {
         setProposta(snapshot.val());
+        console.log(snapshot.val())
         setNota(snapshot.val().nota || '');
         setNotaEnviada(!!snapshot.val().nota);
       }
@@ -377,7 +378,12 @@ const DetalhesPropostaDesk = ({ user }) => {
                 Empresa
               </Typography>
               <Typography variant="body1">
-                {proposta.from.nome}
+                <Link
+                  to={`/perfil/${proposta.from.id}`}
+                  style={{ textDecoration: 'none', color: '#1976d2' }} // azul padrão MUI
+                >
+                  {proposta.from.nome}
+                </Link>
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -387,6 +393,14 @@ const DetalhesPropostaDesk = ({ user }) => {
               <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Phone fontSize="small" /> {proposta.from.contacto}
               </Typography>
+              <Link
+                  to={`/perfil/${proposta.from.email}`}
+                  style={{ textDecoration: 'none', color: '#1976d2' }} // azul padrão MUI
+                >
+              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Phone fontSize="small" /> {proposta.from.email}
+              </Typography>
+              </Link>
             </Grid>
           </Grid>
         </CardContent>

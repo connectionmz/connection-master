@@ -44,10 +44,9 @@ const CompanyProfile = ({ user }) => {
     const [visits, setVisits] = useState([]);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const isMobile = useMediaQuery('(max-width:600px)');
-    const [error, setError] = useState(null); // Estado para armazenar erros
-    const [openSnackbar, setOpenSnackbar] = useState(false); // Estado para controlar a exibição do Snackbar
+    const [error, setError] = useState(null); 
+    const [openSnackbar, setOpenSnackbar] = useState(false); 
 
-    // Função para fechar o Snackbar
     const handleCloseSnackbar = () => {
         setOpenSnackbar(false);
     };
@@ -365,10 +364,12 @@ const CompanyProfile = ({ user }) => {
                 />
             </Box>
 
-            {/* Nome e Bio */}
             <Box textAlign="center" mt={8}>
                 <Typography variant="h5" fontWeight="bold">{userData?.displayName}</Typography>
-                <Typography color="text.secondary" mt={1}>{userData?.bio}</Typography>
+                <Typography
+                        color="text.secondary" mt={1}
+                                dangerouslySetInnerHTML={{ __html: userData?.bio || '' }}
+                            />
                 {user && (
                     <Button
                         variant={
