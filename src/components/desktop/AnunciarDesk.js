@@ -482,6 +482,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   const [empresas, setEmpresas] = useState([]);
   const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
   const [tipoAnuncio, setTipoAnuncio] = useState('home');
+  const isDestacarPerfil = tipoAnuncio === 'destacar_perfil';
+
 
   const prices = {
     home: 30,
@@ -659,16 +661,24 @@ const CreateAdTab = ({ user, onAdCreated }) => {
           Escolha o tipo de anúncio:
         </Typography>
         <RadioGroup
-          value={tipoAnuncio}
-          onChange={(e) => setTipoAnuncio(e.target.value)}
-        >
+            value={tipoAnuncio}
+            onChange={(e) => {
+              setTipoAnuncio(e.target.value);
+              // Resetar descrição e link quando mudar para destacar perfil
+              if (e.target.value === 'destacar_perfil') {
+                setDescription('');
+                setLink('');
+              }
+            }}
+          >
           <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
           <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
           <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
           <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil" />
         </RadioGroup>
       </FormControl>
-
+      {!isDestacarPerfil && (
+    <>
       <TextField
         label="Descrição do anúncio"
         variant="outlined"
@@ -688,29 +698,32 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         onChange={(e) => setLink(e.target.value)}
         sx={{ mb: 2 }}
       />
+       <Box sx={{ mb: 2 }}>
+      <Typography variant="body1" sx={{ mb: 1 }}>
+        Imagem do anúncio *
+      </Typography>
+      <input 
+        type="file" 
+        onChange={handleFileChange} 
+        accept="image/*"
+      />
+      {imageUrl && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+            Pré-visualização:
+          </Typography>
+          <img
+            src={imageUrl}
+            alt="Preview da Imagem"
+            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+          />
+        </Box>
+    )}
+  </Box>
+    </>
+  )}
 
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="body1" sx={{ mb: 1 }}>
-          Imagem do anúncio *
-        </Typography>
-        <input 
-          type="file" 
-          onChange={handleFileChange} 
-          accept="image/*"
-        />
-        {imageUrl && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              Pré-visualização:
-            </Typography>
-            <img
-              src={imageUrl}
-              alt="Preview da Imagem"
-              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
-            />
-          </Box>
-        )}
-      </Box>
+ 
 
       <FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel id="provincias-label">Províncias *</InputLabel>

@@ -24,7 +24,8 @@ import {
   Tooltip,
   Badge,
   InputAdornment,
-  Button
+  Button,
+  Alert
 } from "@mui/material";
 import {
   Share,
@@ -60,6 +61,10 @@ const StoresDesk = ({ user }) => {
   // Dados do usuário protegidos
   const userId = user?.id || 'anonymous';
   const userProvince = user?.provinciaTemp || user?.provincia || null;
+
+
+  const hasMarket = user?.activeModules.moduloMarket.status=== "active"
+
 
   // Registrar impressão ou clique
   const trackInteraction = async (type, action, itemId, storeId = null) => {
@@ -435,7 +440,19 @@ const StoresDesk = ({ user }) => {
       backgroundColor: '#f8f8f8',
       minHeight: '100vh'
     }}>
-
+      {!hasMarket && (
+          <Alert
+            severity="warning"
+            action={
+              <Button color="inherit" size="small" onClick={() =>window.location='/market'}>
+                Ativar Módulo Mercado
+              </Button>
+            }
+            sx={{ mb: 2 }}
+            >
+            O módulo Mercado está inativo. Para usar este serviço, ative o módulo Mercado.
+          </Alert>
+        )}
       {/* Cabeçalho */}
       <Box sx={{ 
         maxWidth: 1400, 
@@ -447,6 +464,7 @@ const StoresDesk = ({ user }) => {
         justifyContent: 'space-between',
         gap: 2
       }}>
+        
         <Box>
           <Typography variant={isMobile ? "h5" : "h4"} sx={{ 
             fontWeight: "bold",

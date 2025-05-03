@@ -172,6 +172,11 @@ useEffect(() => {
         return () => unsubscribe();
     }, [user?.provincia, user?.id]);
     
+    const isPrazoValido = (prazoString) => {
+        const now = new Date();
+        const prazo = new Date(prazoString);
+        return prazo >= now;
+      };
 
     const handlePublishConcurso = () => {
         if (!hasModuleSMS) {
@@ -311,33 +316,46 @@ useEffect(() => {
                             <ListItemAvatar>
                                 <Avatar src={concurso.company?.logoUrl || ''} alt="Logo" />
                             </ListItemAvatar>
-                            <ListItemText
-                                primary={
-                                    <Typography 
-                                        component="span" 
-                                        variant="body1" 
-                                        fontWeight={!concurso.isClicked ? 'bold' : 'normal'}
-                                    >
-                                        {concurso.titulo}
-                                    </Typography>
-                                }
-                                secondary={
-                                    <>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Nº Ref: {concurso.numeroReferencia}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Publicado em: {new Date(concurso.timestamp).toLocaleDateString('pt-PT')}
-                                        </Typography>
-                                        <Typography variant="body2" color="error">
-                                            Prazo: {new Date(concurso.prazo).toLocaleDateString('pt-PT')}
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            Valor: {concurso.valorEstimado ? formatPrice(concurso.valorEstimado) : 'Não especificado'}
-                                        </Typography>
-                                    </>
-                                }
-                            />
+                         <ListItemText
+  primary={
+    <Typography 
+      component="span" 
+      variant="body1" 
+      fontWeight={!concurso.isClicked ? 'bold' : 'normal'}
+    >
+      {concurso.titulo}
+    </Typography>
+  }
+  secondary={
+    <>
+      <Typography variant="body2" color="text.secondary">
+        Nº Ref: {concurso.numeroReferencia}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Publicado em: {new Date(concurso.timestamp).toLocaleDateString('pt-PT')}
+      </Typography>
+      <Typography 
+        variant="body2" 
+        color={isPrazoValido(concurso.prazo) ? 'primary' : 'error'}
+        sx={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5
+        }}
+      >
+        {isPrazoValido(concurso.prazo) ? (
+          <CheckCircle fontSize="small" color="primary" />
+        ) : (
+          <History fontSize="small" color="error" />
+        )}
+        Prazo: {new Date(concurso.prazo).toLocaleDateString('pt-PT')}
+      </Typography>
+      <Typography variant="body2">
+        Valor: {concurso.valorEstimado ? concurso.valorEstimado : 'N/A'} MT
+      </Typography>
+    </>
+  }
+/>
                             {concurso?.company?.id === user?.id && (
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <IconButton

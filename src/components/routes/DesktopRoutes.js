@@ -276,7 +276,7 @@ const DesktopRoutes = ({ user }) => {
       margin: '0 auto',
       padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px',
       boxSizing: 'border-box',
-      pb: 4, // Adiciona padding na parte inferior para evitar sobreposição com o footer
+      pb: 4, 
     }}>
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
@@ -298,7 +298,6 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
             <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
             <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
-            <Route path="/website" element={<LandingPage />} />
 
             {/* Rotas relacionadas a conexões e interações */}
             <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />

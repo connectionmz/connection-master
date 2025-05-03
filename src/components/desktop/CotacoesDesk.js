@@ -75,6 +75,12 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         loadClickedStatus();
     }, [user?.id]);
 
+    const isDateValid = (dateString) => {
+        const now = new Date();
+        const date = new Date(dateString);
+        return date >= now;
+      };
+
     useEffect(() => {
         if (!hasModuleSMS) {
             setLoading(false);
@@ -347,29 +353,43 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                 <Avatar src={cotacao.company?.logoUrl || ''} alt="Logo" />
                             </ListItemAvatar>
                             <ListItemText
-                                        primary={
-                                            <Typography 
-                                                component="span" 
-                                                variant="body1" 
-                                                fontWeight={!cotacao.isClicked ? 'bold' : 'normal'}
-                                            >
-                                                {cotacao.title}
-                                            </Typography>
-                                        }
-                                        secondary={
-                                            <>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
-                                                </Typography>
-                                                <Typography variant="body2" color="error">
-                                                    Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
-                                                </Typography>
-                                                <Typography variant="body2">
-                                                    Sector: {cotacao.sector}
-                                                </Typography>
-                                            </>
-                                        }
-                                    />
+                                primary={
+                                    <Typography 
+                                    component="span" 
+                                    variant="body1" 
+                                    fontWeight={!cotacao.isClicked ? 'bold' : 'normal'}
+                                    >
+                                    {cotacao.title}
+                                    </Typography>
+                                }
+                                secondary={
+                                    <>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
+                                    </Typography>
+                                    <Typography 
+                                        variant="body2" 
+                                        color={isDateValid(cotacao.datalimite) ? 'primary.main' : 'error'}
+                                        sx={{ 
+                                        fontWeight: isDateValid(cotacao.datalimite) ? 'bold' : 'normal',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5
+                                        }}
+                                    >
+                                        {isDateValid(cotacao.datalimite) ? (
+                                        <CheckCircle fontSize="small" color="primary" />
+                                        ) : (
+                                        <AccessTime fontSize="small" color="error" />
+                                        )}
+                                        Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        Sector: {cotacao.sector}
+                                    </Typography>
+                                    </>
+                                }
+                                />
                             {cotacao?.company?.id === user?.id && (
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <IconButton
