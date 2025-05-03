@@ -71,6 +71,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
 
       const unsubscribeConcurso = onValue(concursoRef, async (snapshot) => {
         const data = snapshot.val();
+        console.log(data)
         if (!data) {
           setError('Concurso não encontrado');
           setLoading(false);
@@ -222,18 +223,22 @@ const ConcursoDetalhesDesk = ({ user }) => {
       <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
           <Grid container spacing={2} alignItems="center">
-            <Grid item>
-              <Avatar
-                src={concurso.company?.logoUrl}
-                alt={concurso.company?.nome}
-                sx={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64 }}
-              />
+          <Grid item>
+              <Link to={`/perfil/${concurso.company.id}`}>
+                <Avatar
+                  src={concurso.company.logoUrl || 'default-logo.png'}
+                  alt={concurso.company.nome}
+                  sx={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64 }}
+                />
+              </Link>
             </Grid>
             <Grid item xs>
             <Typography variant={isMobile ? "h6" : "h5"} gutterBottom fontWeight="bold">
+              {concurso.company.nome || 'N/A'} 
+            </Typography>
+            <Typography variant={isMobile ? "h6" : "h5"} gutterBottom fontWeight="bold">
               {concurso.titulo || 'Concurso sem título'} 
             </Typography>
-              
             <Chip
                   label={
                     concurso.status === 'Fechada' || isConcursoExpirado()
@@ -556,7 +561,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
     <Typography variant="subtitle1" fontWeight="bold">
       Valor Estimado:
     </Typography>
-    <Typography>{formatPrice(concurso.valorEstimado)}</Typography>
+    <Typography>{concurso.valorEstimado} MT</Typography>
   </Grid>
 )}
           </Grid>

@@ -66,6 +66,7 @@ const App = () => {
             endereco: data.endereco || 'Endereço não informado',
             isAnonymous: user.isAnonymous,
           });
+          console.log(data)
         } else {
           setUserData(null);
         }
@@ -176,6 +177,7 @@ const App = () => {
     <Router>
       <div className="App">
         <div className="content">
+
           <DesktopRoutes user={userData} />
         </div>
 
