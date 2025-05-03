@@ -79,6 +79,7 @@ import CompanyDataFormDesk from '../CompanyDataFormDesk';
 import AuthCreateDesk from '../AuthCreateDesk';
 import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
 import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
+import ListaInqueritos from '../desktop/ListaInqueritos';
 
 const theme = createTheme({
   palette: {
@@ -298,6 +299,8 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
             <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
             <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
+            
+            <Route path="/inqueritos" element={<ListaInqueritos />} />
 
             {/* Rotas relacionadas a conexões e interações */}
             <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />

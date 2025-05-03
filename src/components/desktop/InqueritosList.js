@@ -44,6 +44,7 @@ const InqueritosList = ({ user }) => {
       
       if (snapshot.exists()) {
         const surveysData = snapshot.val();
+        console.log(surveysData)
         const formattedSurveys = Object.keys(surveysData).map(key => ({
           id: key,
           ...surveysData[key]
@@ -173,9 +174,11 @@ const InqueritosList = ({ user }) => {
       boxShadow: 2,
       backgroundColor: theme.palette.background.paper
     }}>
+      <Link to={'/inqueritos'}>
       <Typography variant="h6" fontWeight="bold">
         Inquéritos ({inqueritosFiltrados.length})
       </Typography>
+      </Link>
 
       {inqueritosFiltrados.length === 0 ? (
         <Typography 
