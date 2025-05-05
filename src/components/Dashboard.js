@@ -42,13 +42,7 @@ const Dashboard = ({ user }) => {
 
   const navigate = useNavigate();
 
-  const handleNavigateToBlog = (id) => {
-    navigate(`/blog/${id}`);
-  };
 
-  const handleNavigateToAllBlogs = () => {
-    navigate('/blog');
-  };
   // Verificar se a empresa já solicitou uma demo
   useEffect(() => {
     if (!user?.id) return;

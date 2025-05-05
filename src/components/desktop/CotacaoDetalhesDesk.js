@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db } from '../../fb';
 import { ref, onValue, increment, update, push, set, get } from 'firebase/database';
-import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload, Timelapse, CalendarToday, AccessTime, Report } from '@mui/icons-material';
+import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload, Timelapse, CalendarToday, AccessTime, Report, CheckCircle } from '@mui/icons-material';
 import {
   Card,
   CardContent,
@@ -219,6 +219,12 @@ const CotacaoDetalhesDesk = ({ user }) => {
     });
   };
 
+  const isDateValid = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    return date >= now;
+  };
+
   if (!cotacao) {
     return <Typography align="center" color="textSecondary">Carregando...</Typography>;
   }
@@ -323,24 +329,23 @@ const CotacaoDetalhesDesk = ({ user }) => {
                     </Typography>
                   </Grid>
                   <Grid item>
-                    <Typography 
-                      color="error" 
+                  <Typography 
+                  variant="body2" 
+                      color={isDateValid(cotacao.datalimite) ? 'primary.main' : 'error'}
                       sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        fontSize: isMobile ? '0.8rem' : '1rem'
+                      fontWeight: isDateValid(cotacao.datalimite) ? 'bold' : 'normal',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5
                       }}
                     >
-                      <AccessTime sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} /> 
-                      Limite em{' '}
-                      {new Date(cotacao.datalimite).toLocaleString('pt-PT', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Typography>
+                    { isDateValid(cotacao.datalimite) ? (
+                    <CheckCircle fontSize="small" color="primary" />
+                    ) : (
+                    <AccessTime fontSize="small" color="error" />
+                    )}
+                    Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                  </Typography>
                   </Grid>
                 </Grid>
               </Box>

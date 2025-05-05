@@ -113,7 +113,7 @@ const DesktopRoutes = ({ user }) => {
   const navigate = useNavigate();
 
 
-  const currentLocation = useLocation(); // Rename to avoid conflicts
+  const currentLocation = useLocation();
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -125,7 +125,6 @@ const DesktopRoutes = ({ user }) => {
     '/forget-password',
   ];
 
-  // Verifica se a rota atual é uma das rotas especiais
   const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
 
   useEffect(() => {
@@ -347,7 +346,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/sms" element={<SmsDesk user={user} />} />
             <Route path="/callcenter" element={<CallCenterModuleDesk />} />
             <Route path="/procurement" element={<LogisticaModuleDesk />} />
-            <Route path="/inqueritos" element={<InqueritosModuleDesk user={user} />} />
+            <Route path="/inquerito" element={<InqueritosModuleDesk user={user} />} />
             <Route path="/inquerito/:surveyId" element={<SurveyPageDesk user={user} />} />
             <Route path="/painel" element={<PortalDesk user={user} />} />
             <Route path="/sendmail" element={<SendMail user={user} />} />

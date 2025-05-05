@@ -22,7 +22,7 @@ const ModuleGrid = ({ activeModules }) => {
     { name: 'SMS', link: '/sms', icon: <FaSms size={40} />, key: 'moduloSMS' },
     { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter', alwaysEnabled: true },
     { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement', alwaysEnabled: true },
-    { name: 'Inquéritos', link: '/inqueritos', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
+    { name: 'Inquéritos', link: '/inquerito', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
     { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' },
     { name: 'Recrutamento', link: '/recrutamento', icon: <FaUserTie size={40} />, key: 'moduloRecrutamento', alwaysEnabled: true }
   ];
