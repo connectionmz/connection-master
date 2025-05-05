@@ -87,7 +87,7 @@ const BlogDetalheDesk = ({ user }) => {
             id: commentId,
             ...comment,
             formattedDate: formatCommentDate(comment.timestamp),
-            editedText: comment.edited ? '(editado)' : ''
+            editedText: comment.edited
           }));
           setComments(commentsArray);
         }

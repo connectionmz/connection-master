@@ -192,12 +192,8 @@ const MinhaPropostaDesk = ({ user }) => {
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
               {proposta.from?.nome || 'Minha Proposta'}
             </Typography>
-            <Typography variant="subtitle2" color="text.secondary">
-              ID: {propostaId.slice(0, 8)}...
-            </Typography>
           </Box>
         </Box>
-
         <Chip
           icon={<CheckCircle fontSize="small" />}
           label={statusLabels[proposta.status] || 'Pendente'}
@@ -259,14 +255,9 @@ const MinhaPropostaDesk = ({ user }) => {
       <Card sx={{ mb: 3, borderRadius: 2 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description color="primary" /> Resposta
+            <Description color="primary" />Minha Resposta
           </Typography>
           
-          {proposta.nota && (
-            <Typography paragraph sx={{ mb: 3,  color: 'text.secondary' }}>
-              {proposta.nota}
-            </Typography>
-          )}
           
           <Box 
             dangerouslySetInnerHTML={{ __html: proposta.proposal || '<p>Nenhum conteúdo detalhado fornecido.</p>' }}
@@ -277,6 +268,20 @@ const MinhaPropostaDesk = ({ user }) => {
               lineHeight: 1.6
             }}
           />
+        </CardContent>
+      </Card>
+
+            {/* Proposal Content */}
+            <Card sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Description color="primary" />Nota de resposta
+          </Typography>
+          {proposta.nota && (
+            <Typography paragraph sx={{ mb: 3,  color: 'text.secondary' }}>
+              {proposta.nota}
+            </Typography>
+          )}
         </CardContent>
       </Card>
 

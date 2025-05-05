@@ -23,7 +23,7 @@ import {
     DialogActions
 } from '@mui/material';
 import { Delete, AccessTime, CheckCircle, History, Edit } from '@mui/icons-material';
-import { ref, onValue, update, remove, set } from 'firebase/database';
+import { ref, onValue, update, remove, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import PaySMSCheckout from '../PaySMSCheckout';
 import { db } from '../../fb';
@@ -117,8 +117,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 // Armazena TODAS as cotações sem filtro
                 setCotacoes(cotacoesArray);
 
-                console.log(cotacoesArray)
-                
                 // Ordena por data
                 const sortedCotacoes = cotacoesArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 setCotacoes(sortedCotacoes);
@@ -201,17 +199,39 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         navigate('/cotacao');
     };
 
-    const deleteCotacao = (cotacaoId) => {
-        if (window.confirm('Tem certeza que deseja excluir esta cotação?')) {
-            const cotacaoRef = ref(db, `cotacoes/${cotacaoId}`);
-            remove(cotacaoRef)
-                .then(() => {
-                    setSnackbar({ open: true, message: 'Cotação excluída com sucesso!', severity: 'success' });
-                })
-                .catch((error) => {
-                    console.error('Erro ao excluir a cotação: ', error);
-                    setSnackbar({ open: true, message: 'Erro ao excluir a cotação.', severity: 'error' });
+    const deleteCotacao = async (cotacaoId) => {
+        try {
+            const propostasRef = ref(db, `cotacoes/${cotacaoId}/proposals`);
+            const snapshot = await get(propostasRef);
+            
+
+            const data = snapshot.val();
+            console.log(data)
+
+            if (snapshot.exists()) {
+                setSnackbar({ 
+                    open: true, 
+                    message: 'Não é possível excluir esta cotação pois já existem propostas associadas. Apenas feche o pedido de cotação.', 
+                    severity: 'error' 
                 });
+                return;
+            }
+            if (window.confirm('Tem certeza que deseja excluir esta cotação?')) {
+                const cotacaoRef = ref(db, `cotacoes/${cotacaoId}`);
+                await remove(cotacaoRef);
+                setSnackbar({ 
+                    open: true, 
+                    message: 'Cotação excluída com sucesso!', 
+                    severity: 'success' 
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao excluir a cotação: ', error);
+            setSnackbar({ 
+                open: true, 
+                message: 'Erro ao excluir a cotação.', 
+                severity: 'error' 
+            });
         }
     };
 
@@ -239,6 +259,13 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     cotacao.createdBy === user?.id
                 );
                 break;
+                case 'propostas':
+                    filtered = filtered.filter((cotacao) => 
+                        cotacao.company?.id === user?.id || 
+                        cotacao.userId === user?.id ||
+                        cotacao.createdBy === user?.id
+                    );
+                    break;
             default:
                 break;
         }
@@ -486,15 +513,14 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     value={activeTab}
                     onChange={(_, newValue) => setActiveTab(newValue)}
                     indicatorColor="primary"
-                    textColor="primary"
-                  >
+                    textColor="primary">
                     <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
                     <Tab value="expiradas" label="Expiradas" icon={<History />} />
                     <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
                     <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
+                    <Tab value="propostas" label="Minhas Propostas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
                   </Tabs>
                 </Paper>
-              
                 <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
                   {renderCotacoes()}
                 </Paper>

@@ -284,12 +284,18 @@ const CotacaoDetalhesDesk = ({ user }) => {
                     </Typography>
                   </Grid>
                   <Grid item>
-                    <Typography sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      fontSize: isMobile ? '0.8rem' : '1rem'
-                    }}>
-                      <Inbox color="warning" sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} /> 
+                  <Typography
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        fontSize: isMobile ? '0.8rem' : '1rem'
+                      }}
+                      component={Link}
+                      to={`/propostas/${id}/propostas`}
+                      style={{ textDecoration: 'none' }}
+                      color="primary"
+                    >
+                      <Inbox color="warning" sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} />
                       {propostas.length} propostas
                     </Typography>
                   </Grid>
