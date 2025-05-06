@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -13,11 +14,6 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
   MenuItem,
   Select,
   FormControl,
@@ -25,33 +21,28 @@ import {
   Pagination,
   Avatar,
   Tooltip,
-  CircularProgress,
-  Grid
+  CircularProgress
 } from '@mui/material';
 import {
   Search,
   FilterList,
   Visibility,
-  Delete,
-  Close,
-  CheckCircle,
-  Pending,
-  ArrowForward
+  Delete
 } from '@mui/icons-material';
 import { ref, onValue, remove } from 'firebase/database';
 import { db } from '../../fb';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import BackButton from '../BackButton';
 
 const ListaInqueritos = ({ user }) => {
   const [inqueritos, setInqueritos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('Todos');
-  const [selectedInquerito, setSelectedInquerito] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
+  const navigate = useNavigate();
 
   // Buscar todos os inquéritos
   useEffect(() => {
@@ -105,16 +96,9 @@ const ListaInqueritos = ({ user }) => {
     ...new Set(inqueritos.map(i => i.tipoInquerito).filter(Boolean))
   ];
 
-  // Abrir modal de detalhes
+  // Abrir página de detalhes
   const handleOpenDetails = (inquerito) => {
-    setSelectedInquerito(inquerito);
-    setOpenDialog(true);
-  };
-
-  // Fechar modal
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setSelectedInquerito(null);
+    navigate(`/inquerito/${inquerito.id}`);
   };
 
   // Excluir inquérito
@@ -139,10 +123,11 @@ const ListaInqueritos = ({ user }) => {
 
   return (
     <Box sx={{ p: 3 }}>
+      <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-        Inquéritos Cadastrados
+        Inquéritos
       </Typography>
-
+      
       {/* Barra de busca e filtros */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -214,7 +199,7 @@ const ListaInqueritos = ({ user }) => {
               </TableHead>
               <TableBody>
                 {paginatedInqueritos.map((inquerito) => (
-                  <TableRow key={inquerito.id}>
+                  <TableRow key={inquerito.id} hover>
                     <TableCell>
                       <Typography fontWeight="medium">
                         {inquerito.title || 'Sem título'}
@@ -329,129 +314,6 @@ const ListaInqueritos = ({ user }) => {
           )}
         </>
       )}
-
-      {/* Modal de detalhes */}
-      <Dialog 
-        open={openDialog} 
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">
-              Detalhes do Inquérito
-            </Typography>
-            <IconButton onClick={handleCloseDialog}>
-              <Close />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedInquerito && (
-            <Box sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Avatar 
-                  src={selectedInquerito.company?.logo} 
-                  alt={selectedInquerito.company?.nome}
-                  sx={{ width: 64, height: 64, mr: 2 }}
-                />
-                <Box>
-                  <Typography variant="h5" gutterBottom>
-                    {selectedInquerito.title}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Criado por: {selectedInquerito.company?.nome || 'N/A'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {formatDate(selectedInquerito.createdAt)}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                Descrição
-              </Typography>
-              <Typography paragraph>
-                {selectedInquerito.description || 'Nenhuma descrição fornecida.'}
-              </Typography>
-
-              <Grid container spacing={3} sx={{ mt: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="h6" gutterBottom>
-                    Províncias
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {selectedInquerito.provincia?.map((p, i) => (
-                      <Chip 
-                        key={i} 
-                        label={p.provincia} 
-                        color="primary"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <Typography variant="h6" gutterBottom>
-                    Setores
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {selectedInquerito.sectores?.map((s, i) => (
-                      <Chip 
-                        key={i} 
-                        label={s.setor} 
-                        color="secondary"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>
-                    Perguntas ({selectedInquerito.questions?.length || 0})
-                  </Typography>
-                  {selectedInquerito.questions?.length > 0 ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {selectedInquerito.questions.map((q, i) => (
-                        <Paper key={i} sx={{ p: 2 }}>
-                          <Typography fontWeight="medium">
-                            {i + 1}. {q.texto}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            Tipo: {q.tipo}
-                          </Typography>
-                          {q.opcoes?.length > 0 && (
-                            <>
-                              <Typography variant="body2" sx={{ mt: 1 }}>
-                                Opções:
-                              </Typography>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                                {q.opcoes.map((op, j) => (
-                                  <Chip key={j} label={op} size="small" />
-                                ))}
-                              </Box>
-                            </>
-                          )}
-                        </Paper>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography>Nenhuma pergunta cadastrada</Typography>
-                  )}
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} startIcon={<ArrowForward />}>
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

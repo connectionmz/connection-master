@@ -49,6 +49,7 @@ import BackButton from '../BackButton';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatDateTime } from '../../utils/utils';
+import EditPostDialog from './EditPostDialog';
 
 
 
@@ -65,8 +66,10 @@ const PostDetailPageDesk = ({ user }) => {
   const [editedCommentText, setEditedCommentText] = useState('');
   const [denunciaModalOpen, setDenunciaModalOpen] = useState(false);
   const [motivoDenuncia, setMotivoDenuncia] = useState('');
+  const [loadingLike, setLoadingLike] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
-const [showReplies, setShowReplies] = useState({});
+  const [showReplies, setShowReplies] = useState({});
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -106,6 +109,7 @@ const replyStyle = {
   useEffect(() => {
     setLoading(true);
     const postsRef = ref(db, `posts/${postId}`);
+    
     const unsubscribe = onValue(postsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -119,21 +123,26 @@ const replyStyle = {
           createdAt: data.createdAt || new Date().toISOString()
         });
         
-        // Verificar se o usuário atual já curtiu
-        if (user?.id && data.likes && data.likes[user.id]) {
+        // Verificar likes de forma mais robusta
+        const likesData = data.likes || {};
+        setLikes(Object.keys(likesData).length);
+
+        console.log(Object.keys(likesData).length)
+        
+        if (user?.id && likesData[user.id]) {
           setHasLiked(true);
         } else {
           setHasLiked(false);
         }
         
-        setLikes(Object.keys(data.likes || {}).length || 0);
+        // Ordenar comentários
+        const commentsData = Object.entries(data.comments || {}).map(([id, comment]) => ({
+          id,
+          ...comment
+        }));
         
-        // Ordenar comentários por data (mais recentes primeiro)
-        const commentsData = Object.values(data.comments || {});
         setComments(
           commentsData.sort((a, b) => {
-            if (a.parentId === b.id) return 1;
-            if (b.parentId === a.id) return -1;
             const dateA = new Date(a.data || 0);
             const dateB = new Date(b.data || 0);
             return dateB - dateA;
@@ -146,10 +155,14 @@ const replyStyle = {
       setLoading(false);
     }, (error) => {
       console.error("Erro ao carregar post:", error);
-      setSnackbar({ open: true, message: 'Erro ao carregar post', severity: 'error' });
+      setSnackbar({ 
+        open: true, 
+        message: 'Erro ao carregar post', 
+        severity: 'error' 
+      });
       setLoading(false);
     });
-
+  
     return () => unsubscribe();
   }, [postId, user?.id]);
 
@@ -215,32 +228,49 @@ const replyStyle = {
   const handleLike = async () => {
     if (!checkUserAuth()) return;
     
+    setLoadingLike(true);
+    
     try {
       const postRef = ref(db, `posts/${postId}/likes/${user.id}`);
+      const likeSnapshot = await get(postRef);
       
-      if (hasLiked) {
+      if (likeSnapshot.exists()) {
+        // Remover like se já existir
         await remove(postRef);
         setHasLiked(false);
-        setLikes(prev => prev - 1);
+        setSnackbar({
+          open: true,
+          message: 'Gosto removido',
+          severity: 'info',
+          autoHideDuration: 2000
+        });
       } else {
-        await set(postRef, true);
+        // Adicionar like com informações adicionais
+        await set(postRef, {
+          timestamp: new Date().toISOString(),
+          userId: user.id,
+          userName: user.nome // Opcional: armazenar nome para exibição
+        });
         setHasLiked(true);
-        setLikes(prev => prev + 1);
-        setSnackbar({ 
-          open: true, 
-          message: 'Curtido!', 
-          severity: 'success' 
+        setSnackbar({
+          open: true,
+          message: 'Gostou',
+          severity: 'success',
+          autoHideDuration: 2000
         });
       }
     } catch (error) {
       console.error('Erro ao curtir:', error);
-      setSnackbar({ 
-        open: true, 
-        message: 'Erro ao curtir.', 
-        severity: 'error' 
+      setSnackbar({
+        open: true,
+        message: 'Erro ao processar sua curtida',
+        severity: 'error'
       });
+    } finally {
+      setLoadingLike(false);
     }
   };
+  
 
   const handleShare = (event) => {
     setShareAnchorEl(event.currentTarget);
@@ -252,37 +282,48 @@ const replyStyle = {
 
   const shareOnPlatform = (platform) => {
     const postUrl = `${window.location.origin}/post/${postId}`;
+    const encodedUrl = encodeURIComponent(postUrl);
+    const text = encodeURIComponent("Confira este post interessante: ");
+    
     let shareUrl = '';
     
     switch(platform) {
       case 'whatsapp':
-        shareUrl = `https://wa.me/?text=Confira este post: ${postUrl}`;
+        shareUrl = `https://api.whatsapp.com/send?text=${text}${encodedUrl}`;
         break;
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${postUrl}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
         break;
       case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?url=${postUrl}`;
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${text}`;
         break;
       case 'copy':
-        navigator.clipboard.writeText(postUrl);
-        setSnackbar({ 
-          open: true, 
-          message: 'Link copiado para a área de transferência!', 
-          severity: 'success' 
-        });
+        navigator.clipboard.writeText(postUrl)
+          .then(() => {
+            setSnackbar({ 
+              open: true, 
+              message: 'Link copiado para a área de transferência!', 
+              severity: 'success' 
+            });
+          })
+          .catch(() => {
+            setSnackbar({ 
+              open: true, 
+              message: 'Falha ao copiar o link', 
+              severity: 'error' 
+            });
+          });
         break;
       default:
         return;
     }
     
     if (platform !== 'copy') {
-      window.open(shareUrl, '_blank');
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
     }
     
     handleCloseShareMenu();
   };
-
   const handleReport = () => {
     if (!checkUserAuth()) return;
     setDenunciaModalOpen(true);
@@ -530,30 +571,63 @@ const replyStyle = {
             borderTop: '1px solid #eee'
           }}
         >
-          <Tooltip title="Curtir">
-            <Button
-              startIcon={hasLiked ? <ThumbUpIcon color="primary" /> : <ThumbUpOutlinedIcon />}
-              onClick={handleLike}
-              variant="text"
-              color="inherit"
-              sx={{ 
-                textTransform: 'none',
-                minWidth: 'auto'
-              }}
-            >
-              <Badge 
-                badgeContent={likes} 
-                color="primary" 
-                sx={{ 
-                  '& .MuiBadge-badge': {
-                    right: -5,
-                    top: 5
-                  }
-                }}
-              />
-            </Button>
-          </Tooltip>
-          
+         <Tooltip title={hasLiked ? "Remover curtida" : "Curtir"}>
+  <Button
+    id="like-button"
+    startIcon={
+      loadingLike ? (
+        <CircularProgress size={20} color="inherit" />
+      ) : hasLiked ? (
+        <ThumbUpIcon color="primary" />
+      ) : (
+        <ThumbUpOutlinedIcon />
+      )
+    }
+    onClick={handleLike}
+    variant="text"
+    color={hasLiked ? "primary" : "inherit"}
+    disabled={loadingLike}
+    sx={{
+      textTransform: 'none',
+      minWidth: 'auto',
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        backgroundColor: theme.palette.action.hover,
+        transform: 'scale(1.05)'
+      },
+      '&.Mui-disabled': {
+        opacity: 0.7
+      }
+    }}
+  >
+    <Badge 
+      badgeContent={likes} 
+      color="primary"
+      max={999}
+      sx={{ 
+        '& .MuiBadge-badge': {
+          right: -5,
+          top: 5,
+          fontWeight: 'bold',
+          fontSize: '0.7rem'
+        }
+      }}
+    />
+    {!isMobile && (
+      <Typography variant="body2" sx={{ ml: 0.5 }}>
+        {hasLiked}
+      </Typography>
+    )}
+  </Button>
+</Tooltip>
+  <Tooltip title="Editar publicação">
+    <IconButton
+      onClick={() => setEditDialogOpen(true)}
+      sx={{ ml: 'auto' }}
+    >
+      <EditIcon />
+    </IconButton>
+  </Tooltip>
           <Tooltip title="Compartilhar">
             <Button
               startIcon={<ShareOutlinedIcon />}
@@ -790,14 +864,23 @@ const replyStyle = {
                   alignItems: 'center',
                   mt: 1
                 }}>
-                  <Button
-                    size="small"
-                    startIcon={<ReplyIcon fontSize="small" />}
-                    onClick={() => handleReply(comment.id, comment.userName)}
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    Responder
-                  </Button>
+               <Button
+                      size="small"
+                      startIcon={<ReplyIcon fontSize="small" />}
+                      onClick={() => handleReply(comment.id, comment.userName)}
+                      sx={{ 
+                        color: 'text.secondary',
+                        // Desabilita visualmente se for o próprio comentário
+                        ...(comment.userId === user?.id && {
+                          opacity: 0.5,
+                          cursor: 'not-allowed',
+                          pointerEvents: 'none'
+                        })
+                      }}
+                      disabled={comment.userId === user?.id}
+                    >
+                      Responder
+                    </Button>
                   
                   {(comment.userId === user?.id || post.companyId === user?.id) && (
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -896,18 +979,16 @@ const replyStyle = {
                           sx={{ 
                             whiteSpace: 'pre-line',
                             wordBreak: 'break-word'
-                          }}
-                        >
+                          }}>
                           {reply.comment}
-                        </Typography>
-                        
-                        {/* Botões de ação para respostas */}
+                        </Typography>                        
                         <Box sx={{ 
                           display: 'flex', 
                           justifyContent: 'flex-end',
                           mt: 1,
                           gap: 0.5
                         }}>
+                    {(reply.userId !== user?.id) && (
                           <Tooltip title="Responder">
                             <IconButton
                               onClick={() => handleReply(comment.id, reply.userName)}
@@ -917,6 +998,7 @@ const replyStyle = {
                               <ReplyIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
+                        )}
                           
                           {(reply.userId === user?.id || post.companyId === user?.id) && (
                             <>
@@ -954,8 +1036,6 @@ const replyStyle = {
     )}
   </CardContent>
 </Card>
-
-      {/* Menu de Compartilhamento */}
       <Menu
         anchorEl={shareAnchorEl}
         open={Boolean(shareAnchorEl)}
@@ -1001,8 +1081,6 @@ const replyStyle = {
           <ListItemText>Copiar link</ListItemText>
         </MenuItem>
       </Menu>
-
-      {/* Modal de Denúncia */}
       <Dialog 
         open={denunciaModalOpen} 
         onClose={() => setDenunciaModalOpen(false)}
@@ -1056,14 +1134,25 @@ const replyStyle = {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar for Feedback */}
+        <EditPostDialog
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          post={post}
+          user={user}
+          onSave={(updatedPost) => {
+            setPost(updatedPost);
+            setSnackbar({
+              open: true,
+              message: 'Publicação atualizada com sucesso!',
+              severity: 'success'
+            });
+          }}
+        />
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert 
           onClose={handleCloseSnackbar} 
           severity={snackbar.severity}
@@ -1075,5 +1164,4 @@ const replyStyle = {
     </Box>
   );
 };
-
 export default PostDetailPageDesk;

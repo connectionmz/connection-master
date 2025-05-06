@@ -35,7 +35,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Divider
+  Divider,
+  Tooltip
 } from '@mui/material';
 import { 
   Search, 
@@ -46,12 +47,14 @@ import {
   Add,
   Image,
   Category,
-  Close
+  Close,
+  Visibility
 } from '@mui/icons-material';
 import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import { formatPrice } from '../../utils/utils';
 
 const ManageStoreDesk = ({ storeId }) => {
+  console.log(storeId)
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -461,42 +464,43 @@ const ManageStoreDesk = ({ storeId }) => {
     } else {
       return (
         <TableContainer component={Paper} sx={{ mt: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.200' }}>
-                <TableCell>Imagem</TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={sorting.orderBy === 'name'}
-                    direction={sorting.order}
-                    onClick={() => handleRequestSort('name')}
-                  >
-                    Nome
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel
-                    active={sorting.orderBy === 'price'}
-                    direction={sorting.order}
-                    onClick={() => handleRequestSort('price')}
-                  >
-                    Preço
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>Categoria</TableCell>
-                {!isTablet && <TableCell>Descrição</TableCell>}
-                <TableCell>Ações</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedProducts
-                .slice(
-                  pagination.page * pagination.rowsPerPage,
-                  pagination.page * pagination.rowsPerPage + pagination.rowsPerPage
-                )
-                .map(([key, product]) => (
-                  <TableRow key={key}>
-                    <TableCell>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'grey.200' }}>
+              <TableCell>Imagem</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sorting.orderBy === 'name'}
+                  direction={sorting.order}
+                  onClick={() => handleRequestSort('name')}
+                >
+                  Nome
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={sorting.orderBy === 'price'}
+                  direction={sorting.order}
+                  onClick={() => handleRequestSort('price')}
+                >
+                  Preço
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>Categoria</TableCell>
+              {!isTablet && <TableCell>Descrição</TableCell>}
+              <TableCell>Ações</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sortedProducts
+              .slice(
+                pagination.page * pagination.rowsPerPage,
+                pagination.page * pagination.rowsPerPage + pagination.rowsPerPage
+              )
+              .map(([key, product]) => (
+                <TableRow key={key} hover>
+                  <TableCell>
+                    <Link to={`/produto/${key}`} style={{ textDecoration: 'none' }}>
                       {product?.imageUrl ? (
                         <img
                           src={product.imageUrl}
@@ -508,22 +512,38 @@ const ManageStoreDesk = ({ storeId }) => {
                           Sem imagem
                         </Typography>
                       )}
-                    </TableCell>
-                    <TableCell>{product?.name || 'Sem nome'}</TableCell>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Link to={`/produto/${key}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {product?.name || 'Sem nome'}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {storeData.settings.showPrices 
+                      ? `${formatPrice(product?.price) || '0.00'} MZN` 
+                      : '--'}
+                  </TableCell>
+                  <TableCell>{product?.category || 'Sem categoria'}</TableCell>
+                  {!isTablet && (
                     <TableCell>
-                      {storeData.settings.showPrices 
-                        ? `${formatPrice(product?.price) || '0.00'} MZN` 
-                        : '--'}
+                      {product?.description?.length > 50 
+                        ? `${product.description.substring(0, 50)}...` 
+                        : product?.description || 'Sem descrição'}
                     </TableCell>
-                    <TableCell>{product?.category || 'Sem categoria'}</TableCell>
-                    {!isTablet && (
-                      <TableCell>
-                        {product?.description?.length > 50 
-                          ? `${product.description.substring(0, 50)}...` 
-                          : product?.description || 'Sem descrição'}
-                      </TableCell>
-                    )}
-                    <TableCell>
+                  )}
+                  <TableCell>
+                    <Tooltip title="Ver produto">
+                      <IconButton
+                        color="info"
+                        component={Link}
+                        to={`/produto/${key}/loja/${storeId}`}
+                        aria-label="Ver produto"
+                      >
+                        <Visibility />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar produto">
                       <IconButton
                         color="primary"
                         onClick={() => handleEditProduct(key, product)}
@@ -531,22 +551,24 @@ const ManageStoreDesk = ({ storeId }) => {
                       >
                         <Edit />
                       </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Remover produto">
                       <IconButton
                         color="error"
                         onClick={() => {
                           setSelectedProductId(key);
                           toggleModal('deleteConfirm', true);
                         }}
-                        aria-label="Remover produto"
-                      >
+                        aria-label="Remover produto">
                         <Delete />
                       </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
       );
     }
   };

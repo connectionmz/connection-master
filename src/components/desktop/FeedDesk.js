@@ -180,7 +180,7 @@ const FeedDesk = ({ user }) => {
                       mb: 1
                     }}
                     dangerouslySetInnerHTML={{ 
-                      __html: truncateText(post.description, 150) || 'Sem descrição' 
+                      __html: truncateText(post.description, 150) || '' 
                     }}
                   />
                 </CardContent>

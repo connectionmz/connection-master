@@ -80,6 +80,7 @@ import AuthCreateDesk from '../AuthCreateDesk';
 import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
 import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
 import ListaInqueritos from '../desktop/ListaInqueritos';
+import ProdutoPage from '../market/ProdutoPage';
 
 const theme = createTheme({
   palette: {
@@ -293,6 +294,7 @@ const DesktopRoutes = ({ user }) => {
             <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
             <Route path="/market" element={<MarketDesk user={user} />} />
             <Route path="/addProduct" element={<ProductFormDesk user={user} />} />
+            <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
             <Route path="/recibos" element={<ReceiptsPage user={user} />} />
             <Route path="/lojas" element={<StoresDesk user={user} />} />
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />

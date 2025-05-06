@@ -129,38 +129,41 @@ const ProductDetailsDesk = ({user}) => {
   };
 
   const addToCart = async () => {
-    if (!product) return;
+    if (!product || !user?.id) return;
   
     try {
-      const cartRef = ref(db, `cart/${user.id}/${product.id}`);
+      const cartRef = ref(db, `cart/${user.id}/${productId}`);
       
+      const cartItem = {
+        productId: productId,
+        storeId: store,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        price: product.price,
+        discountPrice: product.discountPrice || null,
+        storeName: storeInfo?.company?.nome || "Loja Desconhecida",
+        quantity: quantity,
+        addedAt: new Date().toISOString()
+      };
+  
       // Verificar se o item já existe no carrinho
       const snapshot = await get(cartRef);
       
       if (snapshot.exists()) {
         // Atualizar quantidade se já existir
-        const currentQuantity = snapshot.val().quantity || 1;
         await update(cartRef, {
-          quantity: currentQuantity + quantity // Usando a quantidade selecionada
+          quantity: (snapshot.val().quantity || 0) + quantity
         });
       } else {
         // Adicionar novo item ao carrinho
-        await set(cartRef, {
-          productId: product.id,
-          storeId: store,
-          name: product.name,
-          imageUrl: product.imageUrl,
-          price: product.price,
-          discountPrice: product.discountPrice || null,
-          storeName: storeInfo?.company?.nome || "Loja Desconhecida",
-          quantity: quantity, // Usando a quantidade selecionada
-          addedAt: new Date().toISOString()
-        });
+        await set(cartRef, cartItem);
       }
       
-      // Atualizar contador de cliques para o produto
-      const productRef = ref(db, `stores/${store}/products/${product.id}/cartAdds`);
-      await set(productRef, increment(1));
+      // Atualizar contador de adições ao carrinho para o produto
+      const productRef = ref(db, `stores/${store}/products/${productId}`);
+      await update(productRef, {
+        cartAdds: (product.cartAdds || 0) + 1
+      });
       
       // Feedback para o usuário
       setSnackbarMessage(`${quantity} x ${product.name} adicionado ao carrinho!`);
@@ -374,10 +377,8 @@ const ProductDetailsDesk = ({user}) => {
                     type="number"
                     value={quantity}
                     onChange={(e) => {
-                      const value = Math.max(1, Math.min(100, Number(e.target.value)));
-                      setQuantity(value);
+                      setQuantity(e.target.value);
                     }}
-                    inputProps={{ min: 1, max: 100 }}
                     size="small"
                     sx={{ width: "100px", mr: 2 }}
                   />

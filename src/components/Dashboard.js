@@ -40,10 +40,8 @@ const Dashboard = ({ user }) => {
   const isMobile = useMediaQuery("(max-width:600px)");
 
 
-  const navigate = useNavigate();
+const navigate = useNavigate();
 
-
-  // Verificar se a empresa já solicitou uma demo
   useEffect(() => {
     if (!user?.id) return;
 
