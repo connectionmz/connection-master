@@ -432,6 +432,18 @@ const replyStyle = {
     }
   };
 
+  const handleEditClick = () => {
+    if (user?.id !== post.companyId) {
+      setSnackbar({
+        open: true,
+        message: 'Você não tem permissão para editar esta publicação',
+        severity: 'error'
+      });
+      return;
+    }
+    setEditDialogOpen(true);
+  };
+  
   const handleCommentKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -620,14 +632,22 @@ const replyStyle = {
     )}
   </Button>
 </Tooltip>
-  <Tooltip title="Editar publicação">
-    <IconButton
-      onClick={() => setEditDialogOpen(true)}
-      sx={{ ml: 'auto' }}
-    >
-      <EditIcon />
-    </IconButton>
-  </Tooltip>
+          {(user?.id === post.companyId) && (
+            <Tooltip title="Editar publicação">
+              <Button
+                startIcon={<EditIcon />}
+                onClick={handleEditClick}
+                variant="text"
+                color="inherit"
+                sx={{ 
+                  textTransform: 'none',
+                  minWidth: 'auto'
+                }}
+              >
+                {!isMobile && "Editar"}
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip title="Compartilhar">
             <Button
               startIcon={<ShareOutlinedIcon />}
