@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ref, update } from 'firebase/database';
 import { db } from '../../fb';
 import {
@@ -15,6 +15,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Close as CloseIcon, Check as CheckIcon } from '@mui/icons-material';
+import ReactQuill from 'react-quill';
 
 const EditPostDialog = ({ 
   open, 
@@ -27,6 +28,28 @@ const EditPostDialog = ({
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [content, setContent] = useState('');
+
+  const modules = useMemo(() => ({
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['link', 'image'],
+      ['clean']
+    ],
+    clipboard: {
+      matchVisual: false,
+    }
+  }), []);
+
+  // Configuração dos formatos do Quill
+  const formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'link', 'image'
+  ];
 
   // Inicializa o estado quando o post ou a abertura do dialog mudar
   useEffect(() => {
@@ -124,29 +147,21 @@ const EditPostDialog = ({
           </Box>
         )}
         
-        <TextField
-          fullWidth
-          multiline
-          minRows={6}
-          maxRows={12}
-          variant="outlined"
-          label="Descrição da publicação"
-          value={description}
-          onChange={(e) => {
-            setDescription(e.target.value);
-            setError(''); // Limpa o erro quando o usuário começa a digitar
-          }}
-          disabled={loading}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-              fontSize: '1rem',
-              '&.Mui-focused fieldset': {
-                borderColor: theme.palette.primary.main,
-              }
-            }
-          }}
-        />
+        <ReactQuill
+            theme="snow"
+            value={content}
+            onChange={setContent}
+            modules={modules}
+            formats={formats}
+            placeholder="Escreva sua publicação aqui..."
+            style={{
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%'
+            }}
+            readOnly={loading}
+          />
         
         <Box sx={{ mt: 2 }}>
           <Typography variant="caption" color="text.secondary">
@@ -183,13 +198,12 @@ const EditPostDialog = ({
             '&:hover': {
               backgroundColor: theme.palette.primary.dark
             }
-          }}
-        >
+          }}>
           {loading ? 'Salvando...' : 'Salvar Alterações'}
         </Button>
       </DialogActions>
     </Dialog>
   );
-};
+}
 
 export default EditPostDialog;
