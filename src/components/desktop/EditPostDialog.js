@@ -28,27 +28,26 @@ const EditPostDialog = ({
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState(post.description);
+
+  console.log(post)
 
   const modules = useMemo(() => ({
     toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
+      ['bold', 'italic', 'underline'],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link', 'image'],
+      ['link'],
       ['clean']
     ],
     clipboard: {
       matchVisual: false,
     }
   }), []);
-
-  // Configuração dos formatos do Quill
+  
   const formats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
+    'bold', 'italic', 'underline',
     'list', 'bullet',
-    'link', 'image'
+    'link'
   ];
 
   // Inicializa o estado quando o post ou a abertura do dialog mudar
@@ -162,12 +161,7 @@ const EditPostDialog = ({
             }}
             readOnly={loading}
           />
-        
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" color="text.secondary">
-            Dica: Você pode usar formatação básica como negrito (**texto**), itálico (*texto*) e links
-          </Typography>
-        </Box>
+ 
       </DialogContent>
       
       <DialogActions sx={{ px: 3, py: 2 }}>

@@ -12,7 +12,9 @@ import {
   Phone,
   CalendarToday,
   AccessTime,
-  Description
+  Description,
+  CheckCircle,
+  History
 } from '@mui/icons-material';
 import {
   Card,
@@ -113,7 +115,11 @@ const ConcursoDetalhesDesk = ({ user }) => {
       unsubscribeConcurso();
     };
   }, [id, user.id]);
-
+  const isPrazoValido = (prazoString) => {
+    const now = new Date();
+    const prazo = new Date(prazoString);
+    return prazo >= now;
+  };
   const isConcursoExpirado = () => {
     if (!concurso?.prazo) return false;
     const dataLimite = new Date(concurso.prazo);
@@ -323,15 +329,20 @@ const ConcursoDetalhesDesk = ({ user }) => {
                 </Typography>
                 
                 <Typography 
-                  color="error"
+                  variant="body2" 
+                  color={isPrazoValido(concurso.prazo) ? 'primary' : 'error'}
                   sx={{ 
-                    display: 'flex', 
+                    display: 'flex',
                     alignItems: 'center',
-                    fontSize: isMobile ? '0.8rem' : '1rem'
+                    gap: 0.5
                   }}
                 >
-                  <AccessTime sx={{ mr: 0.5 }} /> 
-                  Limite em {new Date(concurso.prazo).toLocaleDateString('pt-PT')}
+                  {isPrazoValido(concurso.prazo) ? (
+                    <CheckCircle fontSize="small" color="primary" />
+                  ) : (
+                    <History fontSize="small" color="error" />
+                  )}
+                  Prazo: {new Date(concurso.prazo).toLocaleDateString('pt-PT')}
                 </Typography>
               </Box>
             </Grid>
