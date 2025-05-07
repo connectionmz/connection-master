@@ -50,7 +50,7 @@ const navigate = useNavigate();
         const demoRef = ref(db, `request_demo/${user.id}`);
         const snapshot = await get(demoRef);
         if (snapshot.exists()) {
-          setHasRequestedDemo(false); // Se existir, marca como solicitado
+          setHasRequestedDemo(false); 
         }
       } catch (error) {
         console.error("Erro ao verificar solicitação de demo:", error);
@@ -74,7 +74,6 @@ const navigate = useNavigate();
                 const campanha = campanhasInternas[subKey];
                 // Verifica se o componente é "home"
                 if (campanha.component === "home") {
-                  // Se o usuário existir, filtra pela província; caso contrário, lista tudo
                   if (!user || (user.provinciaTemp || user.provincia) === campanha.company?.provincia) {
                     campanhasArray.push({ id: subKey, ...campanha });
                   } else if (!user) {
@@ -110,7 +109,6 @@ const navigate = useNavigate();
   }, [user]);
 
   const requestDemo = async () => {
-    // Confirmação antes de enviar a solicitação
     const confirmRequest = window.confirm("Tem certeza que deseja solicitar uma demonstração?");
     if (!confirmRequest) return;
 
@@ -151,15 +149,12 @@ const navigate = useNavigate();
         <StorieListDesk user={user} />
         <Grid container spacing={2}>
         <LatestBlogPost/>
-          {/* Feed Central */}
           <Grid item xs={12} sm={6}>
             <MarqueeAnuncios user={user} />
             <Box>
               <BannerDesk user={user} />
             </Box>
           </Grid>
-
-          {/* Sidebar Direita */}
           <Grid item xs={12} sm={3}>
   {/* Seção de Publicidade para PHC CS 
   <Paper
@@ -209,7 +204,6 @@ const navigate = useNavigate();
         </Grid>
       </Container>
 
-      {/* Snackbar para feedback */}
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}

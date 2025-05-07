@@ -63,7 +63,7 @@ const StoresDesk = ({ user }) => {
   const userProvince = user?.provinciaTemp || user?.provincia || null;
 
 
-  const hasMarket = user?.activeModules.moduloMarket.status=== "active"
+  const hasMarket = user?.activeModules?.moduloMarket?.status=== "active"
 
 
   // Registrar impressão ou clique

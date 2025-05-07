@@ -81,6 +81,7 @@ import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
 import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
 import ListaInqueritos from '../desktop/ListaInqueritos';
 import ProdutoPage from '../market/ProdutoPage';
+import VerificationAccountModal from '../modal/VerificationAccountModal';
 
 const theme = createTheme({
   palette: {
@@ -92,32 +93,34 @@ const theme = createTheme({
       main: '#dc004e',
     },
   },
-});
+})
 
 const DesktopRoutes = ({ user }) => {
-  const [language, setLanguage] = useState('pt');
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [showTerms, setShowTerms] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [hasFeedback, setHasFeedback] = useState(false);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showReferrerModal, setShowReferrerModal] = useState(false); 
-  const [referrerData, setReferrerData] = useState(null);
-  const [feedbackForm, setFeedbackForm] = useState({
-    nome: '',
-    email: '',
-    contacto: '',
-    feedback: ''
-  });
+
+const [language, setLanguage] = useState('pt')
+const [anchorEl, setAnchorEl] = useState(null)
+const [showTerms, setShowTerms] = useState(false)
+const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+const [hasFeedback, setHasFeedback] = useState(false)
+const [feedbackText, setFeedbackText] = useState('')
+const [isLoading, setIsLoading] = useState(false)
+const [showReferrerModal, setShowReferrerModal] = useState(false)
+const [referrerData, setReferrerData] = useState(null)
+const [feedbackForm, setFeedbackForm] = useState({
+nome: '',
+email: '',
+contacto: '',
+feedback: ''
+});
+
+  const isVerify = user?.subscriptions?.isverify
 
   const navigate = useNavigate();
-
 
   const currentLocation = useLocation();
 
   const isMobile = useMediaQuery('(max-width:600px)');
-
+  
   const fullScreenRoutes = [
     '/auth',
     '/email-verification',
@@ -280,6 +283,7 @@ const DesktopRoutes = ({ user }) => {
       pb: 4, 
     }}>
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
+          {isVerify && <VerificationAccountModal />}
           <Routes>
             {/* Rotas públicas */}
             <Route path="/" element={<DashboardComponent user={user} />} />

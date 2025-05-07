@@ -38,11 +38,13 @@ import {
   Divider,
   Avatar,
   Grid,
+  ListItemIcon,
 } from '@mui/material';
 import BackButton from '../BackButton';
 import { formatPrice } from '../../utils/utils';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import { Close } from '@mui/icons-material';
 
 const AnunciarDesk = ({ user }) => {
   const [activeTab, setActiveTab] = useState(0);
@@ -471,7 +473,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [days, setDays] = useState(null);
+  const [days, setDays] = useState(1);
   const [totalCost, setTotalCost] = useState(30);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -483,7 +485,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   const [empresasAtingidas, setEmpresasAtingidas] = useState(0);
   const [tipoAnuncio, setTipoAnuncio] = useState('home');
   const isDestacarPerfil = tipoAnuncio === 'destacar_perfil';
-
+  const [openProvinciaSelect, setOpenProvinciaSelect] = useState(false);
+  const [openSetorSelect, setOpenSetorSelect] = useState(false);
 
   const prices = {
     home: 30,
@@ -500,8 +503,16 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     const sectoresRef = ref(db, 'sectores_de_atividade');
     const empresasRef = ref(db, 'company');
 
-    onValue(provinciasRef, (snapshot) => setProvincias(snapshot.val() || []));
-    onValue(sectoresRef, (snapshot) => setSectores(snapshot.val() || []));
+    onValue(provinciasRef, (snapshot) => {
+      const data = snapshot.val();
+      setProvincias(data ? Object.values(data) : []);
+    });
+
+    onValue(sectoresRef, (snapshot) => {
+      const data = snapshot.val();
+      setSectores(data ? Object.values(data) : []);
+    });
+
     onValue(empresasRef, (snapshot) => {
       const empresasData = snapshot.val();
       if (empresasData) {
@@ -523,21 +534,23 @@ const CreateAdTab = ({ user, onAdCreated }) => {
 
   useEffect(() => {
     const baseCost = prices[tipoAnuncio] || prices.home;
-    const hasAdditionalSectors = selectedSectores.length > 1;
-    const hasAdditionalProvincias = selectedProvincias.length > 1;
-
-    const additionalCost =
-      (hasAdditionalProvincias ? (selectedProvincias.length - 1) * ADDITIONAL_COST_PER_PROVINCIA : 0) +
-      (hasAdditionalSectors ? (selectedSectores.length - 1) * ADDITIONAL_COST_PER_SETOR : 0);
-
+    const provinciasCount = Math.max(0, selectedProvincias.length - 1);
+    const sectoresCount = Math.max(0, selectedSectores.length - 1);
+    
+    const additionalCost = 
+      (provinciasCount * ADDITIONAL_COST_PER_PROVINCIA) + 
+      (sectoresCount * ADDITIONAL_COST_PER_SETOR);
+    
     setTotalCost(days * (baseCost + additionalCost));
   }, [days, selectedProvincias, selectedSectores, tipoAnuncio]);
 
   useEffect(() => {
     if (empresas.length > 0 && (selectedProvincias.length > 0 || selectedSectores.length > 0)) {
       const empresasFiltradas = empresas.filter((empresa) => {
-        const matchesProvincia = selectedProvincias.length === 0 || selectedProvincias.includes(empresa.provincia);
-        const matchesSetor = selectedSectores.length === 0 || selectedSectores.includes(empresa.sector);
+        const matchesProvincia = selectedProvincias.length === 0 || 
+          selectedProvincias.includes(empresa.provincia);
+        const matchesSetor = selectedSectores.length === 0 || 
+          selectedSectores.includes(empresa.sector);
         return matchesProvincia && matchesSetor;
       });
       setEmpresasAtingidas(empresasFiltradas.length);
@@ -546,20 +559,45 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     }
   }, [selectedProvincias, selectedSectores, empresas]);
 
-  const handleProvinciaChange = (e) => {
-    const newSelectedProvincias = e.target.value;
-    if (user.provincia && !newSelectedProvincias.includes(user.provincia)) {
-      newSelectedProvincias.push(user.provincia);
-    }
-    setSelectedProvincias(newSelectedProvincias);
+  
+  const handleSelectAllProvincias = () => {
+    const allProvincias = provincias.map(p => p.provincia);
+    setSelectedProvincias(allProvincias);
   };
 
-  const handleSetorChange = (e) => {
-    const newSelectedSectores = e.target.value;
-    if (user.sector && !newSelectedSectores.includes(user.sector)) {
-      newSelectedSectores.push(user.sector);
+  const handleDeselectAllProvincias = () => {
+    setSelectedProvincias([]);
+  };
+
+  const handleSelectAllSetores = () => {
+    const allSetores = sectores.map(s => s.setor);
+    setSelectedSectores(allSetores);
+  };
+
+  const handleDeselectAllSetores = () => {
+    setSelectedSectores([]);
+  };
+
+  // Modificamos o handleProvinciaChange para lidar com seleção individual
+  const handleProvinciaChange = (event) => {
+    const value = event.target.value;
+    // Se o último item selecionado foi o mesmo que está sendo desmarcado
+    if (selectedProvincias.includes(value[value.length - 1])) {
+      setSelectedProvincias(value);
+    } else {
+      setSelectedProvincias(value);
     }
-    setSelectedSectores(newSelectedSectores);
+  };
+
+  // Modificamos o handleSetorChange para lidar com seleção individual
+  const handleSetorChange = (event) => {
+    const value = event.target.value;
+    // Se o último item selecionado foi o mesmo que está sendo desmarcado
+    if (selectedSectores.includes(value[value.length - 1])) {
+      setSelectedSectores(value);
+    } else {
+      setSelectedSectores(value);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -570,32 +608,47 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     }
   };
 
-const validateForm = () => {
-  if (!file) {
-    showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
-    return false;
-  }
-  if (!phoneNumber) {
-    showSnackbar('Por favor, insira um número de telefone.', 'error');
-    return false;
-  }
-  // A descrição só é obrigatória para tipos diferentes de "Destacar Perfil"
-  if (!isDestacarPerfil && !description) {
-    showSnackbar('Por favor, insira uma descrição para o anúncio.', 'error');
-    return false;
-  }
-  return true;
-};
+  const validateForm = () => {
+    if (!file && !isDestacarPerfil) {
+      showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
+      return false;
+    }
+    if (!phoneNumber) {
+      showSnackbar('Por favor, insira um número de telefone.', 'error');
+      return false;
+    }
+    if (!days || days < 1 || days > 30) {
+      showSnackbar('Por favor, selecione uma duração válida (1-30 dias).', 'error');
+      return false;
+    }
+    if (!isDestacarPerfil && !description) {
+      showSnackbar('Por favor, insira uma descrição para o anúncio.', 'error');
+      return false;
+    }
+    if (selectedProvincias.length === 0) {
+      showSnackbar('Por favor, selecione pelo menos uma província.', 'error');
+      return false;
+    }
+    if (selectedSectores.length === 0) {
+      showSnackbar('Por favor, selecione pelo menos um setor de atividade.', 'error');
+      return false;
+    }
+    return true;
+  };
+
   const handlePublish = async () => {
     if (!validateForm()) return;
     setUploading(true);
 
     try {
-      const fileRef = createStorageRef(storage, `images/${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      await saveToDatabase(url);
+      let url = '';
+      if (file) {
+        const fileRef = createStorageRef(storage, `images/${file.name}`);
+        await uploadBytes(fileRef, file);
+        url = await getDownloadURL(fileRef);
+      }
       
+      await saveToDatabase(url);
       showSnackbar('Anúncio publicado com sucesso!', 'success');
       resetForm();
       onAdCreated();
@@ -607,17 +660,17 @@ const validateForm = () => {
     }
   };
 
-  const saveToDatabase = async (url) => {
+  const saveToDatabase = async (imageUrl) => {
     const anuncioRef = push(ref(db, 'banners'));
     const idAnuncio = anuncioRef.key;
 
-    const expireDate = calculateExpireDate(days);
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + days);
 
     const anuncioData = {
       id: idAnuncio,
-      imageUrl: url,
       uploadedAt: new Date().toISOString(),
-      expireDate,
+      expireDate: expireDate.toISOString(),
       companyId: user.id,
       days,
       totalCost,
@@ -628,20 +681,19 @@ const validateForm = () => {
       status: 'active'
     };
 
+    if (imageUrl) {
+      anuncioData.imageUrl = imageUrl;
+    }
+
     if (!isDestacarPerfil) {
       anuncioData.description = description;
-      anuncioData.link = link;
+      anuncioData.link = link || '#';
     } else {
       anuncioData.description = `Perfil destacado de ${user.nome}`;
       anuncioData.link = `/perfil/${user.id}`;
     }
+
     await set(anuncioRef, anuncioData);
-  };
-  const calculateExpireDate = (days) => {
-    const currentDate = new Date();
-    const expireDate = new Date(currentDate);
-    expireDate.setDate(currentDate.getDate() + days);
-    return expireDate.toISOString();
   };
 
   const resetForm = () => {
@@ -649,7 +701,7 @@ const validateForm = () => {
     setLink('');
     setFile(null);
     setImageUrl('');
-    setDays(null);
+    setDays(1);
     setPhoneNumber('');
     setSelectedProvincias(user.provincia ? [user.provincia] : []);
     setSelectedSectores(user.sector ? [user.sector] : []);
@@ -661,7 +713,11 @@ const validateForm = () => {
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const formatPrice = (value) => {
+    return new Intl.NumberFormat('pt-MZ').format(value);
   };
 
   return (
@@ -671,85 +727,90 @@ const validateForm = () => {
           Escolha o tipo de anúncio:
         </Typography>
         <RadioGroup
-            value={tipoAnuncio}
-            onChange={(e) => {
-              setTipoAnuncio(e.target.value);
-              // Resetar descrição e link quando mudar para destacar perfil
-              if (e.target.value === 'destacar_perfil') {
-                setDescription('');
-                setLink('');
-              }
-            }}
-          >
+          value={tipoAnuncio}
+          onChange={(e) => setTipoAnuncio(e.target.value)}
+        >
           <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
           <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
           <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
           <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil" />
         </RadioGroup>
       </FormControl>
+
       {!isDestacarPerfil && (
-    <>
-      <TextField
-        label="Descrição do anúncio"
-        variant="outlined"
-        fullWidth
-        multiline
-        rows={3}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-
-      <TextField
-        label="Link externo (opcional)"
-        variant="outlined"
-        fullWidth
-        value={link}
-        onChange={(e) => setLink(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-       <Box sx={{ mb: 2 }}>
-      <Typography variant="body1" sx={{ mb: 1 }}>
-        Imagem do anúncio *
-      </Typography>
-      <input 
-        type="file" 
-        onChange={handleFileChange} 
-        accept="image/*"
-      />
-      {imageUrl && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-            Pré-visualização:
-          </Typography>
-          <img
-            src={imageUrl}
-            alt="Preview da Imagem"
-            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+        <>
+          <TextField
+            label="Descrição do anúncio *"
+            variant="outlined"
+            fullWidth
+            multiline
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            sx={{ mb: 2 }}
           />
-        </Box>
-    )}
-  </Box>
-    </>
-  )}
 
- 
+          <TextField
+            label="Link externo (opcional)"
+            variant="outlined"
+            fullWidth
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            sx={{ mb: 2 }}
+          />
 
-      <FormControl fullWidth sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              Imagem do anúncio *
+            </Typography>
+            <input 
+              type="file" 
+              onChange={handleFileChange} 
+              accept="image/*"
+              required
+            />
+            {imageUrl && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  Pré-visualização:
+                </Typography>
+                <img
+                  src={imageUrl}
+                  alt="Preview da Imagem"
+                  style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+                />
+              </Box>
+            )}
+          </Box>
+        </>
+      )}
+
+
+<FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel id="provincias-label">Províncias *</InputLabel>
         <Select
           labelId="provincias-label"
           multiple
+          open={openProvinciaSelect}
+          onOpen={() => setOpenProvinciaSelect(true)}
+          onClose={() => setOpenProvinciaSelect(false)}
           value={selectedProvincias}
           onChange={handleProvinciaChange}
           renderValue={(selected) => selected.join(', ')}
+          label="Províncias *"
         >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+            <Button size="small" onClick={handleSelectAllProvincias}>
+              Selecionar Todos
+            </Button>
+            <Button size="small" onClick={handleDeselectAllProvincias}>
+              Desmarcar Todos
+            </Button>
+          </Box>
+          
           {provincias.map((provincia) => (
             <MenuItem key={provincia.provincia} value={provincia.provincia}>
-              <Checkbox
-                checked={selectedProvincias.includes(provincia.provincia)}
-                disabled={user.provincia === provincia.provincia}
-              />
+              <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
               <ListItemText primary={provincia.provincia} />
             </MenuItem>
           ))}
@@ -761,48 +822,47 @@ const validateForm = () => {
         <Select
           labelId="sectores-label"
           multiple
+          open={openSetorSelect}
+          onOpen={() => setOpenSetorSelect(true)}
+          onClose={() => setOpenSetorSelect(false)}
           value={selectedSectores}
           onChange={handleSetorChange}
           renderValue={(selected) => selected.join(', ')}
+          label="Setores de Atividade *"
         >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+            <Button size="small" onClick={handleSelectAllSetores}>
+              Selecionar Todos
+            </Button>
+            <Button size="small" onClick={handleDeselectAllSetores}>
+              Desmarcar Todos
+            </Button>
+          </Box>
+          
           {sectores.map((setor) => (
             <MenuItem key={setor.setor} value={setor.setor}>
-              <Checkbox
-                checked={selectedSectores.includes(setor.setor)}
-                disabled={user.sector === setor.setor}
-              />
+              <Checkbox checked={selectedSectores.includes(setor.setor)} />
               <ListItemText primary={setor.setor} />
             </MenuItem>
           ))}
         </Select>
       </FormControl>
 
+
       <Box mb={2}>
-        <Typography>Tempo do anúncio (1 a 30 dias):</Typography>
+        <Typography>Tempo do anúncio (1 a 30 dias): *</Typography>
         <TextField
-              type="number"
-              value={days}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  setDays('');
-                  return;
-                }
-
-                const numberValue = Number(value);
-                if (numberValue >= 0 && numberValue <= 30) {
-                  setDays(numberValue);
-                }
-              }}
-              onBlur={() => {
-                // Quando sair do input, forçar limite
-                if (days < 1) setDays(1);
-                if (days > 30) setDays(30);
-              }}
-              inputProps={{ min: 1, max: 30 }}
-              fullWidth
-            />
-
+          type="number"
+          value={days}
+          onChange={(e) => {
+            const value = parseInt(e.target.value) || 0;
+            if (value >= 1 && value <= 30) {
+              setDays(value);
+            }
+          }}
+          inputProps={{ min: 1, max: 30 }}
+          fullWidth
+        />
       </Box>
 
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
@@ -822,17 +882,26 @@ const validateForm = () => {
         sx={{ mb: 2 }}
       />
 
-<Button
-  variant="contained"
-  color="primary"
-  onClick={handlePublish}
-  sx={{ mb: 2 }}
->
-  {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
-</Button>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handlePublish}
+        disabled={uploading}
+        sx={{ mb: 2 }}
+      >
+        {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
+      </Button>
 
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
