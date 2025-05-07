@@ -51,8 +51,10 @@ const CompanyProfile = ({ user }) => {
         setOpenSnackbar(false);
     };
 
-    if(userId === user.id){
-        window.location='/perfil'
+    if(userId){
+        if(userId === user?.id){
+            window.location='/perfil'
+        }
     }
     
     useEffect(() => {

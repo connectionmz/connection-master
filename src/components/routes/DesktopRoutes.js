@@ -283,7 +283,7 @@ feedback: ''
       pb: 4, 
     }}>
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
-          {isVerify && <VerificationAccountModal />}
+          {isVerify && <VerificationAccountModal user={user}/>}
           <Routes>
             {/* Rotas públicas */}
             <Route path="/" element={<DashboardComponent user={user} />} />
@@ -304,9 +304,7 @@ feedback: ''
             <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
             <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
             <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
-            
             <Route path="/inqueritos" element={<ListaInqueritos />} />
-
             {/* Rotas relacionadas a conexões e interações */}
             <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
             <Route path="/search" element={<ConnectionsSearchDesk />} />
