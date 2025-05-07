@@ -55,7 +55,6 @@ const App = () => {
     try {
       const userRef = ref(db, `company/${user.uid}`);
 
-      // Escuta as alterações em tempo real
       const unsubscribe = onValue(userRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
@@ -66,7 +65,6 @@ const App = () => {
             endereco: data.endereco || 'Endereço não informado',
             isAnonymous: user.isAnonymous,
           });
-          console.log(data)
         } else {
           setUserData(null);
         }
@@ -80,7 +78,6 @@ const App = () => {
       setLoading(false);
     }
   };
-
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {

@@ -22,8 +22,6 @@ const LatestBlogPost = () => {
           setLoading(true);
           const data = snapshot.val();
 
-          console.log(data)
-          
           if (!data) {
             setLatestBlog(null);
             return;
