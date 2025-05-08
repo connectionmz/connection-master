@@ -53,14 +53,12 @@ const ProfileDesk = ({ userI }) => {
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const isMobile = useMediaQuery("(max-width:600px)");
 
-  // Função para abrir o editor de imagem
   const openImageEditor = (file, isCover) => {
     setImageToEdit(file);
     setIsEditingCover(isCover); // Define se estamos editando a capa ou o perfil
     setShowImageEditor(true);
   };
 
-    // Share menu handlers
     const handleShareClick = (event) => {
       setShareAnchorEl(event.currentTarget);
     };
@@ -88,21 +86,21 @@ const ProfileDesk = ({ userI }) => {
     };
   
     const shareOnTwitter = () => {
-      const text = encodeURIComponent(`Confira o perfil da ${userData?.displayName} no nosso app!`);
+      const text = encodeURIComponent(`Visite o perfil da ${userData?.displayName}!`);
       const profileUrl = encodeURIComponent(`${window.location.origin}/perfil/${userData?.id}`);
       window.open(`https://twitter.com/intent/tweet?text=${text}&url=${profileUrl}`, '_blank');
       handleShareClose();
     };
   
     const shareOnWhatsApp = () => {
-      const text = encodeURIComponent(`Confira o perfil da ${userData?.displayName}: ${window.location.origin}/perfil/${userData?.id}`);
+      const text = encodeURIComponent(`Visite o perfil da ${userData?.displayName}: ${window.location.origin}/perfil/${userData?.id}`);
       window.open(`https://wa.me/?text=${text}`, '_blank');
       handleShareClose();
     };
   
     const shareViaEmail = () => {
       const subject = encodeURIComponent(`Perfil da ${userData?.displayName}`);
-      const body = encodeURIComponent(`Confira o perfil da ${userData?.displayName}:\n\n${window.location.origin}/perfil/${userData?.id}`);
+      const body = encodeURIComponent(`Visite o perfil da ${userData?.displayName}:\n\n${window.location.origin}/perfil/${userData?.id}`);
       window.open(`mailto:?subject=${subject}&body=${body}`);
       handleShareClose();
     };
