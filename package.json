@@ -23,6 +23,7 @@
     "chart.js": "^4.4.7",
     "cors": "^2.8.5",
     "crypto-browserify": "^3.12.1",
+    "dompurify": "^3.2.5",
     "dotenv": "^16.4.7",
     "e2payments": "^1.0.0",
     "emailjs-com": "^3.2.0",

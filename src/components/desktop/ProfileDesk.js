@@ -513,36 +513,10 @@ const ProfileDesk = ({ userI }) => {
           {userData?.displayName}
         </Typography>
         <Box maxWidth={600} mx="auto" mt={2}>
-          {userData?.bio ? (
-            <>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap={!showFullText}
-                sx={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: showFullText ? "initial" : 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {userData.bio}
-              </Typography>
-              {userData.bio.length > 120 && (
-                <Button
-                  size="small"
-                  onClick={toggleShowFullText}
-                  sx={{ textTransform: "none", mt: 1 }}
-                >
-                  {showFullText ? "Ver Menos" : "Ver Mais"}
-                </Button>
-              )}
-            </>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Sem Bio
-            </Typography>
-          )}
+        <Typography
+                        color="text.secondary" mt={1}
+                                dangerouslySetInnerHTML={{ __html: userData?.bio || '' }}
+                            />
         </Box>
 
         {/* Botão de Editar Perfil */}
