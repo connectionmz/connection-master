@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Twitter, Instagram, LinkedIn, Language, Edit, CameraAlt, ExitToApp, X, WhatsApp } from "@mui/icons-material";
+import { Twitter, Instagram, LinkedIn, Language, Edit, CameraAlt, ExitToApp, X, WhatsApp, Facebook, Email } from "@mui/icons-material";
 import { useNavigate } from 'react-router-dom';
 import { get, ref, update } from 'firebase/database';
 import { signOut } from 'firebase/auth';
@@ -8,7 +8,7 @@ import PostGallery from '../PostGallery';
 import { EditorText } from '../../utils/formUtils';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { AiFillSetting } from 'react-icons/ai';
-import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress, useMediaQuery } from "@mui/material";
+import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import {
   Button,
   CardMedia,
@@ -25,6 +25,7 @@ import VetrineDesk from './VetrineDesk';
 import { PinturaEditor } from '@pqina/react-pintura';
 import { getEditorDefaults } from '@pqina/pintura';
 import '@pqina/pintura/pintura.css';
+import { LinkIcon, Share } from 'lucide-react';
 
 const ProfileDesk = ({ userI }) => {
   const navigate = useNavigate();
@@ -48,7 +49,8 @@ const ProfileDesk = ({ userI }) => {
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [imageToEdit, setImageToEdit] = useState(null);
   const [editedImage, setEditedImage] = useState(null);
-  const [isEditingCover, setIsEditingCover] = useState(false); // Novo estado para distinguir entre capa e perfil
+  const [isEditingCover, setIsEditingCover] = useState(false);
+  const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const isMobile = useMediaQuery("(max-width:600px)");
 
   // Função para abrir o editor de imagem
@@ -57,6 +59,54 @@ const ProfileDesk = ({ userI }) => {
     setIsEditingCover(isCover); // Define se estamos editando a capa ou o perfil
     setShowImageEditor(true);
   };
+
+    // Share menu handlers
+    const handleShareClick = (event) => {
+      setShareAnchorEl(event.currentTarget);
+    };
+  
+    const handleShareClose = () => {
+      setShareAnchorEl(null);
+    };
+  
+    const copyProfileLink = () => {
+      const profileUrl = `${window.location.origin}/perfil/${userData?.id}`;
+      navigator.clipboard.writeText(profileUrl)
+        .then(() => {
+          setSnackbar({ open: true, message: 'Link copiado para a área de transferência!', severity: 'success' });
+          handleShareClose();
+        })
+        .catch(() => {
+          setSnackbar({ open: true, message: 'Falha ao copiar o link', severity: 'error' });
+        });
+    };
+  
+    const shareOnFacebook = () => {
+      const profileUrl = encodeURIComponent(`${window.location.origin}/perfil/${userData?.id}`);
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${profileUrl}`, '_blank');
+      handleShareClose();
+    };
+  
+    const shareOnTwitter = () => {
+      const text = encodeURIComponent(`Confira o perfil da ${userData?.displayName} no nosso app!`);
+      const profileUrl = encodeURIComponent(`${window.location.origin}/perfil/${userData?.id}`);
+      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${profileUrl}`, '_blank');
+      handleShareClose();
+    };
+  
+    const shareOnWhatsApp = () => {
+      const text = encodeURIComponent(`Confira o perfil da ${userData?.displayName}: ${window.location.origin}/perfil/${userData?.id}`);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+      handleShareClose();
+    };
+  
+    const shareViaEmail = () => {
+      const subject = encodeURIComponent(`Perfil da ${userData?.displayName}`);
+      const body = encodeURIComponent(`Confira o perfil da ${userData?.displayName}:\n\n${window.location.origin}/perfil/${userData?.id}`);
+      window.open(`mailto:?subject=${subject}&body=${body}`);
+      handleShareClose();
+    };
+
 
   // Função para lidar com a conclusão da edição da imagem
   const handleImageEditComplete = (res) => {
@@ -324,6 +374,14 @@ const ProfileDesk = ({ userI }) => {
             </Box>
           )}
           <Box position="absolute" top={8} right={8}>
+          <IconButton
+       color="primary"
+      aria-label="share profile"
+      onClick={handleShareClick}
+      sx={{ bgcolor: 'background.paper' }}
+    >
+      <Share />
+    </IconButton>
             <input
               accept="image/*"
               type="file"
@@ -342,6 +400,51 @@ const ProfileDesk = ({ userI }) => {
             </IconButton>
           </Box>
         </Box>
+               {/* Share Menu */}
+               <Menu
+          anchorEl={shareAnchorEl}
+          open={Boolean(shareAnchorEl)}
+          onClose={handleShareClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <MenuItem onClick={copyProfileLink}>
+            <ListItemIcon>
+              <LinkIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Copiar link</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={shareOnFacebook}>
+            <ListItemIcon>
+              <Facebook fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Compartilhar no Facebook</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={shareOnTwitter}>
+            <ListItemIcon>
+              <Twitter fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Compartilhar no Twitter</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={shareOnWhatsApp}>
+            <ListItemIcon>
+              <WhatsApp fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Compartilhar no WhatsApp</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={shareViaEmail}>
+            <ListItemIcon>
+              <Email fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Compartilhar por e-mail</ListItemText>
+          </MenuItem>
+        </Menu>
 
         {/* Avatar do Perfil */}
         <Box
