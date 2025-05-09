@@ -54,7 +54,6 @@ import ConcursoDesk from '../desktop/ConcursoDesk';
 import ConnectionsDesk from '../desktop/ConnectionsDesk';
 import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import AnalyticsDesk from '../desktop/AnalyticsDesk';
-import LandingPage from '../LandingPage';
 import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
 import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
 import ContactForm from '../desktop/Mailer';
@@ -130,9 +129,8 @@ const [showVerificationAlert, setShowVerificationAlert] = useState(false);
     '/forget-password',
   ];
 
-  const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
+const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
 
-  // Lista de rotas protegidas
 const protectedRoutes = [
   '/cotacoes',
   '/cotacao',
@@ -166,7 +164,6 @@ const protectedRoutes = [
   '/painel'
 ];
 
-// Padrões de rotas dinâmicas protegidas
 const dynamicProtectedPatterns = [
   /^\/proposta\/.+/,
   /^\/cotacao\/.+/,
@@ -519,7 +516,6 @@ const renderProtectedRoute = (path, element) => (
     </ProtectedRoute>
   } />
 
-  <Route path="*" element={<Navigate to="/" />} />
 </Routes>
         </Box>
 

@@ -361,8 +361,6 @@ const HeaderDesk = ({ user }) => {
           </Alert>
         </Snackbar>
       )}
-
-      {/* Verification Banner - Only shows for logged-in, unverified users */}
       {user && !isVerify && (
         <Box 
           sx={{

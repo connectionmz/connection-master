@@ -10,7 +10,6 @@ const CompanyVerificationNotice = () => {
 
   const handleLogin = async () => {
     navigate('/auth'); // Redireciona para a rota /auth após o login
-
   };
 
   return (
