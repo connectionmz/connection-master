@@ -9,39 +9,29 @@ import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
 import ApxDesk from '../desktop/ApxDesk';
-import PagamentoModulo from '../PagamentoModulo';
 import FaturacaoDesk from '../desktop/FaturacaoDesk';
-import CriarProformaDesk from '../desktop/CriarProformaDesk';
-import FaturaDesk from '../desktop/FaturaDesk';
+
 import MarketDesk from '../desktop/MarketDesk';
 import ProductFormDesk from '../market/ProductFormDesk';
 import AnunciarDesk from '../desktop/AnunciarDesk';
-import PostInputDesk from '../desktop/PostInputDesk';
-import Sms from '../sms/Sms';
+
 import SmsDesk from '../sms/SmsDesk';
 import CallCenterModuleDesk from '../desktop/CallCenterModuleDesk';
 import InqueritosModuleDesk from '../desktop/InqueritosModuleDesk';
 import LogisticaModuleDesk from '../desktop/LogisticaModuleDesk';
-import ListaDeServicosDesk from '../desktop/ListaDeServicosDesk';
+
 import InboxDesk from '../desktop/InboxDesk';
 import StoresDesk from '../desktop/StoresDesk';
 import StoreDetailDesk from '../desktop/StoreDetailsDesk';
 import ConnectionsSearchDesk from '../desktop/ConnectionsSearchDesk';
 import FooterDesk from '../desktop/FooterDesk';
-import PropostasDesk from '../desktop/PropostasDesk';
-import EnviarPropostaDesk from '../desktop/EnviarPropostaDesk';
 import ProposalDesk from '../desktop/ProposalDesk';
-import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
-import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
-import PortalDesk from '../desktop/PortalDesk';
 import ProductDetailsDesk from '../market/ProductDetailsDesk';
-import SendMail from '../sms/SendMail';
 import Sobre from '../Sobre';
-import SurveyPageDesk from '../desktop/SurveyPageDesk';
-import DestacarModule from '../desktop/DestacarModule';
+
 import EmailVerification from '../EmailVerification';
 import CompanyVerificationNotice from '../CompanyVerificationNotice';
-import CreditCardCheckoutDesk from '../checkout/CreditCardCheckoutDesk';
+
 import AuthDesk from '../AuthDesk';
 import ProfileDesk from '../desktop/ProfileDesk';
 import EditProfileDesk from '../desktop/EditProfileDesk';
@@ -53,10 +43,7 @@ import ParceirosInvestidoresDesk from '../desktop/ParceirosInvestidoresDesk';
 import ConcursoDesk from '../desktop/ConcursoDesk';
 import ConnectionsDesk from '../desktop/ConnectionsDesk';
 import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
-import AnalyticsDesk from '../desktop/AnalyticsDesk';
-import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
-import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
-import ContactForm from '../desktop/Mailer';
+
 import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
@@ -69,17 +56,38 @@ import Terms from '../Termos';
 import Politicas from '../desktop/Politicas';
 import { Close } from '@mui/icons-material';
 import CompanyUpdateDesk from '../CompanyUpdateDesk';
-import ProductForm from '../market/ProductForm';
-import EditarFaturaDesk from '../desktop/EditarFaturaDesk';
+
 import ReceiptsPage from '../desktop/ReceiptsPage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import CompanyDataFormDesk from '../CompanyDataFormDesk';
 import AuthCreateDesk from '../AuthCreateDesk';
 import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
-import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
 import ListaInqueritos from '../desktop/ListaInqueritos';
 import ProdutoPage from '../market/ProdutoPage';
+
+import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
+import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
+import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
+import PropostasDesk from '../desktop/PropostasDesk';
+import EnviarPropostaDesk from '../desktop/EnviarPropostaDesk';
+
+import EditarFaturaDesk from '../desktop/EditarFaturaDesk';
+import AnalyticsDesk from '../desktop/AnalyticsDesk';
+import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
+import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
+import ContactForm from '../desktop/Mailer';
+import CreditCardCheckoutDesk from '../checkout/CreditCardCheckoutDesk';
+import SurveyPageDesk from '../desktop/SurveyPageDesk';
+import DestacarModule from '../desktop/DestacarModule';
+import SendMail from '../sms/SendMail';
+
+import PortalDesk from '../desktop/PortalDesk';
+import ListaDeServicosDesk from '../desktop/ListaDeServicosDesk';
+import PostInputDesk from '../desktop/PostInputDesk';
+import PagamentoModulo from '../PagamentoModulo';
+import CriarProformaDesk from '../desktop/CriarProformaDesk';
+import FaturaDesk from '../desktop/FaturaDesk';
 import VerificationAccountModal from '../modal/VerificationAccountModal';
 
 const theme = createTheme({
@@ -486,13 +494,116 @@ const renderProtectedRoute = (path, element) => (
     </ProtectedRoute>
   } />
 
-  {/* ... (continuar com o mesmo padrão para todas as outras rotas protegidas) */}
 
   <Route path="/cotacaoPdf/:id" element={
     <ProtectedRoute>
       <CotacoesPDF user={user}/>
     </ProtectedRoute>
   } />
+  <Route path="/proposta/:id/:cotId" element={
+  <ProtectedRoute>
+    <ProposalDesk user={user} />
+  </ProtectedRoute>
+} />
+
+
+<Route path="/edit-proforma/:numeroProforma" element={
+  <ProtectedRoute>
+    <EditarFaturaDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/concurso" element={
+  <ProtectedRoute>
+    <PublicarConcursoDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/concurso/:id" element={
+  <ProtectedRoute>
+    <ConcursoDetalhesDesk  ursoDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/inquerito/:surveyId" element={
+  <ProtectedRoute>
+    <SurveyPageDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/painel" element={
+  <ProtectedRoute>
+    <PortalDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/categoria/:categoriaId" element={
+  <ProtectedRoute>
+    <ListaDeServicosDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/post" element={
+  <ProtectedRoute>
+    <PostInputDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/pagamento-modulo/:moduleKey" element={
+  <ProtectedRoute>
+    <PagamentoModulo user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/proforma" element={
+  <ProtectedRoute>
+    <CriarProformaDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/faturas/:id" element={
+  <ProtectedRoute>
+    <FaturaDesk user={user} />
+  </ProtectedRoute>
+} />
+
+
+<Route path="/enviar-proposta/:id/:companyId" element={
+  <ProtectedRoute>
+    <EnviarPropostaDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/propostas/:id/propostas" element={
+  <ProtectedRoute>
+    <PropostasDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/cotacao/:id/proposta/:propostaId" element={
+  <ProtectedRoute>
+    <DetalhesPropostaDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/minha_proposta/cotacao/:id/proposta/:propostaId" element={
+  <ProtectedRoute>
+    <MinhaPropostaDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/cotacao/:id" element={
+  <ProtectedRoute>
+    <CotacaoDetalhesDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/cotacaoPdf/:id" element={
+  <ProtectedRoute>
+    <CotacoesPDF user={user} />
+  </ProtectedRoute>
+} />
+
 
   {/* Concursos */}
   <Route path="/concursos" element={
@@ -501,20 +612,53 @@ const renderProtectedRoute = (path, element) => (
     </ProtectedRoute>
   } />
 
-  {/* ... (proteger todas as demais rotas seguindo o mesmo padrão) */}
 
-  {/* Rotas administrativas/protegidas restantes */}
-  <Route path="/sms" element={
-    <ProtectedRoute>
-      <SmsDesk user={user} />
-    </ProtectedRoute>
-  } />
+<Route path="/faturacao" element={
+  <ProtectedRoute>
+    <FaturacaoDesk user={user} />
+  </ProtectedRoute>
+} />
 
-  <Route path="/analises" element={
-    <ProtectedRoute>
-      <AnalyticsDesk user={user} />
-    </ProtectedRoute>
-  } />
+<Route path="/market" element={
+  <ProtectedRoute>
+    <MarketDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/anunciar" element={
+  <ProtectedRoute>
+    <AnunciarDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/callcenter" element={
+  <ProtectedRoute>
+    <CallCenterModuleDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/procurement" element={
+  <ProtectedRoute>
+    <LogisticaModuleDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/inquerito" element={
+  <ProtectedRoute>
+    <InqueritosModuleDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/recrutamento" element={
+  <ProtectedRoute>
+    <RecrutamentoDesk user={user} />
+  </ProtectedRoute>
+} />
+<Route path="/sms" element={
+  <ProtectedRoute>
+    <SmsDesk user={user} />
+  </ProtectedRoute>
+} />
 
 </Routes>
         </Box>
