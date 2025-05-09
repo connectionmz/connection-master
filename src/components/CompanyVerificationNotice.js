@@ -26,10 +26,6 @@ const CompanyVerificationNotice = () => {
       }}
     >
       <CheckCircleOutline color="success" sx={{ fontSize: 60, mb: 2 }} />
-      <Typography variant="h4" gutterBottom>
-        Cadastro feito com sucesso!
-      </Typography>
-
       <Stack spacing={2} sx={{ width: '100%', maxWidth: 400 }}>
         <Alert
           severity="info"

@@ -16,8 +16,10 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Snackbar,
+  Alert
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu"; // Ícone do menu hambúrguer
+import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
 import GavelIcon from "@mui/icons-material/Gavel";
@@ -27,7 +29,7 @@ import FeedIcon from "@mui/icons-material/Feed";
 import PeopleIcon from "@mui/icons-material/People";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import logo  from "../../img/bg2.png";
+import logo from "../../img/bg2.png";
 import { db } from "../../fb";
 
 const HeaderDesk = ({ user }) => {
@@ -35,12 +37,36 @@ const HeaderDesk = ({ user }) => {
   const [pendingQuotes, setPendingQuotes] = useState(0);
   const [pendingContests, setPendingContests] = useState(0);
   const [pendingNotifications, setPendingNotifications] = useState(0);
-  const [drawerOpen, setDrawerOpen] = useState(false); // Estado para controlar o drawer
-
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const publicPanel = user?.publicPainel;
   const isMobile = useMediaQuery("(max-width:600px)");
+  const isVerify = user?.subscriptions?.isverify === "true";
+
+  // Protected routes configuration
+  const protectedRoutes = [
+    "/empresas",
+    "/lojas",
+    "/concursos", 
+    "/cotacoes",
+    "/feed",
+    "/inbox",
+    "/conexoes"
+  ];
+
+  const handleNavigation = (path) => {
+    // Skip verification check if user is not logged in
+    if (!user) return true;
+    
+    if (!isVerify && protectedRoutes.includes(path)) {
+      setShowVerificationAlert(true);
+      return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -109,8 +135,22 @@ const HeaderDesk = ({ user }) => {
   }, [user?.id, user?.sector]);
 
   const navItems = [
-    { to: "/empresas", icon: <DomainIcon />, label: "Empresas" },
-    { to: "/lojas", icon: <StoreMallDirectoryIcon />, label: "Lojas" },
+    { 
+      to: "/empresas", 
+      icon: <DomainIcon />, 
+      label: "Empresas",
+      onClick: (e) => {
+        if (!handleNavigation("/empresas")) e.preventDefault();
+      }
+    },
+    { 
+      to: "/lojas", 
+      icon: <StoreMallDirectoryIcon />, 
+      label: "Lojas",
+      onClick: (e) => {
+        if (!handleNavigation("/lojas")) e.preventDefault();
+      }
+    },
     {
       to: user ? "/concursos" : "/auth",
       icon: (
@@ -119,6 +159,9 @@ const HeaderDesk = ({ user }) => {
         </Badge>
       ),
       label: "Concursos",
+      onClick: (e) => {
+        if (user && !handleNavigation("/concursos")) e.preventDefault();
+      }
     },
     {
       to: user ? "/cotacoes" : "/auth",
@@ -128,8 +171,18 @@ const HeaderDesk = ({ user }) => {
         </Badge>
       ),
       label: "Cotações",
+      onClick: (e) => {
+        if (user && !handleNavigation("/cotacoes")) e.preventDefault();
+      }
     },
-    { to: "/feed", icon: <FeedIcon />, label: "Feed" },
+    { 
+      to: "/feed", 
+      icon: <FeedIcon />, 
+      label: "Feed",
+      onClick: (e) => {
+        if (!handleNavigation("/feed")) e.preventDefault();
+      }
+    },
     {
       to: user ? "/inbox" : "/auth",
       icon: (
@@ -138,6 +191,9 @@ const HeaderDesk = ({ user }) => {
         </Badge>
       ),
       label: "Notificações",
+      onClick: (e) => {
+        if (user && !handleNavigation("/inbox")) e.preventDefault();
+      }
     },
     {
       to: user ? "/conexoes" : "/auth",
@@ -147,6 +203,9 @@ const HeaderDesk = ({ user }) => {
         </Badge>
       ),
       label: "Conexões",
+      onClick: (e) => {
+        if (user && !handleNavigation("/conexoes")) e.preventDefault();
+      }
     },
     {
       to: user ? "/app" : "/auth",
@@ -155,7 +214,7 @@ const HeaderDesk = ({ user }) => {
           {!user?.logoUrl && <AccountCircleIcon />}
         </Avatar>
       ),
-      label: "Perfil",
+      label: "Perfil"
     },
   ];
 
@@ -185,6 +244,7 @@ const HeaderDesk = ({ user }) => {
               alignItems: "center",
               textDecoration: "none",
             }}
+            onClick={item.onClick}
           >
             <IconButton
               sx={{
@@ -211,58 +271,124 @@ const HeaderDesk = ({ user }) => {
   );
 
   return (
-    <AppBar position="sticky" sx={{ backgroundColor: "#FFF", boxShadow: 3 }}>
-      <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
-            <Link to="/" className="flex items-center space-x-2">
-              <img src={logo} alt="Logo" style={{ width: isMobile ? "30%" : "20%" }} />
-            </Link>
+    <>
+      <AppBar position="sticky" sx={{ backgroundColor: "#FFF", boxShadow: 3 }}>
+        <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
+              <Link to="/" className="flex items-center space-x-2">
+                <img src={logo} alt="Logo" style={{ width: isMobile ? "30%" : "20%" }} />
+              </Link>
+            </Typography>
+          </Box>
+          {isMobile ? (
+            <>
+              <IconButton onClick={toggleDrawer(true)}>
+                <MenuIcon />
+              </IconButton>
+              <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+                <List>
+                  {navItems.map((item, index) => (
+                    <ListItem
+                      button
+                      key={index}
+                      component={Link}
+                      to={item.to}
+                      onClick={(e) => {
+                        if (item.onClick) item.onClick(e);
+                        toggleDrawer(false)();
+                      }}
+                    >
+                      <ListItemIcon>{item.icon}</ListItemIcon>
+                      <ListItemText primary={item.label} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Drawer>
+            </>
+          ) : (
+            <>
+              {renderNavItems()}
+              {publicPanel && (
+                <Button
+                  onClick={() => navigate("/painel")}
+                  sx={{
+                    backgroundColor: "#1976d2",
+                    color: "#fff",
+                    "&:hover": { backgroundColor: "#1565c0" },
+                    padding: "6px 12px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Ir para Painel Público
+                </Button>
+              )}
+            </>
+          )}
+        </Toolbar>
+      </AppBar>
+
+      {/* Verification Alert - Only shows for logged-in, unverified users */}
+      {user && (
+        <Snackbar
+          open={showVerificationAlert}
+          autoHideDuration={8000}
+          onClose={() => setShowVerificationAlert(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            severity="warning" 
+            onClose={() => setShowVerificationAlert(false)}
+            sx={{ width: '100%', alignItems: 'center' }}
+          >
+            <Box>
+              <Typography variant="body1" fontWeight="bold">
+                Em processo de Verificação de conta
+              </Typography>
+              <Typography variant="body2">
+                Os dados da sua empresa estão a ser verificados. Assim que o processo for concluído, o acesso será concedido.
+                Você será notificado através do e-mail{' '}
+                <Link href={`mailto:${user.email}`}>{user.email}</Link>.
+              </Typography>
+              <Typography variant="body2">
+                Para suporte use{' '}
+                <a href="tel:+258xxxxxxxxx">+258 xxxxxxxx</a> ou pelo e-mail{' '}
+                <a href="mailto:suporte@connectionmozambique.com">
+                  suporte@connectionmozambique.com
+                </a>.
+              </Typography>
+            </Box>
+          </Alert>
+        </Snackbar>
+      )}
+
+      {/* Verification Banner - Only shows for logged-in, unverified users */}
+      {user && !isVerify && (
+        <Box 
+          sx={{
+            backgroundColor: 'warning.light',
+            p: 1,
+            textAlign: 'center',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' }
+          }}
+        >
+          <Typography variant="body2" sx={{ textAlign: 'center' }}>
+            Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
           </Typography>
+          <Button 
+            color="primary" 
+            size="small" 
+            sx={{ ml: { xs: 0, sm: 2 }, mt: { xs: 1, sm: 0 } }}
+            onClick={() => navigate("/app/verification")}
+          >
+            Completar verificação
+          </Button>
         </Box>
-        {isMobile ? (
-          <>
-            <IconButton onClick={toggleDrawer(true)}>
-              <MenuIcon />
-            </IconButton>
-            <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
-              <List>
-                {navItems.map((item, index) => (
-                  <ListItem
-                    button
-                    key={index}
-                    component={Link}
-                    to={item.to}
-                    onClick={toggleDrawer(false)}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.label} />
-                  </ListItem>
-                ))}
-              </List>
-            </Drawer>
-          </>
-        ) : (
-          <>
-            {renderNavItems()}
-            {publicPanel && (
-              <Button
-                onClick={() => navigate("/painel")}
-                sx={{
-                  backgroundColor: "#1976d2",
-                  color: "#fff",
-                  "&:hover": { backgroundColor: "#1565c0" },
-                  padding: "6px 12px",
-                  fontWeight: "bold",
-                }}
-              >
-                Ir para Painel Público
-              </Button>
-            )}
-          </>
-        )}
-      </Toolbar>
-    </AppBar>
+      )}
+    </>
   );
 };
 

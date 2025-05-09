@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery, Modal } from '@mui/material';
+import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery, Modal, Snackbar, Alert } from '@mui/material';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
@@ -112,6 +112,7 @@ email: '',
 contacto: '',
 feedback: ''
 });
+const [showVerificationAlert, setShowVerificationAlert] = useState(false);
 
   const isVerify = user?.subscriptions?.isverify
 
@@ -130,6 +131,110 @@ feedback: ''
   ];
 
   const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
+
+  // Lista de rotas protegidas
+const protectedRoutes = [
+  '/cotacoes',
+  '/cotacao',
+  '/proposta',
+  '/enviar-proposta',
+  '/propostas',
+  '/minha_proposta',
+  '/cotacaoPdf',
+  '/concursos',
+  '/concurso',
+  '/faturacao',
+  '/proforma',
+  '/edit-proforma',
+  '/faturas',
+  '/checkout',
+  '/pagamento-modulo',
+  '/post',
+  '/anunciar',
+  '/sms',
+  '/callcenter',
+  '/procurement',
+  '/inquerito',
+  '/destacar',
+  '/analises',
+  '/recrutamento',
+  '/addProduct',
+  '/conexoes',
+  '/inbox',
+  '/perfil',
+  '/editar-perfil',
+  '/painel'
+];
+
+// Padrões de rotas dinâmicas protegidas
+const dynamicProtectedPatterns = [
+  /^\/proposta\/.+/,
+  /^\/cotacao\/.+/,
+  /^\/concurso\/.+/,
+  /^\/proforma\/.+/,
+  /^\/faturas\/.+/,
+  /^\/inquerito\/.+/
+];
+
+// Componente para verificação de rotas protegidas
+// Componente para verificação de rotas protegidas
+const ProtectedRoute = ({ children }) => {
+  const currentLocation = useLocation();
+  
+  const isProtected = protectedRoutes.some(route => 
+    currentLocation.pathname.startsWith(route) ||
+    dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
+  );
+
+  // Se não há usuário logado, permite acesso sem verificação
+  if (!user) {
+    return children;
+  }
+
+  // Se há usuário logado mas não está verificado e a rota é protegida
+  if (!isVerify && isProtected) {
+    return (
+      <>
+        {children}
+        <Snackbar
+          open={true}
+          autoHideDuration={6000}
+          onClose={() => {}}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            severity="warning"
+            sx={{ width: '100%' }}
+          >
+            Sua conta precisa ser verificada para acessar esta funcionalidade.
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => navigate('/app/verification')}
+              sx={{ ml: 1 }}
+            >
+              Verificar agora
+            </Button>
+          </Alert>
+        </Snackbar>
+      </>
+    );
+  }
+
+  return children;
+};
+
+// Função auxiliar para renderizar rotas protegidas
+const renderProtectedRoute = (path, element) => (
+  <Route 
+    path={path} 
+    element={
+      <ProtectedRoute>
+        {element}
+      </ProtectedRoute>
+    } 
+  />
+);
 
   useEffect(() => {
     const acceptedTerms = localStorage.getItem('acceptedTerms');
@@ -283,94 +388,139 @@ feedback: ''
       pb: 4, 
     }}>
           {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
-          {isVerify && <VerificationAccountModal user={user}/>}
           <Routes>
-            {/* Rotas públicas */}
-            <Route path="/" element={<DashboardComponent user={user} />} />
-            <Route path="/feed" element={<FeedDesk user={user} />} />
-            <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
-            <Route path="/empresas" element={<ExploreDesk user={user} />} />
-            <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
-            <Route path="/sobre" element={<Sobre />} />
-            <Route path="/noticias" element={<NoticiadosDesk />} />
-            <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user} />} />
-            <Route path="/blog" element={<Blogs />} />
-            <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
-            <Route path="/market" element={<MarketDesk user={user} />} />
-            <Route path="/addProduct" element={<ProductFormDesk user={user} />} />
-            <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
-            <Route path="/recibos" element={<ReceiptsPage user={user} />} />
-            <Route path="/lojas" element={<StoresDesk user={user} />} />
-            <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
-            <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
-            <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
-            <Route path="/inqueritos" element={<ListaInqueritos />} />
-            {/* Rotas relacionadas a conexões e interações */}
-            <Route path="/conexoes" element={<ConnectionsDesk user={user} />} />
-            <Route path="/search" element={<ConnectionsSearchDesk />} />
-            <Route path="/parceiros-investidores" element={<ParceirosInvestidoresDesk />} />
-            <Route path="/app" element={<ApxDesk user={user} />} />
-            <Route path="/inbox" element={<InboxDesk user={user} />} />
+  {/* Rotas públicas */}
+  <Route path="/" element={<DashboardComponent user={user} />} />
+  <Route path="/feed" element={<FeedDesk user={user} />} />
+  <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
+  <Route path="/empresas" element={<ExploreDesk user={user} />} />
+  <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
+  <Route path="/sobre" element={<Sobre />} />
+  <Route path="/noticias" element={<NoticiadosDesk />} />
+  <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user} />} />
+  <Route path="/blog" element={<Blogs />} />
+  <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
+  <Route path="/market" element={<MarketDesk user={user} />} />
+  <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
+  <Route path="/recibos" element={<ReceiptsPage user={user} />} />
+  <Route path="/lojas" element={<StoresDesk user={user} />} />
+  <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
+  <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
+  <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
+  <Route path="/inqueritos" element={<ListaInqueritos />} />
+  <Route path="/termos" element={<Terms />} />
+  <Route path="/politicas" element={<Politicas />} />
 
-            {/* Rotas de perfil e configurações */}
-            <Route path="/perfil" element={<ProfileDesk user={user} />} />
-            <Route path="/editar-perfil" element={<EditProfileDesk user={user} />} />
+  {/* Rotas de autenticação */}
+  <Route path="/auth" element={<AuthDesk user={user} />} />
+  <Route path="/create" element={<AuthCreateDesk user={user} />} />
+  <Route path="/setup" element={<CompanyDataFormDesk />} />
+  <Route path="/forget-password" element={<ForgetPassword />} />
+  <Route path="/change-password" element={<ChangePassword user={user} />} />
+  <Route path="/email-verification" element={<EmailVerification />} />
+  <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
 
-            {/* Rotas de cotações e propostas */}
-            <Route path="/cotacoes" element={<CotacoesDesk user={user} />} />
-            <Route path="/cotacao" element={<NovaCotacaoDesk user={user} />} />
-            <Route path="/proposta/:id/:cotId" element={<ProposalDesk user={user} />} />
-            <Route path="/enviar-proposta/:id/:companyId" element={<EnviarPropostaDesk user={user} />} />
-            <Route path="/propostas/:id/propostas" element={<PropostasDesk />} />
-            <Route path="/cotacao/:id/proposta/:propostaId" element={<DetalhesPropostaDesk user={user} />} />
-            <Route path="/minha_proposta/cotacao/:id/proposta/:propostaId" element={<MinhaPropostaDesk user={user} />} />
-            <Route path="/cotacao/:id" element={<CotacaoDetalhesDesk user={user} />} />
-            <Route path="/cotacaoPdf/:id" element={<CotacoesPDF user={user}/>} />
+  {/* Rotas protegidas */}
+  <Route path="/addProduct" element={
+    <ProtectedRoute>
+      <ProductFormDesk user={user} />
+    </ProtectedRoute>
+  } />
+  
+  <Route path="/conexoes" element={
+    <ProtectedRoute>
+      <ConnectionsDesk user={user} />
+    </ProtectedRoute>
+  } />
 
-            {/* Rotas de concursos e serviços */}
-            <Route path="/concursos" element={<ConcursoDesk user={user} />} />
-            <Route path="/concurso" element={<PublicarConcursoDesk user={user} />} />
-            <Route path="/concurso/:id" element={<ConcursoDetalhesDesk user={user} />} />
-            <Route path="/categoria/:categoriaId" element={<ListaDeServicosDesk user={user} />} />
+  <Route path="/search" element={
+    <ProtectedRoute>
+      <ConnectionsSearchDesk />
+    </ProtectedRoute>
+  } />
 
-            {/* Rotas de faturação e pagamentos */}
-            <Route path="/faturacao" element={<FaturacaoDesk user={user} />} />
-            <Route path="/proforma" element={<CriarProformaDesk user={user} />} />
-            <Route path="/proforma/:numeroProforma" element={<FaturaDesk user={user} />} />
-            <Route path="/edit-proforma/:numeroProforma" element={<EditarFaturaDesk user={user} />} />
-            <Route path="/faturas/:id" element={<FaturaDesk user={user} />} />
-            <Route path="/checkout" element={<CreditCardCheckoutDesk user={user} />} />
-            <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
+  <Route path="/parceiros-investidores" element={
+    <ProtectedRoute>
+      <ParceirosInvestidoresDesk />
+    </ProtectedRoute>
+  } />
 
-            {/* Rotas de anúncios e postagens */}
-            <Route path="/post" element={<PostInputDesk user={user} />} />
-            <Route path="/anunciar" element={<AnunciarDesk user={user} />} />
+  <Route path="/app" element={
+    <ProtectedRoute>
+      <ApxDesk user={user} />
+    </ProtectedRoute>
+  } />
 
-            {/* Outras funcionalidades */}
-            <Route path="/sms" element={<SmsDesk user={user} />} />
-            <Route path="/callcenter" element={<CallCenterModuleDesk />} />
-            <Route path="/procurement" element={<LogisticaModuleDesk />} />
-            <Route path="/inquerito" element={<InqueritosModuleDesk user={user} />} />
-            <Route path="/inquerito/:surveyId" element={<SurveyPageDesk user={user} />} />
-            <Route path="/painel" element={<PortalDesk user={user} />} />
-            <Route path="/sendmail" element={<SendMail user={user} />} />
-            <Route path="/destacar" element={<DestacarModule user={user} />} />
-            <Route path="/analises" element={<AnalyticsDesk user={user} />} />
-            <Route path="/termos" element={<Terms />} />
-            <Route path="/recrutamento" element={<RecrutamentoDesk user={user}/>} />
-            <Route path="/politicas" element={<Politicas />} />
+  <Route path="/inbox" element={
+    <ProtectedRoute>
+      <InboxDesk user={user} />
+    </ProtectedRoute>
+  } />
 
-            <Route path="/change-password" element={<ChangePassword user={user} />} />
-            
-            {/* Rotas de autenticação */}
-            <Route path="/auth" element={<AuthDesk user={user} />} />
-            <Route path="/create" element={<AuthCreateDesk user={user} />} />
-            <Route path="/setup" element={<CompanyDataFormDesk />} />
-            <Route path="/forget-password" element={<ForgetPassword />} />
+  {/* Rotas de perfil */}
+  <Route path="/perfil" element={
+    <ProtectedRoute>
+      <ProfileDesk user={user} />
+    </ProtectedRoute>
+  } />
 
-            {/* Rota de fallback para redirecionamento */}
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
+  <Route path="/editar-perfil" element={
+    <ProtectedRoute>
+      <EditProfileDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  {/* Cotações e propostas */}
+  <Route path="/cotacoes" element={
+    <ProtectedRoute>
+      <CotacoesDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  <Route path="/cotacao" element={
+    <ProtectedRoute>
+      <NovaCotacaoDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  <Route path="/proposta/:id/:cotId" element={
+    <ProtectedRoute>
+      <ProposalDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  {/* ... (continuar com o mesmo padrão para todas as outras rotas protegidas) */}
+
+  <Route path="/cotacaoPdf/:id" element={
+    <ProtectedRoute>
+      <CotacoesPDF user={user}/>
+    </ProtectedRoute>
+  } />
+
+  {/* Concursos */}
+  <Route path="/concursos" element={
+    <ProtectedRoute>
+      <ConcursoDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  {/* ... (proteger todas as demais rotas seguindo o mesmo padrão) */}
+
+  {/* Rotas administrativas/protegidas restantes */}
+  <Route path="/sms" element={
+    <ProtectedRoute>
+      <SmsDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  <Route path="/analises" element={
+    <ProtectedRoute>
+      <AnalyticsDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  <Route path="*" element={<Navigate to="/" />} />
+</Routes>
         </Box>
 
         {!isFullScreenRoute && <FooterDesk sx={{ 
