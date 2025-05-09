@@ -58,7 +58,7 @@ const NovaCotacao = ({ user }) => {
   const [selectedProvincias, setSelectedProvincias] = useState([]);
   const [provincias, setProvincias] = useState([]);
   const [sectores, setSectores] = useState([]);
-const [openSectorSelect, setOpenSectorSelect] = useState(false);
+  const [openSectorSelect, setOpenSectorSelect] = useState(false);
 
   useEffect(() => {
     const fetchSectores = async () => {
@@ -78,49 +78,44 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
         setFormData(prev => ({ ...prev, selectedSubsector: [] }));
         return;
       }
+      
       const provinciasRef = ref(db, 'provincias');
       onValue(provinciasRef, (snapshot) => {
         const provinciasData = snapshot.val() || [];
         setProvincias(provinciasData);
       });
+      
       const sectorRef = ref(db, `sectores_de_atividade`);
       onValue(sectorRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
           const sectorData = Object.values(data).find((s) => s.setor === formData.sector);
-          setSubsectores(sectorData?.subsectores || []);
-          setFormData(prev => ({ ...prev, selectedSubsector: [] }));
+          const validSubsectores = (sectorData?.subsectores || []).filter(s => s);
+          setSubsectores(validSubsectores);
+          setFormData(prev => ({ 
+            ...prev, 
+            selectedSubsector: prev.selectedSubsector.filter(s => validSubsectores.includes(s))
+          }));
         } else {
           setSubsectores([]);
           setFormData(prev => ({ ...prev, selectedSubsector: [] }));
         }
       });
     };
-    fetchSectores()
+    
+    fetchSectores();
     fetchSubsectores();
   }, [formData.sector]);
 
   const handleChangeInpt = (e) => {
     const input = e.target.value;
-
-    // Remover todos os caracteres não numéricos (como vírgulas e espaços)
     const soNumeros = input.replace(/\D/g, "");
-    
-    // Converte para número e divide por 100
     const valor = Number(soNumeros) / 100;
-
-    // Atualiza o estado com o valor numérico
-    setFormData((prev) => ({
-      ...prev,
-      maxProposals: valor,
-    }));
-
-    // Formata o valor como moeda para exibição no input
     const formattedValue = formatCurrency(input);
 
-    // Atualiza o campo formatado no estado
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
+      maxProposals: valor,
       valor: formattedValue,
     }));
   };
@@ -154,6 +149,10 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
 
   const handleSubsectorChange = (event) => {
     const value = event.target.value;
+    const filteredValue = Array.isArray(value) 
+      ? value.filter(item => item !== undefined && item !== null && item !== '')
+      : [];
+
     if (value.includes("all")) {
       if (formData.selectedSubsector.length === subsectores.length) {
         setFormData(prev => ({ ...prev, selectedSubsector: [] }));
@@ -162,7 +161,8 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
       }
       return;
     }
-    setFormData(prev => ({ ...prev, selectedSubsector: value }));
+    
+    setFormData(prev => ({ ...prev, selectedSubsector: filteredValue }));
   };
 
   const handleCloseProvinciaSelect = () => {
@@ -244,6 +244,9 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
     e.preventDefault();
     if (!validateForm()) return;
 
+    // Filtrar valores undefined do selectedSubsector
+    const filteredSubsectors = formData.selectedSubsector.filter(item => item !== undefined && item !== null && item !== '');
+    
     setLoading(true);
     setSnackbarMessage('');
 
@@ -253,8 +256,9 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
       const cotacaoId = newCotacaoRef.key;
       const linkDoPedido = `https://app.connectionmozambique.com/cotacao/${cotacaoId}`;
 
-      await set(ref(db, `cotacoes/${cotacaoId}`), {
+      const cotacaoData = {
         ...formData,
+        selectedSubsector: filteredSubsectors,
         id: cotacaoId,
         company: {
           nome: user.nome,
@@ -272,13 +276,18 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
         datalimite: new Date(formData.deadline).toISOString(),
         status: 'open',
         link: linkDoPedido,
-        proposalLimit: formData.proposalLimit || null, 
-      });
+        proposalLimit: formData.proposalLimit || null,
+      };
+
+      console.log('Dados a serem enviados:', cotacaoData); // Log para depuração
+
+      await set(ref(db, `cotacoes/${cotacaoId}`), cotacaoData);
 
       setSnackbarMessage('Cotação publicada com sucesso!');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
 
+      // Enviar notificações para empresas do mesmo setor
       const empresasRef = ref(db, 'company');
       const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.sector.trim()));
       const empresasSnapshot = await get(setorQuery);
@@ -307,6 +316,7 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
         }
       }
 
+      // Resetar formulário após sucesso
       setFormData({
         title: '',
         description: '',
@@ -388,7 +398,7 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
           
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+              <FormControl fullWidth>
                 <InputLabel>Setor de Atividade</InputLabel>
                 <Select
                   value={formData.sector}
@@ -399,7 +409,6 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                   label="Setor de Atividade"
                   required
                 >
-                  {/* Opção de Fechar */}
                   <MenuItem onClick={handleCloseSectorSelect}>
                     <ListItemIcon>
                       <Close fontSize="small" />
@@ -416,8 +425,9 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                 </Select>
               </FormControl>
             </Grid>
+            
             <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+              <FormControl fullWidth>
                 <InputLabel>Subsectores</InputLabel>
                 <Select
                   multiple
@@ -429,7 +439,6 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                   label="Subsectores"
                   renderValue={(selected) => selected.join(', ')}
                 >
-                  {/* Opção "Selecionar Todos" */}
                   <MenuItem value="all">
                     <ListItemIcon>
                       <Checkbox
@@ -443,7 +452,6 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                     <ListItemText primary="Selecionar Todos" />
                   </MenuItem>
 
-                  {/* Opção "Fechar" */}
                   <MenuItem onClick={handleCloseSubsectorSelect}>
                     <ListItemIcon>
                       <Close fontSize="small" />
@@ -451,6 +459,7 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                     <ListItemText primary="Fechar" />
                   </MenuItem>
                   <Divider />
+                  
                   {subsectores.map((subsector) => (
                     <MenuItem key={subsector} value={subsector}>
                       <Checkbox checked={formData.selectedSubsector.includes(subsector)} />
@@ -460,6 +469,7 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                 </Select>
               </FormControl>
             </Grid>
+            
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
                 <InputLabel>Província(s)</InputLabel>
@@ -475,7 +485,6 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                   required
                   renderValue={(selected) => selected.join(', ')}
                 >
-                  {/* Opção "Todas" */}
                   <MenuItem value="all">
                     <ListItemIcon>
                       <Checkbox
@@ -489,7 +498,6 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
                     <ListItemText primary="Todas as Províncias" />
                   </MenuItem>
 
-                  {/* Opção "Fechar" */}
                   <MenuItem onClick={handleCloseProvinciaSelect}>
                     <ListItemIcon>
                       <Close fontSize="small" />
@@ -499,7 +507,6 @@ const [openSectorSelect, setOpenSectorSelect] = useState(false);
 
                   <Divider />
 
-                  {/* Lista de províncias */}
                   {provincias.map((provinciaObj, index) => (
                     <MenuItem key={index} value={provinciaObj.provincia}>
                       <Checkbox checked={selectedProvincias.includes(provinciaObj.provincia)} />
