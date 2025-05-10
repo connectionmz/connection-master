@@ -221,7 +221,7 @@ const CriarProformaDesk = ({ user }) => {
         dataCriacao: serverTimestamp() 
       });
 
-      const proformaLink = `https://app.connectionmozambique.com/proforma/${numeroProforma}`;
+      const proformaLink = `https://connectionmozambique.com/proforma/${numeroProforma}`;
 
       const notification = {
         type: 'invoice_generate',

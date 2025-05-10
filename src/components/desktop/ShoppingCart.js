@@ -252,34 +252,12 @@ const MyCart = ({
                 <Typography>Subtotal:</Typography>
                 <Typography>{formatPrice(total)}</Typography>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography>Entrega:</Typography>
-                <Typography>A calcular</Typography>
-              </Box>
+             
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Typography variant="h6">Total:</Typography>
                 <Typography variant="h6">{formatPrice(total)}</Typography>
               </Box>
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                startIcon={<Payment />}
-                onClick={onCheckout}
-                sx={{ mb: 1 }}
-              >
-                Finalizar Compra
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                startIcon={<LocalShipping />}
-                onClick={() => alert('Calcular frete')}
-              >
-                Calcular Frete
-              </Button>
             </Box>
           </>
         )}

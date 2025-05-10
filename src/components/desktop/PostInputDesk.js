@@ -73,7 +73,7 @@ const PostInputDesk = ({ user }) => {
             fromUserId: user.id,
             fromUserName: user.nome,
             postId: postId,
-            link: `https://app.connectionmozambique.com/post/${postId}`,
+            link: `/post/${postId}`,
             timestamp: new Date().toISOString(),
             status: "unread",
           };
