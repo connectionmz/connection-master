@@ -40,7 +40,8 @@ import {
   Phone,
   Description,
   AttachFile,
-  ArrowBack
+  ArrowBack,
+  Email
 } from '@mui/icons-material';
 import sendEmail from '../sms/SendMail';
 
@@ -387,25 +388,28 @@ const DetalhesPropostaDesk = ({ user }) => {
               </Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Contacto
-              </Typography>
-              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Phone fontSize="small" /> {proposta.from.contacto}
-              </Typography>
-              <Link
-                  to={`/perfil/${proposta.from.email}`}
-                  style={{ textDecoration: 'none', color: '#1976d2' }} // azul padrão MUI
-                >
-              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Phone fontSize="small" /> {proposta.from.email}
-              </Typography>
-              </Link>
-            </Grid>
+            <Typography variant="subtitle2" color="text.secondary">
+              Contacto
+            </Typography>
+
+            {/* Link para chamada telefónica */}
+            <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Phone fontSize="small" />
+              <a href={`tel:${proposta.from.contacto}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
+                {proposta.from.contacto}
+              </a>
+            </Typography>
+            {/* Link para enviar email */}
+            <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Email fontSize="small" />
+              <a href={`mailto:${proposta.from.email}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
+                {proposta.from.email}
+              </a>
+            </Typography>
+          </Grid>
           </Grid>
         </CardContent>
       </Card>
-
       {/* Proposal Content */}
       <Card sx={{ mb: 3, borderRadius: 2 }}>
         <CardContent>
