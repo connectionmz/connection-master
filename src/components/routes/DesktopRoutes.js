@@ -89,6 +89,7 @@ import PagamentoModulo from '../PagamentoModulo';
 import CriarProformaDesk from '../desktop/CriarProformaDesk';
 import FaturaDesk from '../desktop/FaturaDesk';
 import VerificationAccountModal from '../modal/VerificationAccountModal';
+import VerFaturaDesk from '../desktop/VerFaturaDesk';
 
 const theme = createTheme({
   palette: {
@@ -513,6 +514,21 @@ const renderProtectedRoute = (path, element) => (
   </ProtectedRoute>
 } />
 
+<Route
+  path="/verproforma/:numeroProforma/sender/:sender"
+  element={
+    <ProtectedRoute>
+      <VerFaturaDesk user={user} />
+    </ProtectedRoute>
+  }
+/>
+
+
+<Route path="/proforma/:numeroProforma" element={
+  <ProtectedRoute>
+    <FaturaDesk user={user} />
+  </ProtectedRoute>
+} />
 <Route path="/concurso" element={
   <ProtectedRoute>
     <PublicarConcursoDesk user={user} />

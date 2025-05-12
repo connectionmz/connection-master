@@ -164,19 +164,18 @@ const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total }) => (
   </Document>
 );
 
-const FaturaDesk = ({ user }) => {
+const VerFaturaDesk = ({ user }) => {
   const faturaRef = useRef();
   const barcodeRef = useRef();
   const [fatura, setFatura] = useState(null);
   const [error, setError] = useState(null);
-  const { numeroProforma } = useParams();
-
+  const { numeroProforma, sender } = useParams();
 
   useEffect(() => {
     const fetchProforma = async () => {
       try {
         const proformaSnap = await get(
-          ref(db, `invoices/${user.id}/${numeroProforma}`)
+          ref(db, `invoices/${sender}/${numeroProforma}`)
         );
           setFatura(proformaSnap.val());
       console.log(proformaSnap.val())
@@ -401,4 +400,4 @@ const FaturaDesk = ({ user }) => {
   );
 };
 
-export default FaturaDesk;
+export default VerFaturaDesk;

@@ -291,23 +291,24 @@ const CotacaoDetalhesDesk = ({ user }) => {
                   </Grid>
                   <Grid item>
                   <Typography
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: isMobile ? '0.8rem' : '1rem'
-                      }}
-                      component={Link}
-                      to={`/propostas/${id}/propostas`}
-                      style={{ textDecoration: 'none' }}
-                      color="primary"
-                    >
-                      <Inbox color="warning" sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} />
-                      {propostas.length} propostas
-                    </Typography>
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontSize: isMobile ? '0.8rem' : '1rem',
+                          cursor: user?.id === cotacao?.company?.id ? 'pointer' : 'default'
+                        }}
+                        component={user?.id === cotacao?.company?.id ? Link : 'div'}
+                        to={user?.id === cotacao?.company?.id ? `/propostas/${id}/propostas` : undefined}
+                        style={{ textDecoration: 'none' }}
+                        color="primary"
+                      >
+                        <Inbox color="warning" sx={{ mr: 1, fontSize: isMobile ? '1rem' : '1.25rem' }} />
+                        {propostas.length} propostas
+                      </Typography>
+
                   </Grid>
                 </Grid>
               </Box>
-              
               <Box mt={2}>
                 <Grid container spacing={isMobile ? 1 : 2} direction={isMobile ? 'column' : 'row'}>
                   <Grid item>
