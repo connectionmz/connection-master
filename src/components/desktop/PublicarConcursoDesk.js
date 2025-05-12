@@ -456,7 +456,7 @@ const PublicarConcursoDesk = ({ user }) => {
                     required
                     margin="normal"/>
                 <FormControl fullWidth margin="normal">
-                    <InputLabel>Província(s) abrangidas pelo concurso público</InputLabel>
+                    <InputLabel>Província(s) abrangidas pelo concurso</InputLabel>
                     <Select
                         multiple
                         name="provincia"

@@ -458,9 +458,16 @@ const CotacaoDetalhesDesk = ({ user }) => {
   </Stack>
 </CardActions>
       </Card>
-
-      {/* Description Card */}
       <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
+      <CardContent>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
+            Titulo:
+          </Typography>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
+            {cotacao?.title || 'N/A'}
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </CardContent>
         <CardContent>
           <Typography variant="h6" gutterBottom fontWeight="bold">
             Descrição
