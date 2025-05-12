@@ -630,6 +630,11 @@ const renderProtectedRoute = (path, element) => (
     <AnunciarDesk user={user} />
   </ProtectedRoute>
 } />
+<Route path="/analises" element={
+  <ProtectedRoute>
+    <AnalyticsDesk user={user} />
+  </ProtectedRoute>
+} />
 
 <Route path="/callcenter" element={
   <ProtectedRoute>

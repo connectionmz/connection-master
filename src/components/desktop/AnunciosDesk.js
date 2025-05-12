@@ -351,12 +351,13 @@ const AnunciosDesk = ({ campanhas, user }) => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
-          }}>
+            }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <BusinessIcon />
+              <Link to={`/perfil/${companies[selectedBanner.companyId]?.nome}`}>
               <Typography variant="h6">
                 {companies[selectedBanner.companyId]?.nome || 'Detalhes do Anúncio'}
               </Typography>
+              </Link>
             </Box>
             <IconButton onClick={handleCloseDialog} sx={{ color: 'common.white' }}>
               <CloseIcon />

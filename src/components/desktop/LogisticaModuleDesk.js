@@ -53,7 +53,6 @@ const LogisticaModuleDesk = () => {
       boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.08)'
     }}>
       <BackButton sx={{ mb: 3 }} />
-      
       <Typography 
         variant="h4" 
         gutterBottom 
@@ -61,11 +60,9 @@ const LogisticaModuleDesk = () => {
           fontWeight: 'bold', 
           color: 'primary.main',
           mb: 3
-        }}
-      >
+        }}>
         Procurement - Soluções Personalizadas
       </Typography>
-      
       <Typography 
         variant="body1" 
         sx={{ 
@@ -73,18 +70,17 @@ const LogisticaModuleDesk = () => {
           mb: 4,
           fontSize: '1.1rem',
           lineHeight: 1.6
-        }}
-      >
+        }}>
+        O módulo funciona mediante contrato formal. 
         Nosso módulo de Procurement oferece uma experiência otimizada para empresas que necessitam de eficiência na busca e entrega de soluções.
-      </Typography>
-      
+    </Typography>
       <Paper sx={{ 
         p: isMobile ? 2 : 3, 
         mb: 4, 
         backgroundColor: 'background.paper',
         borderRadius: 3,
         borderLeft: `4px solid ${theme.palette.primary.main}`
-      }}>
+        }}>
         <List disablePadding>
           {features.map((feature, index) => (
             <React.Fragment key={index}>
@@ -100,8 +96,7 @@ const LogisticaModuleDesk = () => {
                         fontWeight: 'bold',
                         color: 'text.primary',
                         mb: 0.5
-                      }}
-                    >
+                      }}>
                       {feature.title}
                     </Typography>
                   }
@@ -111,8 +106,7 @@ const LogisticaModuleDesk = () => {
                       sx={{ 
                         color: 'text.secondary',
                         lineHeight: 1.5
-                      }}
-                    >
+                      }}>
                       {feature.description}
                     </Typography>
                   }
@@ -133,8 +127,7 @@ const LogisticaModuleDesk = () => {
           mb: 3,
           textAlign: 'center',
           fontSize: '1.1rem'
-        }}
-      >
+        }}>
         Para mais informações, entre em contato:
       </Typography>
       

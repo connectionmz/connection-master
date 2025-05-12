@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { db } from '../../fb';
+import { db2 } from '../../fb';
 
 const Explore = React.memo(({ user }) => {
   const [companies, setCompanies] = useState([]);
@@ -51,7 +51,7 @@ const Explore = React.memo(({ user }) => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const companiesRef = ref(db, 'company');
+        const companiesRef = ref(db2, 'company');
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
@@ -71,15 +71,15 @@ const Explore = React.memo(({ user }) => {
     };
     
 
-    onValue(ref(db, 'provincias'), (snapshot) => {
+    onValue(ref(db2, 'provincias'), (snapshot) => {
       setProvincias(snapshot.val() || []);
     });
 
-    onValue(ref(db, 'sectores_de_atividade'), (snapshot) => {
+    onValue(ref(db2, 'sectores_de_atividade'), (snapshot) => {
       setSectores(snapshot.val() || []);
     });
 
-    onValue(ref(db, 'tipos_entidades'), (snapshot) => {
+    onValue(ref(db2, 'tipos_entidades'), (snapshot) => {
       setTiposEntidades(snapshot.val() || []);
     });
 

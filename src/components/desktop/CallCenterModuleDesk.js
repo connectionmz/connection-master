@@ -151,7 +151,7 @@ const CallCenterModuleDesk = () => {
           lineHeight: 1.6
         }}
       >
-        O módulo funciona mediante contrato. As empresas que utilizam este módulo podem gerenciar suas chamadas, garantindo que todas as
+        O módulo funciona mediante contrato formal. As empresas que utilizam este módulo podem gerenciar suas chamadas, garantindo que todas as
         solicitações sejam tratadas com a devida atenção.
       </Typography>
       

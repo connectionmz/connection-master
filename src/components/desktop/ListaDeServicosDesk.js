@@ -124,20 +124,25 @@ const ListaDeServicosDesk = ({ user }) => {
       </Typography>
       <Typography variant="body1" sx={{ marginBottom: 2, whiteSpace: 'pre-line' }}>
         {showFullDescription ? servicos.notes : truncatedDescription}
-        {servicos.notes && servicos.notes.length > maxDescriptionLength && (
-          <Button
-            onClick={toggleDescription}
-            sx={{
-              color: '#1976d2',
-              textTransform: 'none',
-              fontWeight: 'bold',
-              marginLeft: 1,
-            }}
-          >
-            {showFullDescription ? 'ver menos' : 'ver mais'}
-          </Button>
-        )}
       </Typography>
+        {servicos.notes && servicos.notes.length > maxDescriptionLength && (
+          <Box sx={{ textAlign: 'left', mt: 1 }}>
+            <Button
+              onClick={toggleDescription}
+              sx={{
+                color: '#1976d2',
+                textTransform: 'none',
+                fontWeight: 'bold',
+                padding: 0,
+                minHeight: 0,
+                minWidth: 0,
+              }}
+            >
+              {showFullDescription ? 'ver menos' : 'ver mais'}
+            </Button>
+          </Box>
+        )}
+
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
