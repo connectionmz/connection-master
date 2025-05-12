@@ -370,7 +370,7 @@ const MinhaPropostaDesk = ({ user }) => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <Typography variant="subtitle2" color="text.secondary">
-                Status
+                Estado da aprovação desta proposta
               </Typography>
               <Typography variant="body1">
                 {statusLabels[proposta.status] || 'Pendente'}
