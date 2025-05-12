@@ -279,15 +279,12 @@ const NovaCotacao = ({ user }) => {
         proposalLimit: formData.proposalLimit || null,
       };
 
-      console.log('Dados a serem enviados:', cotacaoData); // Log para depuração
-
       await set(ref(db, `cotacoes/${cotacaoId}`), cotacaoData);
 
       setSnackbarMessage('Cotação publicada com sucesso!');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
 
-      // Enviar notificações para empresas do mesmo setor
       const empresasRef = ref(db, 'company');
       const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.sector.trim()));
       const empresasSnapshot = await get(setorQuery);
@@ -316,7 +313,6 @@ const NovaCotacao = ({ user }) => {
         }
       }
 
-      // Resetar formulário após sucesso
       setFormData({
         title: '',
         description: '',

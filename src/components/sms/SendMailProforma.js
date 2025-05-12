@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const sendEmailProposta = async (to,emailMessage) => {
+const SendMailProforma = async (to,emailMessage) => {
 
   console.log(emailMessage)
 
@@ -30,4 +30,4 @@ const sendEmailProposta = async (to,emailMessage) => {
   }
 };
 
-export default sendEmailProposta;
+export default SendMailProforma;

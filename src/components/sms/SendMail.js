@@ -2,9 +2,6 @@ import axios from 'axios';
 
 const sendEmail = async (to,emailMessage) => {
 
-
-  console.log(to)
-
   const textContent = `
   Um novo pedido de cotação foi publicado para o seu setor.
 
@@ -27,7 +24,6 @@ const sendEmail = async (to,emailMessage) => {
     subject: "Novo Pedido de Cotação Disponível",
         text:textContent, 
   };
-
   try {
     const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData);
     console.log('E-mail enviado com sucesso:', response.data);

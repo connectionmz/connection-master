@@ -56,7 +56,6 @@ import Terms from '../Termos';
 import Politicas from '../desktop/Politicas';
 import { Close } from '@mui/icons-material';
 import CompanyUpdateDesk from '../CompanyUpdateDesk';
-
 import ReceiptsPage from '../desktop/ReceiptsPage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -65,13 +64,11 @@ import AuthCreateDesk from '../AuthCreateDesk';
 import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
 import ListaInqueritos from '../desktop/ListaInqueritos';
 import ProdutoPage from '../market/ProdutoPage';
-
 import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
 import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
 import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
 import PropostasDesk from '../desktop/PropostasDesk';
 import EnviarPropostaDesk from '../desktop/EnviarPropostaDesk';
-
 import EditarFaturaDesk from '../desktop/EditarFaturaDesk';
 import AnalyticsDesk from '../desktop/AnalyticsDesk';
 import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
@@ -81,7 +78,6 @@ import CreditCardCheckoutDesk from '../checkout/CreditCardCheckoutDesk';
 import SurveyPageDesk from '../desktop/SurveyPageDesk';
 import DestacarModule from '../desktop/DestacarModule';
 import SendMail from '../sms/SendMail';
-
 import PortalDesk from '../desktop/PortalDesk';
 import ListaDeServicosDesk from '../desktop/ListaDeServicosDesk';
 import PostInputDesk from '../desktop/PostInputDesk';

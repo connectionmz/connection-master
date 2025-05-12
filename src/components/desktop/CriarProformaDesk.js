@@ -31,6 +31,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import sendEmail from '../sms/SendMail';
 import { formatPrice } from '../../utils/utils';
 import { saveContentToInbox } from '../SaveToInbox';
+import SendMailProforma from '../sms/SendMailProforma';
 
 const CriarProformaDesk = ({ user }) => {
   const [cliente, setCliente] = useState(null); // Armazenar o objeto completo do cliente
@@ -262,7 +263,7 @@ const CriarProformaDesk = ({ user }) => {
           Contacto ${user.contacto || 'da '}
         `;
   
-        const emailSent = await sendEmail(clienteLimpo.email, title, finalMessage);
+        const emailSent = await SendMailProforma(clienteLimpo.email, title, finalMessage);
   
         if (!emailSent) {
           setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');

@@ -26,10 +26,12 @@ import BackButton from '../BackButton';
 import sendEmail from '../sms/SendMail';
 import { saveContentToInbox } from '../SaveToInbox';
 import { CheckCircle } from '@mui/icons-material';
+import sendEmailProposta from '../sms/SendMailProposal';
 
 const EnviarPropostaDesk = ({ user }) => {
   const { id, companyId } = useParams();
   const [description, setDescription] = useState('');
+  const [companyEmail, setCompanyEmail] = useState('')
   const [anexo, setAnexo] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -75,16 +77,23 @@ const EnviarPropostaDesk = ({ user }) => {
 
   useEffect(() => {
     const checkProposal = async () => {
-      const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
+      const cotacaoRef = ref(db, `cotacoes/${id}`);
       try {
-        onValue(proposalsRef, (snapshot) => {
-          const proposals = snapshot.val();
-          const userProposal = Object.values(proposals || []);
-          if (userProposal.length > 0) {
-            setHasProposal(true);
-          } else {
-            setHasProposal(false);
-          }
+        onValue(cotacaoRef, (cotacaoSnapshot) => {
+          const cotacaoData = cotacaoSnapshot.val();
+          const companyEmail = cotacaoData?.company?.email;
+
+          setCompanyEmail(companyEmail);
+          
+          // Encode the email to make it Firebase path-safe
+          const encodedUserEmail = encodeURIComponent(user.email).replace(/[.$#[\]%]/g, '_');
+          
+          const proposalsRef = ref(db, `cotacoes/${id}/proposals/${encodedUserEmail}`);
+          onValue(proposalsRef, (snapshot) => {
+            const proposals = snapshot.val();
+            const userProposal = Object.values(proposals || {});
+            setHasProposal(userProposal.length > 0);
+          });
         });
       } catch (error) {
         console.error('Erro ao verificar proposta:', error);
@@ -92,11 +101,14 @@ const EnviarPropostaDesk = ({ user }) => {
         setErrorAlert(true);
       }
     };
+  
     checkProposal();
+  
     return () => {
       setHasProposal(false);
     };
-  }, [id, user.id]);
+  }, [id]);
+  
 
   const handleAnexoChange = (e) => {
     if (e.target.files[0]) {
@@ -192,12 +204,16 @@ const notification = {
   proposalId: proposalId,
 };
 
-  // Agora salva a proposta
   await set(newProposalRef, newProposal);
 
     try {
+     
       await set(proposalsRef, newProposal);
+     
       saveContentToInbox(companyId, notification);
+     
+      sendEmailProposta(companyEmail, notification)
+     
       setSuccessAlert(true);
       setDescription('');
       setAnexo(null);
