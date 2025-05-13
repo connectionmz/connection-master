@@ -25,7 +25,6 @@ const InqueritosList = ({ user }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(3);
 
-  // Função para embaralhar array
   const shuffleArray = (array) => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -35,7 +34,6 @@ const InqueritosList = ({ user }) => {
     return newArray;
   };
 
-  // Busca todos os inquéritos
   const fetchInqueritos = useCallback(async () => {
     try {
       setLoading(true);
@@ -44,22 +42,28 @@ const InqueritosList = ({ user }) => {
       
       if (snapshot.exists()) {
         const surveysData = snapshot.val();
-        console.log(surveysData)
+  
         const formattedSurveys = Object.keys(surveysData).map(key => ({
           id: key,
           ...surveysData[key]
         }));
-        setInqueritos(shuffleArray(formattedSurveys)); // Embaralha ao carregar
+  
+        const filteredSurveys = formattedSurveys.filter(
+          (survey) => survey.company?.id !== user.id
+        );
+  
+        setInqueritos(shuffleArray(filteredSurveys));
       }
+  
       setLoading(false);
     } catch (err) {
       console.error("Erro ao carregar inquéritos:", err);
       setError("Erro ao carregar inquéritos");
       setLoading(false);
     }
-  }, []);
+  }, [user.id]);
+  
 
-  // Busca os inquéritos respondidos pelo usuário
   const fetchRespondedSurveys = useCallback(async () => {
     if (!user?.id || !user?.provincia || !user?.sector) return;
 
@@ -89,7 +93,6 @@ const InqueritosList = ({ user }) => {
     fetchRespondedSurveys();
   }, [fetchInqueritos, fetchRespondedSurveys]);
 
-  // Filtra os inquéritos: não respondidos E direcionados ao usuário
   const inqueritosFiltrados = inqueritos.filter(inquerito => {
     const isForUserProvince = !inquerito.provincias || 
                              inquerito.provincias.length === 0 || 
@@ -104,12 +107,10 @@ const InqueritosList = ({ user }) => {
     return isForUserProvince && isForUserSector && notResponded && user;
   });
 
-  // Atualiza a página quando os dados mudam
   useEffect(() => {
     setPage(0);
   }, [inqueritosFiltrados]);
 
-  // Manipuladores de paginação
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -174,7 +175,7 @@ const InqueritosList = ({ user }) => {
       boxShadow: 2,
       backgroundColor: theme.palette.background.paper
     }}>
-      <Link to={'/inqueritos'}>
+      <Link to={'/inqueritos'} style={{textDecoration:'underline'}}>
       <Typography variant="h6" fontWeight="bold">
         Inquéritos ({inqueritosFiltrados.length})
       </Typography>

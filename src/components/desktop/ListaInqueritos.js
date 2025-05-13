@@ -36,6 +36,7 @@ import { ptBR } from 'date-fns/locale';
 import BackButton from '../BackButton';
 
 const ListaInqueritos = ({ user }) => {
+
   const [inqueritos, setInqueritos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,7 +45,6 @@ const ListaInqueritos = ({ user }) => {
   const itemsPerPage = 10;
   const navigate = useNavigate();
 
-  // Buscar todos os inquéritos
   useEffect(() => {
     const inqueritosRef = ref(db, 'surveys');
     setLoading(true);

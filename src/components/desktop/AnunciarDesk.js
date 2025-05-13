@@ -473,7 +473,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [days, setDays] = useState(1);
+  const [days, setDays] = useState('');
   const [totalCost, setTotalCost] = useState(30);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -852,17 +852,23 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       <Box mb={2}>
         <Typography>Tempo do anúncio (1 a 30 dias): *</Typography>
         <TextField
-          type="number"
-          value={days}
-          onChange={(e) => {
-            const value = parseInt(e.target.value) || 0;
-            if (value >= 1 && value <= 30) {
-              setDays(value);
-            }
-          }}
-          inputProps={{ min: 1, max: 30 }}
-          fullWidth
-        />
+  type="number"
+  value={days}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === "") {
+      setDays(""); // Permite apagar
+    } else {
+      const parsed = parseInt(value);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 30) {
+        setDays(parsed);
+      }
+    }
+  }}
+  inputProps={{ min: 1, max: 30 }}
+  fullWidth
+/>
+
       </Box>
 
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>

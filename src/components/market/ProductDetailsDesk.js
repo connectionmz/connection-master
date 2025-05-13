@@ -302,10 +302,9 @@ const ProductDetailsDesk = ({user}) => {
                       height: 40, 
                       mr: 2,
                       border: `1px solid ${theme.palette.divider}`
-                    }}
-                  />
+                    }}/>
                 </Badge>
-                <Link to={`/perfil/${storeInfo.company.id}`} style={{ textDecoration: 'none', cursor:'pointer' }}>
+                <a href={`/perfil/${storeInfo.company.id}`} style={{ textDecoration: 'none', cursor:'pointer' }}>
                 <Box>
                   <Typography variant="subtitle1" fontWeight="bold" color="primary">
                     {storeInfo.company.nome}
@@ -314,8 +313,7 @@ const ProductDetailsDesk = ({user}) => {
                   {storeInfo.company.provincia}
                 </Typography>
               </Box>
-              </Link>
-
+              </a>
                 <Button 
                   component={Link}
                   href={`/loja/${store}`}
@@ -323,12 +321,10 @@ const ProductDetailsDesk = ({user}) => {
                   size="small" 
                   startIcon={<StoreIcon />}
                   sx={{ ml: 'auto' }}
-                >
-                  Ver Loja
+                >Ver Loja
                 </Button>
               </Box>
             )}
-
             <Typography variant={isMobile ? "h5" : "h4"} gutterBottom fontWeight="bold">
               {product.name}
             </Typography>
@@ -339,7 +335,6 @@ const ProductDetailsDesk = ({user}) => {
             
             <Divider sx={{ my: 2 }} />
             
-            {/* Pricing Section */}
             <Box sx={{ mb: 3 }}>
               {showPrices ? (
                 product.discountPrice ? (

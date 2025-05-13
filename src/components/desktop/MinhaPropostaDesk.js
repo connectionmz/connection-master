@@ -396,11 +396,11 @@ const MinhaPropostaDesk = ({ user }) => {
           variant="contained"
           color="error"
           sx={{ px: 4, py: 1.5, borderRadius: 2 }}
+          disabled={proposta.status} // desabilita se status for true
         >
           Eliminar Proposta
         </Button>
       </Box>
-
       {/* Message Snackbar */}
       <Snackbar
         open={message.open}

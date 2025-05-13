@@ -19,7 +19,7 @@ import {
   DialogActions
 } from '@mui/material';
 import { auth, db } from './fb';
-import { ref, onValue, remove, set } from 'firebase/database';
+import { ref, onValue, remove, set, get } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
@@ -51,53 +51,48 @@ const App = () => {
     provincia: ''
   });
 
-  const fetchUserDataRealtime = (user) => {
+  const fetchUserDataRealtime = async (user) => {
     try {
       const userRef = ref(db, `company/${user.uid}`);
-
-      const unsubscribe = onValue(userRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          setUserData({
-            ...data,
-            photoURL: data.logoUrl || 'https://via.placeholder.com/150',
-            displayName: data.nome || 'Nome da Empresa',
-            endereco: data.endereco || 'Endereço não informado',
-            isAnonymous: user.isAnonymous,
-          });
-        } else {
-          setUserData(null);
-        }
-        setLoading(false);
-      });
-
-      return unsubscribe;
+      const snapshot = await get(userRef);
+  
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setUserData({
+          ...data,
+          photoURL: data.logoUrl || 'https://via.placeholder.com/150',
+          displayName: data.nome || 'Nome da Empresa',
+          endereco: data.endereco || 'Endereço não informado',
+          isAnonymous: user.isAnonymous,
+        });
+      } else {
+        setUserData(null);
+      }
     } catch (error) {
       SaveLogError('app', error);
       setError('Erro ao carregar dados do usuário. Tente novamente mais tarde.');
+    } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const unsubscribeRealtime = fetchUserDataRealtime(user);
-        return unsubscribeRealtime;
+        await fetchUserDataRealtime(user); 
       } else {
         setUserData(null);
         setLoading(false);
-        
-        // Verifica se é um visitante (pode ser armazenado no localStorage)
+  
         const isVisitor = localStorage.getItem('isVisitor') === 'true';
         if (!isVisitor) {
           setShowVisitorModal(true);
         }
       }
     });
-
+  
     return () => unsubscribeAuth();
   }, []);
+  
 
   const handleVisitorSubmit = async () => {
     try {

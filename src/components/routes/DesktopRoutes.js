@@ -679,7 +679,6 @@ const renderProtectedRoute = (path, element) => (
 
 </Routes>
         </Box>
-
         {!isFullScreenRoute && <FooterDesk sx={{ 
   flexShrink: 0,
   marginTop: 'auto' 

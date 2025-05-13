@@ -237,7 +237,6 @@ const CriarProformaDesk = ({ user }) => {
 
       saveContentToInbox(cliente.id, notification);
 
-
       if (clienteLimpo && clienteLimpo.email) {
         const title = `Proforma ${numeroProforma}`;
         const finalMessage = `
@@ -262,7 +261,7 @@ const CriarProformaDesk = ({ user }) => {
           Email ${user.email || 'da '}
           Contacto ${user.contacto || 'da '}
         `;
-  
+   
         const emailSent = await SendMailProforma(clienteLimpo.email, title, finalMessage);
   
         if (!emailSent) {
