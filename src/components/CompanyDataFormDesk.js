@@ -12,13 +12,16 @@ import {
   Alert,
   FormControlLabel,
   Checkbox,
-  ListItemText
+  ListItemText,
+  ListItemIcon,
+  Divider
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { get, ref, set, push } from 'firebase/database';
 import { auth, db } from '../fb';
 import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { signOut } from 'firebase/auth';
+import { Close } from '@mui/icons-material';
 
 // Reorganizando os passos para começar com o tipo de entidade
 const steps = ['Tipo de Entidade', 'Informações Básicas', 'Endereço & Contacto', 'Setor & Capacidade', 'Upload de Logotipo'];
@@ -36,6 +39,8 @@ const CompanyDataFormDesk = () => {
   const [subtiposEntidade, setSubtiposEntidade] = useState([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [hasOptionalFiscalFields, setHasOptionalFiscalFields] = useState(false);
+  const [openSubsectorSelect, setOpenSubsectorSelect] = useState(false);
+// Add similar states for other select fields if needed
   const [companyData, setCompanyData] = useState({
     nome: '',
     sigla: '',
@@ -104,6 +109,11 @@ const CompanyDataFormDesk = () => {
     const foundEntidade = tiposEntidades.find(ent => ent.tipo === selectedTipoEntidade);
     setSubtiposEntidade(foundEntidade ? foundEntidade.subtipos : []);
   };
+
+  const handleCloseSelect = (setter) => () => {
+    setter(false);
+  };
+
 
   const handleProvinceChange = (e) => {
     const selectedProvince = e.target.value;
@@ -523,27 +533,74 @@ const CompanyDataFormDesk = () => {
               </TextField>
 
               {subsectores.length > 0 && (
-                <TextField
-                  select
-                  label="Subsetores"
-                  name="subsectores"
-                  value={companyData.subsectores}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  SelectProps={{
-                    multiple: true,
-                    renderValue: (selected) => selected.join(', '), // mostra os selecionados
-                  }}
-                >
-                  {subsectores.map((sub) => (
-                    <MenuItem key={sub} value={sub}>
-                      <Checkbox checked={companyData.subsectores.includes(sub)} />
-                      <ListItemText primary={sub} />
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
+  <TextField
+    select
+    label="Subsetores"
+    name="subsectores"
+    value={companyData.subsectores}
+    onChange={(e) => {
+      // Handle "Select All" case
+      if (e.target.value.includes("all")) {
+        if (companyData.subsectores.length === subsectores.length) {
+          // If all are already selected, deselect all
+          handleChange({
+            target: {
+              name: "subsectores",
+              value: [],
+            },
+          });
+        } else {
+          // Select all subsectores
+          handleChange({
+            target: {
+              name: "subsectores",
+              value: [...subsectores],
+            },
+          });
+        }
+      } else {
+        // Normal selection
+        handleChange(e);
+      }
+    }}
+    fullWidth
+    margin="normal"
+    SelectProps={{
+      multiple: true,
+      open: openSubsectorSelect,
+      onClose: handleCloseSelect(setOpenSubsectorSelect),
+      onOpen: () => setOpenSubsectorSelect(true),
+      renderValue: (selected) => selected.join(', '),
+    }}
+  >
+    <MenuItem onClick={handleCloseSelect(setOpenSubsectorSelect)}>
+      <ListItemIcon>
+        <Close fontSize="small" />
+      </ListItemIcon>
+      <ListItemText primary="Fechar" />
+    </MenuItem>
+    <MenuItem value="all">
+      <ListItemIcon>
+        <Checkbox
+          checked={companyData.subsectores.length === subsectores.length && subsectores.length > 0}
+          indeterminate={
+            companyData.subsectores.length > 0 && 
+            companyData.subsectores.length < subsectores.length
+          }
+        />
+      </ListItemIcon>
+      <ListItemText primary="Selecionar Todos" />
+    </MenuItem>
+    <Divider />
+
+    {subsectores.map((sub) => (
+      <MenuItem key={sub} value={sub}>
+        <Checkbox checked={companyData.subsectores.includes(sub)} />
+        <ListItemText primary={sub} />
+      </MenuItem>
+    ))}
+  </TextField>
+)}
           </Box>
         );
       case 4: // Upload de Logotipo

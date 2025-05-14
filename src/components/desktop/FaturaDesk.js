@@ -15,6 +15,14 @@ import {
   Button,
   CircularProgress,
   Alert,
+  useMediaQuery,
+  Grid,
+  Card,
+  CardContent,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import { db } from '../../fb';
 import BackButton from '../BackButton';
@@ -72,7 +80,6 @@ const styles = StyleSheet.create({
 
 // PDF Document Component
 const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total }) => (
-  
   <Document>
     <Page size="A4" style={styles.page}>
       {/* Header */}
@@ -136,41 +143,39 @@ const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total }) => (
       </View>
 
       <View style={styles.footer}>
-  {/* Seção de Totais - alinhada à direita */}
-  <View style={{ 
-    display: 'flex', 
-    flexDirection: 'row', 
-    justifyContent: 'flex-end',
-    borderTop: '1px solid #ccc',
-    paddingTop: 5,
-    marginTop: 5
-  }}>
-    <View style={{ width: '30%', textAlign: 'right' }}>
-      <Text>Subtotal:{formatPrice(subtotal.toFixed(2))} MT</Text>
-      <Text>IVA: {iva.toFixed(2)} MT</Text>
-      <Text style={{ fontWeight: 'bold' }}>Total: {formatPrice(total.toFixed(2))} MT</Text>
-    </View>
-  </View>
+        <View style={{ 
+          display: 'flex', 
+          flexDirection: 'row', 
+          justifyContent: 'flex-end',
+          borderTop: '1px solid #ccc',
+          paddingTop: 5,
+          marginTop: 5
+        }}>
+          <View style={{ width: '30%', textAlign: 'right' }}>
+            <Text>Subtotal:{formatPrice(subtotal.toFixed(2))} MT</Text>
+            <Text>IVA: {iva.toFixed(2)} MT</Text>
+            <Text style={{ fontWeight: 'bold' }}>Total: {formatPrice(total.toFixed(2))} MT</Text>
+          </View>
+        </View>
 
-  {/* Mensagem de rodapé - centralizada e abaixo dos totais */}
-  <View style={{ 
-    marginTop: 15, // Espaço entre os totais e a mensagem
-    textAlign: 'center' // Centraliza o texto
-  }}>
-    <Text>Obrigado pela sua preferência!</Text>
-  </View>
-</View>
+        <View style={{ 
+          marginTop: 15,
+          textAlign: 'center'
+        }}>
+          <Text>Obrigado pela sua preferência!</Text>
+        </View>
+      </View>
     </Page>
   </Document>
 );
 
 const FaturaDesk = ({ user }) => {
+  const isMobile = useMediaQuery('(max-width:600px)');
   const faturaRef = useRef();
   const barcodeRef = useRef();
   const [fatura, setFatura] = useState(null);
   const [error, setError] = useState(null);
   const { numeroProforma } = useParams();
-
 
   useEffect(() => {
     const fetchProforma = async () => {
@@ -178,8 +183,7 @@ const FaturaDesk = ({ user }) => {
         const proformaSnap = await get(
           ref(db, `invoices/${user.id}/${numeroProforma}`)
         );
-          setFatura(proformaSnap.val());
-      console.log(proformaSnap.val())
+        setFatura(proformaSnap.val());
       } catch (err) {
         setError("Erro ao carregar proforma.");
       }
@@ -202,22 +206,259 @@ const FaturaDesk = ({ user }) => {
     }
   }, [numeroProforma]);
 
-  const subtotal =
-    fatura?.itens?.reduce(
-      (acc, item) => acc + Number(item.quantidade) * Number(item.preco),
-      0
-    ) || 0;
+  const subtotal = fatura?.itens?.reduce(
+    (acc, item) => acc + Number(item.quantidade) * Number(item.preco),
+    0
+  ) || 0;
   const iva = subtotal * 0.16;
   const total = subtotal + iva;
+
+  const renderDesktopView = () => (
+    <Paper
+      ref={faturaRef}
+      elevation={3}
+      sx={{
+        width: "210mm",
+        minHeight: "297mm",
+        p: 3,
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+        <Box>
+          <img
+            src={user?.logoUrl || "/imagens/default-logo.png"}
+            alt="Logotipo"
+            style={{ width: 100 }}
+          />
+          <Typography variant="h6" color="error" fontWeight="bold">
+            {user.nome}
+          </Typography>
+          <Typography variant="body2">
+            {user.endereco}, {user.distrito}
+          </Typography>
+        </Box>
+        <Box textAlign="right">
+          <Typography variant="h4" fontWeight="bold" color="text.primary">
+            PROFORMA{" "}
+            <Typography color="error">
+              {numeroProforma}
+            </Typography>
+          </Typography>
+          <Typography variant="body2">
+            Data: {fatura.dataEmissao}
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Client Info */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          mb: 3,
+          fontSize: "0.875rem",
+        }}
+      >
+        <Box>
+          <Typography fontWeight="bold">Para:</Typography>
+          <Typography>
+            {fatura.cliente?.nome || "Cliente Desconhecido"}
+          </Typography>
+          <Typography>{fatura.cliente?.morada}</Typography>
+          <Typography>Nuit: {fatura.cliente?.nuit}</Typography>
+          <Typography>{fatura.cliente?.contacto}</Typography>
+          <Typography>{fatura.cliente?.email}</Typography>
+        </Box>
+        <Box textAlign="right">
+          <Typography fontWeight="bold">De:</Typography>
+          <Typography>{user.nome}</Typography>
+          <Typography>Nuit: {user.nuit}</Typography>
+          <Typography>{user.contacto}</Typography>
+          <Typography>{user.email}</Typography>
+          <Typography>{user.endereco}</Typography>
+        </Box>
+      </Box>
+
+      {/* Table */}
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: "error.main" }}>
+              <TableCell sx={{ color: "white" }}>Quantidade</TableCell>
+              <TableCell sx={{ color: "white" }}>Descrição</TableCell>
+              <TableCell sx={{ color: "white" }}>Preço Unitário(MT)</TableCell>
+              <TableCell sx={{ color: "white" }}>Total (MT)</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {fatura.itens.map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>{Number(item.quantidade)}</TableCell>
+                <TableCell>{item.descricao}</TableCell>
+                <TableCell>
+                  {Number(item.preco).toFixed(2)} 
+                </TableCell>
+                <TableCell>
+                  {(
+                    Number(item.quantidade) * Number(item.preco)
+                  ).toFixed(2)}{" "}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Summary */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          mt: 3,
+          fontSize: "0.875rem",
+        }}
+      >
+        <Box>
+          <Typography>Subtotal:</Typography>
+          <Typography>IVA:</Typography>
+          <Typography fontWeight="bold">Total:</Typography>
+        </Box>
+        <Box textAlign="right">
+          <Typography>{formatPrice(subtotal.toFixed(2))} MT</Typography>
+          <Typography>{iva.toFixed(2)} MT</Typography>
+          <Typography fontWeight="bold">{formatPrice(total.toFixed(2))} MT</Typography>
+        </Box>
+      </Box>
+
+      {/* Footer */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          fontSize: "0.875rem",
+          color: "text.secondary",
+          p: 2,
+          textAlign: 'center',
+        }}
+      >
+        <Typography>Obrigado pela sua preferência!</Typography>
+        <Typography>
+          Tel: {user.contacto} | Email: {user.email}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+
+  const renderMobileView = () => (
+    <Card elevation={3} sx={{ p: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Box>
+          <Typography variant="h6" color="error" fontWeight="bold">
+            {user.nome}
+          </Typography>
+          <Typography variant="body2">
+            {user.endereco}, {user.distrito}
+          </Typography>
+        </Box>
+        <Box textAlign="right">
+          <Typography variant="h6" fontWeight="bold">
+            PROFORMA {numeroProforma}
+          </Typography>
+          <Typography variant="body2">
+            Data: {fatura.dataEmissao}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Client Info */}
+      <Box mb={3}>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          Cliente
+        </Typography>
+        <Typography>{fatura.cliente?.nome || "Cliente Desconhecido"}</Typography>
+        <Typography variant="body2">{fatura.cliente?.morada}</Typography>
+        <Typography variant="body2">Nuit: {fatura.cliente?.nuit}</Typography>
+        <Typography variant="body2">Contacto: {fatura.cliente?.contacto}</Typography>
+        <Typography variant="body2">Email: {fatura.cliente?.email}</Typography>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Items List */}
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        Itens
+      </Typography>
+      <List>
+        {fatura.itens.map((item, index) => (
+          <React.Fragment key={index}>
+            <ListItem>
+              <ListItemText
+                primary={item.descricao}
+                secondary={
+                  <>
+                    <Typography component="span" display="block">
+                      Quantidade: {Number(item.quantidade)}
+                    </Typography>
+                    <Typography component="span" display="block">
+                      Preço Unitário: {Number(item.preco).toFixed(2)} MT
+                    </Typography>
+                    <Typography component="span" display="block">
+                      Total: {(Number(item.quantidade) * Number(item.preco)).toFixed(2)} MT
+                    </Typography>
+                  </>
+                }
+              />
+            </ListItem>
+            <Divider />
+          </React.Fragment>
+        ))}
+      </List>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Summary */}
+      <Box>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          Resumo
+        </Typography>
+        <Box display="flex" justifyContent="space-between">
+          <Typography>Subtotal:</Typography>
+          <Typography>{formatPrice(subtotal.toFixed(2))} MT</Typography>
+        </Box>
+        <Box display="flex" justifyContent="space-between">
+          <Typography>IVA:</Typography>
+          <Typography>{iva.toFixed(2)} MT</Typography>
+        </Box>
+        <Box display="flex" justifyContent="space-between" fontWeight="bold">
+          <Typography>Total:</Typography>
+          <Typography>{formatPrice(total.toFixed(2))} MT</Typography>
+        </Box>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Footer */}
+      <Box textAlign="center">
+        <Typography variant="body2">Obrigado pela sua preferência!</Typography>
+        <Typography variant="body2">
+          Tel: {user.contacto} | Email: {user.email}
+        </Typography>
+      </Box>
+    </Card>
+  );
 
   return (
     <Box
       sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        p: 2,
+        p: isMobile ? 1 : 3,
         bgcolor: "background.default",
       }}
     >
@@ -226,149 +467,10 @@ const FaturaDesk = ({ user }) => {
       {error && <Alert severity="error">{error}</Alert>}
       {fatura ? (
         <>
-          <Paper
-            ref={faturaRef}
-            elevation={3}
-            sx={{
-              width: "210mm",
-              minHeight: "297mm",
-              p: 3,
-              display: "flex",
-              flexDirection: "column",
-              position: "relative",
-            }}
-          >
-            {/* Header */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
-              <Box>
-                <img
-                  src={user?.logoUrl || "/imagens/default-logo.png"}
-                  alt="Logotipo"
-                  style={{ width: 100 }}
-                />
-                <Typography variant="h6" color="error" fontWeight="bold">
-                  {user.nome}
-                </Typography>
-                <Typography variant="body2">
-                  {user.endereco}, {user.distrito}
-                </Typography>
-              </Box>
-              <Box textAlign="right">
-                <Typography variant="h4" fontWeight="bold" color="text.primary">
-                  PROFORMA{" "}
-                  <Typography color="error">
-                    {numeroProforma}
-                  </Typography>
-                </Typography>
-                <Typography variant="body2">
-                  Data: {fatura.dataEmissao}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Informações do Cliente */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                mb: 3,
-                fontSize: "0.875rem",
-              }}
-            >
-              <Box>
-                <Typography fontWeight="bold">Para:</Typography>
-                <Typography>
-                  {fatura.cliente?.nome || "Cliente Desconhecido"}
-                </Typography>
-                <Typography>{fatura.cliente?.morada}</Typography>
-                <Typography>Nuit: {fatura.cliente?.nuit}</Typography>
-                <Typography>{fatura.cliente?.contacto}</Typography>
-                <Typography>{fatura.cliente?.email}</Typography>
-              </Box>
-              <Box textAlign="right">
-                <Typography fontWeight="bold">De:</Typography>
-                <Typography>{user.nome}</Typography>
-                <Typography>Nuit: {user.nuit}</Typography>
-                <Typography>{user.contacto}</Typography>
-                <Typography>{user.email}</Typography>
-                <Typography>{user.endereco}</Typography>
-                <Typography>Av. 25 de Setembro, Pemba</Typography>
-              </Box>
-            </Box>
-
-            {/* Tabela */}
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: "error.main" }}>
-                    <TableCell sx={{ color: "white" }}>Quantidade</TableCell>
-                    <TableCell sx={{ color: "white" }}>Descrição</TableCell>
-                    <TableCell sx={{ color: "white" }}>Preço Unitário(MT)</TableCell>
-                    <TableCell sx={{ color: "white" }}>Total (MT)</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {fatura.itens.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{Number(item.quantidade)}</TableCell>
-                      <TableCell>{item.descricao}</TableCell>
-                      <TableCell>
-                        {Number(item.preco).toFixed(2)} 
-                      </TableCell>
-                      <TableCell>
-                        {(
-                          Number(item.quantidade) * Number(item.preco)
-                        ).toFixed(2)}{" "}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {/* Resumo */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                mt: 3,
-                fontSize: "0.875rem",
-              }}
-            >
-              <Box>
-                <Typography>Subtotal:</Typography>
-                <Typography>IVA:</Typography>
-                <Typography fontWeight="bold">Total:</Typography>
-              </Box>
-              <Box textAlign="right">
-                <Typography>{formatPrice(subtotal.toFixed(2))} MT</Typography>
-                <Typography>{iva.toFixed(2)} MT</Typography>
-                <Typography fontWeight="bold">{formatPrice(total.toFixed(2))} MT</Typography>
-              </Box>
-            </Box>
-
-            {/* Rodapé fixo */}
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                fontSize: "0.875rem",
-                color: "text.secondary",
-                p: 2,
-                textAlign: 'center',
-              }}
-            >
-              <Typography>Obrigado pela sua preferência!</Typography>
-              <Typography>
-                Tel: {user.contacto} | Email: {user.email}
-              </Typography>
-            </Box>
-          </Paper>
+          {isMobile ? renderMobileView() : renderDesktopView()}
           
           {/* PDF Download Button */}
-          <Box sx={{ mt: 3 }}>
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
             <PDFDownloadLink
               document={
                 <FaturaPDF
@@ -387,6 +489,8 @@ const FaturaDesk = ({ user }) => {
                   variant="contained"
                   color="primary"
                   disabled={loading}
+                  fullWidth={isMobile}
+                  size={isMobile ? "medium" : "large"}
                 >
                   {loading ? 'Preparando PDF...' : 'Baixar PDF'}
                 </Button>
@@ -395,7 +499,9 @@ const FaturaDesk = ({ user }) => {
           </Box>
         </>
       ) : (
-        <CircularProgress />
+        <Box display="flex" justifyContent="center" p={4}>
+          <CircularProgress />
+        </Box>
       )}
     </Box>
   );

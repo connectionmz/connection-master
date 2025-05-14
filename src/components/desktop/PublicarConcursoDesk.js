@@ -68,6 +68,7 @@ const PublicarConcursoDesk = ({ user }) => {
     const [tiposEntidades, setTiposEntidades] = useState([]);
     const [openProvinciaSelect, setOpenProvinciaSelect] = useState(false);
     const [selectedProvincias, setSelectedProvincias] = useState([]);
+    const [openTipoEntidadeSelect, setOpenTipoEntidadeSelect] = useState(false);
 
     useEffect(() => {
         const provinciasRef = ref(db, 'provincias');
@@ -520,24 +521,71 @@ const PublicarConcursoDesk = ({ user }) => {
                     </Select>
                 </FormControl>
                 <FormControl fullWidth margin="normal">
-                    <InputLabel>Tipo de Entidade</InputLabel>
-                    <Select
-                        multiple
-                        name="tipoEntidade"
-                        value={formData.tipoEntidade}
-                        onChange={handleTipoEntidadeChange}
-                        label="Tipo de Entidade"
-                        required
-                        renderValue={(selected) => selected.join(', ')}
-                    >
-                        {tiposEntidades.map((tipoObj, index) => (
-                            <MenuItem key={index} value={tipoObj.tipo}>
-                                <Checkbox checked={formData.tipoEntidade.includes(tipoObj.tipo)} />
-                                <ListItemText primary={tipoObj.tipo} />
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+  <InputLabel>Tipo de Entidade *</InputLabel>
+  <Select
+    multiple
+    name="tipoEntidade"
+    value={formData.tipoEntidade}
+    onChange={(e) => {
+      // Handle "Select All" case
+      if (e.target.value.includes("all")) {
+        if (formData.tipoEntidade.length === tiposEntidades.length) {
+          // If all are already selected, deselect all
+          handleTipoEntidadeChange({
+            target: {
+              name: "tipoEntidade",
+              value: [],
+            },
+          });
+        } else {
+          // Select all tipos
+          handleTipoEntidadeChange({
+            target: {
+              name: "tipoEntidade",
+              value: tiposEntidades.map(t => t.tipo),
+            },
+          });
+        }
+      } else {
+        // Normal selection
+        handleTipoEntidadeChange(e);
+      }
+    }}
+    label="Tipo de Entidade *"
+    required
+    renderValue={(selected) => selected.join(', ')}
+    open={openTipoEntidadeSelect}
+    onClose={() => setOpenTipoEntidadeSelect(false)}
+    onOpen={() => setOpenTipoEntidadeSelect(true)}
+  >
+    <MenuItem onClick={() => setOpenTipoEntidadeSelect(false)}>
+      <ListItemIcon>
+        <Close fontSize="small" />
+      </ListItemIcon>
+      <ListItemText primary="Fechar" />
+    </MenuItem>
+    <MenuItem value="all">
+      <ListItemIcon>
+        <Checkbox
+          checked={formData.tipoEntidade.length === tiposEntidades.length && tiposEntidades.length > 0}
+          indeterminate={
+            formData.tipoEntidade.length > 0 && 
+            formData.tipoEntidade.length < tiposEntidades.length
+          }
+        />
+      </ListItemIcon>
+      <ListItemText primary="Selecionar Todos" />
+    </MenuItem>
+    <Divider />
+
+    {tiposEntidades.map((tipoObj, index) => (
+      <MenuItem key={index} value={tipoObj.tipo}>
+        <Checkbox checked={formData.tipoEntidade.includes(tipoObj.tipo)} />
+        <ListItemText primary={tipoObj.tipo} />
+      </MenuItem>
+    ))}
+  </Select>
+</FormControl>
 
                 <TextField
                     fullWidth

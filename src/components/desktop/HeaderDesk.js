@@ -20,7 +20,6 @@ import {
   Alert
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
-import SearchIcon from "@mui/icons-material/Search";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
 import GavelIcon from "@mui/icons-material/Gavel";
 import DomainIcon from "@mui/icons-material/Domain";
@@ -58,7 +57,6 @@ const HeaderDesk = ({ user }) => {
   ];
 
   const handleNavigation = (path) => {
-    // Skip verification check if user is not logged in
     if (!user) return true;
     
     if (!isVerify && protectedRoutes.includes(path)) {
@@ -281,11 +279,13 @@ const HeaderDesk = ({ user }) => {
               </Link>
             </Typography>
           </Box>
+          
           {isMobile ? (
-            <>
+            <Box display="flex" alignItems="center">
               <IconButton onClick={toggleDrawer(true)}>
                 <MenuIcon />
               </IconButton>
+              
               <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
                 <List>
                   {navItems.map((item, index) => (
@@ -303,11 +303,24 @@ const HeaderDesk = ({ user }) => {
                       <ListItemText primary={item.label} />
                     </ListItem>
                   ))}
+                  {publicPanel && (
+                    <ListItem
+                      button
+                      component={Link}
+                      to="/painel"
+                      onClick={toggleDrawer(false)}
+                    >
+                      <ListItemIcon>
+                        <DomainIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Painel Público" />
+                    </ListItem>
+                  )}
                 </List>
               </Drawer>
-            </>
+            </Box>
           ) : (
-            <>
+            <Box display="flex" alignItems="center" gap={2}>
               {renderNavItems()}
               {publicPanel && (
                 <Button
@@ -323,12 +336,11 @@ const HeaderDesk = ({ user }) => {
                   Ir para Painel Público
                 </Button>
               )}
-            </>
+            </Box>
           )}
         </Toolbar>
       </AppBar>
 
-      {/* Verification Alert - Only shows for logged-in, unverified users */}
       {user && (
         <Snackbar
           open={showVerificationAlert}
@@ -361,6 +373,7 @@ const HeaderDesk = ({ user }) => {
           </Alert>
         </Snackbar>
       )}
+      
       {user && !isVerify && (
         <Box 
           sx={{
