@@ -282,7 +282,6 @@ const FaturaDesk = ({ user }) => {
           <Typography>{user.endereco}</Typography>
         </Box>
       </Box>
-
       {/* Table */}
       <TableContainer>
         <Table>
@@ -423,8 +422,6 @@ const FaturaDesk = ({ user }) => {
       </List>
 
       <Divider sx={{ my: 2 }} />
-
-      {/* Summary */}
       <Box>
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
           Resumo

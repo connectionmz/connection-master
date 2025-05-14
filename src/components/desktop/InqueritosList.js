@@ -61,7 +61,7 @@ const InqueritosList = ({ user }) => {
       setError("Erro ao carregar inquéritos");
       setLoading(false);
     }
-  }, [user.id]);
+  });
   
 
   const fetchRespondedSurveys = useCallback(async () => {
