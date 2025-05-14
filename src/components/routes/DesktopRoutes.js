@@ -409,7 +409,7 @@ const renderProtectedRoute = (path, element) => (
   <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
   <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
   <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
-  <Route path="/inqueritos" element={<ListaInqueritos />} />
+  <Route path="/inqueritos" element={<ListaInqueritos user={user}/>} />
   <Route path="/termos" element={<Terms />} />
   <Route path="/politicas" element={<Politicas />} />
 

@@ -50,11 +50,7 @@ import BackButton from '../BackButton';
 
 // Lista de tipos de inquérito pré-definidos
 const TIPOS_INQUERITO = [
-  'Satisfação do Cliente',
   'Pesquisa de Mercado',
-  'Avaliação de Produto',
-  'Feedback de Evento',
-  'Outro'
 ];
 
 // Lista de províncias

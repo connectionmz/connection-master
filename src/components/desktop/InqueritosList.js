@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Box,
   Paper,
@@ -23,16 +23,17 @@ const InqueritosList = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(3);
+  const [rowsPerPage, setRowsPerPage] = useState(5); // Changed default to 5 for better UX
 
-  const shuffleArray = (array) => {
+  // Memoized shuffle function
+  const shuffleArray = useCallback((array) => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
     return newArray;
-  };
+  }, []);
 
   const fetchInqueritos = useCallback(async () => {
     try {
@@ -42,27 +43,24 @@ const InqueritosList = ({ user }) => {
       
       if (snapshot.exists()) {
         const surveysData = snapshot.val();
-  
-        const formattedSurveys = Object.keys(surveysData).map(key => ({
+        const formattedSurveys = Object.entries(surveysData).map(([key, value]) => ({
           id: key,
-          ...surveysData[key]
+          ...value
         }));
-  
+
         const filteredSurveys = formattedSurveys.filter(
-          (survey) => survey.company?.id !== user.id
+          (survey) => survey.company?.id !== user?.id
         );
   
-        setInqueritos(shuffleArray(filteredSurveys));
+        setInqueritos(filteredSurveys);
       }
-  
-      setLoading(false);
     } catch (err) {
       console.error("Erro ao carregar inquéritos:", err);
       setError("Erro ao carregar inquéritos");
+    } finally {
       setLoading(false);
     }
-  });
-  
+  }, [user?.id]);
 
   const fetchRespondedSurveys = useCallback(async () => {
     if (!user?.id || !user?.provincia || !user?.sector) return;
@@ -76,7 +74,7 @@ const InqueritosList = ({ user }) => {
         const respondedIds = new Set();
 
         Object.entries(responsesData).forEach(([surveyId, usersResponses]) => {
-          if (usersResponses && usersResponses[user.id]) {
+          if (usersResponses?.[user.id]) {
             respondedIds.add(surveyId);
           }
         });
@@ -89,23 +87,25 @@ const InqueritosList = ({ user }) => {
   }, [user]);
 
   useEffect(() => {
-    fetchInqueritos();
-    fetchRespondedSurveys();
+    const fetchData = async () => {
+      await Promise.all([fetchInqueritos(), fetchRespondedSurveys()]);
+    };
+    fetchData();
   }, [fetchInqueritos, fetchRespondedSurveys]);
 
-  const inqueritosFiltrados = inqueritos.filter(inquerito => {
-    const isForUserProvince = !inquerito.provincias || 
-                             inquerito.provincias.length === 0 || 
-                             inquerito.provincias.includes(user?.provincia);
-    
-    const isForUserSector = !inquerito.sectores || 
-                           inquerito.sectores.length === 0 || 
-                           inquerito.sectores.includes(user?.sector);
-    
-    const notResponded = !hasRespondedIds.has(inquerito.id);
-    
-    return isForUserProvince && isForUserSector && notResponded && user;
-  });
+  const inqueritosFiltrados = useMemo(() => {
+    return inqueritos.filter(inquerito => {
+      const isForUserProvince = !inquerito.provincias?.length || 
+                               inquerito.provincias.includes(user?.provincia);
+      
+      const isForUserSector = !inquerito.sectores?.length || 
+                             inquerito.sectores.includes(user?.sector);
+      
+      const notResponded = !hasRespondedIds.has(inquerito.id);
+      
+      return isForUserProvince && isForUserSector && notResponded && user;
+    });
+  }, [inqueritos, user, hasRespondedIds]);
 
   useEffect(() => {
     setPage(0);
@@ -175,10 +175,14 @@ const InqueritosList = ({ user }) => {
       boxShadow: 2,
       backgroundColor: theme.palette.background.paper
     }}>
-      <Link to={'/inqueritos'} style={{textDecoration:'underline'}}>
-      <Typography variant="h6" fontWeight="bold">
-        Inquéritos ({inqueritosFiltrados.length})
-      </Typography>
+      <Link to="/inqueritos" style={{ textDecoration: 'none' }}>
+        <Typography 
+          variant="h6" 
+          fontWeight="bold"
+          sx={{ color: theme.palette.primary.main, '&:hover': { textDecoration: 'underline' } }}
+        >
+          Inquéritos ({inqueritosFiltrados.length})
+        </Typography>
       </Link>
 
       {inqueritosFiltrados.length === 0 ? (
@@ -221,24 +225,16 @@ const InqueritosList = ({ user }) => {
                         </Typography>
                       }
                       secondary={
-                        <>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: theme.palette.text.secondary,
-                                mr: 2
-                              }}
-                            >
-                              {inquerito.company?.nome || "Empresa não especificada"}
-                            </Typography>
-                          </Box>
-                        </>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ color: theme.palette.text.secondary }}
+                        >
+                          {inquerito.company?.nome || "Empresa não especificada"}
+                        </Typography>
                       }
-                      secondaryTypographyProps={{ component: 'div' }}
                     />
                   </ListItem>
-                  {index < inqueritosFiltrados.length - 1 && (
+                  {index < Math.min(inqueritosFiltrados.length, rowsPerPage) - 1 && (
                     <Divider variant="inset" component="li" />
                   )}
                 </React.Fragment>
@@ -246,15 +242,16 @@ const InqueritosList = ({ user }) => {
           </List>
 
           <TablePagination
-  rowsPerPageOptions={[5, 10, 25]}
-  component="div"
-  count={inqueritosFiltrados.length}
-  rowsPerPage={rowsPerPage}
-  page={page}
-  onPageChange={handleChangePage}
-  onRowsPerPageChange={handleChangeRowsPerPage}
-  labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-/>
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={inqueritosFiltrados.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Itens por página:"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+          />
         </>
       )}
     </Paper>

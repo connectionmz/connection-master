@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -29,48 +29,102 @@ import {
   Visibility,
   Delete
 } from '@mui/icons-material';
-import { ref, onValue, remove } from 'firebase/database';
+import { ref, get, remove } from 'firebase/database';
 import { db } from '../../fb';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BackButton from '../BackButton';
 
 const ListaInqueritos = ({ user }) => {
-
   const [inqueritos, setInqueritos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('Todos');
   const [page, setPage] = useState(1);
+  const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
   const itemsPerPage = 10;
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const inqueritosRef = ref(db, 'surveys');
-    setLoading(true);
-
-    onValue(inqueritosRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const inqueritosArray = Object.keys(data).map(key => ({
+  const fetchInqueritos = useCallback(async () => {
+    try {
+      const surveysRef = ref(db, "surveys");
+      const snapshot = await get(surveysRef);
+      
+      if (snapshot.exists()) {
+        const surveysData = snapshot.val();
+        const formattedSurveys = Object.entries(surveysData).map(([key, value]) => ({
           id: key,
-          ...data[key]
+          ...value
         }));
-        setInqueritos(inqueritosArray);
-      } else {
-        setInqueritos([]);
+        setInqueritos(formattedSurveys);
       }
-      setLoading(false);
-    });
-
-    return () => {
-      // Limpar listener quando o componente desmontar
-      onValue(inqueritosRef, () => {});
-    };
+    } catch (err) {
+      console.error("Erro ao carregar inquéritos:", err);
+    }
   }, []);
 
-  // Filtrar e pesquisar inquéritos
-  const filteredInqueritos = inqueritos.filter(inquerito => {
+  const fetchRespondedSurveys = useCallback(async () => {
+    if (!user?.id || !user?.provincia || !user?.sector) return;
+
+    try {
+      const responsesRef = ref(db, "survey_responses");
+      const responsesSnapshot = await get(responsesRef);
+
+      if (responsesSnapshot.exists()) {
+        const responsesData = responsesSnapshot.val();
+        const respondedIds = new Set();
+
+        Object.entries(responsesData).forEach(([surveyId, usersResponses]) => {
+          if (usersResponses?.[user.id]) {
+            respondedIds.add(surveyId);
+          }
+        });
+
+        setHasRespondedIds(respondedIds);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar respostas:", err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([fetchInqueritos(), fetchRespondedSurveys()]);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [fetchInqueritos, fetchRespondedSurveys]);
+
+  // Filtrar inquéritos com useMemo
+  const inqueritosFiltrados = useMemo(() => {
+    return inqueritos.filter(inquerito => {
+      // Verificar se o inquérito é para a província do usuário
+      const isForUserProvince = !inquerito.provincias?.length || 
+                              inquerito.provincias.includes(user?.provincia);
+      
+      // Verificar se o inquérito é para o setor do usuário
+      const isForUserSector = !inquerito.sectores?.length || 
+                            inquerito.sectores.includes(user?.sector);
+      
+      // Verificar se o usuário já respondeu
+      const notResponded = !hasRespondedIds.has(inquerito.id);
+      
+      // Verificar se o inquérito não foi criado pelo próprio usuário
+      const notOwnInquerito = inquerito.company?.id !== user?.id;
+      
+      return isForUserProvince && isForUserSector && notResponded && notOwnInquerito && user;
+    });
+  }, [inqueritos, user, hasRespondedIds]);
+
+  // Aplicar filtros adicionais (pesquisa e tipo)
+  const filteredInqueritos = inqueritosFiltrados.filter(inquerito => {
     const matchesSearch = 
       inquerito.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inquerito.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,12 +179,12 @@ const ListaInqueritos = ({ user }) => {
     <Box sx={{ p: 3 }}>
       <BackButton sx={{ mb: 2 }} />
       <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-        Inquéritos
+        Inquéritos Disponíveis
       </Typography>
       
       {/* Barra de busca e filtros */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
             fullWidth
             variant="outlined"
@@ -144,6 +198,7 @@ const ListaInqueritos = ({ user }) => {
                 </InputAdornment>
               ),
             }}
+            sx={{ flex: '1 1 300px' }}
           />
 
           <FormControl sx={{ minWidth: 200 }}>
@@ -175,11 +230,11 @@ const ListaInqueritos = ({ user }) => {
         </Box>
       ) : filteredInqueritos.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h6">Nenhum inquérito encontrado</Typography>
+          <Typography variant="h6">Nenhum inquérito disponível</Typography>
           <Typography variant="body1" sx={{ mt: 1 }}>
             {searchTerm || filterTipo !== 'Todos' 
               ? 'Tente ajustar seus critérios de busca' 
-              : 'Nenhum inquérito foi cadastrado ainda'}
+              : 'Não há inquéritos disponíveis para seu perfil ou você já respondeu a todos'}
           </Typography>
         </Paper>
       ) : (
@@ -224,23 +279,18 @@ const ListaInqueritos = ({ user }) => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {inquerito.provincia?.slice(0, 2).map((p, i) => (
+                        {inquerito.provincias?.slice(0, 2).map((p, i) => (
                           <Chip 
                             key={i} 
-                            label={p.provincia} 
+                            label={p} 
                             size="small" 
                             variant="outlined"
                           />
                         ))}
-                        {inquerito.provincia?.length > 2 && (
-                          <Tooltip 
-                            title={inquerito.provincia
-                              .slice(2)
-                              .map(p => p.provincia)
-                              .join(', ')}
-                          >
+                        {inquerito.provincias?.length > 2 && (
+                          <Tooltip title={inquerito.provincias.slice(2).join(', ')}>
                             <Chip 
-                              label={`+${inquerito.provincia.length - 2}`} 
+                              label={`+${inquerito.provincias.length - 2}`} 
                               size="small"
                             />
                           </Tooltip>
@@ -252,18 +302,13 @@ const ListaInqueritos = ({ user }) => {
                         {inquerito.sectores?.slice(0, 2).map((s, i) => (
                           <Chip 
                             key={i} 
-                            label={s.setor} 
+                            label={s} 
                             size="small" 
                             variant="outlined"
                           />
                         ))}
                         {inquerito.sectores?.length > 2 && (
-                          <Tooltip 
-                            title={inquerito.sectores
-                              .slice(2)
-                              .map(s => s.setor)
-                              .join(', ')}
-                          >
+                          <Tooltip title={inquerito.sectores.slice(2).join(', ')}>
                             <Chip 
                               label={`+${inquerito.sectores.length - 2}`} 
                               size="small"
@@ -285,14 +330,16 @@ const ListaInqueritos = ({ user }) => {
                             <Visibility />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Excluir">
-                          <IconButton 
-                            color="error"
-                            onClick={() => handleDelete(inquerito.id)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
+                        {user?.id === inquerito.company?.id && (
+                          <Tooltip title="Excluir">
+                            <IconButton 
+                              color="error"
+                              onClick={() => handleDelete(inquerito.id)}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                       </Box>
                     </TableCell>
                   </TableRow>
