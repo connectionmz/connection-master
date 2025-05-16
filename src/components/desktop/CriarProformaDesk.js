@@ -202,18 +202,27 @@ const CriarProformaDesk = ({ user }) => {
       // Limpar o objeto cliente para remover propriedades undefined
       const clienteLimpo = cliente
         ? {
-            nome: cliente.nome || '',
-            nuit: cliente.nuit || '',
-            contacto: cliente.contacto || '',
-            morada: cliente.morada || '',
-            email: cliente.email || '',
+            nome: cliente.nome || 'N/A',
+            nuit: cliente.nuit || 'N/A',
+            contacto: cliente.contacto || 'N/A',
+            morada: cliente.morada || 'N/A',
+            email: cliente.email || 'N/A',
           }
         : null;
+
+        const emissor = {
+          nome: user.nome || 'N/A',
+          nuit: user.nuit || 'N/A',
+          contacto: user.contacto || 'N/A',
+          morada: user.morada || 'N/A',
+          email: user.email || 'N/A',
+        }
   
       const newProformaRef = ref(db, `invoices/${user.id}/${numeroProforma}`);
       await set(newProformaRef, {
         numeroProforma,
         cliente: clienteLimpo,
+        emissor:emissor,
         dataEmissao,
         dataVencimento,
         itens,
@@ -222,7 +231,7 @@ const CriarProformaDesk = ({ user }) => {
         dataCriacao: serverTimestamp() 
       });
 
-      const proformaLink = `/verproforma/${numeroProforma}/sender/${user.id}`;
+      const proformaLink = `https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id}`;
 
       const notification = {
         type: 'invoice_generate',
