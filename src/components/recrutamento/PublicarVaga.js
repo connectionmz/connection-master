@@ -50,7 +50,6 @@ const PublicarVaga = ({
     salario: '',
     subAreas: []
   });
-
   const [selectedArea, setSelectedArea] = useState('');
   const [availableSubAreas, setAvailableSubAreas] = useState([]);
   const [provincias, setProvincias] = useState([]);
@@ -59,7 +58,7 @@ const PublicarVaga = ({
   const [loadingDistritos, setLoadingDistritos] = useState(false);
   const [distritosEnabled, setDistritosEnabled] = useState(false);
 
-  // Quill editor modules
+  // Configuração do editor Quill
   const quillModules = {
     toolbar: [
       ['bold', 'italic', 'underline', 'strike'],
@@ -79,6 +78,7 @@ const PublicarVaga = ({
     ],
   };
 
+  // Carregar lista de províncias do Firebase
   useEffect(() => {
     const buscarProvincias = async () => {
       setLoadingProvincias(true);
@@ -87,9 +87,9 @@ const PublicarVaga = ({
         onValue(provinciasRef, (snapshot) => {
           const data = snapshot.val();
           if (data) {
-            const provinciasArray = data.map((provincia, index) => ({
-              id: index.toString(),
-              nome: provincia.provincia
+            const provinciasArray = Object.values(data).map((p) => ({
+              id: p.provincia,
+              nome: p.provincia
             }));
             setProvincias(provinciasArray);
           } else {
@@ -98,15 +98,15 @@ const PublicarVaga = ({
           setLoadingProvincias(false);
         });
       } catch (error) {
-        console.error('Erro ao buscar províncias:', error);
+        console.error('Erro ao carregar províncias:', error);
         setProvincias([]);
         setLoadingProvincias(false);
       }
     };
-
     buscarProvincias();
   }, []);
 
+  // Carregar distritos quando uma província é selecionada
   useEffect(() => {
     if (vagaData.provincias.length === 1) {
       setDistritosEnabled(true);
@@ -117,13 +117,14 @@ const PublicarVaga = ({
           onValue(provinciasRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-              const provinciaId = vagaData.provincias[0];
-              const provincia = data[provinciaId];
-              const distritosArray = provincia?.distritos?.map((distrito, index) => ({
-                id: `${provinciaId}-${index}`,
-                nome: distrito,
-                provinciaId: provinciaId
+              const provinciaNome = vagaData.provincias[0];
+              const provincia = Object.values(data).find(p => p.provincia === provinciaNome);
+
+              const distritosArray = provincia?.distritos?.map((d, index) => ({
+                id: `${provinciaNome}-${index}`,
+                nome: d
               })) || [];
+
               setDistritos(distritosArray);
             } else {
               setDistritos([]);
@@ -131,7 +132,7 @@ const PublicarVaga = ({
             setLoadingDistritos(false);
           });
         } catch (error) {
-          console.error('Erro ao buscar distritos:', error);
+          console.error('Erro ao carregar distritos:', error);
           setDistritos([]);
           setLoadingDistritos(false);
         }
@@ -148,6 +149,7 @@ const PublicarVaga = ({
     }
   }, [vagaData.provincias]);
 
+  // Atualizar subáreas com base na área principal
   useEffect(() => {
     if (selectedArea && areasAtuacao[selectedArea]) {
       setAvailableSubAreas(areasAtuacao[selectedArea]);
@@ -157,6 +159,7 @@ const PublicarVaga = ({
     }
   }, [selectedArea, areasAtuacao]);
 
+  // Funções de manipulação de estado
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
@@ -219,7 +222,6 @@ const PublicarVaga = ({
       ...vagaData.areas,
       ...vagaData.subAreas
     ];
-
     onPublicarVaga({
       ...vagaData,
       areas: areasCompletas,
@@ -239,7 +241,6 @@ const PublicarVaga = ({
       >
         Publicar Nova Vaga
       </Button>
-
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>
           <Box display="flex" alignItems="center">
@@ -247,13 +248,9 @@ const PublicarVaga = ({
             <Typography variant="h6">Publicar Nova Vaga</Typography>
           </Box>
         </DialogTitle>
-        
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-              Informações Básicas
-            </Typography>
-            
+            {/* Informações Básicas */}
             <TextField
               label="Título da Vaga *"
               value={vagaData.titulo}
@@ -262,7 +259,6 @@ const PublicarVaga = ({
               variant="outlined"
               size="small"
             />
-
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Descrição Completa da Vaga *
@@ -276,48 +272,42 @@ const PublicarVaga = ({
               />
             </Box>
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-              Detalhes da Vaga
-            </Typography>
-
+            {/* Detalhes da Vaga */}
             <Grid container spacing={2}>
-  <Grid item xs={6}>
-    <FormControl fullWidth size="small">
-      <InputLabel>Tipo de Vaga</InputLabel>
-      <Select
-        value={vagaData.tipo}
-        onChange={(e) => handleChange('tipo', e.target.value)}
-        label="Tipo de Vaga"
-      >
-        <MenuItem value="Vaga permanente">Vaga permanente</MenuItem>
-        <MenuItem value="Vaga temporária">Vaga temporária</MenuItem>
-        <MenuItem value="Vaga sazonal">Vaga sazonal</MenuItem>
-        <MenuItem value="Vaga ocasional">Vaga ocasional</MenuItem>
-        <MenuItem value="Vaga a tempo parcial">Vaga a tempo parcial</MenuItem>
-        <MenuItem value="Vaga a tempo inteiro">Vaga a tempo inteiro</MenuItem>
-      </Select>
-    </FormControl>
-  </Grid>
-
-  <Grid item xs={6}>
-    <FormControl fullWidth size="small">
-      <InputLabel>Tipo de Contrato</InputLabel>
-      <Select
-        value={vagaData.tipoContrato}
-        onChange={(e) => handleChange('tipoContrato', e.target.value)}
-        label="Tipo de Contrato"
-      >
-        <MenuItem value="Contrato por tempo indeterminado">Contrato por tempo indeterminado</MenuItem>
-        <MenuItem value="Contrato a prazo certo">Contrato a prazo certo</MenuItem>
-        <MenuItem value="Contrato a prazo incerto">Contrato a prazo incerto</MenuItem>
-        <MenuItem value="Contrato de trabalho a tempo parcial">Contrato de trabalho a tempo parcial</MenuItem>
-        <MenuItem value="Contrato de trabalho para tarefa ou obra certa">Contrato de trabalho para tarefa ou obra certa</MenuItem>
-      </Select>
-    </FormControl>
-  </Grid>
-</Grid>
-
-
+              <Grid item xs={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Tipo de Vaga</InputLabel>
+                  <Select
+                    value={vagaData.tipo}
+                    onChange={(e) => handleChange('tipo', e.target.value)}
+                    label="Tipo de Vaga"
+                  >
+                    <MenuItem value="Vaga permanente">Vaga permanente</MenuItem>
+                    <MenuItem value="Vaga temporária">Vaga temporária</MenuItem>
+                    <MenuItem value="Vaga sazonal">Vaga sazonal</MenuItem>
+                    <MenuItem value="Vaga ocasional">Vaga ocasional</MenuItem>
+                    <MenuItem value="Vaga a tempo parcial">Vaga a tempo parcial</MenuItem>
+                    <MenuItem value="Vaga a tempo inteiro">Vaga a tempo inteiro</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Tipo de Contrato</InputLabel>
+                  <Select
+                    value={vagaData.tipoContrato}
+                    onChange={(e) => handleChange('tipoContrato', e.target.value)}
+                    label="Tipo de Contrato"
+                  >
+                    <MenuItem value="Contrato por tempo indeterminado">Contrato por tempo indeterminado</MenuItem>
+                    <MenuItem value="Contrato a prazo certo">Contrato a prazo certo</MenuItem>
+                    <MenuItem value="Contrato a prazo incerto">Contrato a prazo incerto</MenuItem>
+                    <MenuItem value="Contrato de trabalho a tempo parcial">Contrato de trabalho a tempo parcial</MenuItem>
+                    <MenuItem value="Contrato de trabalho para tarefa ou obra certa">Contrato de trabalho para tarefa ou obra certa</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
             <TextField
               label="Salário (opcional)"
               value={vagaData.salario}
@@ -327,10 +317,7 @@ const PublicarVaga = ({
               placeholder="Ex: 20.000,00 MZN"
             />
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-              Localização
-            </Typography>
-
+            {/* Localização */}
             <FormControl fullWidth size="small">
               <InputLabel>Províncias *</InputLabel>
               <Select
@@ -373,9 +360,10 @@ const PublicarVaga = ({
                 ))}
               </Select>
             </FormControl>
-
             <FormControl fullWidth size="small">
-              <InputLabel>Distritos {vagaData.provincias.length === 1 ? '*' : '(selecione apenas uma província)'}</InputLabel>
+              <InputLabel>
+                Distritos {vagaData.provincias.length === 1 ? '*' : '(selecione apenas uma província)'}
+              </InputLabel>
               <Select
                 multiple
                 value={vagaData.distritos}
@@ -425,7 +413,6 @@ const PublicarVaga = ({
                 )}
               </Select>
             </FormControl>
-
             <Box sx={{ mt: 1 }}>
               <DatePicker
                 selected={vagaData.dataLimite}
@@ -443,10 +430,7 @@ const PublicarVaga = ({
               />
             </Box>
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-              Áreas Relacionadas
-            </Typography>
-
+            {/* Áreas */}
             <FormControl fullWidth size="small">
               <InputLabel>Área Principal *</InputLabel>
               <Select
@@ -461,7 +445,6 @@ const PublicarVaga = ({
                 ))}
               </Select>
             </FormControl>
-
             {selectedArea && (
               <FormControl fullWidth size="small">
                 <InputLabel>Subáreas (opcional)</InputLabel>
@@ -496,56 +479,25 @@ const PublicarVaga = ({
               </FormControl>
             )}
 
-            <Autocomplete
-              multiple
-              options={Object.keys(areasAtuacao || {})}
-              value={vagaData.areas}
-              onChange={(_, newValue) => handleChange('areas', newValue)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Outras Áreas Relacionadas (opcional)"
-                  placeholder="Selecione áreas adicionais"
-                  size="small"
+            {/* Formação Requerida */}
+            <FormGroup row>
+              {areasFormacao.map((area, index) => (
+                <FormControlLabel
+                  key={index}
+                  control={
+                    <Checkbox
+                      checked={vagaData.areasFormacao.includes(area.nivel)}
+                      onChange={() => handleCheckboxChange('areasFormacao', area.nivel)}
+                      name={area.nivel}
+                      size="small"
+                    />
+                  }
+                  label={area.nivel}
                 />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    label={option}
-                    {...getTagProps({ index })}
-                    key={option}
-                    size="small"
-                  />
-                ))
-              }
-            />
-
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-              Formação Requerida
-            </Typography>
-            
-            <Box sx={{ mb: 2 }}>
-              <FormGroup row>
-                {areasFormacao.map((area, index) => (
-                  <FormControlLabel
-                    key={index}
-                    control={
-                      <Checkbox
-                        checked={vagaData.areasFormacao.includes(area.nivel)}
-                        onChange={() => handleCheckboxChange('areasFormacao', area.nivel)}
-                        name={area.nivel}
-                        size="small"
-                      />
-                    }
-                    label={area.nivel}
-                  />
-                ))}
-              </FormGroup>
-            </Box>
+              ))}
+            </FormGroup>
           </Box>
         </DialogContent>
-        
         <DialogActions sx={{ borderTop: '1px solid #eee', p: 2 }}>
           <Button onClick={handleClose} variant="outlined" size="medium">
             Cancelar

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { db } from '../../fb';
 import { ref, onValue, push, set, remove, update, get } from 'firebase/database';
 import {
@@ -527,39 +527,42 @@ const replyStyle = {
               width: '100%'
             }}
           />
-         
         </Box>
-        
         <CardContent>
-          <Box sx={{ 
+        <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
             mb: 2 
           }}>
-            <Avatar 
-              src={post.logoUrl} 
-              sx={{ 
-                width: 40, 
-                height: 40, 
-                mr: 2 
-              }} 
-            />
+            <Link to="/perfil" underline="none" sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+              <Avatar 
+                src={post.logoUrl} 
+                sx={{ 
+                  width: 40, 
+                  height: 40, 
+                }} 
+              />
+            </Link>
             <Box>
-              <Typography variant="subtitle1" fontWeight="bold">
-                {post.companyName}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                  {new Date(post.createdAt).toLocaleDateString('pt-PT', {
-                    day: '2-digit',
-                    month: 'long',
-                  }) + ' às ' + 
-                  new Date(post.createdAt).toLocaleTimeString('pt-PT', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                  })}
+            <Link 
+              to={`/perfil/${post.companyId}`} 
+              underline="hover" 
+              color="inherit"
+>                <Typography variant="subtitle1" fontWeight="bold">
+                  {post.companyName}
                 </Typography>
-
+              </Link>
+              <Typography variant="caption" color="text.secondary">
+                {new Date(post.createdAt).toLocaleDateString('pt-PT', {
+                  day: '2-digit',
+                  month: 'long',
+                }) + ' às ' + 
+                new Date(post.createdAt).toLocaleTimeString('pt-PT', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                })}
+              </Typography>
             </Box>
           </Box>
           

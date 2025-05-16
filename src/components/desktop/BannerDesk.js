@@ -87,37 +87,33 @@ const BannerDesk = ({ user }) => {
 
   const registerImpression = useCallback(async (bannerId) => {
     const userId = getUserId();
-    const impressionKey = `${bannerId}_${userId}`;
-
-    if (trackedImpressions.has(impressionKey)) return;
+    if (!userId || trackedImpressions.has(`${bannerId}_${userId}`)) return;
 
     try {
-      const impressionData = {
-        userId,
-        timestamp: serverTimestamp(),
-        userAgent: navigator.userAgent,
-        deviceType: isMobile ? 'mobile' : 'desktop',
-        screenResolution: `${window.screen.width}x${window.screen.height}`,
-      };
+        const timestamp = serverTimestamp();
+        const updates = {};
 
-      await set(ref(db, `anuncios_metrics/${bannerId}/impressoes/${userId}`), impressionData);
+        const impressionData = { timestamp };
 
-      if (userId !== 'desconhecido') {
-        await set(ref(db, `users/${userId}/anuncios_visualizados/${bannerId}`), {
-          ...impressionData,
-          bannerId,
-        });
-      }
+        updates[`anuncios_metrics/${bannerId}/impressoes/${userId}`] = impressionData;
 
-      await update(ref(db, `anuncios_metrics/${bannerId}`), {
-        total_impressoes: increment(1),
-        ultima_impressao: serverTimestamp(),
-      });
-      setTrackedImpressions(prev => new Set(prev).add(impressionKey));
+        updates[`anuncios_metrics/${bannerId}/total_impressoes`] = increment(1);
+        updates[`anuncios_metrics/${bannerId}/ultima_impressao`] = timestamp;
+
+        if (userId !== 'desconhecido') {
+            updates[`users/${userId}/anuncios_visualizados/${bannerId}`] = {
+                ...impressionData,
+                bannerId, 
+            };
+        }
+
+        await update(ref(db), updates);
+
+        setTrackedImpressions((prev) => new Set(prev).add(`${bannerId}_${userId}`));
     } catch (error) {
-      console.error('Error registering impression:', error);
+        console.error("Erro ao registrar impressão:", error);
     }
-  }, [getUserId, isMobile, trackedImpressions]);
+}, [getUserId, trackedImpressions]);
 
   const registerClick = useCallback(async (bannerId) => {
     const userId = getUserId();
@@ -204,9 +200,6 @@ const BannerDesk = ({ user }) => {
       setLoading(false);
     }
 
-    return () => {
-      if (unsubscribeBanners) unsubscribeBanners();
-    };
   }, [user, filterBanners, trackedImpressions, registerImpression]);
 
   const settings = {

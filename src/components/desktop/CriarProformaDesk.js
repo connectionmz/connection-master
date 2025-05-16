@@ -32,19 +32,20 @@ import sendEmail from '../sms/SendMail';
 import { formatPrice } from '../../utils/utils';
 import { saveContentToInbox } from '../SaveToInbox';
 import SendMailProforma from '../sms/SendMailProforma';
+import { NumberFormatBase, NumericFormat } from 'react-number-format';
 
 const CriarProformaDesk = ({ user }) => {
-  const [cliente, setCliente] = useState(null); // Armazenar o objeto completo do cliente
+  const [cliente, setCliente] = useState(null);
   const [dataEmissao, setDataEmissao] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');
-  const [itens, setItens] = useState([{ descricao: '', quantidade: 1, preco: null }]);
+  const [itens, setItens] = useState([{ descricao: '', quantidade: 1, preco: 0 }]);
   const [errors, setErrors] = useState({});
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('error');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [clientes, setClientes] = useState([]); // Lista unificada de clientes
+  const [clientes, setClientes] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [selectedProduto, setSelectedProduto] = useState(null);
   const [openModal, setOpenModal] = useState(false);
@@ -56,7 +57,6 @@ const CriarProformaDesk = ({ user }) => {
     nuit: '',
   });
 
-  // Busca clientes (conexões e cadastrados manualmente)
   useEffect(() => {
     fetchClients();
     fetchProdutos();
@@ -64,17 +64,14 @@ const CriarProformaDesk = ({ user }) => {
 
   const fetchClients = async () => {
     try {
-      // Busca clientes cadastrados manualmente
       const clientsRef = ref(db, `clients/${user.id}`);
       const clientsSnapshot = await get(clientsRef);
       const clientesCadastrados = clientsSnapshot.exists() ? Object.values(clientsSnapshot.val()) : [];
 
-      // Busca conexões do usuário
       const connectionsRef = ref(db, `connections/${user.id}`);
       const connectionsSnapshot = await get(connectionsRef);
       const conexoes = connectionsSnapshot.exists() ? Object.keys(connectionsSnapshot.val()) : [];
 
-      // Busca detalhes das empresas conectadas
       const empresasConectadas = [];
       for (const companyId of conexoes) {
         const companyRef = ref(db, `company/${companyId}`);
@@ -87,12 +84,11 @@ const CriarProformaDesk = ({ user }) => {
             nuit: companyData.nuit || '',
             contacto: companyData.contacto || '',
             morada: companyData.endereco || '',
-            email:companyData.email || ''
+            email: companyData.email || ''
           });
         }
       }
 
-      // Combina as duas listas de clientes
       setClientes([...clientesCadastrados, ...empresasConectadas]);
     } catch (err) {
       console.error('Erro ao carregar clientes: ' + err);
@@ -108,7 +104,6 @@ const CriarProformaDesk = ({ user }) => {
     }
   };
 
-  // Adiciona um item da loja
   const handleAddItemFromStore = () => {
     if (!selectedProduto) {
       setSnackbarMessage('Selecione um produto para adicionar.');
@@ -119,54 +114,47 @@ const CriarProformaDesk = ({ user }) => {
 
     const item = {
       descricao: selectedProduto.name,
-      quantidade: null,
-      preco: selectedProduto.price,
+      quantidade: 1,
+      preco: Number(selectedProduto.price),
     };
     setItens([...itens, item]);
     setSelectedProduto(null);
   };
 
-  // Adiciona um item manualmente
   const handleAddItem = () => {
     setItens([...itens, { descricao: '', quantidade: 1, preco: 0 }]);
   };
 
-  // Remove um item
   const handleRemoveItem = (index) => {
     const newItens = itens.filter((_, i) => i !== index);
     setItens(newItens);
   };
 
-  // Atualiza um item
   const handleItemChange = (index, field, value) => {
     const newItens = [...itens];
-    newItens[index][field] = value;
+    newItens[index][field] = field === 'preco' || field === 'quantidade' ? Number(value) : value;
     setItens(newItens);
   };
 
-  // Calcula o total
-  const total = itens.reduce((sum, item) => sum + item.quantidade * item.preco, 0);
+  const total = itens.reduce((sum, item) => sum + (item.quantidade * item.preco), 0);
 
-  // Valida o formulário
   const validateForm = () => {
     const newErrors = {};
 
     if (!dataEmissao) {
       newErrors.dataEmissao = 'Data de emissão é obrigatória';
     }
-
     if (!dataVencimento) {
       newErrors.dataVencimento = 'Data de vencimento é obrigatória';
     }
-
     itens.forEach((item, index) => {
       if (!item.descricao) {
         newErrors[`item-descricao-${index}`] = 'Descrição é obrigatória';
       }
-      if (item.quantidade <= 0) {
+      if (item.quantidade <= 0 || isNaN(item.quantidade)) {
         newErrors[`item-quantidade-${index}`] = 'Quantidade deve ser maior que 0';
       }
-      if (item.preco <= 0) {
+      if (item.preco <= 0 || isNaN(item.preco)) {
         newErrors[`item-preco-${index}`] = 'Preço deve ser maior que 0';
       }
     });
@@ -183,23 +171,21 @@ const CriarProformaDesk = ({ user }) => {
       setOpenSnackbar(true);
       return;
     }
-  
     setLoading(true);
     try {
       const today = new Date();
       const day = String(today.getDate()).padStart(2, '0');
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const year = String(today.getFullYear()).slice(-2);
-  
+
       const proformaRef = ref(db, `invoices/${user.id}`);
       const snapshot = await get(proformaRef);
       const proformas = snapshot.val();
       const proformaCount = proformas ? Object.keys(proformas).length : 0;
-  
+
       const sequentialNumber = String(proformaCount + 1).padStart(2, '0');
       const numeroProforma = `PF${day}${month}${year}${sequentialNumber}`;
-  
-      // Limpar o objeto cliente para remover propriedades undefined
+
       const clienteLimpo = cliente
         ? {
             nome: cliente.nome || 'N/A',
@@ -210,28 +196,39 @@ const CriarProformaDesk = ({ user }) => {
           }
         : null;
 
-        const emissor = {
-          nome: user.nome || 'N/A',
-          nuit: user.nuit || 'N/A',
-          contacto: user.contacto || 'N/A',
-          morada: user.morada || 'N/A',
-          email: user.email || 'N/A',
-        }
-  
+      const emissor = {
+        nome: user.nome || 'N/A',
+        nuit: user.nuit || 'N/A',
+        contacto: user.contacto || 'N/A',
+        morada: user.morada || 'N/A',
+        email: user.email || 'N/A',
+      };
+
+      const itensNumericos = itens.map(item => ({
+        ...item,
+        quantidade: Number(item.quantidade),
+        preco: Number(item.preco)
+      }));
+
+      const totalNumerico = total;
+      console.log(totalNumerico)
+
       const newProformaRef = ref(db, `invoices/${user.id}/${numeroProforma}`);
+      
+      /*
       await set(newProformaRef, {
         numeroProforma,
         cliente: clienteLimpo,
-        emissor:emissor,
+        emissor: emissor,
         dataEmissao,
         dataVencimento,
-        itens,
-        total,
+        itens: itensNumericos,
+        total: totalNumerico,
         status: 'POR PAGAR',
-        dataCriacao: serverTimestamp() 
-      });
+        dataCriacao: serverTimestamp()
+      });*/
 
-      const proformaLink = `https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id}`;
+      const proformaLink = `https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id}`
 
       const notification = {
         type: 'invoice_generate',
@@ -244,9 +241,11 @@ const CriarProformaDesk = ({ user }) => {
         proformaId: numeroProforma,
       };
 
-      saveContentToInbox(cliente.id, notification);
+      if (cliente?.id) {
+        saveContentToInbox(cliente.id, notification);
+      }
 
-      if (clienteLimpo && clienteLimpo.email) {
+      if (clienteLimpo?.email) {
         const title = `Proforma ${numeroProforma}`;
         const finalMessage = `
           Olá ${clienteLimpo.nome},
@@ -256,23 +255,23 @@ const CriarProformaDesk = ({ user }) => {
           - Número da Proforma: ${numeroProforma}
           - Data de Emissão: ${dataEmissao}
           - Data de Vencimento: ${dataVencimento}
-          - Total: ${total} MZN
+          - Total: ${formatPrice(totalNumerico)} MZN
           
           Itens:
-          ${itens.map((item) => `- ${item.descricao}: ${item.quantidade} x ${item.preco} MZN`).join('\n')}
+          ${itensNumericos.map((item) => `- ${item.descricao}: ${item.quantidade} x ${formatPrice(item.preco)} MZN`).join('\n')}
 
           Clique em: ${proformaLink} para visualizar a proforma ${numeroProforma}
           
-          Por favor, entre em contato conosco se tiver alguma dúvida.
+          Por favor, entre em contato conosco se tiver alguma dúvidade.
           
           Atenciosamente,
           Equipe ${user.displayName || 'da '}
           Email ${user.email || 'da '}
           Contacto ${user.contacto || 'da '}
         `;
-   
+
         const emailSent = await SendMailProforma(clienteLimpo.email, title, finalMessage);
-  
+
         if (!emailSent) {
           setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');
           setSnackbarSeverity('warning');
@@ -284,8 +283,8 @@ const CriarProformaDesk = ({ user }) => {
         setSnackbarMessage('Proforma criada com sucesso!');
         setSnackbarSeverity('success');
       }
-  
-      navigate('/faturacao');
+
+      //navigate('/faturacao');
     } catch (err) {
       console.error(err);
       setSnackbarMessage('Erro ao salvar a proforma. Tente novamente.');
@@ -296,22 +295,18 @@ const CriarProformaDesk = ({ user }) => {
     }
   };
 
-  // Fecha o Snackbar
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);
   };
 
-  // Abre o modal de adicionar cliente
   const handleOpenModal = () => {
     setOpenModal(true);
   };
 
-  // Fecha o modal de adicionar cliente
   const handleCloseModal = () => {
     setOpenModal(false);
   };
 
-  // Salva um novo cliente
   const handleSaveCliente = async () => {
     if (!novoCliente.nome) {
       setSnackbarMessage('O nome do cliente é obrigatório.');
@@ -330,7 +325,7 @@ const CriarProformaDesk = ({ user }) => {
       setSnackbarMessage('Cliente adicionado com sucesso!');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
-      fetchClients(); // Atualiza a lista de clientes
+      fetchClients();
       handleCloseModal();
     } catch (error) {
       setSnackbarMessage('Erro ao salvar o cliente.');
@@ -352,26 +347,26 @@ const CriarProformaDesk = ({ user }) => {
             Dados da Proforma
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <TextField
-  label="Cliente (Opcional)"
-  fullWidth
-  select
-  value={cliente ? cliente.nome : ''}
-  onChange={(e) => {
-    const selectedCliente = clientes.find((c) => c.nome === e.target.value);
-    setCliente(selectedCliente);
-  }}
-  error={Boolean(errors.dataEmissao)} // Display error if any
-  helperText={errors.dataEmissao} // Show specific error message
->
-  <MenuItem value="">Selecione um cliente</MenuItem>
-  {clientes.map((c, index) => (
-    <MenuItem key={index} value={c.nome}>
-      {c.nome}
-    </MenuItem>
-  ))}
-</TextField>
-
+            <TextField
+              label="Cliente (Opcional)"
+              fullWidth
+              select
+              value={cliente ? cliente.nome : ''}
+              onChange={(e) => {
+                const selectedCliente = clientes.find((c) => c.nome === e.target.value);
+                setCliente(selectedCliente);
+              }}
+            >
+              <MenuItem value="">Selecione um cliente</MenuItem>
+              {clientes.map((c, index) => (
+                <MenuItem key={index} value={c.nome}>
+                  {c.nome}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button variant="outlined" onClick={handleOpenModal}>
+              Adicionar Cliente
+            </Button>
           </Box>
           {cliente && (
             <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
@@ -412,7 +407,7 @@ const CriarProformaDesk = ({ user }) => {
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
             <Select
-              value={selectedProduto}
+              value={selectedProduto || ''}
               onChange={(e) => setSelectedProduto(e.target.value)}
               fullWidth
               displayEmpty
@@ -420,7 +415,7 @@ const CriarProformaDesk = ({ user }) => {
               <MenuItem value="">Selecione um produto</MenuItem>
               {produtos.map((produto) => (
                 <MenuItem key={produto.id} value={produto}>
-                  {produto.name} - {produto.price} MZN
+                  {produto.name} - {formatPrice(produto.price)} MZN
                 </MenuItem>
               ))}
             </Select>
@@ -441,6 +436,7 @@ const CriarProformaDesk = ({ user }) => {
                   <TableCell>Descrição</TableCell>
                   <TableCell>Quantidade</TableCell>
                   <TableCell>Preço Unitário</TableCell>
+                  <TableCell>Subtotal</TableCell>
                   <TableCell>Ações</TableCell>
                 </TableRow>
               </TableHead>
@@ -461,24 +457,32 @@ const CriarProformaDesk = ({ user }) => {
                         type="number"
                         fullWidth
                         value={item.quantidade}
-                        onChange={(e) => handleItemChange(index, 'quantidade', parseInt(e.target.value))}
+                        onChange={(e) => handleItemChange(index, 'quantidade', e.target.value)}
                         error={!!errors[`item-quantidade-${index}`]}
                         helperText={errors[`item-quantidade-${index}`]}
+                        inputProps={{ min: 1 }}
                       />
                     </TableCell>
                     <TableCell>
-                      <TextField
-                        type="number"
-                        fullWidth
+                      <NumericFormat
                         value={item.preco}
-                        onChange={(e) => handleItemChange(index, 'preco', parseFloat(e.target.value))}
+                        displayType="input"
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        decimalScale={2}
+                        fixedDecimalScale
+                        allowNegative={false}
+                        onValueChange={(values) => {
+                          handleItemChange(index, 'preco', values.floatValue);
+                        }}
+                        customInput={TextField}
+                        fullWidth
                         error={!!errors[`item-preco-${index}`]}
                         helperText={errors[`item-preco-${index}`]}
-                        inputProps={{ 
-                          maxLength: 20,
-                          inputMode: 'numeric',
-                      }}
                       />
+                    </TableCell>
+                    <TableCell>
+                      {formatPrice(item.quantidade * item.preco)} 
                     </TableCell>
                     <TableCell>
                       <Tooltip title="Remover item">
@@ -492,11 +496,15 @@ const CriarProformaDesk = ({ user }) => {
               </TableBody>
             </Table>
           </TableContainer>
-          <Button variant="contained" onClick={handleAddItem} sx={{ mt: 2 }}>
+          <Button 
+            variant="contained" 
+            onClick={handleAddItem} 
+            sx={{ mt: 2 }}
+            startIcon={<AddIcon />}
+          >
             Adicionar Item Manualmente
           </Button>
         </Box>
-
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             Total: {formatPrice(total)} MZN
@@ -508,18 +516,73 @@ const CriarProformaDesk = ({ user }) => {
             fullWidth
             onClick={handleSalvar}
             disabled={loading}
+            size="large"
           >
             {loading ? 'Criando...' : 'Criar Proforma'}
           </Button>
         </Box>
       </Paper>
 
-      <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={handleCloseSnackbar}>
-        <MuiAlert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
+      {/* Modal para adicionar novo cliente */}
+      <Dialog open={openModal} onClose={handleCloseModal}>
+        <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Nome"
+            fullWidth
+            value={novoCliente.nome}
+            onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="Email"
+            fullWidth
+            value={novoCliente.email}
+            onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="Telefone"
+            fullWidth
+            value={novoCliente.telefone}
+            onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="Endereço"
+            fullWidth
+            value={novoCliente.endereco}
+            onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="NUIT"
+            fullWidth
+            value={novoCliente.nuit}
+            onChange={(e) => setNovoCliente({ ...novoCliente, nuit: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseModal}>Cancelar</Button>
+          <Button onClick={handleSaveCliente}>Salvar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+        <MuiAlert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbarSeverity} 
+          sx={{ width: '100%' }}
+          elevation={6}
+          variant="filled"
+        >
           {snackbarMessage}
         </MuiAlert>
       </Snackbar>
     </Box>
   );
 };
+
 export default CriarProformaDesk;

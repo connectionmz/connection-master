@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import BackButton from '../BackButton';
 import { Close } from '@mui/icons-material';
+import { formatCurrency } from '../../utils/utils';
 
 const PublicarConcursoDesk = ({ user }) => {
     const [formData, setFormData] = useState({
@@ -99,19 +100,7 @@ const PublicarConcursoDesk = ({ user }) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
-    const formatCurrency = (value) => {
-        if (!value) return '';
-        
-        // Remove qualquer caractere que não seja número
-        const numericValue = value.replace(/\D/g, '');
-      
-        // Converte para número float dividido por 100
-        const floatValue = parseFloat(numericValue) / 100;
-      
-        // Formata para estilo português (pt-PT)
-        return floatValue.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      };
-
+ 
     const handleValorChange = (e) => {
         const { name, value } = e.target;
       

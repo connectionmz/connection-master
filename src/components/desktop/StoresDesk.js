@@ -552,7 +552,6 @@ const StoresDesk = ({ user }) => {
           title={store?.name || "Loja sem nome"} 
           arrow
         >
-          <TrackedStoreLink store={store}>
             <Box sx={{
               minWidth: 120,
               display: "flex",
@@ -597,7 +596,6 @@ const StoresDesk = ({ user }) => {
                 {store?.name || "Loja sem nome"}
               </Typography>
             </Box>
-          </TrackedStoreLink>
         </Tooltip>
       ))}
     </Box>
@@ -653,7 +651,6 @@ const StoresDesk = ({ user }) => {
                       />
                     )}
 
-                    <TrackedProductLink product={product}>
                       <CardActionArea sx={{ flexGrow: 1 }}>
                         {/* Imagem do produto */}
                         <Box
@@ -730,7 +727,6 @@ const StoresDesk = ({ user }) => {
                          
                         </CardContent>
                       </CardActionArea>
-                    </TrackedProductLink>
 
 {/* Ações do Produto */}
 <Box sx={{ 
