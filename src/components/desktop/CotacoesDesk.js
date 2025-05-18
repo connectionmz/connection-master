@@ -505,9 +505,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                   mb: 2,
                   zIndex: 1
                 }}>
-                  <AnunciosDesk campanhas={campanhasAtivas} />
-                </Box>
-              
+                    <AnunciosDesk campanhas={campanhasAtivas} user={user} local="Cotacoes"/>
+                    </Box>
                 <Paper elevation={1} sx={{ mb: 2, backgroundColor: 'white' }}>
                   <Tabs
                     value={activeTab}

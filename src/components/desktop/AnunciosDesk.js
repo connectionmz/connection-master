@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
@@ -21,34 +21,28 @@ import {
 import { Link } from 'react-router-dom';
 import { 
   OpenInNew as OpenInNewIcon,
-  CalendarToday as CalendarIcon,
-  AccessTime as TimeIcon,
   Business as BusinessIcon,
   Share as ShareIcon,
-  Favorite as FavoriteIcon,
-  FavoriteBorder as FavoriteBorderIcon,
   Close as CloseIcon,
   LocationOn as LocationIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
   Language as LanguageIcon
 } from '@mui/icons-material';
-import { ref, onValue, set, update, serverTimestamp } from 'firebase/database';
+import { ref, onValue, update, serverTimestamp } from 'firebase/database';
 import { db } from '../../fb';
 import placeholderImage from '../../img/anunciar.gif';
 
-const AnunciosDesk = ({ campanhas, user }) => {
+const AnunciosDesk = ({ campanhas, user, local }) => {
   const [companies, setCompanies] = useState({});
   const [loading, setLoading] = useState(true);
-  const [trackedImpressions, setTrackedImpressions] = useState(new Set());
-  const [likedBanners, setLikedBanners] = useState({});
   const [selectedBanner, setSelectedBanner] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Configurações do slider
-  const settings = {
+  // Memoized slider settings
+  const settings = useMemo(() => ({
     dots: true,
     infinite: true,
     speed: 600,
@@ -75,115 +69,69 @@ const AnunciosDesk = ({ campanhas, user }) => {
         }}
       />
     ),
-  };
+  }), [isMobile, theme]);
 
-  // Carrega dados da empresa
+  // Fetch company data
   const fetchCompanyData = useCallback(async (companyId) => {
     if (!companyId || companies[companyId]) return;
 
     const companyRef = ref(db, `company/${companyId}`);
-    onValue(companyRef, (snapshot) => {
+    const unsubscribe = onValue(companyRef, (snapshot) => {
       const companyData = snapshot.val();
       if (companyData) {
         setCompanies(prev => ({ ...prev, [companyId]: companyData }));
       }
     });
+    return unsubscribe;
   }, [companies]);
 
-  // Registra impressão do banner
-  const registerImpression = useCallback(async (bannerId) => {
-    const userId = user?.id || 'anonymous';
-    const impressionKey = `${bannerId}-${userId}`;
-
-    if (trackedImpressions.has(impressionKey)) return;
-
-    try {
-      await update(ref(db, `anuncios_metrics/${bannerId}`), {
-        total_impressoes: increment(1),
-        ultima_impressao: serverTimestamp(),
-      });
-
-      if (userId !== 'anonymous') {
-        await set(ref(db, `anuncios_metrics/${bannerId}/impressoes/${userId}`), {
-          timestamp: serverTimestamp(),
-          deviceType: isMobile ? 'mobile' : 'desktop',
-        });
-      }
-
-      setTrackedImpressions(prev => new Set(prev).add(impressionKey));
-    } catch (error) {
-      console.error('Error registering impression:', error);
-    }
-  }, [user, isMobile, trackedImpressions]);
-
-  // Registra clique no banner
+  // Register banner click
   const registerClick = useCallback(async (bannerId) => {
-    const userId = user?.id || 'anonymous';
-    
-    try {
-      await update(ref(db, `anuncios_metrics/${bannerId}`), {
-        total_cliques: increment(1),
-        ultimo_clique: serverTimestamp(),
-      });
-
-      if (userId !== 'anonymous') {
-        await set(ref(db, `anuncios_metrics/${bannerId}/cliques/${userId}`), {
-          timestamp: serverTimestamp(),
-        });
-      }
-    } catch (error) {
-      console.error('Error registering click:', error);
-    }
-  }, [user]);
-
-  // Gerencia likes nos banners
-  const toggleLike = useCallback(async (bannerId) => {
     if (!user?.id) return;
 
-    const isLiked = likedBanners[bannerId];
-    const newLikedState = !isLiked;
-
     try {
-      await set(ref(db, `users/${user.id}/banners_liked/${bannerId}`), 
-        newLikedState ? { timestamp: serverTimestamp() } : null
-      );
+      const updates = {};
+      const timestamp = serverTimestamp();
 
-      await update(ref(db, `anuncios_metrics/${bannerId}`), {
-        total_likes: increment(newLikedState ? 1 : -1),
-      });
+      const clickData = {
+        timestamp,
+        referrer: document.referrer || 'direct',
+      };
+      
+      updates[`anuncios_metrics/${bannerId}/total_cliques`] = increment(1);
+      updates[`anuncios_metrics/${bannerId}/ultimo_clique`] = timestamp;
+      updates[`anuncios_metrics/${bannerId}/from`] = local;
+      updates[`anuncios_metrics/${bannerId}/company`] = {
+        id: user.id,
+        nome: user.nome,
+        provincia: user.provincia,
+        distrito: user.distrito,
+        contacto: user.contacto,
+        sector:user.sector,
+        email: user.email
+      };
 
-      setLikedBanners(prev => ({ ...prev, [bannerId]: newLikedState }));
+      updates[`users/${user.id}/anuncios_clicados/${bannerId}`] = clickData;
+
+      await update(ref(db), updates);
     } catch (error) {
-      console.error('Error toggling like:', error);
+      console.error('Erro ao registrar clique:', error);
     }
-  }, [user, likedBanners]);
+  }, [user, campanhas.tipoAnuncio]);
 
-  // Abre o popup com detalhes do banner
-  const handleBannerClick = (banner) => {
+  // Handle banner click
+  const handleBannerClick = useCallback((banner) => {
     setSelectedBanner(banner);
     setOpenDialog(true);
     registerClick(banner.id);
-  };
+  }, [registerClick]);
 
-  // Fecha o popup
-  const handleCloseDialog = () => {
+  // Close dialog
+  const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
-  };
+  }, []);
 
-  // Carrega likes do usuário
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const likedRef = ref(db, `users/${user.id}/banners_liked`);
-    const unsubscribe = onValue(likedRef, (snapshot) => {
-      const likesData = snapshot.val() || {};
-      setLikedBanners(likesData);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // Carrega dados das empresas para os banners
+  // Load company data for banners
   useEffect(() => {
     if (campanhas.length === 0) {
       setLoading(false);
@@ -191,7 +139,7 @@ const AnunciosDesk = ({ campanhas, user }) => {
     }
 
     const companyIds = [...new Set(campanhas.map(b => b.companyId))];
-    const promises = companyIds.map(fetchCompanyData);
+    const promises = companyIds.map(id => fetchCompanyData(id));
     
     Promise.all(promises).finally(() => setLoading(false));
   }, [campanhas, fetchCompanyData]);
@@ -235,7 +183,8 @@ const AnunciosDesk = ({ campanhas, user }) => {
             width: '100%', 
             maxWidth: '300px',
             height: 'auto',
-            marginBottom: theme.spacing(2)
+            marginBottom: theme.spacing(2),
+            objectFit: 'contain'
           }}
         />
         <Button
@@ -275,24 +224,26 @@ const AnunciosDesk = ({ campanhas, user }) => {
                   width: '100%',
                   height: isMobile ? '250px' : '400px',
                   overflow: 'hidden',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#f5f5f5'
                 }}
                 onClick={() => handleBannerClick(banner)}
-                onMouseEnter={() => registerImpression(banner.id)}
               >
                 <img
                   src={banner.imageUrl || placeholderImage}
                   alt={banner.description || `Banner ${banner.id}`}
                   onError={(e) => (e.target.src = placeholderImage)}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'transform 0.5s ease',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                    width: 'auto',
+                    height: 'auto'
                   }}
                 />
-
-               
               </Box>
 
               {/* Company Info (Desktop) */}
@@ -308,10 +259,14 @@ const AnunciosDesk = ({ campanhas, user }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 2,
-                    maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
+                    maxWidth: '50%',
                   }}
                 >
-                  <Link to={`/perfil/${company.id}`} style={{ textDecoration: 'none' }}>
+                  <MuiLink 
+                    component={Link} 
+                    to={`/perfil/${company.id}`} 
+                    sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 2 }}
+                  >
                     <Avatar
                       src={company.logoUrl || ''}
                       alt={company.nome}
@@ -323,7 +278,15 @@ const AnunciosDesk = ({ campanhas, user }) => {
                     >
                       {company.nome?.charAt(0)?.toUpperCase()}
                     </Avatar>
-                  </Link>
+                    <Box>
+                      <Typography variant="subtitle1" color="white" fontWeight="bold">
+                        {company.nome}
+                      </Typography>
+                      <Typography variant="body2" color="rgba(255,255,255,0.8)">
+                        {banner.description}
+                      </Typography>
+                    </Box>
+                  </MuiLink>
                 </Box>
               )}
             </Box>
@@ -331,7 +294,7 @@ const AnunciosDesk = ({ campanhas, user }) => {
         })}
       </Slider>
 
-      {/* Popup de Detalhes */}
+      {/* Banner Details Dialog */}
       {selectedBanner && (
         <Dialog
           open={openDialog}
@@ -351,14 +314,16 @@ const AnunciosDesk = ({ campanhas, user }) => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
-            }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Link to={`/perfil/${companies[selectedBanner.companyId]?.nome}`}>
+          }}>
+            <MuiLink 
+              component={Link} 
+              to={`/perfil/${companies[selectedBanner.companyId]?.id}`}
+              sx={{ color: 'white', textDecoration: 'none' }}
+            >
               <Typography variant="h6">
                 {companies[selectedBanner.companyId]?.nome || 'Detalhes do Anúncio'}
               </Typography>
-              </Link>
-            </Box>
+            </MuiLink>
             <IconButton onClick={handleCloseDialog} sx={{ color: 'common.white' }}>
               <CloseIcon />
             </IconButton>
@@ -366,23 +331,27 @@ const AnunciosDesk = ({ campanhas, user }) => {
           
           <DialogContent dividers sx={{ p: 0 }}>
             <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
-              {/* Imagem do Banner */}
+              {/* Banner Image */}
               <Box sx={{ 
                 width: isMobile ? '100%' : '60%',
-                height: isMobile ? '250px' : '400px'
+                height: isMobile ? '250px' : '400px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#f5f5f5'
               }}>
                 <img
                   src={selectedBanner.imageUrl || placeholderImage}
                   alt={`Banner ${selectedBanner.id}`}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain'
                   }}
                 />
               </Box>
               
-              {/* Informações Detalhadas */}
+              {/* Banner Details */}
               <Box sx={{ 
                 width: isMobile ? '100%' : '40%',
                 p: 3
@@ -390,7 +359,9 @@ const AnunciosDesk = ({ campanhas, user }) => {
                 <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
                   {selectedBanner.description || 'Anúncio'}
                 </Typography>
+                
                 <Divider sx={{ my: 2 }} />
+                
                 {companies[selectedBanner.companyId] && (
                   <>
                     <Typography variant="subtitle1" gutterBottom sx={{ 
@@ -421,31 +392,35 @@ const AnunciosDesk = ({ campanhas, user }) => {
                       )}
                       
                       {companies[selectedBanner.companyId].contacto && (
-                          <Typography 
-                            variant="body2" 
-                            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
-                            onClick={() => window.open(`tel:${companies[selectedBanner.companyId].contacto}`)}
-                          >
-                            <PhoneIcon color="primary" fontSize="small" />
-                            {companies[selectedBanner.companyId].contacto}
-                          </Typography>
-                        )}
-
-                        {companies[selectedBanner.companyId].email && (
-                          <Typography 
-                            variant="body2" 
-                            sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
-                            onClick={() => window.open(`mailto:${companies[selectedBanner.companyId].email}`)}
-                          >
-                            <EmailIcon color="primary" fontSize="small" />
-                            {companies[selectedBanner.companyId].email}
-                          </Typography>
-                        )}
+                        <Typography 
+                          variant="body2" 
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+                          onClick={() => window.open(`tel:${companies[selectedBanner.companyId].contacto}`)}
+                        >
+                          <PhoneIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].contacto}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].email && (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+                          onClick={() => window.open(`mailto:${companies[selectedBanner.companyId].email}`)}
+                        >
+                          <EmailIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].email}
+                        </Typography>
+                      )}
                       
                       {companies[selectedBanner.companyId].website && (
                         <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LanguageIcon color="primary" fontSize="small" />
-                          <MuiLink href={companies[selectedBanner.companyId].website} target="_blank">
+                          <MuiLink 
+                            href={companies[selectedBanner.companyId].website} 
+                            target="_blank"
+                            sx={{ color: 'inherit' }}
+                          >
                             {companies[selectedBanner.companyId].website}
                           </MuiLink>
                         </Typography>

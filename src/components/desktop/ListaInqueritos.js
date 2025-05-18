@@ -105,6 +105,11 @@ const ListaInqueritos = ({ user }) => {
   // Filtrar inquéritos com useMemo
   const inqueritosFiltrados = useMemo(() => {
     return inqueritos.filter(inquerito => {
+      // Verificar se o inquérito não foi criado pelo próprio usuário
+      if (inquerito.company?.id === user?.id) {
+        return false;
+      }
+      
       // Verificar se o inquérito é para a província do usuário
       const isForUserProvince = !inquerito.provincias?.length || 
                               inquerito.provincias.includes(user?.provincia);
@@ -116,10 +121,7 @@ const ListaInqueritos = ({ user }) => {
       // Verificar se o usuário já respondeu
       const notResponded = !hasRespondedIds.has(inquerito.id);
       
-      // Verificar se o inquérito não foi criado pelo próprio usuário
-      const notOwnInquerito = inquerito.company?.id !== user?.id;
-      
-      return isForUserProvince && isForUserSector && notResponded && notOwnInquerito && user;
+      return isForUserProvince && isForUserSector && notResponded && user;
     });
   }, [inqueritos, user, hasRespondedIds]);
 
@@ -261,15 +263,18 @@ const ListaInqueritos = ({ user }) => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar 
-                          src={inquerito.company?.logo} 
-                          alt={inquerito.company?.nome}
-                          sx={{ width: 32, height: 32 }}
-                        />
-                        <Typography>{inquerito.company?.nome || 'N/A'}</Typography>
-                      </Box>
-                    </TableCell>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <a href={`/perfil/${inquerito.company.id}`} style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+      <Avatar 
+        src={inquerito.company?.logo} 
+        alt={inquerito.company?.nome}
+        sx={{ width: 32, height: 32 }}
+      />
+      <Typography>{inquerito.company?.nome || 'N/A'}</Typography>
+    </a>
+  </Box>
+</TableCell>
+
                     <TableCell>
                       <Chip 
                         label={inquerito.tipoInquerito || 'Outro'} 

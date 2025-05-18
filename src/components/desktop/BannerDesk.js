@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ref, onValue, set, update, serverTimestamp } from "firebase/database";
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { ref, onValue, update, serverTimestamp } from "firebase/database";
 import { db } from '../../fb';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -21,13 +21,87 @@ const BannerDesk = ({ user }) => {
   const [banners, setBanners] = useState([]);
   const [companies, setCompanies] = useState({});
   const [loading, setLoading] = useState(true);
-  const [trackedImpressions, setTrackedImpressions] = useState(new Set());
   const [selectedBanner, setSelectedBanner] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const getUserId = useCallback(() => user?.id || 'desconhecido', [user]);
+
+  const isBannerExpired = useCallback((banner) => {
+    if (banner.status === 'expired') return true;
+    const expireDate = new Date(banner.expireDate);
+    return expireDate < new Date();
+  }, []);
+
+  const bannerMatchesUser = useCallback((banner, currentUser) => {
+    if (!currentUser) return false;
+    
+    const bannerProvincias = banner.provincias || [];
+    const bannerSectores = banner.sectores || [];
+    
+    const hasProvinciaFilter = bannerProvincias.length > 0;
+    const hasSectorFilter = bannerSectores.length > 0;
+
+    if (!hasProvinciaFilter && !hasSectorFilter) return true;
+
+    const userProvincia = currentUser.provinciaTemp || currentUser.provincia || '';
+    const userSector = currentUser.sector || '';
+
+    const provinciaMatch = !hasProvinciaFilter || 
+        bannerProvincias.some(provincia => 
+            provincia.toLowerCase() === userProvincia.toLowerCase()
+        );
+
+    const sectorMatch = !hasSectorFilter || 
+        bannerSectores.some(sector => 
+            sector.toLowerCase() === userSector.toLowerCase()
+        );
+
+    return provinciaMatch && sectorMatch;
+  }, []);
+
+  const filterBanners = useCallback((bannerList, currentUser) => {
+    return bannerList.filter(banner => (
+        banner.status === 'active' &&
+        banner.tipoAnuncio === 'home' &&
+        !isBannerExpired(banner) &&
+        bannerMatchesUser(banner, currentUser)
+    ));
+  }, [isBannerExpired, bannerMatchesUser]);
+
+  const registerClick = useCallback(async (bannerId) => {
+    const userId = getUserId();
+    const clickKey = `click_${bannerId}_${userId}`;
+
+    try {
+        const updates = {};
+        const timestamp = serverTimestamp();
+
+        const clickData = {
+            timestamp,
+            referrer: document.referrer || 'direct',
+        };
+        updates[`anuncios_metrics/${bannerId}/total_cliques`] = increment(1);
+        updates[`anuncios_metrics/${bannerId}/ultimo_clique`] = timestamp;
+        updates[`anuncios_metrics/${bannerId}/from`] = 'Pagina Inicial';
+        updates[`anuncios_metrics/${bannerId}/company`] = {
+          id: user?.id,
+          nome: user?.nome,
+          provincia: user?.provincia,
+          distrito: user?.distrito,
+          contacto: user?.contacto,
+          sector:user?.sector,
+          email: user?.email
+        }
+
+            updates[`users/${userId}/anuncios_clicados/${bannerId}`] = clickData;
+
+        await update(ref(db), updates);
+    } catch (error) {
+        console.error('Erro ao registrar clique:', error);
+    }
+  }, [getUserId, user]);
 
   const fetchCompanyData = useCallback((companyId) => {
     return new Promise((resolve) => {
@@ -49,112 +123,15 @@ const BannerDesk = ({ user }) => {
     });
   }, [companies]);
 
-  const isBannerExpired = useCallback((banner) => {
-    if (banner.status === 'expired') return true;
-    const expireDate = new Date(banner.expireDate);
-    return expireDate < new Date();
-  }, []);
-
-  const bannerMatchesUser = useCallback((banner, user) => {
-    if (!user) return false;
-    const hasProvinciaFilter = banner.provincias && banner.provincias.length > 0;
-    const hasSectorFilter = banner.sectores && banner.sectores.length > 0;
-
-    if (!hasProvinciaFilter && !hasSectorFilter) return true;
-
-    const provinciaMatch = !hasProvinciaFilter || 
-        banner.provincias.some(provincia => 
-            provincia.toLowerCase() === user.provinciaTemp?.toLowerCase() || 
-            provincia.toLowerCase() === user.provincia?.toLowerCase()
-        );
-
-    const sectorMatch = !hasSectorFilter || 
-        banner.sectores.some(sector => 
-            sector.toLowerCase() === user.sector?.toLowerCase()
-        );
-
-    return provinciaMatch && sectorMatch;
-  }, []);
-
-  const filterBanners = useCallback((bannerList, user) => {
-    return bannerList.filter(banner => (
-        banner.status === 'active' &&
-        banner.tipoAnuncio ==='home' &&
-        !isBannerExpired(banner) &&
-        bannerMatchesUser(banner, user)
-    ));
-  }, [isBannerExpired, bannerMatchesUser]);
-
-  const registerImpression = useCallback(async (bannerId) => {
-    const userId = getUserId();
-    if (!userId || trackedImpressions.has(`${bannerId}_${userId}`)) return;
-
-    try {
-        const timestamp = serverTimestamp();
-        const updates = {};
-
-        const impressionData = { timestamp };
-
-        updates[`anuncios_metrics/${bannerId}/impressoes/${userId}`] = impressionData;
-
-        updates[`anuncios_metrics/${bannerId}/total_impressoes`] = increment(1);
-        updates[`anuncios_metrics/${bannerId}/ultima_impressao`] = timestamp;
-
-        if (userId !== 'desconhecido') {
-            updates[`users/${userId}/anuncios_visualizados/${bannerId}`] = {
-                ...impressionData,
-                bannerId, 
-            };
-        }
-
-        await update(ref(db), updates);
-
-        setTrackedImpressions((prev) => new Set(prev).add(`${bannerId}_${userId}`));
-    } catch (error) {
-        console.error("Erro ao registrar impressão:", error);
-    }
-}, [getUserId, trackedImpressions]);
-
-  const registerClick = useCallback(async (bannerId) => {
-    const userId = getUserId();
-    
-    try {
-      const clickData = {
-        userId,
-        timestamp: serverTimestamp(),
-        userAgent: navigator.userAgent,
-        deviceType: isMobile ? 'mobile' : 'desktop',
-        screenResolution: `${window.screen.width}x${window.screen.height}`,
-        referrer: document.referrer || 'direct',
-      };
-
-      await set(ref(db, `anuncios_metrics/${bannerId}/cliques/${userId}`), clickData);
-      
-      if (userId !== 'desconhecido') {
-        await set(ref(db, `users/${userId}/anuncios_clicados/${bannerId}`), {
-          ...clickData,
-          bannerId,
-        });
-      }
-      
-      await update(ref(db, `anuncios_metrics/${bannerId}`), {
-        total_cliques: increment(1),
-        ultimo_clique: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Error registering click:', error);
-    }
-  }, [getUserId, isMobile]);
-
-  const handleBannerClick = (banner) => {
+  const handleBannerClick = useCallback((banner) => {
     setSelectedBanner(banner);
     setOpenDialog(true);
     registerClick(banner.id);
-  };
+  }, [registerClick]);
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (banners.length > 0) {
@@ -184,13 +161,6 @@ const BannerDesk = ({ user }) => {
       const filteredBanners = filterBanners(bannerList, user);
       setBanners(filteredBanners);
       setLoading(false);
-
-      filteredBanners.forEach(banner => {
-        if (!trackedImpressions.has(banner.id)) {
-          registerImpression(banner.id);
-          setTrackedImpressions(prev => new Set(prev).add(banner.id));
-        }
-      });
     };
 
     try {
@@ -200,9 +170,12 @@ const BannerDesk = ({ user }) => {
       setLoading(false);
     }
 
-  }, [user, filterBanners, trackedImpressions, registerImpression]);
+    return () => {
+      if (unsubscribeBanners) unsubscribeBanners();
+    };
+  }, [user, filterBanners]);
 
-  const settings = {
+  const settings = useMemo(() => ({
     dots: true,
     infinite: true,
     speed: 600,
@@ -217,15 +190,15 @@ const BannerDesk = ({ user }) => {
         width: isMobile ? '8px' : '12px',
         height: isMobile ? '8px' : '12px',
         borderRadius: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
         margin: '0 4px',
-        transition: 'all 0.3s ease',
-        '&.slick-active': {
-          backgroundColor: theme.palette.primary.main,
-        },
       }} />
     ),
-  };
+  }), [isMobile]);
+
+  const activeBanners = useMemo(() => 
+    banners.filter(banner => !isBannerExpired(banner)), 
+    [banners, isBannerExpired]
+  );
 
   if (loading) {
     return (
@@ -241,8 +214,6 @@ const BannerDesk = ({ user }) => {
     );
   }
 
-  const activeBanners = banners.filter(banner => !isBannerExpired(banner));
-
   return (
     <Box sx={{ 
       width: '100%',
@@ -253,109 +224,150 @@ const BannerDesk = ({ user }) => {
     }}>
       {activeBanners.length > 0 ? (
         <Slider {...settings}>
-  {activeBanners.map((banner) => {
-    const company = companies[banner.companyId] || {};
-    return (
-      <Box
-        key={banner.id}
-        sx={{
-          position: 'relative',
-          width: '100%',
-          overflow: 'hidden',
-          height: isMobile ? '250px' : '600px',
-          cursor: 'pointer'
-        }}
-        onClick={() => handleBannerClick(banner)}
-      >
-        <img
-          src={banner.imageUrl}
-          alt={`Banner ${banner.id}`}
-          onError={(e) => (e.target.src = anunciar)}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
-        />
-        
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: 16,
-            left: 16,
-            right: 16,
-            borderRadius: 2,
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
-          }}>
-              <Link to={`/perfil/${company.id}`} style={{ textDecoration: 'none' }}>
-                <Avatar
-                  src={company.logoUrl || ''}
-                  alt={company.nome}
+          {activeBanners.map((banner) => {
+            const company = companies[banner.companyId] || {};
+            return (
+              <Box
+                key={banner.id}
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  height: isMobile ? '250px' : '600px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  overflow: 'hidden'
+                }}
+                onClick={() => handleBannerClick(banner)}
+              >
+                <Box
                   sx={{
-                    width: 56,
-                    height: 56,
-                    bgcolor: 'grey.100',
-                    transition: 'transform 0.2s',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                      cursor: 'pointer',
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    backgroundImage: `url(${banner.imageUrl})`,
+                    '&:before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0,0,0,0.1)'
                     }
                   }}
                 >
-                  {company.nome?.charAt(0)?.toUpperCase()}
-                </Avatar>
-              </Link>
-
-        </Box>
-      </Box>
-    );
-  })}
-</Slider>
+                  <img
+                    src={anunciar}
+                    alt="Fallback banner"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      display: 'none'
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'block';
+                      const parent = e.target.parentElement;
+                      parent.style.backgroundImage = 'none';
+                    }}
+                  />
+                </Box>
+                
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    borderRadius: 2,
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backdropFilter: 'blur(4px)'
+                  }}>
+                  <Link 
+                    href={`/perfil/${company.id}`} 
+                    style={{ textDecoration: 'none' }} 
+                    onClick={() => setOpenDialog(false)}
+                  >
+                    <Avatar
+                      src={company.logoUrl || ''}
+                      alt={company.nome}
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        bgcolor: 'grey.100',
+                        transition: 'transform 0.2s',
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          cursor: 'pointer',
+                        }
+                      }}
+                    >
+                      {company.nome?.charAt(0)?.toUpperCase()}
+                    </Avatar>
+                 
+                    <Box>
+                      <Typography variant="subtitle1" color="white" fontWeight="bold">
+                        {company.nome}
+                      </Typography>
+                      <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
+                        {banner.title}
+                      </Typography>
+                    </Box>
+                  </Link>
+                </Box>
+              </Box>
+            );
+          })}
+        </Slider>
       ) : (
-<Box
-  sx={{
-    width: '100%',
-    overflow: 'hidden',
-    height: isMobile ? '250px' : '600px',
-    backgroundColor: 'background.paper',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  }}
->
-  {user?.id ? (
-    <a href="/anunciar" style={{ width: '100%', height: '100%' }}>
-      <img
-        src={anunciar}
-        alt="Anunciar"
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-        }}
-      />
-    </a>
-  ) : (
-    <img
-      src={anunciar}
-      alt="Anunciar (login necessário)"
-      style={{
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain',
-      }}
-      title="Inicie sessão para anunciar"
-    />
-  )}
-</Box>
-
+        <Box
+          sx={{
+            width: '100%',
+            height: isMobile ? '250px' : '600px',
+            backgroundColor: 'background.paper',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          {user?.id ? (
+            <a href="/anunciar" style={{ width: '100%', height: '100%' }}>
+              <img
+                src={anunciar}
+                alt="Anunciar"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                }}
+              />
+            </a>
+          ) : (
+            <img
+              src={anunciar}
+              alt="Anunciar (login necessário)"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
+              title="Inicie sessão para anunciar"
+            />
+          )}
+        </Box>
       )}
 
-      {/* Dialog com Informações Detalhadas */}
       {selectedBanner && (
         <Dialog
           open={openDialog}
@@ -369,18 +381,18 @@ const BannerDesk = ({ user }) => {
             }
           }}
         >
-         <DialogTitle sx={{ 
+          <DialogTitle sx={{ 
             bgcolor: 'primary.main', 
             color: 'common.white',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
-            }}>
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Link to={`/perfil/${companies[selectedBanner.companyId]?.nome}`}>
-              <Typography variant="h6">
-                {companies[selectedBanner.companyId]?.nome || 'Detalhes do Anúncio'}
-              </Typography>
+              <Link href={`/perfil/${companies[selectedBanner.companyId]?.id}`} style={{ color: 'white', textDecoration: 'none' }}>
+                <Typography variant="h6">
+                  {companies[selectedBanner.companyId]?.nome || 'Detalhes do Anúncio'}
+                </Typography>
               </Link>
             </Box>
             <IconButton onClick={handleCloseDialog} sx={{ color: 'common.white' }}>
@@ -392,19 +404,29 @@ const BannerDesk = ({ user }) => {
             <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
               <Box sx={{ 
                 width: isMobile ? '100%' : '60%',
-                height: isMobile ? '250px' : '400px'
+                height: isMobile ? 'auto' : '400px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                overflow: 'hidden'
               }}>
                 <img
                   src={selectedBanner.imageUrl}
                   alt={`Banner ${selectedBanner.id}`}
                   style={{
                     width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
+                    height: 'auto',
+                    maxHeight: '400px',
+                    objectFit: 'contain',
+                    display: 'block'
+                  }}
+                  onError={(e) => {
+                    e.target.src = anunciar;
+                    e.target.style.objectFit = 'contain';
                   }}
                 />
               </Box>
-              
               <Box sx={{ 
                 width: isMobile ? '100%' : '40%',
                 p: 3
@@ -449,41 +471,42 @@ const BannerDesk = ({ user }) => {
                       )}
                       
                       {companies[selectedBanner.companyId].contacto && (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 1,
-                          '&:hover': {
-                            textDecoration: 'underline',
-                            cursor: 'pointer'
-                          } 
-                        }}
-                        onClick={() => window.location.href = `tel:${companies[selectedBanner.companyId].contacto}`}
-                      >
-                        <PhoneIcon color="primary" fontSize="small" />
-                        {companies[selectedBanner.companyId].contacto}
-                      </Typography>
-                    )}
-                    {companies[selectedBanner.companyId].email && (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 1,
-                          '&:hover': {
-                            textDecoration: 'underline',
-                            cursor: 'pointer'
-                          }
-                        }}
-                        onClick={() => window.location.href = `mailto:${companies[selectedBanner.companyId].email}`}
-                      >
-                        <EmailIcon color="primary" fontSize="small" />
-                        {companies[selectedBanner.companyId].email}
-                      </Typography>
-                    )}
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            '&:hover': {
+                              textDecoration: 'underline',
+                              cursor: 'pointer'
+                            } 
+                          }}
+                          onClick={() => window.location.href = `tel:${companies[selectedBanner.companyId].contacto}`}
+                        >
+                          <PhoneIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].contacto}
+                        </Typography>
+                      )}
+                      
+                      {companies[selectedBanner.companyId].email && (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            '&:hover': {
+                              textDecoration: 'underline',
+                              cursor: 'pointer'
+                            }
+                          }}
+                          onClick={() => window.location.href = `mailto:${companies[selectedBanner.companyId].email}`}
+                        >
+                          <EmailIcon color="primary" fontSize="small" />
+                          {companies[selectedBanner.companyId].email}
+                        </Typography>
+                      )}
                       
                       {companies[selectedBanner.companyId].website && (
                         <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

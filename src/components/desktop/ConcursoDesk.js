@@ -432,7 +432,7 @@ useEffect(() => {
                         </Box>
                     </Paper>
 
-                    <AnunciosDesk campanhas={campanhasAtivas} />
+                    <AnunciosDesk campanhas={campanhasAtivas} user={user} local="Concursos"/>
 
                     <Paper elevation={1} sx={{ mb: 2, backgroundColor: 'white' }}>
                         <Tabs
