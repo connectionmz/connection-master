@@ -45,18 +45,9 @@ const MyAdsTab = ({ myAds, loading, onAdCreated }) => {
         <Typography variant="body1" color="textSecondary">
           Não tem nenhum anúncio criado ainda.
         </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          sx={{ mt: 2 }}
-          onClick={() => onAdCreated()}
-        >
-          Criar Primeiro Anúncio
-        </Button>
       </Box>
     );
   }
-
   return (
     <>
       <TableContainer component={Paper}>

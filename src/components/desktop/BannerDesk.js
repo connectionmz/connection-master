@@ -313,7 +313,6 @@ const BannerDesk = ({ user }) => {
                         }
                       }}
                     >
-                      {company.nome?.charAt(0)?.toUpperCase()}
                     </Avatar>
                  
                     <Box>
