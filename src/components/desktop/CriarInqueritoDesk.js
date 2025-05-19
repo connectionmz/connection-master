@@ -21,7 +21,7 @@ import {
   Box,
 } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
-import sendEmail from '../sms/SendMail';
+//import sendEmailInquerito from '../sms/SendMail';
 
 const CriarInqueritoDesk = ({ user }) => {
   const [titulo, setTitulo] = useState('');
@@ -36,10 +36,7 @@ const CriarInqueritoDesk = ({ user }) => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: '' });
 
   const tiposInqueritos = [
-    'Satisfação do Cliente',
     'Pesquisa de Mercado',
-    'Avaliação Interna',
-    'Outro',
   ];
 
   useEffect(() => {
@@ -170,7 +167,7 @@ const CriarInqueritoDesk = ({ user }) => {
     }
   };
 
-  const notificarEmpresas = async (inquerito, link) => {
+  const notificarEmpresas = async (inquerito, link) => { // Adicionei userId como parâmetro
     try {
       // 1. Buscar empresas que correspondem aos setores E províncias selecionados
       const empresasRef = ref(db, 'company');
@@ -189,7 +186,8 @@ const CriarInqueritoDesk = ({ user }) => {
         const setorCorresponde = inquerito.sectores.includes(empresa.sector);
         const provinciaCorresponde = inquerito.provincias.includes(empresa.provincia);
         
-        if (setorCorresponde && provinciaCorresponde && (empresa.contacto || empresa.email)) {
+        // Adicionei a verificação empresa.id !== userId
+        if (setorCorresponde && provinciaCorresponde && (empresa.contacto || empresa.email) && empresa.id !== user.id) {
           empresasParaNotificar.push(empresa);
         }
       }
@@ -205,8 +203,8 @@ const CriarInqueritoDesk = ({ user }) => {
         };
 
         // Enviar notificação para o Firebase (cada empresa tem sua coleção de notificações)
-        const notificacaoRef = ref(db, `notifications/${empresa.id}`);
-        await push(notificacaoRef, mensagem);
+        //const notificacaoRef = ref(db, `notifications/${empresa.id}`);
+        //await push(notificacaoRef, mensagem);
 
         // Enviar email se existir (opcional)
         if (empresa.email) {
@@ -222,7 +220,7 @@ const CriarInqueritoDesk = ({ user }) => {
               <p>Acesse o inquérito: <a href="${link}">${link}</a></p>
             `
           };
-          await sendEmail(emailData); // Implemente esta função conforme seu sistema de email
+          //await sendEmailInquerito(emailData); // Implemente esta função conforme seu sistema de email
         }
       }
 

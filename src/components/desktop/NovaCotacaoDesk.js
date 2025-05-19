@@ -291,21 +291,35 @@ const NovaCotacao = ({ user }) => {
 
       if (empresasSnapshot.exists()) {
         const empresas = empresasSnapshot.val();
-
+      
+        // Format the deadline date
+        const formatDeadline = (isoString) => {
+          const date = new Date(isoString);
+          return date.toLocaleDateString('pt-PT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        };
+      
         for (const key in empresas) {
           const empresa = empresas[key];
           if (!empresa.contacto && !empresa.email) continue;
-
-          const message = `Título: ${formData.title}\nDescrição: ${formData.description}\nData Limite: ${formData.deadline}\nSetor de Atividade: ${formData.sector}\nAcesse: ${linkDoPedido}`;
+      
+          const formattedDeadline = formatDeadline(formData.deadline);
+          
+          const message = `Título: ${formData.title}\nDescrição: ${formData.description}\nData Limite: ${formattedDeadline}\nSetor de Atividade: ${formData.sector}\nAcesse: ${linkDoPedido}`;
           
           const mailMessage = {
             title: formData.title,
             description: formData.description.replace(/<\/?[^>]+(>|$)/g, ""),
-            deadline: formData.deadline,
+            deadline: formattedDeadline, // Use formatted date here
             sector: formData.sector,
             link: linkDoPedido
           };
-
+      
           if (empresa.email) {
             const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
             await Promise.all(emails.map(email => sendEmail(email, mailMessage))); 

@@ -7,7 +7,6 @@ const sendEmail = async (to,emailMessage) => {
 
   Detalhes do pedido:
   Título: ${emailMessage.title}
-  Descrição: ${emailMessage.description}
   Data Limite: ${emailMessage.deadline}
   Setor de Atividade: ${emailMessage.sector}
   Acesse: ${emailMessage.link}

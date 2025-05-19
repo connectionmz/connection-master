@@ -201,27 +201,38 @@ const CompanyDataFormDesk = () => {
   const handleBack = () => setActiveStep(prevActiveStep => prevActiveStep - 1);
 
   const handleSubmit = async () => {
-    
-    
     setIsLoading(true);
     try {
       const user = auth.currentUser;
       if (user) {
-        // Verificação de duplicados apenas para campos preenchidos
+        // Clean subsectores array - remove any undefined or empty values
+        const cleanedSubsectores = companyData.subsectores
+          ? companyData.subsectores.filter(sub => sub && sub.trim() !== '')
+          : [];
+
+        // Create a cleaned company data object
+        const cleanedCompanyData = {
+          ...companyData,
+          subsectores: cleanedSubsectores,
+          // Ensure other array fields are properly initialized
+          sector: companyData.sector || '',
+          customSector: companyData.customSector || '',
+          tipoEntidade: companyData.tipoEntidade || '',
+          subtipoEntidade: companyData.subtipoEntidade || '',
+        };
+
+        // Verificação de duplicados
         const companyRef = ref(db, "company");
         const snapshot = await get(companyRef);
 
         let camposDuplicados = [];
         snapshot.forEach(child => {
           const data = child.val();
-          if (data.nome === companyData.nome) camposDuplicados.push("Nome da Empresa");
-          
-          // Verifica apenas campos fiscais que foram preenchidos
-          if (companyData.nuit && data.nuit === companyData.nuit) camposDuplicados.push("NUIT");
-          if (companyData.nuel && data.nuel === companyData.nuel) camposDuplicados.push("NUEL");
-          if (companyData.nrContriuinte && data.nrContriuinte === companyData.nrContriuinte) camposDuplicados.push("Número de Contribuinte");
-          
-          if (data.contacto === companyData.contacto) camposDuplicados.push("Contacto");
+          if (data.nome === cleanedCompanyData.nome) camposDuplicados.push("Nome da Empresa");
+          if (cleanedCompanyData.nuit && data.nuit === cleanedCompanyData.nuit) camposDuplicados.push("NUIT");
+          if (cleanedCompanyData.nuel && data.nuel === cleanedCompanyData.nuel) camposDuplicados.push("NUEL");
+          if (cleanedCompanyData.nrContriuinte && data.nrContriuinte === cleanedCompanyData.nrContriuinte) camposDuplicados.push("Número de Contribuinte");
+          if (data.contacto === cleanedCompanyData.contacto) camposDuplicados.push("Contacto");
         });
 
         if (camposDuplicados.length > 0) {
@@ -235,38 +246,44 @@ const CompanyDataFormDesk = () => {
 
         // Upload do logo
         let logoUrl = "";
-        if (companyData.logo) {
+        if (cleanedCompanyData.logo) {
           const storage = getStorage();
           const fileRef = storageRef(storage, `logos/${user.uid}`);
-          await uploadBytes(fileRef, companyData.logo);
+          await uploadBytes(fileRef, cleanedCompanyData.logo);
           logoUrl = await getDownloadURL(fileRef);
         }
 
         // Preparar dados para salvar
         const dataToSave = {
-          ...companyData,
+          ...cleanedCompanyData,
           id: user.uid,
           email: user.email,
-          logoUrl,
+          logoUrl: logoUrl || null, // Ensure logoUrl is not undefined
           hasOptionalFiscalFields,
           subscriptions: {
             status: "active",
             isverify: "false",
           },
           createdAt: new Date().toISOString(),
+          // Ensure all array fields are properly initialized
+          subsectores: cleanedSubsectores.length > 0 ? cleanedSubsectores : null, // Use null instead of empty array
         };
 
-        // Remove campos fiscais vazios para entidades com campos opcionais
+        // Remove empty optional fields for entities with optional fiscal fields
         if (hasOptionalFiscalFields) {
-          if (!companyData.nuit) delete dataToSave.nuit;
-          if (!companyData.nuel) delete dataToSave.nuel;
-          if (!companyData.nrContriuinte) delete dataToSave.nrContriuinte;
+          if (!cleanedCompanyData.nuit) delete dataToSave.nuit;
+          if (!cleanedCompanyData.nuel) delete dataToSave.nuel;
+          if (!cleanedCompanyData.nrContriuinte) delete dataToSave.nrContriuinte;
         }
+
+        // Remove other empty fields that might cause issues
+        if (!dataToSave.sigla) delete dataToSave.sigla;
+        if (!dataToSave.customSector) delete dataToSave.customSector;
 
         await set(ref(db, `company/${user.uid}`), dataToSave);
         await push(ref(db, `subscriptions/${user.uid}`), { status: "active" });
 
-        navigate('/');
+        window.location.reload();
       }
     } catch (error) {
       setErrorMessage("Ocorreu um erro ao salvar os dados. Tente novamente.");

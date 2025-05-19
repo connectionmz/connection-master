@@ -167,6 +167,7 @@ const MinhaPropostaDesk = ({ user }) => {
         <IconButton
           color="error"
           onClick={() => setDeleteDialog(true)}
+          disabled={proposta.status}
           sx={{ ml: 'auto' }}
         >
           <Delete />

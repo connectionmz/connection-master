@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Button,
   Paper,
@@ -24,13 +24,15 @@ import {
   Avatar,
   Chip,
   Divider,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import { ref, onValue, update, get } from 'firebase/database';
 import { db } from '../../fb';
 import BackButton from '../BackButton';
 import { saveContentToInbox } from '../SaveToInbox';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   CheckCircle,
   Cancel,
@@ -41,79 +43,152 @@ import {
   Description,
   AttachFile,
   ArrowBack,
-  Email
+  Email,
+  Lock,
+  Info,
+  Print,
+  Share,
+  AccessTime
 } from '@mui/icons-material';
 import sendEmail from '../sms/SendMail';
 
+// Status configuration
+const STATUS_CONFIG = {
+  'Aceite': { color: 'success', icon: <CheckCircle />, label: 'Aprovada' },
+  'Recusada': { color: 'error', icon: <Cancel />, label: 'Recusada' },
+  'Pendente': { color: 'warning', icon: <Info />, label: 'Pendente' }
+};
+
 const DetalhesPropostaDesk = ({ user }) => {
-  // Constants and state
+  // Hooks and state initialization
   const { id, propostaId } = useParams();
+  const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width:600px)');
+  
   const [proposta, setProposta] = useState(null);
   const [nota, setNota] = useState('');
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ open: false, text: '', type: 'success' });
   const [notaEnviada, setNotaEnviada] = useState(false);
+  
+  // Messages and dialogs
+  const [message, setMessage] = useState({ open: false, text: '', type: 'success' });
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
     content: '',
-    onConfirm: () => {}
+    onConfirm: () => {},
+    showCancelOption: true
   });
 
-  const isMobile = useMediaQuery('(max-width:600px)');
-  const customUrl = 'app.connectionmozambique.com/';
+  // Constants
+  const CUSTOM_URL = 'connectionmozambique.com/';
+  const currentStatus = proposta?.status || 'Pendente';
+  const statusInfo = STATUS_CONFIG[currentStatus];
 
-  // Status colors mapping
-  const statusColors = {
-    'Aceite': 'success',
-    'Recusada': 'error',
-    'Pendente': 'warning'
-  };
+  // Memoized values
+  const cotacaoIdShort = useMemo(() => id?.slice(0, 8), [id]);
+  const proposalLink = useMemo(() => 
+    `https://${CUSTOM_URL}cotacao/${id}/proposta/${propostaId}`, 
+    [CUSTOM_URL, id, propostaId]
+  );
 
-  // Fetch proposal data
+  // Data fetching
   useEffect(() => {
-    const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
-    const unsubscribe = onValue(propostaRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setProposta(snapshot.val());
-        console.log(snapshot.val())
-        setNota(snapshot.val().nota || '');
-        setNotaEnviada(!!snapshot.val().nota);
-      }
-      setLoading(false);
-    });
+    const fetchProposalData = async () => {
+      try {
+        const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
+        const unsubscribe = onValue(propostaRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            setProposta(data);
+            setNota(data.nota || '');
+            setNotaEnviada(!!data.nota);
+            checkApprovalTime(data);
+          }
+          setLoading(false);
+        });
 
-    return () => unsubscribe();
+        return () => unsubscribe();
+      } catch (error) {
+        handleError(error, 'Erro ao carregar proposta');
+        setLoading(false);
+      }
+    };
+
+    fetchProposalData();
   }, [id, propostaId]);
 
   // Helper functions
-  const showMessage = (text, type = 'success') => {
-    setMessage({ open: true, text, type });
-  };
+  const checkApprovalTime = useCallback((proposalData) => {
+    if (proposalData.status === 'Aceite' && proposalData.acceptedAt) {
+      const acceptedTime = new Date(proposalData.acceptedAt).getTime();
+      const now = new Date().getTime();
+      const hoursDiff = (now - acceptedTime) / (1000 * 60 * 60);
+      
+      setConfirmDialog(prev => ({
+        ...prev,
+        showCancelOption: hoursDiff <= 24
+      }));
+    }
+  }, []);
 
-  const handleError = (error, defaultMessage) => {
+  const showMessage = useCallback((text, type = 'success') => {
+    setMessage({ open: true, text, type });
+  }, []);
+
+  const handleError = useCallback((error, defaultMessage) => {
     console.error(error);
     showMessage(defaultMessage, 'error');
-  };
+  }, [showMessage]);
 
-  // Proposal status handlers
-  const updateProposalStatus = async (status) => {
+  // Proposal status management
+  const updateProposalStatus = useCallback(async (status) => {
     try {
       const updates = { 
         status,
-        [`${status === 'Aceite' ? 'acceptedAt' : 'rejectedAt'}`]: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        updatedBy: user.id,
+        ...(status === 'Aceite' && { acceptedAt: new Date().toISOString() }),
+        ...(status === 'Recusada' && { rejectedAt: new Date().toISOString() })
       };
       
       await update(ref(db, `cotacoes/${id}/proposals/${propostaId}`), updates);
-      showMessage(`Proposta ${status} com sucesso!`, 'success');
+      showMessage(`Proposta ${status.toLowerCase()} com sucesso!`);
       return true;
     } catch (error) {
       handleError(error, 'Erro ao atualizar status da proposta');
       return false;
     }
-  };
+  }, [id, propostaId, user.id, handleError, showMessage]);
 
-  const sendNotification = async (recipientId, messageText, isAccepted = false) => {
+  const rejectOtherProposals = useCallback(async (acceptedProposalId) => {
+    try {
+      const proposalsRef = ref(db, `cotacoes/${id}/proposals`);
+      const snapshot = await get(proposalsRef);
+      
+      if (!snapshot.exists()) return;
+
+      const updates = {};
+      const proposals = snapshot.val();
+      
+      Object.keys(proposals).forEach(proposalId => {
+        if (proposalId !== acceptedProposalId && proposals[proposalId].status !== 'Recusada') {
+          updates[`${proposalId}/status`] = 'Recusada';
+          updates[`${proposalId}/rejectedAt`] = new Date().toISOString();
+          updates[`${proposalId}/updatedBy`] = user.id;
+        }
+      });
+      
+      if (Object.keys(updates).length > 0) {
+        await update(proposalsRef, updates);
+      }
+    } catch (error) {
+      handleError(error, 'Erro ao recusar outras propostas');
+    }
+  }, [id, user.id, handleError]);
+
+  // Notification handlers
+  const sendNotification = useCallback(async (recipientId, messageText) => {
     try {
       const notification = {
         type: 'cotation_reply',
@@ -123,166 +198,214 @@ const DetalhesPropostaDesk = ({ user }) => {
         timestamp: new Date().toISOString(),
         status: 'unread',
         link: `minha_proposta/cotacao/${id}/proposta/${propostaId}`,
+        isImportant: true
       };
       await saveContentToInbox(recipientId, notification);
     } catch (error) {
       handleError(error, 'Erro ao enviar notificação');
     }
-  };
+  }, [id, propostaId, user.id, user.nome, handleError]);
 
-  const sendEmailNotification = async (email, subject, messageText) => {
+  const sendEmailNotification = useCallback(async (email, subject, messageText) => {
     try {
-      const fullUrl = `https://${customUrl}cotacao/${id}/proposta/${propostaId}`;
       const emailContent = `
-        Olá,
-
-        ${messageText}
-
-        Você pode visualizar os detalhes acessando: ${fullUrl}
-
-        ${subject.includes('aceita') ? 
-          'Por favor, entre em contato com o comprador para os próximos passos.' : 
-          'Agradecemos seu interesse e esperamos contar com você em futuras cotações.'
-        }
-
-        Atenciosamente,
-        Equipe Connection Mozambique
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2>${subject}</h2>
+          <p>${messageText}</p>
+          <p>Você pode visualizar os detalhes acessando: <a href="${proposalLink}">${proposalLink}</a></p>
+          ${subject.includes('aceita') ? 
+            '<p><strong>Por favor, entre em contato com o comprador para os próximos passos.</strong></p>' : 
+            '<p>Agradecemos seu interesse e esperamos contar com você em futuras cotações.</p>'
+          }
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 0.9em; color: #777;">
+            Atenciosamente,<br>
+            Equipe Connection Mozambique
+          </p>
+        </div>
       `;
       
       await sendEmail({
         to: email,
         subject,
-        text: emailContent
+        html: emailContent
       });
     } catch (error) {
       handleError(error, 'Erro ao enviar e-mail de notificação');
     }
-  };
+  }, [proposalLink, handleError]);
 
-  const rejectOtherProposals = async (acceptedProposalId) => {
+  // Action handlers
+  const handleAcceptProposal = useCallback(async () => {
     try {
-      const proposalsRef = ref(db, `cotacoes/${id}/proposals`);
-      const snapshot = await get(proposalsRef);
-      
-      if (!snapshot.exists()) return false;
-
-      const updates = {};
-      const proposals = snapshot.val();
-      const notificationPromises = [];
-      
-      Object.keys(proposals).forEach(proposalId => {
-        if (proposalId !== acceptedProposalId) {
-          updates[`${proposalId}/status`] = 'Recusada';
-          updates[`${proposalId}/rejectedAt`] = new Date().toISOString();
-          
-          const proposal = proposals[proposalId];
-          if (proposal.from?.id) {
-            notificationPromises.push(
-              sendNotification(
-                proposal.from.id,
-                `Sua proposta para a cotação foi recusada por ${user.nome}`
-              )
-            );
-          }
-          
-          if (proposal.from?.email) {
-            notificationPromises.push(
-              sendEmailNotification(
-                proposal.from.email,
-                `Sua proposta foi recusada - Cotação #${id.slice(0, 8)}`,
-                `Infelizmente sua proposta para a cotação foi recusada por ${user.nome}.`
-              )
-            );
-          }
-        }
-      });
-      
-      await update(proposalsRef, updates);
-      await Promise.all(notificationPromises);
-      return true;
-    } catch (error) {
-      handleError(error, 'Erro ao recusar outras propostas');
-      return false;
-    }
-  };
-
-  const handleAcceptProposal = async () => {
-    try {
-      // 1. Update accepted proposal
       const success = await updateProposalStatus('Aceite');
       if (!success) return;
 
-      // 2. Reject other proposals
       await rejectOtherProposals(propostaId);
 
-      // 3. Send acceptance notifications
-      await Promise.all([
-        sendNotification(
+      if (proposta.from?.id) {
+        await sendNotification(
           proposta.from.id,
-          `Sua proposta foi aceita por ${user.nome}`
-        ),
-        proposta.from?.email && sendEmailNotification(
+          `Sua proposta para a cotação #${cotacaoIdShort} foi aceita por ${user.nome}`
+        );
+      }
+
+      if (proposta.from?.email) {
+        await sendEmailNotification(
           proposta.from.email,
-          `Sua proposta foi aceita - Cotação #${id.slice(0, 8)}`,
+          `Sua proposta foi aceita - Cotação #${cotacaoIdShort}`,
           `Parabéns! Sua proposta para a cotação foi aceita por ${user.nome}.`
-        )
-      ]);
+        );
+      }
+
+      await update(ref(db, `cotacoes/${id}`), {
+        status: 'Concluída',
+        selectedProposal: propostaId,
+        updatedAt: new Date().toISOString()
+      });
+
+      navigate(`/cotacao/${id}`, { replace: true });
     } catch (error) {
       handleError(error, 'Erro ao processar a aceitação');
     }
-  };
-  const handleRejectProposal = async () => {
+  }, [
+    proposta,
+    updateProposalStatus,
+    rejectOtherProposals,
+    sendNotification,
+    sendEmailNotification,
+    cotacaoIdShort,
+    user.nome,
+    id,
+    propostaId,
+    navigate,
+    handleError
+  ]);
+
+  const handleRejectProposal = useCallback(async () => {
     try {
       await updateProposalStatus('Recusada');
-      await sendNotification(
-        proposta.from.id,
-        `Sua proposta foi recusada por ${user.nome}`
-      );
+      
+      if (proposta.from?.id) {
+        await sendNotification(
+          proposta.from.id,
+          `Sua proposta para a cotação #${cotacaoIdShort} foi recusada por ${user.nome}`
+        );
+      }
+
+      if (proposta.from?.email) {
+        await sendEmailNotification(
+          proposta.from.email,
+          `Sua proposta foi recusada - Cotação #${cotacaoIdShort}`,
+          `Infelizmente sua proposta para a cotação foi recusada por ${user.nome}.`
+        );
+      }
     } catch (error) {
       handleError(error, 'Erro ao recusar proposta');
     }
-  };
-  const handleCancelApproval = async () => {
+  }, [proposta, updateProposalStatus, sendNotification, sendEmailNotification, cotacaoIdShort, user.nome, handleError]);
+
+  const handleCancelApproval = useCallback(async () => {
     try {
+      if (!confirmDialog.showCancelOption) {
+        showMessage('Não é possível cancelar a aprovação após 24 horas', 'error');
+        return;
+      }
+
       await updateProposalStatus('Pendente');
+      await update(ref(db, `cotacoes/${id}`), {
+        status: 'Em andamento',
+        selectedProposal: null,
+        updatedAt: new Date().toISOString()
+      });
     } catch (error) {
       handleError(error, 'Erro ao cancelar aprovação');
     }
-  };
-  // Note handlers
-  const handleNotaSubmit = async () => {
+  }, [confirmDialog.showCancelOption, updateProposalStatus, id, showMessage, handleError]);
+
+  const handleNotaSubmit = useCallback(async () => {
     if (!nota.trim()) {
       showMessage('A nota não pode estar vazia.', 'error');
       return;
     }
     try {
-      await update(ref(db, `cotacoes/${id}/proposals/${propostaId}`), { nota });
+      await update(ref(db, `cotacoes/${id}/proposals/${propostaId}`), { 
+        nota,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user.id
+      });
       showMessage('Nota enviada com sucesso!');
       setNotaEnviada(true);
     } catch (error) {
       handleError(error, 'Erro ao enviar nota');
     }
-  };
+  }, [nota, id, propostaId, user.id, showMessage, handleError]);
 
-  const showAcceptConfirmation = () => {
+  // Dialog handlers
+  const showAcceptConfirmation = useCallback(() => {
     setConfirmDialog({
       open: true,
       title: 'Confirmar Aceitação',
-      content: 'Ao aceitar esta proposta, todas as outras serão automaticamente recusadas. Esta ação é irreversível. Deseja continuar?',
-      onConfirm: handleAcceptProposal
+      content: 'Ao aceitar esta proposta: \n1. Todas as outras propostas serão automaticamente recusadas \n2. A cotação será marcada como concluída \n3. Esta ação não poderá ser desfeita',
+      onConfirm: handleAcceptProposal,
+      showCancelOption: true,
+      confirmText: 'Confirmar Aceitação',
+      confirmColor: 'success'
     });
-  };
+  }, [handleAcceptProposal]);
 
-  const showRejectConfirmation = () => {
+  const showRejectConfirmation = useCallback(() => {
     setConfirmDialog({
       open: true,
       title: 'Confirmar Recusa',
-      content: 'Tem certeza que deseja recusar esta proposta? Esta ação é irreversível.',
-      onConfirm: handleRejectProposal
+      content: 'Tem certeza que deseja recusar esta proposta? O fornecedor será notificado desta decisão.',
+      onConfirm: handleRejectProposal,
+      showCancelOption: true,
+      confirmText: 'Confirmar Recusa',
+      confirmColor: 'error'
     });
-  };
+  }, [handleRejectProposal]);
 
-  // Loading and error states
+  const showCancelApprovalConfirmation = useCallback(() => {
+    setConfirmDialog({
+      open: true,
+      title: 'Cancelar Aprovação',
+      content: confirmDialog.showCancelOption 
+        ? 'Tem certeza que deseja cancelar a aprovação desta proposta? A cotação será reaberta para outras propostas.'
+        : 'A aprovação não pode ser cancelada após 24 horas da aceitação.',
+      onConfirm: confirmDialog.showCancelOption ? handleCancelApproval : null,
+      showCancelOption: confirmDialog.showCancelOption,
+      confirmText: 'Cancelar Aprovação',
+      confirmColor: 'warning'
+    });
+  }, [confirmDialog.showCancelOption, handleCancelApproval]);
+
+  // UI handlers
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
+  const handleShare = useCallback(() => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Proposta de ${proposta.from.nome}`,
+        text: `Confira esta proposta para a cotação #${cotacaoIdShort}`,
+        url: proposalLink
+      }).catch(err => {
+        console.error('Erro ao compartilhar:', err);
+        showMessage('Erro ao compartilhar', 'error');
+      });
+    } else {
+      navigator.clipboard.writeText(proposalLink).then(() => {
+        showMessage('Link copiado para a área de transferência!');
+      }).catch(err => {
+        console.error('Erro ao copiar:', err);
+        showMessage('Erro ao copiar link', 'error');
+      });
+    }
+  }, [proposta, cotacaoIdShort, proposalLink, showMessage]);
+
+  // Render states
   if (loading) {
     return (
       <Box sx={{ 
@@ -309,7 +432,7 @@ const DetalhesPropostaDesk = ({ user }) => {
         <Typography variant="h6">Proposta não encontrada</Typography>
         <Button 
           startIcon={<ArrowBack />}
-          onClick={() => window.history.back()}
+          onClick={() => navigate(-1)}
           variant="outlined"
         >
           Voltar
@@ -318,7 +441,6 @@ const DetalhesPropostaDesk = ({ user }) => {
     );
   }
 
-  // Main render
   return (
     <Paper sx={{
       width: '100%',
@@ -327,11 +449,11 @@ const DetalhesPropostaDesk = ({ user }) => {
       p: isMobile ? 2 : 4,
       boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
       borderRadius: 3,
-      backgroundColor: 'background.paper'
+      backgroundColor: 'background.paper',
+      position: 'relative'
     }}>
+      {/* Header Section */}
       <BackButton sx={{ mb: 2 }} />
-
-      {/* Header */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -350,293 +472,432 @@ const DetalhesPropostaDesk = ({ user }) => {
           </Box>
         </Box>
 
-        <Chip
-          icon={<CheckCircle fontSize="small" />}
-          label={proposta.status || 'Pendente'}
-          color={statusColors[proposta.status] || 'default'}
-          variant="outlined"
-          sx={{ 
-            px: 1,
-            fontWeight: 500,
-            borderWidth: 2,
-            '& .MuiChip-icon': { ml: 0.5 }
-          }}
-        />
-      </Box>
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Company Information */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Business color="primary" /> Informações da Empresa
-          </Typography>
-          
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Empresa
-              </Typography>
-              <Typography variant="body1">
-                <Link
-                  to={`/perfil/${proposta.from.id}`}
-                  style={{ textDecoration: 'none', color: '#1976d2' }} // azul padrão MUI
-                >
-                  {proposta.from.nome}
-                </Link>
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Contacto
-            </Typography>
-
-            {/* Link para chamada telefónica */}
-            <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Phone fontSize="small" />
-              <a href={`tel:${proposta.from.contacto}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
-                {proposta.from.contacto}
-              </a>
-            </Typography>
-            {/* Link para enviar email */}
-            <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Email fontSize="small" />
-              <a href={`mailto:${proposta.from.email}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
-                {proposta.from.email}
-              </a>
-            </Typography>
-          </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-      {/* Proposal Content */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description color="primary" /> Conteúdo da Proposta
-          </Typography>
-          
-          <Box 
-            dangerouslySetInnerHTML={{ __html: proposta.proposal }}
-            sx={{
-              '& p': { mb: 2 },
-              '& ul, & ol': { pl: 3, mb: 2 },
-              fontSize: '0.9375rem',
-              lineHeight: 1.6
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            label={statusInfo.label}
+            icon={statusInfo.icon}
+            color={statusInfo.color}
+            variant="outlined"
+            sx={{ 
+              px: 1,
+              fontWeight: 500,
+              borderWidth: 2,
+              '& .MuiChip-icon': { ml: 0.5 }
             }}
           />
-
-          {proposta.fileUrl && (
-            <Button
-              href={proposta.fileUrl}
-              target="_blank"
-              startIcon={<AttachFile />}
-              variant="outlined"
-              sx={{ mt: 2 }}
-            >
-              Baixar Arquivo Anexado
-            </Button>
+          {currentStatus === 'Aceite' && !confirmDialog.showCancelOption && (
+            <Tooltip title="Aprovação bloqueada após 24 horas">
+              <Lock color="error" fontSize="small" />
+            </Tooltip>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Products/Services */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description color="primary" /> Produtos/Serviços
-          </Typography>
-          
-          {proposta.selectedProducts?.length > 0 ? (
-            <TableContainer sx={{ 
-              maxHeight: 400,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1
-            }}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Nome</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Preço (MT)</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Ação</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {proposta.selectedProducts.map((product) => (
-                    <TableRow key={product.id} hover>
-                      <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.price}</TableCell>
-                      <TableCell>
-                        <Button
-                          href={product.url}
-                          target="_blank"
-                          size="small"
-                          variant="outlined"
-                        >
-                          Ver Detalhes
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
-              Nenhum produto/serviço selecionado nesta proposta
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Notes */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Description color="primary" /> Notas
-          </Typography>
-          
-          {notaEnviada ? (
-            <>
-              <Typography variant="body1" sx={{ mb: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                {nota}
-              </Typography>
-              <Button
-                onClick={() => setNotaEnviada(false)}
-                startIcon={<Edit />}
-                variant="outlined"
-              >
-                Editar Nota
-              </Button>
-            </>
-          ) : (
-            <>
-              <TextField
-                value={nota}
-                onChange={(e) => setNota(e.target.value)}
-                label="Adicionar uma nota"
-                multiline
-                rows={4}
-                fullWidth
-                variant="outlined"
-                sx={{ mb: 2 }}
-              />
-              <Button
-                onClick={handleNotaSubmit}
-                startIcon={<Send />}
-                variant="contained"
-              >
-                Enviar Nota
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 2,
-        flexDirection: isMobile ? 'column' : 'row',
-        mb: 2
-      }}>
-        {proposta.status === 'Aceite' ? (
-          <Button
-            onClick={handleCancelApproval}
-            startIcon={<Cancel />}
-            variant="contained"
-            color="warning"
-            fullWidth
-            size="large"
-          >
-            Cancelar Aprovação
-          </Button>
-        ) : (
-          <Button
-            onClick={showAcceptConfirmation}
-            startIcon={<CheckCircle />}
-            variant="contained"
-            color="success"
-            fullWidth
-            size="large"
-          >
-            Aprovar Proposta
-          </Button>
-        )}
-        
-        <Button
-          onClick={showRejectConfirmation}
-          startIcon={<Cancel />}
-          variant="contained"
-          color="error"
-          fullWidth
-          size="large"
-          disabled={proposta.status === 'Recusada'}
-        >
-          Recusar Proposta
-        </Button>
+        </Box>
       </Box>
 
+      {/* Action Buttons 
+      <Box sx={{ 
+        position: 'absolute', 
+        top: 16, 
+        right: 16,
+        display: 'flex',
+        gap: 1
+      }}>
+        <Tooltip title="Imprimir proposta">
+          <IconButton onClick={handlePrint} size="small">
+            <Print fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Compartilhar proposta">
+          <IconButton onClick={handleShare} size="small">
+            <Share fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+*/}
+      <Divider sx={{ my: 3 }} />
+
+      {/* Company Information Section */}
+      <CompanyInfoSection proposta={proposta} />
+
+      {/* Proposal Content Section */}
+      <ProposalContentSection proposta={proposta} />
+
+      {/* Products/Services Section */}
+      <ProductsServicesSection proposta={proposta} />
+
+      {/* Notes Section */}
+      <NotesSection 
+        nota={nota} 
+        notaEnviada={notaEnviada} 
+        setNota={setNota} 
+        handleNotaSubmit={handleNotaSubmit}
+      />
+
+      {/* Status Timeline */}
+      {proposta.acceptedAt && (
+        <StatusTimeline 
+          status={currentStatus}
+          acceptedAt={proposta.acceptedAt}
+          rejectedAt={proposta.rejectedAt}
+        />
+      )}
+
+      {/* Action Buttons Section */}
+      {currentStatus !== 'Recusada' && (
+        <ActionButtonsSection 
+          currentStatus={currentStatus}
+          confirmDialog={confirmDialog}
+          showAcceptConfirmation={showAcceptConfirmation}
+          showRejectConfirmation={showRejectConfirmation}
+          showCancelApprovalConfirmation={showCancelApprovalConfirmation}
+          isMobile={isMobile}
+        />
+      )}
+
       {/* Message Snackbar */}
-      <Snackbar
-        open={message.open}
-        autoHideDuration={4000}
-        onClose={() => setMessage({ ...message, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setMessage({ ...message, open: false })}
-          severity={message.type}
-          sx={{ width: '100%' }}
-          elevation={6}
-        >
-          {message.text}
-        </Alert>
-      </Snackbar>
+      <MessageSnackbar 
+        message={message}
+        setMessage={setMessage}
+      />
 
       {/* Confirmation Dialog */}
-      <Dialog 
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog({...confirmDialog, open: false})}
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            p: 2,
-            width: isMobile ? '90%' : '400px'
-          }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 600 }}>{confirmDialog.title}</DialogTitle>
-        <DialogContent>
-          <Typography>{confirmDialog.content}</Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button
-            onClick={() => setConfirmDialog({...confirmDialog, open: false})}
-            variant="outlined"
-            color="inherit"
-            sx={{ borderRadius: 2 }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => {
-              confirmDialog.onConfirm();
-              setConfirmDialog({...confirmDialog, open: false});
-            }}
-            variant="contained"
-            color="primary"
-            startIcon={<CheckCircle />}
-            sx={{ borderRadius: 2 }}
-          >
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmationDialog 
+        confirmDialog={confirmDialog}
+        setConfirmDialog={setConfirmDialog}
+        isMobile={isMobile}
+      />
     </Paper>
   );
 };
+
+// Sub-components for better organization
+const CompanyInfoSection = ({ proposta }) => (
+  <Card sx={{ mb: 3, borderRadius: 2 }}>
+    <CardContent>
+      <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Business color="primary" /> Informações da Empresa
+      </Typography>
+      
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Empresa
+          </Typography>
+          <Typography variant="body1">
+            <Link
+              to={`/perfil/${proposta.from.id}`}
+              style={{ textDecoration: 'none', color: '#1976d2' }}
+            >
+              {proposta.from.nome}
+            </Link>
+          </Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Contacto
+          </Typography>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Phone fontSize="small" />
+            <a href={`tel:${proposta.from.contacto}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
+              {proposta.from.contacto}
+            </a>
+          </Typography>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            <Email fontSize="small" />
+            <a href={`mailto:${proposta.from.email}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
+              {proposta.from.email}
+            </a>
+          </Typography>
+        </Grid>
+      </Grid>
+    </CardContent>
+  </Card>
+);
+
+const ProposalContentSection = ({ proposta }) => (
+  <Card sx={{ mb: 3, borderRadius: 2 }}>
+    <CardContent>
+      <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Description color="primary" /> Conteúdo da Proposta
+      </Typography>
+      
+      <Box 
+        dangerouslySetInnerHTML={{ __html: proposta.proposal }}
+        sx={{
+          '& p': { mb: 2 },
+          '& ul, & ol': { pl: 3, mb: 2 },
+          fontSize: '0.9375rem',
+          lineHeight: 1.6
+        }}
+      />
+
+      {proposta.fileUrl && (
+        <Button
+          href={proposta.fileUrl}
+          target="_blank"
+          startIcon={<AttachFile />}
+          variant="outlined"
+          sx={{ mt: 2 }}
+        >
+          Baixar Arquivo Anexado
+        </Button>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const ProductsServicesSection = ({ proposta }) => (
+  <Card sx={{ mb: 3, borderRadius: 2 }}>
+    <CardContent>
+      <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Description color="primary" /> Produtos/Serviços
+      </Typography>
+      
+      {proposta.selectedProducts?.length > 0 ? (
+        <TableContainer sx={{ 
+          maxHeight: 400,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1
+        }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Nome</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Preço (MT)</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Ação</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {proposta.selectedProducts.map((product, index) => (
+                <TableRow key={index} hover>
+                  <TableCell>{product.name}</TableCell>
+                  <TableCell>{product.price.toLocaleString('pt-PT')}</TableCell>
+                  <TableCell>
+                    <Button
+                      href={product.url}
+                      target="_blank"
+                      size="small"
+                      variant="outlined"
+                    >
+                      Ver Detalhes
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+          Nenhum produto/serviço selecionado nesta proposta
+        </Typography>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const NotesSection = ({ nota, notaEnviada, setNota, setNotaEnviada, handleNotaSubmit }) => (
+  <Card sx={{ mb: 3, borderRadius: 2 }}>
+    <CardContent>
+      <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Description color="primary" /> Notas
+      </Typography>
+      {notaEnviada ? (
+        <>
+          <Typography variant="body1" sx={{ 
+            mb: 2, 
+            p: 2, 
+            backgroundColor: 'action.hover', 
+            borderRadius: 1,
+            whiteSpace: 'pre-wrap'
+          }}>
+            {nota}
+          </Typography>
+          <Button
+            onClick={() => setNotaEnviada(false)}
+            startIcon={<Edit />}
+            variant="outlined"
+          >
+            Editar Nota
+          </Button>
+        </>
+      ) : (
+        <>
+          <TextField
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            label="Adicionar uma nota"
+            multiline
+            rows={4}
+            fullWidth
+            variant="outlined"
+            sx={{ mb: 2 }}
+          />
+          <Button
+            onClick={handleNotaSubmit}
+            startIcon={<Send />}
+            variant="contained"
+            disabled={!nota.trim()}
+          >
+            Enviar Nota
+          </Button>
+        </>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const StatusTimeline = ({ status, acceptedAt, rejectedAt }) => {
+  const getStatusTime = () => {
+    if (status === 'Aceite' && acceptedAt) {
+      return new Date(acceptedAt).toLocaleString('pt-PT');
+    }
+    if (status === 'Recusada' && rejectedAt) {
+      return new Date(rejectedAt).toLocaleString('pt-PT');
+    }
+    return null;
+  };
+
+  const statusTime = getStatusTime();
+
+  if (!statusTime) return null;
+
+  return (
+    <Card sx={{ mb: 3, borderRadius: 2 }}>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AccessTime color="primary" /> Histórico de Status
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography variant="body1" color="text.secondary">
+            {status === 'Aceite' ? 'Aprovada em:' : 'Recusada em:'}
+          </Typography>
+          <Typography variant="body1" fontWeight={500}>
+            {statusTime}
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ActionButtonsSection = ({ 
+  currentStatus, 
+  confirmDialog, 
+  showAcceptConfirmation, 
+  showRejectConfirmation, 
+  showCancelApprovalConfirmation,
+  isMobile
+}) => (
+  <Box sx={{ 
+    display: 'flex', 
+    gap: 2,
+    flexDirection: isMobile ? 'column' : 'row',
+    mb: 2
+  }}>
+    {currentStatus === 'Aceite' ? (
+      <Button
+        onClick={showCancelApprovalConfirmation}
+        startIcon={<Cancel />}
+        variant="contained"
+        color="warning"
+        fullWidth
+        size="large"
+        disabled={!confirmDialog.showCancelOption}
+      >
+        {confirmDialog.showCancelOption ? 'Cancelar Aprovação' : 'Aprovação Bloqueada'}
+      </Button>
+    ) : (
+      <Button
+        onClick={showAcceptConfirmation}
+        startIcon={<CheckCircle />}
+        variant="contained"
+        color="success"
+        fullWidth
+        size="large"
+      >
+        Aprovar Proposta
+      </Button>
+    )}
+    
+    <Button
+      onClick={showRejectConfirmation}
+      startIcon={<Cancel />}
+      variant="contained"
+      color="error"
+      fullWidth
+      size="large"
+      disabled={currentStatus === 'Recusada'}
+    >
+      Recusar Proposta
+    </Button>
+  </Box>
+);
+
+const MessageSnackbar = ({ message, setMessage }) => (
+  <Snackbar
+    open={message.open}
+    autoHideDuration={6000}
+    onClose={() => setMessage({ ...message, open: false })}
+    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+  >
+    <Alert
+      onClose={() => setMessage({ ...message, open: false })}
+      severity={message.type}
+      sx={{ width: '100%' }}
+      elevation={6}
+      variant="filled"
+    >
+      {message.text}
+    </Alert>
+  </Snackbar>
+);
+
+const ConfirmationDialog = ({ confirmDialog, setConfirmDialog, isMobile }) => (
+  <Dialog 
+    open={confirmDialog.open}
+    onClose={() => setConfirmDialog({...confirmDialog, open: false})}
+    PaperProps={{
+      sx: {
+        borderRadius: 3,
+        p: 2,
+        width: isMobile ? '90%' : '400px'
+      }
+    }}
+  >
+    <DialogTitle sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+      {confirmDialog.title}
+    </DialogTitle>
+    <DialogContent>
+      <Typography sx={{ whiteSpace: 'pre-line' }}>{confirmDialog.content}</Typography>
+    </DialogContent>
+    <DialogActions sx={{ p: 2 }}>
+      {confirmDialog.showCancelOption && (
+        <Button
+          onClick={() => setConfirmDialog({...confirmDialog, open: false})}
+          variant="outlined"
+          color="inherit"
+          sx={{ borderRadius: 2 }}
+        >
+          Cancelar
+        </Button>
+      )}
+      {confirmDialog.onConfirm && (
+        <Button
+          onClick={() => {
+            confirmDialog.onConfirm();
+            setConfirmDialog({...confirmDialog, open: false});
+          }}
+          variant="contained"
+          color={confirmDialog.confirmColor || 'primary'}
+          startIcon={<CheckCircle />}
+          sx={{ borderRadius: 2 }}
+        >
+          {confirmDialog.confirmText || 'Confirmar'}
+        </Button>
+      )}
+    </DialogActions>
+  </Dialog>
+);
 
 export default DetalhesPropostaDesk;

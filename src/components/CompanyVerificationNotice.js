@@ -40,19 +40,6 @@ const CompanyVerificationNotice = () => {
             Os dados da sua empresa estão sendo verificados. Você será notificado
           </Typography>
         </Alert>
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleLogin}
-          sx={{
-            textTransform: 'none',
-            fontSize: '1rem',
-            py: 1,
-          }}
-        >
-          Iniciar Sessão
-        </Button>
       </Stack>
     </Box>
   );

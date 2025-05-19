@@ -180,6 +180,7 @@ const ParceirosInvestidoresDesk = () => {
         
         if (snapshot.exists()) {
           const allCompanies = Object.values(snapshot.val());
+          console.log(allCompanies)
           
           setCompanies({
             parceiros: allCompanies.filter(c => c.tipo === 'Parceiro'),

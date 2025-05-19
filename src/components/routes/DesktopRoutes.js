@@ -86,6 +86,7 @@ import CriarProformaDesk from '../desktop/CriarProformaDesk';
 import FaturaDesk from '../desktop/FaturaDesk';
 import VerificationAccountModal from '../modal/VerificationAccountModal';
 import VerFaturaDesk from '../desktop/VerFaturaDesk';
+import { allModules } from '../ModuleGrid';
 
 const theme = createTheme({
   palette: {
@@ -180,7 +181,7 @@ const dynamicProtectedPatterns = [
 
 // Componente para verificação de rotas protegidas
 // Componente para verificação de rotas protegidas
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, requiredModule }) => {
   const currentLocation = useLocation();
   
   const isProtected = protectedRoutes.some(route => 
@@ -188,9 +189,29 @@ const ProtectedRoute = ({ children }) => {
     dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
   );
 
-  // Se não há usuário logado, permite acesso sem verificação
+  // Se não há usuário logado, permite acesso (será redirecionado pelo sistema de autenticação)
   if (!user) {
     return children;
+  }
+
+  // Verifica se a rota requer um módulo específico e se o usuário não tem acesso
+  if (requiredModule && !isActiveModule(user, requiredModule)) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h5" gutterBottom>
+          Módulo não disponível
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          Você não tem acesso a este módulo. Entre em contato com o administrador para ativá-lo.
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => navigate('/')}
+        >
+          Voltar para a página inicial
+        </Button>
+      </Box>
+    );
   }
 
   // Se há usuário logado mas não está verificado e a rota é protegida
@@ -225,6 +246,20 @@ const ProtectedRoute = ({ children }) => {
 
   return children;
 };
+
+const isActiveModule = (user, moduleKey) => {
+  // Se o módulo tem alwaysEnabled, sempre permite acesso
+  const module = allModules.find(m => m.key === moduleKey);
+  if (module?.alwaysEnabled) return true;
+  
+  // Se não há usuário logado, permite acesso (será tratado pelo sistema de autenticação)
+  if (!user) return true;
+  
+  // Verifica se o usuário tem o módulo ativo
+  return user?.activeModules?.[moduleKey]
+};
+
+
 
 // Função auxiliar para renderizar rotas protegidas
 const renderProtectedRoute = (path, element) => (
@@ -480,7 +515,7 @@ const renderProtectedRoute = (path, element) => (
   } />
 
   <Route path="/cotacao" element={
-    <ProtectedRoute>
+    <ProtectedRoute requiredModule="moduloSMS">
       <NovaCotacaoDesk user={user} />
     </ProtectedRoute>
   } />
@@ -493,7 +528,7 @@ const renderProtectedRoute = (path, element) => (
 
 
   <Route path="/cotacaoPdf/:id" element={
-    <ProtectedRoute>
+    <ProtectedRoute requiredModule="moduloSMS">
       <CotacoesPDF user={user}/>
     </ProtectedRoute>
   } />
@@ -505,7 +540,7 @@ const renderProtectedRoute = (path, element) => (
 
 
 <Route path="/edit-proforma/:numeroProforma" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloProforma">
     <EditarFaturaDesk user={user} />
   </ProtectedRoute>
 } />
@@ -533,7 +568,7 @@ const renderProtectedRoute = (path, element) => (
 
 <Route path="/concurso/:id" element={
   <ProtectedRoute>
-    <ConcursoDetalhesDesk  ursoDesk user={user} />
+    <ConcursoDetalhesDesk user={user} />
   </ProtectedRoute>
 } />
 
@@ -593,25 +628,25 @@ const renderProtectedRoute = (path, element) => (
 } />
 
 <Route path="/cotacao/:id/proposta/:propostaId" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloSMS">
     <DetalhesPropostaDesk user={user} />
   </ProtectedRoute>
 } />
 
 <Route path="/minha_proposta/cotacao/:id/proposta/:propostaId" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloSMS">
     <MinhaPropostaDesk user={user} />
   </ProtectedRoute>
 } />
 
 <Route path="/cotacao/:id" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloSMS">
     <CotacaoDetalhesDesk user={user} />
   </ProtectedRoute>
 } />
 
 <Route path="/cotacaoPdf/:id" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloSMS">
     <CotacoesPDF user={user} />
   </ProtectedRoute>
 } />

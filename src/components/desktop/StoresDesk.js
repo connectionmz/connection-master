@@ -70,41 +70,91 @@ const StoresDesk = ({ user }) => {
   const trackInteraction = async (type, action, itemId, storeId = null) => {
     try {
       const timestamp = Date.now();
-      const date = new Date().toISOString().split('T')[0];
-      const hour = new Date().getHours();
-
-      const interactionData = {
-        type,
-        action,
-        itemId,
-        storeId,
-        userId,
-        timestamp,
-        date,
-        hour,
-        userAgent: navigator.userAgent
-      };
-
-      let path;
-      if (action === 'impression') {
-        path = `impressions/${type}_${itemId}_${userId}`;
-      } else {
-        path = `clicks/${type}_${itemId}_${userId}_${timestamp}`;
+      
+      if (action === 'click') {
+        const updates = {};
         
-        if (type === 'product' && storeId) {
-          const productRef = ref(db, `stores/${storeId}/products/${itemId}/clicks`);
-          await set(productRef, increment(1));
-        } else if (type === 'store') {
-          const storeRef = ref(db, `stores/${itemId}/storeClicks`);
-          await set(storeRef, increment(1));
+        // Atualizações para métricas de anúncios/lojas
+        updates[`anuncios_metrics/${storeId}/total_cliques`] = increment(1);
+        updates[`loja_metrics/${storeId}/ultimo_clique`] = timestamp;
+        updates[`loja_metrics/${storeId}/from`] = 'Pagina Inicial';
+        
+        // Adiciona informações da empresa se o usuário estiver logado
+        if (user) {
+          updates[`loja_metrics/${storeId}/company`] = {
+            id: user.id,
+            nome: user.nome || user.displayName || 'Anônimo',
+            provincia: user.provinciaTemp || user.provincia || 'Não especificado',
+            distrito: user.distrito || 'Não especificado',
+            contacto: user.contacto || user.phoneNumber || 'Não especificado',
+            sector: user.sector || 'Não especificado',
+            email: user.email || 'Não especificado'
+          };
         }
+        
+        // Aplica todas as atualizações de uma vez
+        await update(ref(db), updates);
+        
+        // Registro adicional para analytics (opcional)
+        const clickData = {
+          type,
+          itemId,
+          storeId,
+          userId: user?.id || 'anonymous',
+          timestamp,
+          userAgent: navigator.userAgent,
+          page: 'Pagina Inicial'
+        };
+        
+        const clickRef = push(ref(db, 'clicks'));
+        await set(clickRef, clickData);
       }
-
-      const interactionRef = ref(db, path);
-      await set(interactionRef, interactionData);
-
+      
     } catch (error) {
       console.error("Erro ao registrar interação:", error);
+    }
+  };
+
+  const trackClick = async (storeId) => {
+    try {
+      const timestamp = Date.now();
+      const updates = {};
+      
+      // Atualizações para métricas
+      updates[`loja_metrics/${storeId}/total_cliques`] = increment(1);
+      updates[`loja_metrics/${storeId}/ultimo_clique`] = timestamp;
+      updates[`loja_metrics/${storeId}/from`] = 'Pagina Inicial';
+      
+      // Adiciona informações da empresa se o usuário estiver logado
+      if (user) {
+        updates[`loja_metrics/${storeId}/company`] = {
+          id: user.id,
+          nome: user.nome || user.displayName || 'Anônimo',
+          provincia: user.provinciaTemp || user.provincia || 'Não especificado',
+          distrito: user.distrito || 'Não especificado',
+          contacto: user.contacto || user.phoneNumber || 'Não especificado',
+          sector: user.sector || 'Não especificado',
+          email: user.email || 'Não especificado'
+        };
+      }
+      
+      // Aplica todas as atualizações
+      await update(ref(db), updates);
+      
+      // Registro adicional para analytics
+      const clickData = {
+        storeId,
+        userId: user?.id || 'anonymous',
+        timestamp,
+        userAgent: navigator.userAgent,
+        page: 'Pagina Inicial'
+      };
+      
+      const clickRef = push(ref(db, 'clicks'));
+      await set(clickRef, clickData);
+      
+    } catch (error) {
+      console.error("Erro ao registrar clique:", error);
     }
   };
 
@@ -406,7 +456,7 @@ const StoresDesk = ({ user }) => {
       to={`/product/${product.id}/store/${product.storeId}`}
       onClick={(e) => {
         e.preventDefault();
-        trackInteraction('product', 'click', product.id, product.storeId)
+        trackClick(product.storeId)
           .then(() => {
             window.location.href = `/product/${product.id}/store/${product.storeId}`;
           });
@@ -423,7 +473,7 @@ const StoresDesk = ({ user }) => {
       to={`/loja/${store.id}`}
       onClick={(e) => {
         e.preventDefault();
-        trackInteraction('store', 'click', store.id)
+        trackClick(store.id)
           .then(() => {
             window.location.href = `/loja/${store.id}`;
           });

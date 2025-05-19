@@ -30,10 +30,9 @@ import {
   FormGroup,
   useMediaQuery,
   useTheme,
-  Grid,
   Tabs,
   Tab,
-  Stack
+  Tooltip
 } from '@mui/material';
 import { 
   Edit, 
@@ -44,16 +43,15 @@ import {
   Close, 
   FilterList, 
   Sort,
-  Add
+  Add,
+  Block
 } from '@mui/icons-material';
 import BackButton from '../BackButton';
 
-// Lista de tipos de inquérito pré-definidos
 const TIPOS_INQUERITO = [
   'Pesquisa de Mercado',
 ];
 
-// Lista de províncias
 const PROVINCIAS = [
   'Maputo Cidade',
   'Maputo Província',
@@ -100,7 +98,6 @@ const InqueritosModuleDesk = ({ user }) => {
     onConfirm: () => {}
   });
 
-  // Filtra e ordena os inquéritos
   const filteredInqueritos = inqueritos
     .filter((inq) => {
       const matchesSearch = inq.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -120,7 +117,6 @@ const InqueritosModuleDesk = ({ user }) => {
     const fetchData = async () => {
       setLoading(true);
       
-      // Fetch surveys
       const inqueritosRef = ref(db, 'surveys');
       onValue(inqueritosRef, (snapshot) => {
         const data = snapshot.val();
@@ -132,7 +128,6 @@ const InqueritosModuleDesk = ({ user }) => {
         setInqueritos(listaInqueritos);
       });
 
-      // Fetch sectors
       onValue(ref(db, 'sectores_de_atividade'), (snapshot) => {
         const sectoresData = snapshot.val();
         if (sectoresData) {
@@ -140,7 +135,6 @@ const InqueritosModuleDesk = ({ user }) => {
         }
       });
 
-      // Fetch responses count for each survey
       const responsesRef = ref(db, 'survey_responses');
       onValue(responsesRef, (snapshot) => {
         const responsesData = snapshot.val();
@@ -180,10 +174,20 @@ const InqueritosModuleDesk = ({ user }) => {
     });
   };
 
-  const startEdit = (id, currentData) => {
+  const handleEditClick = (id, currentData) => {
     if (!canEditSurvey(id)) {
+      setConfirmDialog({
+        open: true,
+        title: 'Edição não permitida',
+        content: 'Este inquérito já possui respostas e não pode ser editado.',
+        onConfirm: () => setConfirmDialog({ ...confirmDialog, open: false })
+      });
       return;
     }
+    startEdit(id, currentData);
+  };
+
+  const startEdit = (id, currentData) => {
     setEditingId(id);
     setEditData({ 
       title: currentData.title, 
@@ -274,7 +278,7 @@ const InqueritosModuleDesk = ({ user }) => {
       backgroundColor: '#fff',
       minHeight: '70vh'
     }}>
-              <BackButton/>
+      <BackButton/>
 
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, flexDirection: isMobile ? 'column' : 'row' }}>
         <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ 
@@ -540,29 +544,48 @@ const InqueritosModuleDesk = ({ user }) => {
                         display: 'flex',
                         justifyContent: isMobile ? 'center' : 'flex-end'
                       }}>
-                        <IconButton
-                          onClick={() => startEdit(inq.id, inq)}
-                          color="primary"
-                          disabled={!canEditSurvey(inq.id)}
-                          title={!canEditSurvey(inq.id) ? "Não é possível editar inquéritos com respostas" : "Editar"}
-                          size={isMobile ? 'small' : 'medium'}
-                        >
-                          <Edit fontSize={isMobile ? 'small' : 'medium'} />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handleDelete(inq.id)}
-                          color="error"
-                          size={isMobile ? 'small' : 'medium'}
-                        >
-                          <Delete fontSize={isMobile ? 'small' : 'medium'} />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => visualizarRespostas(inq.id)}
-                          color="secondary"
-                          size={isMobile ? 'small' : 'medium'}
-                        >
-                          <Visibility fontSize={isMobile ? 'small' : 'medium'} />
-                        </IconButton>
+                        {canEditSurvey(inq.id) ? (
+                          <Tooltip title="Editar inquérito">
+                            <IconButton
+                              onClick={() => handleEditClick(inq.id, inq)}
+                              color="primary"
+                              size={isMobile ? 'small' : 'medium'}
+                            >
+                              <Edit fontSize={isMobile ? 'small' : 'medium'} />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip title="Inquérito com respostas - edição desativada">
+                            <span>
+                              <IconButton
+                                color="primary"
+                                size={isMobile ? 'small' : 'medium'}
+                                disabled
+                                sx={{ opacity: 0.5 }}
+                              >
+                                <Block fontSize={isMobile ? 'small' : 'medium'} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Excluir inquérito">
+                          <IconButton
+                            onClick={() => handleDelete(inq.id)}
+                            color="error"
+                            size={isMobile ? 'small' : 'medium'}
+                          >
+                            <Delete fontSize={isMobile ? 'small' : 'medium'} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Visualizar respostas">
+                          <IconButton
+                            onClick={() => visualizarRespostas(inq.id)}
+                            color="secondary"
+                            size={isMobile ? 'small' : 'medium'}
+                          >
+                            <Visibility fontSize={isMobile ? 'small' : 'medium'} />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                     </Box>
                   </ListItem>

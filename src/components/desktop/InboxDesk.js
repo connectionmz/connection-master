@@ -38,6 +38,7 @@ const InboxDesk = ({ user }) => {
 
     const unsubscribe = onValue(notificationsRef, (snapshot) => {
       const data = snapshot.val();
+      console.log(data)
       const userNotifications = [];
 
       if (data) {
