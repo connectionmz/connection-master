@@ -261,17 +261,17 @@ const NovaCotacao = ({ user }) => {
         selectedSubsector: filteredSubsectors,
         id: cotacaoId,
         company: {
-          nome: user.nome,
-          logoUrl: user.logoUrl,
-          provincia: user.provincia,
-          sector: user.sector,
-          id: user.id, 
-          distrito: user.distrito,
-          morada: user.endereco,
-          nuit: user.nuit || 'N/A', 
-          contacto: user.contacto,
-          email: user.email
-        },
+          nome: user.nome || 'N/A',
+          logoUrl: user.logoUrl || 'N/A',
+          provincia: user.provincia || 'N/A',
+          sector: user.sector || 'N/A',
+          id: user.id || 'N/A',
+          distrito: user.distrito || 'N/A',
+          morada: user.endereco || 'N/A',
+          nuit: user.nuit || 'N/A',
+          contacto: user.contacto || 'N/A',
+          email: user.email || 'N/A'
+        },        
         timestamp: new Date().toISOString(),
         datalimite: new Date(formData.deadline).toISOString(),
         status: 'open',
@@ -315,7 +315,7 @@ const NovaCotacao = ({ user }) => {
           const mailMessage = {
             title: formData.title,
             description: formData.description.replace(/<\/?[^>]+(>|$)/g, ""),
-            deadline: formattedDeadline, // Use formatted date here
+            deadline: formattedDeadline,
             sector: formData.sector,
             link: linkDoPedido
           };
