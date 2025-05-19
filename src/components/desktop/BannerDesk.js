@@ -277,8 +277,7 @@ const BannerDesk = ({ user }) => {
                       parent.style.backgroundImage = 'none';
                     }}
                   />
-                </Box>
-                
+                </Box>      
                 <Box
                   sx={{
                     position: 'absolute',
@@ -312,15 +311,6 @@ const BannerDesk = ({ user }) => {
                       }}
                     >
                     </Avatar>
-                 
-                    <Box>
-                      <Typography variant="subtitle1" color="white" fontWeight="bold">
-                        {company.nome}
-                      </Typography>
-                      <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-                        {banner.title}
-                      </Typography>
-                    </Box>
                   </Link>
                 </Box>
               </Box>
