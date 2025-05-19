@@ -291,8 +291,6 @@ const BannerDesk = ({ user }) => {
                     alignItems: 'center',
                     gap: 2,
                     maxWidth: isMobile ? 'calc(100% - 32px)' : '50%',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    backdropFilter: 'blur(4px)'
                   }}>
                   <Link 
                     href={`/perfil/${company.id}`} 
