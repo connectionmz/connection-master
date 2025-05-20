@@ -450,39 +450,39 @@ const StoresDesk = ({ user }) => {
     );
   };
 
-  // Componente de Link para produto com tracking
-  const TrackedProductLink = ({ product, children }) => (
-    <Link 
-      to={`/product/${product.id}/store/${product.storeId}`}
-      onClick={(e) => {
-        e.preventDefault();
-        trackClick(product.storeId)
-          .then(() => {
-            window.location.href = `/product/${product.id}/store/${product.storeId}`;
-          });
-      }}
-      style={{ textDecoration: 'none', color: 'inherit' }}
-    >
-      {children}
-    </Link>
-  );
+// Componente de Link para produto com tracking - VERSÃO CORRIGIDA
+const TrackedProductLink = ({ product, children }) => (
+  <Link 
+    to={`/product/${product.id}/store/${product.storeId}`}
+    onClick={(e) => {
+      e.preventDefault();
+      trackClick(product.storeId)
+        .then(() => {
+          navigate(`/product/${product.id}/store/${product.storeId}`);
+        });
+    }}
+    style={{ textDecoration: 'none', color: 'inherit' }}
+  >
+    {children}
+  </Link>
+);
 
-  // Componente de Link para loja com tracking
-  const TrackedStoreLink = ({ store, children }) => (
-    <Link 
-      to={`/loja/${store.id}`}
-      onClick={(e) => {
-        e.preventDefault();
-        trackClick(store.id)
-          .then(() => {
-            window.location.href = `/loja/${store.id}`;
-          });
-      }}
-      style={{ textDecoration: 'none', color: 'inherit' }}
-    >
-      {children}
-    </Link>
-  );
+// Componente de Link para loja com tracking - VERSÃO CORRIGIDA
+const TrackedStoreLink = ({ store, children }) => (
+  <Link 
+    to={`/loja/${store.id}`}
+    onClick={(e) => {
+      e.preventDefault();
+      trackClick(store.id)
+        .then(() => {
+          navigate(`/loja/${store.id}`);
+        });
+    }}
+    style={{ textDecoration: 'none', color: 'inherit' }}
+  >
+    {children}
+  </Link>
+);
 
   return (
     <Box sx={{ 
@@ -597,56 +597,54 @@ const StoresDesk = ({ user }) => {
       },
     }}>
       {(featuredStores || []).map((store) => (
-        <Tooltip 
-          key={store?.id} 
-          title={store?.name || "Loja sem nome"} 
-          arrow
-        >
-            <Box sx={{
-              minWidth: 120,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              p: 1,
-              borderRadius: 1,
-              '&:hover': { backgroundColor: '#f5f5f5' }
-            }}>
-              <Badge
-                overlap="circular"
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                badgeContent={
-                  store?.company?.verified ? (
-                    <Verified fontSize="small" color="primary" />
-                  ) : null
-                }
-              >
-                <Avatar
-                  src={store?.company?.logo}
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    border: `2px solid ${theme.palette.primary.main}`,
-                  }}
-                >
-                  {(store?.name || '').charAt(0)}
-                </Avatar>
-              </Badge>
-              <Typography
-                variant="body2"
-                sx={{ 
-                  mt: 1,
-                  fontWeight: 500,
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxWidth: '100%'
-                }}
-              >
-                {store?.name || "Loja sem nome"}
-              </Typography>
-            </Box>
-        </Tooltip>
+       <Tooltip key={store?.id} title={store?.name || "Loja sem nome"} arrow>
+       <TrackedStoreLink store={store}>
+         <Box sx={{
+           minWidth: 120,
+           display: "flex",
+           flexDirection: "column",
+           alignItems: "center",
+           p: 1,
+           borderRadius: 1,
+           '&:hover': { backgroundColor: '#f5f5f5' }
+         }}>
+           <Badge
+             overlap="circular"
+             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+             badgeContent={
+               store?.company?.verified ? (
+                 <Verified fontSize="small" color="primary" />
+               ) : null
+             }
+           >
+             <Avatar
+               src={store?.company?.logo}
+               sx={{
+                 width: 80,
+                 height: 80,
+                 border: `2px solid ${theme.palette.primary.main}`,
+               }}
+             >
+               {(store?.name || '').charAt(0)}
+             </Avatar>
+           </Badge>
+           <Typography
+             variant="body2"
+             sx={{ 
+               mt: 1,
+               fontWeight: 500,
+               textAlign: 'center',
+               whiteSpace: 'nowrap',
+               overflow: 'hidden',
+               textOverflow: 'ellipsis',
+               maxWidth: '100%'
+             }}
+           >
+             {store?.name || "Loja sem nome"}
+           </Typography>
+         </Box>
+       </TrackedStoreLink>
+     </Tooltip>
       ))}
     </Box>
   </Box>
@@ -701,7 +699,11 @@ const StoresDesk = ({ user }) => {
                       />
                     )}
 
-                      <CardActionArea sx={{ flexGrow: 1 }}>
+                    <CardActionArea 
+                      component={TrackedProductLink} 
+                      product={product}
+                      sx={{ flexGrow: 1 }}
+                    >
                         {/* Imagem do produto */}
                         <Box
                           sx={{

@@ -369,14 +369,25 @@ const ProductDetailsDesk = ({user}) => {
                     Quantidade:
                   </Typography>
                   <TextField
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => {
-                      setQuantity(e.target.value);
-                    }}
-                    size="small"
-                    sx={{ width: "100px", mr: 2 }}
-                  />
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
+                          setQuantity(value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        let val = parseInt(e.target.value);
+                        if (isNaN(val) || val < 1) val = 1;
+                        if (val > 10) val = 10;
+                        setQuantity(val);
+                      }}
+                      inputProps={{ min: 1, max: 10 }}
+                      size="small"
+                      sx={{ width: "100px", mr: 2 }}
+                    />
+
                 </Box>
                 
                 {/* Order Summary */}
