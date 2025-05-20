@@ -87,6 +87,7 @@ import FaturaDesk from '../desktop/FaturaDesk';
 import VerificationAccountModal from '../modal/VerificationAccountModal';
 import VerFaturaDesk from '../desktop/VerFaturaDesk';
 import { allModules } from '../ModuleGrid';
+import EditalConcursoPDF from '../pdf/EditalConcursoPDF';
 
 const theme = createTheme({
   palette: {
@@ -569,6 +570,12 @@ const renderProtectedRoute = (path, element) => (
 <Route path="/concurso/:id" element={
   <ProtectedRoute>
     <ConcursoDetalhesDesk user={user} />
+  </ProtectedRoute>
+} />
+
+<Route path="/concursoPdf/:id" element={
+  <ProtectedRoute>
+    <EditalConcursoPDF user={user} />
   </ProtectedRoute>
 } />
 

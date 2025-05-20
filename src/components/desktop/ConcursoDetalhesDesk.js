@@ -128,11 +128,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
   };
 
   const handleBaixarEdital = () => {
-    if (concurso?.documentUrl) {
-      window.open(concurso.documentUrl, '_blank');
-    } else {
-      alert('Documento do edital não disponível');
-    }
+    navigate(`/concursoPdf/${id}`);
   };
 
   const handlePartilhar = () => {

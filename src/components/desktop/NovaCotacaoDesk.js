@@ -327,7 +327,7 @@ const NovaCotacao = ({ user }) => {
         }
       }
 
-      setFormData({
+      /*setFormData({
         title: '',
         description: '',
         items: [],
@@ -337,7 +337,7 @@ const NovaCotacao = ({ user }) => {
         sector: '',
         provincia: [],
         selectedSubsector: [],
-      });
+      });*/
 
     } catch (error) {
       console.error('Erro ao publicar a cotação:', error);

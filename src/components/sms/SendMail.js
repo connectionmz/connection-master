@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-const sendEmail = async (to,emailMessage) => {
-
+const sendEmail = async (to, emailMessage) => {
   const textContent = `
   Um novo pedido de cotação foi publicado para o seu setor.
 
@@ -16,15 +15,22 @@ const sendEmail = async (to,emailMessage) => {
   Atenciosamente,
   Equipe de Suporte
   suporte@connectionmozambique.com
-`;
+  `;
 
   const emailData = {
     to,
     subject: "Novo Pedido de Cotação Disponível",
-        text:textContent, 
+    text: textContent, 
   };
+
   try {
-    const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData);
+    // URL corrigida com protocolo http://
+    const response = await axios.post('http://localhost:5000/send-email', emailData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
     console.log('E-mail enviado com sucesso:', response.data);
     return true; 
   } catch (error) {
