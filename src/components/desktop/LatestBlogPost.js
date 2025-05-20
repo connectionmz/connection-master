@@ -142,12 +142,7 @@ const LatestBlogPost = () => {
               >
                 {latestBlog.title}
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ fontSize: isMobile ? "0.8rem" : "0.875rem" }}
-                dangerouslySetInnerHTML={{ __html: getTextPreviewAsHtml(latestBlog.content || '') }}
-              />
+            
             </Box>     
             <Button
               onClick={handleNavigateToAllBlogs}
