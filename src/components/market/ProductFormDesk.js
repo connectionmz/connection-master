@@ -77,6 +77,7 @@ const ProductFormDesk = ({ user }) => {
         name: '', 
         price: '', 
         description: '', 
+        qtd:'',
         imageUrl: '', 
         imageFile: null,
         category: '',
@@ -195,6 +196,7 @@ const ProductFormDesk = ({ user }) => {
           imageUrl: product.imageUrl || '',
           category: product.category || 'Geral',
           sku: product.sku || '',
+          qtd:product.qtd || '',
           createdAt: Date.now(),
           updatedAt: Date.now()
         });
