@@ -244,7 +244,6 @@ const NovaCotacao = ({ user }) => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    // Filtrar valores undefined do selectedSubsector
     const filteredSubsectors = formData.selectedSubsector.filter(item => item !== undefined && item !== null && item !== '');
     
     setLoading(true);
@@ -292,7 +291,6 @@ const NovaCotacao = ({ user }) => {
       if (empresasSnapshot.exists()) {
         const empresas = empresasSnapshot.val();
       
-        // Format the deadline date
         const formatDeadline = (isoString) => {
           const date = new Date(isoString);
           return date.toLocaleDateString('pt-PT', {
@@ -320,25 +318,37 @@ const NovaCotacao = ({ user }) => {
             link: linkDoPedido
           };
       
+          // Save SMS data to smsCotacao node with company info
+          if (empresa.contacto) {
+            const contactos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
+            
+            await Promise.all(contactos.map(async (contacto) => {
+              if (!contacto) return;
+              
+              const smsData = {
+                cotacaoId: cotacaoId,
+                contacto: contacto,
+                message: message,
+                status: 'por enviar',
+                timestamp: new Date().toISOString(),
+                attempts: 0,
+                empresaNome: empresa.nome || 'N/A',      
+                empresaId: key,                          
+                remetenteNome: user.nome || 'N/A',       
+                remetenteId: user.id || 'N/A'            
+              };
+              
+              const smsRef = ref(db, 'smsCotacao/'+user.id);
+              const newSmsRef = push(smsRef);
+              await set(newSmsRef, smsData);
+            }));
+          }
           if (empresa.email) {
             const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
             await Promise.all(emails.map(email => sendEmail(email, mailMessage))); 
           }
         }
       }
-
-      /*setFormData({
-        title: '',
-        description: '',
-        items: [],
-        deadline: '',
-        maxProposals: '',
-        proposalLimit: '',
-        sector: '',
-        provincia: [],
-        selectedSubsector: [],
-      });*/
-
     } catch (error) {
       console.error('Erro ao publicar a cotação:', error);
       setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
