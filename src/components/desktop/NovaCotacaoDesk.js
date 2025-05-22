@@ -240,124 +240,142 @@ const NovaCotacao = ({ user }) => {
     return isValid;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    const filteredSubsectors = formData.selectedSubsector.filter(item => item !== undefined && item !== null && item !== '');
-    
-    setLoading(true);
-    setSnackbarMessage('');
+  const filteredSubsectors = formData.selectedSubsector.filter(
+    item => item !== undefined && item !== null && item !== ''
+  );
 
-    try {
-      const cotacoesRef = ref(db, 'cotacoes');
-      const newCotacaoRef = push(cotacoesRef);
-      const cotacaoId = newCotacaoRef.key;
-      const linkDoPedido = `https://connectionmozambique.com/cotacao/${cotacaoId}`;
+  setLoading(true);
+  setSnackbarMessage('');
 
-      const cotacaoData = {
-        ...formData,
-        selectedSubsector: filteredSubsectors,
-        id: cotacaoId,
-        company: {
-          nome: user.nome || 'N/A',
-          logoUrl: user.logoUrl || 'N/A',
-          provincia: user.provincia || 'N/A',
-          sector: user.sector || 'N/A',
-          id: user.id || 'N/A',
-          distrito: user.distrito || 'N/A',
-          morada: user.endereco || 'N/A',
-          nuit: user.nuit || 'N/A',
-          contacto: user.contacto || 'N/A',
-          email: user.email || 'N/A'
-        },        
-        timestamp: new Date().toISOString(),
-        datalimite: new Date(formData.deadline).toISOString(),
-        status: 'open',
-        link: linkDoPedido,
-        proposalLimit: formData.proposalLimit || null,
+  try {
+    const cotacoesRef = ref(db, 'cotacoes');
+    const newCotacaoRef = push(cotacoesRef);
+    const cotacaoId = newCotacaoRef.key;
+    const linkDoPedido = `https://connectionmozambique.com/cotacao/${cotacaoId}`;
+
+    const cotacaoData = {
+      ...formData,
+      selectedSubsector: filteredSubsectors,
+      id: cotacaoId,
+      company: {
+        provincia: user.provincia || 'N/A',
+        sector: user.sector || 'N/A',
+        id: user.id || 'N/A',
+        distrito: user.distrito || 'N/A',
+        morada: user.endereco || 'N/A',
+        nuit: user.nuit || 'N/A',
+        contacto: user.contacto || 'N/A',
+        email: user.email || 'N/A',
+      },
+      timestamp: new Date().toISOString(),
+      datalimite: new Date(formData.deadline).toISOString(),
+      status: 'open',
+      link: linkDoPedido,
+      proposalLimit: formData.proposalLimit || null,
+    };
+
+    // Guardar cotação na base de dados
+    await set(ref(db, `cotacoes/${cotacaoId}`), cotacaoData);
+
+    setSnackbarMessage('Cotação publicada com sucesso!');
+    setSnackbarSeverity('success');
+    setOpenSnackbar(true);
+
+    // Buscar empresas do mesmo setor
+    const empresasRef = ref(db, 'company');
+    const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.sector.trim()));
+    const empresasSnapshot = await get(setorQuery);
+
+    if (empresasSnapshot.exists()) {
+      const empresas = empresasSnapshot.val();
+
+      // Formatar data
+      const formatDeadline = (isoString) => {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('pt-PT', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
       };
 
-      await set(ref(db, `cotacoes/${cotacaoId}`), cotacaoData);
+      const formattedDeadline = formatDeadline(formData.deadline);
+      const message = `Título: ${formData.title}\nDescrição: ${formData.description}\nData Limite: ${formattedDeadline}\nSetor de Atividade: ${formData.sector}\nAcesse: ${linkDoPedido}`;
 
-      setSnackbarMessage('Cotação publicada com sucesso!');
-      setSnackbarSeverity('success');
-      setOpenSnackbar(true);
+      const mailMessage = {
+        title: formData.title,
+        description: formData.description.replace(/<\/?[^>]+(>|$)/g, ""),
+        deadline: formattedDeadline,
+        sector: formData.sector,
+        link: linkDoPedido
+      };
 
-      const empresasRef = ref(db, 'company');
-      const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.sector.trim()));
-      const empresasSnapshot = await get(setorQuery);
+      // Criar estrutura base para SMS
+      const smsData = {
+        mensagem: message,
+        empresaOrigemId: user.id || 'N/A',
+        empresaOrigemNome: user.nome || 'N/A',
+        timestamp: new Date().toISOString(),
+        tipo:'cotacao',
+        contactos: []
+      };
 
-      if (empresasSnapshot.exists()) {
-        const empresas = empresasSnapshot.val();
-      
-        const formatDeadline = (isoString) => {
-          const date = new Date(isoString);
-          return date.toLocaleDateString('pt-PT', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+      // Notificar todas as empresas do mesmo setor
+      for (const key in empresas) {
+        const empresa = empresas[key];
+
+        // Ignorar se não tiver contacto nem email
+        if (!empresa.contacto && !empresa.email) continue;
+
+        // SMS
+        if (empresa.contacto) {
+          const contactos = Array.isArray(empresa.contacto)
+            ? empresa.contacto
+            : [empresa.contacto];
+
+          contactos.forEach(contacto => {
+            if (!contacto) return;
+
+            smsData.contactos.push({
+              empresaId: key,
+              empresaNome: empresa.nome || 'N/A',
+              numero: contacto,
+              status: 'por enviar',
+              attempts: 0
+            });
           });
-        };
-      
-        for (const key in empresas) {
-          const empresa = empresas[key];
-          if (!empresa.contacto && !empresa.email) continue;
-      
-          const formattedDeadline = formatDeadline(formData.deadline);
-          
-          const message = `Título: ${formData.title}\nDescrição: ${formData.description}\nData Limite: ${formattedDeadline}\nSetor de Atividade: ${formData.sector}\nAcesse: ${linkDoPedido}`;
-          
-          const mailMessage = {
-            title: formData.title,
-            description: formData.description.replace(/<\/?[^>]+(>|$)/g, ""),
-            deadline: formattedDeadline,
-            sector: formData.sector,
-            link: linkDoPedido
-          };
-      
-          // Save SMS data to smsCotacao node with company info
-          if (empresa.contacto) {
-            const contactos = Array.isArray(empresa.contacto) ? empresa.contacto : [empresa.contacto];
-            
-            await Promise.all(contactos.map(async (contacto) => {
-              if (!contacto) return;
-              
-              const smsData = {
-                cotacaoId: cotacaoId,
-                contacto: contacto,
-                message: message,
-                status: 'por enviar',
-                timestamp: new Date().toISOString(),
-                attempts: 0,
-                empresaNome: empresa.nome || 'N/A',      
-                empresaId: key,                          
-                remetenteNome: user.nome || 'N/A',       
-                remetenteId: user.id || 'N/A'            
-              };
-              
-              const smsRef = ref(db, 'smsCotacao/'+user.id);
-              const newSmsRef = push(smsRef);
-              await set(newSmsRef, smsData);
-            }));
-          }
-          if (empresa.email) {
-            const emails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
-            await Promise.all(emails.map(email => sendEmail(email, mailMessage))); 
-          }
+        }
+
+        // EMAIL
+        if (empresa.email) {
+          const emails = Array.isArray(empresa.email)
+            ? empresa.email
+            : [empresa.email];
+
+          await Promise.all(emails.map(email => sendEmail(email, mailMessage)));
         }
       }
-    } catch (error) {
-      console.error('Erro ao publicar a cotação:', error);
-      setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
-    } finally {
-      setLoading(false);
+
+      // Guardar estrutura de envio SMS
+      const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
+      await set(smsRef, smsData);
     }
-  };
+  } catch (error) {
+    console.error('Erro ao publicar a cotação:', error);
+    setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
+    setSnackbarSeverity('error');
+    setOpenSnackbar(true);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleSnackbarClose = () => {
     setOpenSnackbar(false);

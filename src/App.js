@@ -55,6 +55,12 @@ const App = () => {
     try {
       const userRef = ref(db, `company/${user.uid}`);
       const snapshot = await get(userRef);
+
+       const cotacaoSms = ref(db, `smsEnvio/`);
+      const snapshotSms = await get(cotacaoSms);
+      const dataSms = snapshotSms.val();
+
+      console.log(dataSms)
   
       if (snapshot.exists()) {
         const data = snapshot.val();
