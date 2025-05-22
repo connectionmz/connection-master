@@ -10,6 +10,7 @@ import BackButton from '../BackButton';
 import { Close } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import sendEmail from '../sms/SendMail';
 
 const PublicarConcursoDesk = ({ user }) => {
   // Estados do componente
@@ -133,129 +134,177 @@ const PublicarConcursoDesk = ({ user }) => {
 
   // Handler para envio do formulário
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    // Validações
-    const requiredFields = ['titulo', 'prazo', 'localEntrega', 'setor', 'modalidade'];
-    const missingFields = requiredFields.filter(field => !formData[field]);
+  // Validações
+  const requiredFields = ['titulo', 'prazo', 'localEntrega', 'setor', 'modalidade'];
+  const missingFields = requiredFields.filter(field => !formData[field]);
 
-    if (missingFields.length > 0) {
-      setSnackbar({
-        open: true,
-        message: `Preencha os campos obrigatórios: ${missingFields.join(', ')}`,
-        severity: 'error'
-      });
-      setLoading(false);
-      return;
-    }
+  if (missingFields.length > 0) {
+    setSnackbar({
+      open: true,
+      message: `Preencha os campos obrigatórios: ${missingFields.join(', ')}`,
+      severity: 'error'
+    });
+    setLoading(false);
+    return;
+  }
 
-    if (formData.provincia.length === 0) {
-      setSnackbar({
-        open: true,
-        message: 'Selecione pelo menos uma província',
-        severity: 'error'
-      });
-      setLoading(false);
-      return;
-    }
+  if (formData.provincia.length === 0) {
+    setSnackbar({
+      open: true,
+      message: 'Selecione pelo menos uma província',
+      severity: 'error'
+    });
+    setLoading(false);
+    return;
+  }
 
-    if (formData.tipoEntidade.length === 0) {
-      setSnackbar({
-        open: true,
-        message: 'Selecione pelo menos um tipo de entidade',
-        severity: 'error'
-      });
-      setLoading(false);
-      return;
-    }
+  if (formData.tipoEntidade.length === 0) {
+    setSnackbar({
+      open: true,
+      message: 'Selecione pelo menos um tipo de entidade',
+      severity: 'error'
+    });
+    setLoading(false);
+    return;
+  }
 
-    try {
-      // Preparar dados para o Firebase
-      const concursoData = {
-        ...formData,
-        ...richTextData,
-        id: '',
-        status: 'Aberta',
-        timestamp: new Date().toISOString(),
-        company: {
-          id: user?.id,
-          nome: user?.nome,
-          logoUrl: user?.logoUrl || '',
-          provincia: user?.provincia || ''
-        },
-        // Garantir que arrays não sejam undefined
-        provincia: formData.provincia || ['Todas'],
-        tipoEntidade: formData.tipoEntidade || ['Todas'],
-        // Preencher campos vazios com valores padrão
-        valorEstimado: formData.valorEstimado || 'Não especificado',
-        numeroReferencia: formData.numeroReferencia || 'Não especificado'
+  try {
+    // Preparar dados para o Firebase
+    const concursoData = {
+      ...formData,
+      ...richTextData,
+      id: '',
+      status: 'Aberta',
+      timestamp: new Date().toISOString(),
+      company: {
+        id: user?.id,
+        nome: user?.nome,
+        logoUrl: user?.logoUrl || '',
+        provincia: user?.provincia || ''
+      },
+      provincia: formData.provincia || ['Todas'],
+      tipoEntidade: formData.tipoEntidade || ['Todas'],
+      valorEstimado: formData.valorEstimado || 'Não especificado',
+      numeroReferencia: formData.numeroReferencia || 'Não especificado'
+    };
+
+    const sanitizedData = Object.fromEntries(
+      Object.entries(concursoData).filter(([_, v]) => v !== undefined)
+    );
+
+    const newConcursoRef = push(ref(db, 'concursos'));
+    const cotacaoId = newConcursoRef.key;
+
+    await set(newConcursoRef, {
+      ...sanitizedData,
+      id: cotacaoId
+    });
+
+    // BUSCAR EMPRESAS DO MESMO SETOR
+    const empresasRef = ref(db, 'company');
+    const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.setor.trim()));
+    const empresasSnapshot = await get(setorQuery);
+
+    if (empresasSnapshot.exists()) {
+      const empresas = empresasSnapshot.val();
+
+      console.log(empresas)
+
+      // Formatador de data
+      const formatDeadline = (isoString) => {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('pt-PT', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
       };
 
-      // Remover campos undefined
-      const sanitizedData = Object.fromEntries(
-        Object.entries(concursoData).filter(([_, v]) => v !== undefined)
-      );
+      const formattedDeadline = formatDeadline(formData.prazo);
+      const linkDoPedido = `https://www.connectionmozambique.com/concurso/${cotacaoId}`; // substitua pela sua URL real
 
-      // Criar referência e salvar no Firebase
-      const newConcursoRef = push(ref(db, 'concursos'));
-      const concursoId = newConcursoRef.key;
-      
-      await set(newConcursoRef, {
-        ...sanitizedData,
-        id: concursoId
-      });
+      const message = `Título: ${formData.titulo}\nDescrição: ${formData.descricao}\nData Limite: ${formattedDeadline}\nSetor de Atividade: ${formData.setor}\nAcesse: ${linkDoPedido}`;
 
-      setSnackbar({
-        open: true,
-        message: 'Concurso publicado com sucesso!',
-        severity: 'success'
-      });
+      const mailMessage = {
+        title: formData.titulo,
+        description: formData.descricao,
+        deadline: formattedDeadline,
+        sector: formData.setor,
+        link: linkDoPedido
+      };
 
-      // Limpar formulário após sucesso
-      setFormData({
-        titulo: '',
-        entidade: user?.nome || '',
-        objeto: '',
-        condicoes: '',
-        documentacao: '',
-        prazo: '',
-        localEntrega: '',
-        dataAbertura: '',
-        criterios: '',
-        valorEstimado: '',
-        condicoesPagamento: '',
-        observacoes: '',
-        provincia: [],
-        setor: '',
-        tipoEntidade: [],
-        modalidade: '',
-        numeroReferencia: '',
-        anexos: [],
-        requisitosTecnicos: ''
-      });
+      const smsData = {
+        mensagem: message,
+        empresaOrigemId: user.id || 'N/A',
+        empresaOrigemNome: user.nome || 'N/A',
+        timestamp: new Date().toISOString(),
+        tipo: 'concurso',
+        contactos: []
+      };
 
-      setRichTextData({
-        objeto: '',
-        condicoes: '',
-        documentacao: '',
-        criterios: '',
-        condicoesPagamento: '',
-        observacoes: '',
-        requisitosTecnicos: ''
-      });
+      for (const key in empresas) {
+        const empresa = empresas[key];
 
-    } catch (error) {
-      console.error('Erro ao publicar concurso:', error);
-      setSnackbar({
-        open: true,
-        message: `Erro ao publicar concurso: ${error.message}`,
-        severity: 'error'
-      });
-    } finally {
-      setLoading(false);
+        // Ignorar se não tiver contacto nem email
+        if (!empresa.contacto && !empresa.email) continue;
+
+        // SMS
+        if (empresa.contacto) {
+          const contactos = Array.isArray(empresa.contacto)
+            ? empresa.contacto
+            : [empresa.contacto];
+
+          contactos.forEach(contacto => {
+            if (!contacto) return;
+
+            smsData.contactos.push({
+              empresaId: key,
+              empresaNome: empresa.nome || 'N/A',
+              numero: contacto,
+              status: 'por enviar',
+              attempts: 0
+            });
+          });
+        }
+
+        // EMAIL
+        if (empresa.email) {
+          const emails = Array.isArray(empresa.email)
+            ? empresa.email
+            : [empresa.email];
+
+          await Promise.all(emails.map(email => sendEmail(email, mailMessage)));
+        }
+      }
+
+      // Guardar envio de SMS
+      const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
+      await set(smsRef, smsData);
     }
-  };
+
+    setSnackbar({
+      open: true,
+      message: 'Concurso publicado com sucesso!',
+      severity: 'success'
+    });
+
+  } catch (error) {
+    console.error('Erro ao publicar concurso:', error);
+    setSnackbar({
+      open: true,
+      message: `Erro ao publicar concurso: ${error.message}`,
+      severity: 'error'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Fechar snackbar
   const handleCloseSnackbar = () => {

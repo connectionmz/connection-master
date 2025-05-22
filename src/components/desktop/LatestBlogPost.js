@@ -67,7 +67,7 @@ const LatestBlogPost = () => {
     div.innerHTML = html;
     const textOnly = div.textContent || div.innerText || '';
     const preview = textOnly.length > 100 ? textOnly.substring(0, 100) + '...' : textOnly;
-    return preview.replace(/\n/g, "<br>"); // se quiseres preservar quebras de linha
+    return preview.replace(/\n/g, "<br>"); 
   };
 
   if (loading) {
@@ -104,15 +104,13 @@ const LatestBlogPost = () => {
     <Grid item xs={12} sm={3}>
       <Paper sx={{ padding: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
-          Último Blog
+          Blog
         </Typography>
-        
         {latestBlog ? (
           <Box>
             <Box 
               onClick={() => handleNavigateToBlog(latestBlog.id)}
-              sx={{ cursor: 'pointer' }}
-            >
+              sx={{ cursor: 'pointer' }}>
               {latestBlog.imageUrl && (
                 <img
                   src={latestBlog.imageUrl}
@@ -124,7 +122,7 @@ const LatestBlogPost = () => {
                     borderRadius: "8px",
                   }}
                   onError={(e) => {
-                    e.target.src = '/placeholder-blog.jpg'; // Imagem de fallback
+                    e.target.src = '/placeholder-blog.jpg'; 
                   }}
                 />
               )}

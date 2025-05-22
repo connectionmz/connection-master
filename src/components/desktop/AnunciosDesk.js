@@ -41,7 +41,6 @@ const AnunciosDesk = ({ campanhas, user, local }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Memoized slider settings
   const settings = useMemo(() => ({
     dots: true,
     infinite: true,
@@ -279,12 +278,6 @@ const AnunciosDesk = ({ campanhas, user, local }) => {
                       {company.nome?.charAt(0)?.toUpperCase()}
                     </Avatar>
                     <Box>
-                      <Typography variant="subtitle1" color="white" fontWeight="bold">
-                        {company.nome}
-                      </Typography>
-                      <Typography variant="body2" color="rgba(255,255,255,0.8)">
-                        {banner.description}
-                      </Typography>
                     </Box>
                   </MuiLink>
                 </Box>

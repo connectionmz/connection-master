@@ -41,9 +41,7 @@ import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import InfoIcon from '@mui/icons-material/Info';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
-const MAX_FREE_POSTS = 5;
-
-const PostInputDesk = ({ user, currentPostCount }) => {
+const PostInputDesk = ({ user }) => {
   const [newPhotos, setNewPhotos] = useState([]);
   const [photoPreviews, setPhotoPreviews] = useState({});
   const [photoDescriptions, setPhotoDescriptions] = useState({});
@@ -62,9 +60,6 @@ const PostInputDesk = ({ user, currentPostCount }) => {
     }
     if (newPhotos.length === 0) {
       errors.push("Nenhuma foto selecionada para upload.");
-    }
-    if (currentPostCount + newPhotos.length > MAX_FREE_POSTS) {
-      errors.push(`Limite de ${MAX_FREE_POSTS} publicações gratuitas atingido. Remova algumas fotos ou atualize seu plano para publicar mais.`);
     }
     setErrorMessages(errors);
     return errors.length === 0;
@@ -133,19 +128,19 @@ const PostInputDesk = ({ user, currentPostCount }) => {
               const newPostRef = push(ref(db, "posts"));
               const postId = newPostRef.key;
 
-              await set(newPostRef, {
-                id: postId,
-                company: {
-                  id: user.id,
-                  name: user.nome,
-                  logo: user.logoUrl,
-                  sector: user.sector,
-                  provincia: user.provincia,
-                },
-                description,
-                url,
-                timestamp: Date.now(),
-              });
+                await set(newPostRef, {
+                  id: postId,
+                  company: {
+                    id: user.id,
+                    name: user.nome,
+                    logo: user.logoUrl,
+                    sector: user.sector,
+                    provincia: user.provincia,
+                  },
+                  description: description || "", // Ensure description is never undefined
+                  url,
+                  timestamp: Date.now(),
+                });
 
               await sendNotificationToConnections(postId);
 
@@ -163,7 +158,7 @@ const PostInputDesk = ({ user, currentPostCount }) => {
       setErrorMessages([...errorMessages, `Erro ao carregar as fotos: ${error.message}`]);
       setIsUploading(false);
     }
-  }, [newPhotos, photoDescriptions, user, errorMessages, currentPostCount]);
+  }, [newPhotos, photoDescriptions, user, errorMessages]);
 
   useEffect(() => {
     if (uploadSuccess) {
@@ -182,22 +177,20 @@ const PostInputDesk = ({ user, currentPostCount }) => {
     setSnackbarOpen(false);
   };
 
-const handleFileChange = (event) => {
-  const files = Array.from(event.target.files);
-  if (files.length === 0) return;
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
 
-  // Verificação mais robusta do limite
-  const remainingSlots = MAX_FREE_POSTS - currentPostCount;
-  if (remainingSlots <= 0) {
-    setErrorMessages([`Você atingiu o limite de ${MAX_FREE_POSTS} publicações gratuitas. Atualize seu plano para publicar mais.`]);
-    return;
-  }
+    const newPreviews = {};
+    files.forEach(file => {
+      newPreviews[file.name] = URL.createObjectURL(file);
+    });
 
-  if (files.length > remainingSlots) {
-    setErrorMessages([`Você só pode adicionar mais ${remainingSlots} foto(s). Remova ${files.length - remainingSlots} foto(s) ou atualize seu plano.`]);
-    return;
-  }
-}
+    setNewPhotos(prev => [...prev, ...files]);
+    setPhotoPreviews(prev => ({ ...prev, ...newPreviews }));
+    setErrorMessages([]);
+  };
+
   const handleDescriptionChange = (value, photoName) => {
     setPhotoDescriptions((prevDescriptions) => ({
       ...prevDescriptions,
@@ -279,24 +272,15 @@ const handleFileChange = (event) => {
             </Alert>
             
             <Alert severity="warning">
-              <AlertTitle>Limitações do Plano Gratuito</AlertTitle>
-              No plano gratuito:
+              <AlertTitle>Diretrizes de Publicação</AlertTitle>
+              Por favor, observe:
               <ul>
-                <li>Limite de {MAX_FREE_POSTS} publicações</li>
+                <li>Publicações devem ser relevantes para seu negócio</li>
                 <li>Não são permitidos anúncios promocionais</li>
                 <li>Não são permitidos produtos à venda</li>
                 <li>Conteúdo inapropriado será removido</li>
               </ul>
             </Alert>
-            
-            <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic' }}>
-              Você já publicou {currentPostCount} de {MAX_FREE_POSTS} trabalhos disponíveis no plano gratuito.
-              {currentPostCount >= MAX_FREE_POSTS && (
-                <Box sx={{ color: 'error.main', fontWeight: 'bold', mt: 1 }}>
-                  Limite atingido! Atualize seu plano para publicar mais trabalhos.
-                </Box>
-              )}
-            </Typography>
           </AccordionDetails>
         </Accordion>
 
@@ -307,13 +291,13 @@ const handleFileChange = (event) => {
           multiple
           type="file"
           onChange={handleFileChange}
-          disabled={isUploading || currentPostCount >= MAX_FREE_POSTS}
+          disabled={isUploading}
         />
         <label htmlFor="raised-button-file">
           <Button 
             variant="contained" 
             component="span" 
-            disabled={isUploading || currentPostCount >= MAX_FREE_POSTS}
+            disabled={isUploading}
             startIcon={<CloudUploadIcon />}
             sx={{
               px: 3,
@@ -324,30 +308,12 @@ const handleFileChange = (event) => {
               boxShadow: 'none',
               '&:hover': {
                 boxShadow: '0 4px 12px rgba(25, 118, 210, 0.2)'
-              },
-              '&:disabled': {
-                backgroundColor: currentPostCount >= MAX_FREE_POSTS ? 'error.light' : 'action.disabledBackground',
-                color: currentPostCount >= MAX_FREE_POSTS ? 'error.contrastText' : 'text.disabled'
               }
             }}
           >
-            {currentPostCount >= MAX_FREE_POSTS ? 'Limite Atingido' : 'Selecionar Fotos'}
+            Selecionar Fotos
           </Button>
         </label>
-
-        {currentPostCount >= MAX_FREE_POSTS && (
-          <Alert severity="error" sx={{ mt: 2, alignItems: 'center' }}>
-            Você atingiu o limite de {MAX_FREE_POSTS} publicações no plano gratuito. 
-            <Button 
-              variant="text" 
-              color="inherit" 
-              sx={{ ml: 1, fontWeight: 'bold' }}
-              onClick={() => {/* Add your upgrade plan function here */}}
-            >
-              Atualizar Plano
-            </Button>
-          </Alert>
-        )}
 
         {errorMessages.length > 0 && (
           <Alert 
@@ -373,7 +339,7 @@ const handleFileChange = (event) => {
           <Box sx={{ mt: 3 }}>
             <Typography variant="subtitle1" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <DescriptionIcon color="action" />
-              Fotos selecionadas ({newPhotos.length}) - {currentPostCount + newPhotos.length}/{MAX_FREE_POSTS} no total
+              Fotos selecionadas ({newPhotos.length})
             </Typography>
             
             <Divider sx={{ mb: 3 }} />
@@ -502,7 +468,7 @@ const handleFileChange = (event) => {
               onClick={handleSavePublishedPhotos}
               variant="contained"
               color="primary"
-              disabled={isUploading || newPhotos.length === 0 || currentPostCount + newPhotos.length > MAX_FREE_POSTS}
+              disabled={isUploading || newPhotos.length === 0}
               fullWidth
               size="large"
               startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : null}
@@ -517,16 +483,10 @@ const handleFileChange = (event) => {
                 '&:hover': {
                   boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
                   backgroundColor: 'primary.dark'
-                },
-                '&:disabled': {
-                  backgroundColor: currentPostCount + newPhotos.length > MAX_FREE_POSTS ? 'error.light' : 'action.disabledBackground',
-                  color: currentPostCount + newPhotos.length > MAX_FREE_POSTS ? 'error.contrastText' : 'text.disabled'
                 }
               }}
             >
-              {isUploading ? "Publicando..." : 
-               currentPostCount + newPhotos.length > MAX_FREE_POSTS ? "Limite Excedido" : 
-               "Publicar Fotos"}
+              {isUploading ? "Publicando..." : "Publicar Fotos"}
             </Button>
           </Box>
         )}
