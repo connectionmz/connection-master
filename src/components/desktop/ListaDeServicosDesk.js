@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ref, onValue, get } from 'firebase/database';
+import { ref, get } from 'firebase/database';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../fb';
 import {
@@ -22,91 +22,72 @@ const ListaDeServicosDesk = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showFullDescription, setShowFullDescription] = useState(false); // Estado para controlar a descrição
-  const isMobile = useMediaQuery('(max-width:600px)'); // Verifica se a tela é pequena
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
-    const servicosRef = ref(db, `categoriasExternas`);
-    const unsubscribe = onValue(
-      servicosRef,
-      (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Buscar dados da categoria
+        const servicosRef = ref(db, 'categoriasExternas');
+        const servicosSnapshot = await get(servicosRef);
+        
+        if (servicosSnapshot.exists()) {
+          const data = servicosSnapshot.val();
           const categoriaSelecionada = Object.values(data).find(
             (categoria) => categoria.name === categoriaId
           );
-
-          if (categoriaSelecionada) {
-            setServicos(categoriaSelecionada);
-          } else {
-            setServicos({});
-          }
+          setServicos(categoriaSelecionada || {});
         } else {
           setServicos({});
         }
-        setLoading(false);
-      },
-      (error) => {
-        setError('Erro ao carregar categorias.');
-        console.error('Erro ao carregar categorias:', error);
-      }
-    );
 
-    const fetchCompanies = async () => {
-      try {
+        // Buscar empresas
         const companiesRef = ref(db, 'company');
-        const snapshot = await get(companiesRef);
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          let companyList = Object.keys(data).map((key) => ({
+        const companiesSnapshot = await get(companiesRef);
+        
+        if (companiesSnapshot.exists()) {
+          const data = companiesSnapshot.val();
+          const allCompanies = Object.keys(data).map((key) => ({
             id: key,
-            nome: data[key].nome,
-            logoUrl: data[key].logoUrl,
-            sector: data[key].sector,
-            provincia: data[key].provincia,
+            ...data[key]
           }));
 
-          // Filtrar apenas se o usuário existir
-          if (user) {
-            companyList = companyList.filter(
-              (company) =>
-                company.categoriaExterna === categoriaId &&
-                company.provincia === user.provincia
-            );
-          } else {
-            // Exibe todas as empresas da categoria, sem filtrar por província
-            companyList = companyList.filter(
-              (company) => company.categoriaExterna === categoriaId
-            );
-          }
+          // Filtra empresas pela categoria
+          const filteredCompanies = allCompanies.filter(
+            (company) => company.categoriaExterna === categoriaId
+          );
 
-          setCompanies(companyList);
+          // Filtro adicional por província se o usuário estiver logado
+          const finalCompanies = user?.provincia 
+            ? filteredCompanies.filter(company => company.provincia === user.provincia)
+            : filteredCompanies;
+
+          setCompanies(finalCompanies);
         } else {
           setCompanies([]);
         }
       } catch (error) {
-        setError('Erro ao buscar empresas.');
-        console.error('Erro ao buscar empresas:', error);
+        setError('Erro ao carregar dados.');
+        console.error('Erro:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCompanies();
-
-    return () => unsubscribe();
+    fetchData();
   }, [categoriaId, user?.provincia]);
 
   const handleCompanyClick = (companyId) => {
     navigate(`/perfil/${companyId}`);
   };
 
-  // Função para alternar entre "ver mais" e "ver menos"
   const toggleDescription = () => {
     setShowFullDescription(!showFullDescription);
   };
 
-  // Limita o número de caracteres da descrição
   const maxDescriptionLength = 200;
   const truncatedDescription =
     servicos.notes && servicos.notes.length > maxDescriptionLength
@@ -118,31 +99,29 @@ const ListaDeServicosDesk = ({ user }) => {
       <br />
       <BackButton sx={{ mb: 2 }} />
 
-      {/* Exibir o nome e as notas da categoria selecionada */}
       <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 2 }}>
         {servicos.name}
       </Typography>
       <Typography variant="body1" sx={{ marginBottom: 2, whiteSpace: 'pre-line' }}>
         {showFullDescription ? servicos.notes : truncatedDescription}
       </Typography>
-        {servicos.notes && servicos.notes.length > maxDescriptionLength && (
-          <Box sx={{ textAlign: 'left', mt: 1 }}>
-            <Button
-              onClick={toggleDescription}
-              sx={{
-                color: '#1976d2',
-                textTransform: 'none',
-                fontWeight: 'bold',
-                padding: 0,
-                minHeight: 0,
-                minWidth: 0,
-              }}
-            >
-              {showFullDescription ? 'ver menos' : 'ver mais'}
-            </Button>
-          </Box>
-        )}
-
+      {servicos.notes && servicos.notes.length > maxDescriptionLength && (
+        <Box sx={{ textAlign: 'left', mt: 1 }}>
+          <Button
+            onClick={toggleDescription}
+            sx={{
+              color: '#1976d2',
+              textTransform: 'none',
+              fontWeight: 'bold',
+              padding: 0,
+              minHeight: 0,
+              minWidth: 0,
+            }}
+          >
+            {showFullDescription ? 'ver menos' : 'ver mais'}
+          </Button>
+        </Box>
+      )}
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>

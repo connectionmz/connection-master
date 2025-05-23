@@ -137,7 +137,7 @@ const PostInputDesk = ({ user }) => {
                     sector: user.sector,
                     provincia: user.provincia,
                   },
-                  description: description || "", // Ensure description is never undefined
+                  description: description || "", 
                   url,
                   timestamp: Date.now(),
                 });
