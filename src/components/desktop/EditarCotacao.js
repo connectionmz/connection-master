@@ -28,8 +28,6 @@ import {
 } from '@mui/material';
 import { Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUtils';
-import sendMessage from '../sms/sendMessage';
-import sendEmail from '../sms/SendMail';
 
 const EditarCotacao = ({ cotacao, user, onClose, onSuccess, onError }) => {
   const theme = useTheme();

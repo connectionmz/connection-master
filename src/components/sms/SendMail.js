@@ -13,8 +13,6 @@ const sendEmail = async (to, emailMessage) => {
   Caso tenha interesse, acesse o link acima e envie sua proposta.
 
   Atenciosamente,
-  Equipe de Suporte
-  suporte@connectionmozambique.com
   `;
 
   const emailData = {
@@ -39,4 +37,65 @@ const sendEmail = async (to, emailMessage) => {
   }
 };
 
-export default sendEmail;
+const sendEmailConcurso = async (to, emailMessage) => {
+  const textContent = `
+  Um novo concurso foi publicado para o seu setor.
+
+  Detalhes do Concurso:
+  Título: ${emailMessage.title}
+  Data Limite: ${emailMessage.deadline}
+  Setor de Atividade: ${emailMessage.sector}
+  Acesse: ${emailMessage.link}
+
+  Caso tenha interesse, acesse o link acima e envie sua proposta.
+
+  Atenciosamente,
+  `;
+
+  const emailData = {
+    to,
+    subject: "Novo concurso Disponível",
+    text: textContent, 
+  };
+
+  try {
+    // URL corrigida com protocolo http://
+    const response = await axios.post('http://localhost:5000/send-email', emailData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('E-mail enviado com sucesso:', response.data);
+    return true; 
+  } catch (error) {
+    console.error('Erro ao enviar o e-mail:', error);
+    return false; 
+  }
+};
+
+const SendMailProforma = async (to, emailMessage) => {
+  const textContent = `
+  Detalhes do pedido:
+  ${emailMessage.message}
+
+  `;
+
+  const emailData = {
+    to,
+    subject: "Nova Proforma Criada",
+    text: textContent, 
+  };
+
+  try {
+    const response = await axios.post('http://localhost:5000/send-email', emailData);
+    console.log('E-mail enviado com sucesso:', response.data);
+    return true; 
+  } catch (error) {
+    console.error('Erro ao enviar o e-mail:', error);
+    return false; 
+  }
+};
+
+
+export {sendEmail, SendMailProforma, sendEmailConcurso};

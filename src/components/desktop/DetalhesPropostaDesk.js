@@ -50,7 +50,7 @@ import {
   Share,
   AccessTime
 } from '@mui/icons-material';
-import sendEmail from '../sms/SendMail';
+import {sendEmail} from '../sms/SendMail';
 
 // Status configuration
 const STATUS_CONFIG = {

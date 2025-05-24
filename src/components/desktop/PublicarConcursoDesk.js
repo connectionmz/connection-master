@@ -10,7 +10,7 @@ import BackButton from '../BackButton';
 import { Close } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import sendEmail from '../sms/SendMail';
+import { sendEmailConcurso} from '../sms/SendMail';
 
 const PublicarConcursoDesk = ({ user }) => {
   // Estados do componente
@@ -232,7 +232,6 @@ const PublicarConcursoDesk = ({ user }) => {
 
       const mailMessage = {
         title: formData.titulo,
-        description: formData.descricao,
         deadline: formattedDeadline,
         sector: formData.setor,
         link: linkDoPedido
@@ -278,7 +277,7 @@ const PublicarConcursoDesk = ({ user }) => {
             ? empresa.email
             : [empresa.email];
 
-          await Promise.all(emails.map(email => sendEmail(email, mailMessage)));
+          await Promise.all(emails.map(email => sendEmailConcurso(email, mailMessage)));
         }
       }
 

@@ -27,8 +27,7 @@ import {
 import { Add, Close, Delete, Image as ImageIcon } from '@mui/icons-material';
 import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUtils';
 import BackButton from '../BackButton';
-import sendMessage from '../sms/sendMessage';
-import sendEmail from '../sms/SendMail';
+import {sendEmail} from '../sms/SendMail';
 import { formatarMoeda, formatCurrency } from '../../utils/utils';
 
 const NovaCotacao = ({ user }) => {

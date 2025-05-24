@@ -28,10 +28,9 @@ import { db } from '../../fb';
 import BackButton from '../BackButton';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import sendEmail from '../sms/SendMail';
+import {SendMailProforma} from '../sms/SendMail';
 import { formatPrice } from '../../utils/utils';
 import { saveContentToInbox } from '../SaveToInbox';
-import SendMailProforma from '../sms/SendMailProforma';
 import { NumberFormatBase, NumericFormat } from 'react-number-format';
 
 const CriarProformaDesk = ({ user }) => {
@@ -215,7 +214,7 @@ const CriarProformaDesk = ({ user }) => {
 
       const newProformaRef = ref(db, `invoices/${user.id}/${numeroProforma}`);
       
-      /*
+      
       await set(newProformaRef, {
         numeroProforma,
         cliente: clienteLimpo,
@@ -226,7 +225,7 @@ const CriarProformaDesk = ({ user }) => {
         total: totalNumerico,
         status: 'POR PAGAR',
         dataCriacao: serverTimestamp()
-      });*/
+      });
 
       const proformaLink = `https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id}`
 
@@ -245,44 +244,45 @@ const CriarProformaDesk = ({ user }) => {
         saveContentToInbox(cliente.id, notification);
       }
 
-      if (clienteLimpo?.email) {
-        const title = `Proforma ${numeroProforma}`;
-        const finalMessage = `
-          Olá ${clienteLimpo.nome},
-          
-          Uma nova proforma foi criada para você. Aqui estão os detalhes:
-          
-          - Número da Proforma: ${numeroProforma}
-          - Data de Emissão: ${dataEmissao}
-          - Data de Vencimento: ${dataVencimento}
-          - Total: ${formatPrice(totalNumerico)} MZN
-          
-          Itens:
-          ${itensNumericos.map((item) => `- ${item.descricao}: ${item.quantidade} x ${formatPrice(item.preco)} MZN`).join('\n')}
+if (clienteLimpo?.email) {
+  const title = `Proforma ${numeroProforma}`;
+  const finalMessage = `
+    Olá ${clienteLimpo.nome},
+    
+    Uma nova proforma foi criada para você. Aqui estão os detalhes:
+    
+    - Número da Proforma: ${numeroProforma}
+    - Data de Emissão: ${dataEmissao}
+    - Data de Vencimento: ${dataVencimento}
+    - Total: ${formatPrice(totalNumerico)} MZN
+  
 
-          Clique em: ${proformaLink} para visualizar a proforma ${numeroProforma}
-          
-          Por favor, entre em contato conosco se tiver alguma dúvidade.
-          
-          Atenciosamente,
-          Equipe ${user.displayName || 'da '}
-          Email ${user.email || 'da '}
-          Contacto ${user.contacto || 'da '}
-        `;
+    Clique em: https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id} para visualizar a proforma.
+    
+    Por favor, entre em contato conosco se tiver alguma dúvida.
+    
+    Atenciosamente,
+    Equipe ${user.displayName || 'da '}
+    Email: ${user.email || '-'}
+    Contacto: ${user.contacto || '-'}
+  `;
 
-        const emailSent = await SendMailProforma(clienteLimpo.email, title, finalMessage);
+  const emailMessage = {
+    message: finalMessage,
+    link: `verproforma/${numeroProforma}/sender/${user.id}`,
+  };
 
-        if (!emailSent) {
-          setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');
-          setSnackbarSeverity('warning');
-        } else {
-          setSnackbarMessage('Proforma criada e cliente notificado com sucesso!');
-          setSnackbarSeverity('success');
-        }
-      } else {
-        setSnackbarMessage('Proforma criada com sucesso!');
-        setSnackbarSeverity('success');
-      }
+  const emailSent = await SendMailProforma(clienteLimpo.email, emailMessage);
+
+  if (!emailSent) {
+    setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');
+    setSnackbarSeverity('warning');
+  } else {
+    setSnackbarMessage('Proforma criada e cliente notificado com sucesso!');
+    setSnackbarSeverity('success');
+  }
+}
+
 
       //navigate('/faturacao');
     } catch (err) {

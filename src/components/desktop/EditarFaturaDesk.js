@@ -28,7 +28,7 @@ import { db } from '../../fb';
 import BackButton from '../BackButton';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import sendEmail from '../sms/SendMail';
+import {sendEmail} from '../sms/SendMail';
 
 const EditarFaturaDesk = ({ user }) => {
 
