@@ -366,6 +366,21 @@ const handleSubmit = async (e) => {
       // Guardar estrutura de envio SMS
       const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
       await set(smsRef, smsData);
+
+
+       setFormData({
+        title: '',
+        description: '',
+        items: [],
+        deadline: '',
+        maxProposals: '',
+        proposalLimit: '',
+        sector: '',
+        provincia: [],
+        selectedSubsector: [],
+      });
+
+      
     }
   } catch (error) {
     console.error('Erro ao publicar a cotação:', error);

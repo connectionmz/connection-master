@@ -286,6 +286,40 @@ const PublicarConcursoDesk = ({ user }) => {
       // Guardar envio de SMS
       const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
       await set(smsRef, smsData);
+
+            
+      setFormData({
+        titulo: '',
+        entidade: user?.nome || '',
+        objeto: '',
+        condicoes: '',
+        documentacao: '',
+        prazo: '',
+        localEntrega: '',
+        dataAbertura: '',
+        criterios: '',
+        valorEstimado: '',
+        condicoesPagamento: '',
+        observacoes: '',
+        provincia: [],
+        setor: '',
+        tipoEntidade: [],
+        modalidade: '',
+        numeroReferencia: '',
+        anexos: [],
+        requisitosTecnicos: ''
+      });
+
+      setRichTextData({
+        objeto: '',
+        condicoes: '',
+        documentacao: '',
+        criterios: '',
+        condicoesPagamento: '',
+        observacoes: '',
+        requisitosTecnicos: ''
+      });
+      
     }
 
     setSnackbar({
