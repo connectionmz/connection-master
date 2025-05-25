@@ -84,6 +84,14 @@ const AnunciosDesk = ({ campanhas, user, local }) => {
     return unsubscribe;
   }, [companies]);
 
+
+  const ensureUrlHasProtocol = (url) => {
+  if (!/^https?:\/\//i.test(url)) {
+    return `https://${url}`;
+  }
+  return url;
+};
+
   // Register banner click
   const registerClick = useCallback(async (bannerId) => {
     if (!user?.id) return;
@@ -430,7 +438,7 @@ const AnunciosDesk = ({ campanhas, user, local }) => {
                       color="primary"
                       fullWidth
                       size="large"
-                      href={selectedBanner.link}
+                      href={ensureUrlHasProtocol(selectedBanner.link)} rel="noopener noreferrer"
                       target="_blank"
                       endIcon={<OpenInNewIcon />}
                       onClick={() => registerClick(selectedBanner.id)}

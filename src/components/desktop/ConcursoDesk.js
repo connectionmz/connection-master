@@ -444,7 +444,7 @@ useEffect(() => {
                             <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
                             <Tab value="expiradas" label="Expiradas" icon={<History />} />
                             <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                            <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
+                            <Tab value="minhas" label="Meus" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
                         </Tabs>
                     </Paper>
 

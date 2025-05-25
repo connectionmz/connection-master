@@ -269,6 +269,8 @@ const handleSubmit = async (e) => {
         nuit: user.nuit || 'N/A',
         contacto: user.contacto || 'N/A',
         email: user.email || 'N/A',
+        nome:user.nome || 'N/A',
+        logoUrl:user.logoUrl || ''
       },
       timestamp: new Date().toISOString(),
       datalimite: new Date(formData.deadline).toISOString(),

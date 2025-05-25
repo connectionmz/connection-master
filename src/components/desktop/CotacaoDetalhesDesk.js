@@ -74,7 +74,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
       const unsubscribe = onValue(cotacaoRef, (snapshot) => {
         const data = snapshot.val();
         if (!data) return;
-
+        console.log(data)
         setCotacao(data);
         trackView();
 

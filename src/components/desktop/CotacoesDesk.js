@@ -259,13 +259,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     cotacao.createdBy === user?.id
                 );
                 break;
-                case 'propostas':
-                    filtered = filtered.filter((cotacao) => 
-                        cotacao.company?.id === user?.id || 
-                        cotacao.userId === user?.id ||
-                        cotacao.createdBy === user?.id
-                    );
-                    break;
+               
             default:
                 break;
         }
@@ -517,7 +511,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     <Tab value="expiradas" label="Expiradas" icon={<History />} />
                     <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
                     <Tab value="minhas" label="Minhas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
-                    <Tab value="propostas" label="Minhas Propostas" icon={<Avatar src={user?.logoUrl} sx={{ width: 24, height: 24 }} />} />
                   </Tabs>
                 </Paper>
                 <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
