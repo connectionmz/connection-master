@@ -9,11 +9,8 @@ const sendEmail = async (to, emailMessage) => {
   Data Limite: ${emailMessage.deadline}
   Setor de Atividade: ${emailMessage.sector}
   Acesse: ${emailMessage.link}
-
   Caso tenha interesse, acesse o link acima e envie sua proposta.
-
-  Atenciosamente,
-  `;
+  Atenciosamente,`;
 
   const emailData = {
     to,
@@ -23,7 +20,7 @@ const sendEmail = async (to, emailMessage) => {
 
   try {
     // URL corrigida com protocolo http://
-    const response = await axios.post('http://localhost:5000/send-email', emailData, {
+    const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData, {
       headers: {
         'Content-Type': 'application/json'
       }
