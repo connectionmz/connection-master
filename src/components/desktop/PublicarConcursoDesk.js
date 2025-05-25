@@ -249,6 +249,8 @@ const PublicarConcursoDesk = ({ user }) => {
       for (const key in empresas) {
         const empresa = empresas[key];
 
+        if (key === user.id) continue;
+
         // Ignorar se não tiver contacto nem email
         if (!empresa.contacto && !empresa.email) continue;
 
