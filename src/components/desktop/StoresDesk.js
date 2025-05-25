@@ -322,8 +322,7 @@ const StoresDesk = ({ user }) => {
       }))
     ).filter(product => 
       searchQuery ? 
-        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.storeName.toLowerCase().includes(searchQuery.toLowerCase())
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase())
       : true
     );
 
