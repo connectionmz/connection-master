@@ -526,5 +526,4 @@ const SmsDesk = ({ user }) => {
     </Box>
   );
 };
-
 export default SmsDesk;
