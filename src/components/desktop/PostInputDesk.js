@@ -29,7 +29,7 @@ import {
   AccordionDetails,
   AlertTitle,
 } from "@mui/material";
-import { push, ref, set, get } from "firebase/database";
+import { push, ref, set, get, onValue } from "firebase/database";
 import { db } from "../../fb";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -41,6 +41,7 @@ import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import InfoIcon from '@mui/icons-material/Info';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
+
 const PostInputDesk = ({ user }) => {
   const [newPhotos, setNewPhotos] = useState([]);
   const [photoPreviews, setPhotoPreviews] = useState({});
@@ -50,8 +51,32 @@ const PostInputDesk = ({ user }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessages, setErrorMessages] = useState([]);
+  const [userPostCount, setUserPostCount] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
   const isSmallScreen = useMediaQuery('(max-width:400px)');
+
+  // Monitorar posts existentes e contar os do usuário atual
+  useEffect(() => {
+    const postsRef = ref(db, 'posts');
+    const unsubscribe = onValue(postsRef, (snapshot) => {
+      const data = snapshot.val();
+      let count = 0;
+
+      if (data) {
+        Object.values(data).forEach(post => {
+          if (post.company?.id === user?.id) {
+            count++;
+          }
+        });
+      }
+
+      setUserPostCount(count);
+      setLimitReached(count >= 5);
+    });
+
+    return () => unsubscribe();
+  }, [user?.id]);
 
   const validateData = () => {
     const errors = [];
@@ -60,6 +85,12 @@ const PostInputDesk = ({ user }) => {
     }
     if (newPhotos.length === 0) {
       errors.push("Nenhuma foto selecionada para upload.");
+    }
+    if (limitReached) {
+      errors.push("Você atingiu o limite de 5 postagens permitidas. Remova algumas publicações existentes para adicionar novas.");
+    }
+    if (userPostCount + newPhotos.length > 5) {
+      errors.push(`Você já tem ${userPostCount} publicações. Selecionando ${newPhotos.length} foto(s), você ultrapassará o limite de 5.`);
     }
     setErrorMessages(errors);
     return errors.length === 0;
@@ -128,19 +159,19 @@ const PostInputDesk = ({ user }) => {
               const newPostRef = push(ref(db, "posts"));
               const postId = newPostRef.key;
 
-                await set(newPostRef, {
-                  id: postId,
-                  company: {
-                    id: user.id,
-                    name: user.nome,
-                    logo: user.logoUrl,
-                    sector: user.sector,
-                    provincia: user.provincia,
-                  },
-                  description: description || "", 
-                  url,
-                  timestamp: Date.now(),
-                });
+              await set(newPostRef, {
+                id: postId,
+                company: {
+                  id: user.id,
+                  name: user.nome,
+                  logo: user.logoUrl,
+                  sector: user.sector,
+                  provincia: user.provincia,
+                },
+                description: description || "", 
+                url,
+                timestamp: Date.now(),
+              });
 
               await sendNotificationToConnections(postId);
 
@@ -180,6 +211,19 @@ const PostInputDesk = ({ user }) => {
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
+
+    // Verificação criativa do limite
+    const remainingSlots = 5 - userPostCount;
+    if (remainingSlots <= 0) {
+      setErrorMessages(["Você já atingiu o limite máximo de 5 publicações."]);
+      setLimitReached(true);
+      return;
+    }
+
+    if (files.length > remainingSlots) {
+      setErrorMessages([`Você só pode adicionar mais ${remainingSlots} foto(s). Selecione menos arquivos ou remova publicações existentes.`]);
+      return;
+    }
 
     const newPreviews = {};
     files.forEach(file => {
@@ -248,7 +292,29 @@ const PostInputDesk = ({ user }) => {
         >
           <PhotoLibraryIcon color="primary" />
           Publicar Trabalhos Realizados
+          <Chip 
+            label={`${userPostCount}/5`} 
+            color={limitReached ? "error" : "primary"} 
+            size="small"
+            variant="outlined"
+            sx={{ ml: 1 }}
+          />
         </Typography>
+
+        {limitReached && (
+          <Alert severity="warning" sx={{ mb: 3, alignItems: 'center' }}>
+            <Box>
+              <AlertTitle>Limite de Publicações Atingido</AlertTitle>
+              <Typography variant="body2">
+                Você já possui 5 publicações ativas. Para adicionar mais:
+              </Typography>
+              <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
+                <li>Remova publicações antigas</li>
+                <li>Atualize publicações existentes</li>
+              </ul>
+            </Box>
+          </Alert>
+        )}
 
         <Accordion defaultExpanded sx={{ mb: 3, borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -272,14 +338,15 @@ const PostInputDesk = ({ user }) => {
             </Alert>
             
             <Alert severity="warning">
-              <AlertTitle>Diretrizes de Publicação</AlertTitle>
-              Por favor, observe:
-              <ul>
-                <li>Publicações devem ser relevantes para seu negócio</li>
-                <li>Não são permitidos anúncios promocionais</li>
-                <li>Não são permitidos produtos à venda</li>
-                <li>Conteúdo inapropriado será removido</li>
-              </ul>
+              <AlertTitle>Limites e Diretrizes</AlertTitle>
+              <Box component="ul" sx={{ pl: 2, mb: 0 }}>
+                <Box component="li" sx={{ mb: 1 }}>
+                  <strong>Qualidade sobre quantidade</strong> - Selecione apenas seus melhores trabalhos
+                </Box>
+                <Box component="li">
+                  <strong>Atualizações frequentes</strong> - Substitua trabalhos antigos por novos regularmente
+                </Box>
+              </Box>
             </Alert>
           </AccordionDetails>
         </Accordion>
@@ -291,13 +358,13 @@ const PostInputDesk = ({ user }) => {
           multiple
           type="file"
           onChange={handleFileChange}
-          disabled={isUploading}
+          disabled={isUploading || limitReached}
         />
         <label htmlFor="raised-button-file">
           <Button 
             variant="contained" 
             component="span" 
-            disabled={isUploading}
+            disabled={isUploading || limitReached}
             startIcon={<CloudUploadIcon />}
             sx={{
               px: 3,
@@ -311,9 +378,15 @@ const PostInputDesk = ({ user }) => {
               }
             }}
           >
-            Selecionar Fotos
+            {limitReached ? 'Limite Atingido' : 'Selecionar Fotos'}
           </Button>
         </label>
+
+        {!limitReached && userPostCount > 0 && (
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+            Você ainda pode adicionar {5 - userPostCount} foto(s).
+          </Typography>
+        )}
 
         {errorMessages.length > 0 && (
           <Alert 
@@ -340,6 +413,9 @@ const PostInputDesk = ({ user }) => {
             <Typography variant="subtitle1" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <DescriptionIcon color="action" />
               Fotos selecionadas ({newPhotos.length})
+              <Typography variant="caption" color="text.secondary">
+                ({userPostCount + newPhotos.length}/5 no total)
+              </Typography>
             </Typography>
             
             <Divider sx={{ mb: 3 }} />
@@ -468,7 +544,7 @@ const PostInputDesk = ({ user }) => {
               onClick={handleSavePublishedPhotos}
               variant="contained"
               color="primary"
-              disabled={isUploading || newPhotos.length === 0}
+              disabled={isUploading || newPhotos.length === 0 || limitReached || (userPostCount + newPhotos.length) > 5}
               fullWidth
               size="large"
               startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : null}

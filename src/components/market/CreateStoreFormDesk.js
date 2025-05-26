@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ref as dbRef, set } from 'firebase/database';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../fb'; // Importe o storage do Firebase
+import { db, storage } from '../../fb';
 import {
   Box,
   Button,
@@ -10,8 +10,12 @@ import {
   Typography,
   Alert,
   IconButton,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
+  Tooltip
 } from '@mui/material';
-import { PhotoCamera } from '@mui/icons-material';
+import { PhotoCamera, Info } from '@mui/icons-material';
 
 const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
   const [store, setStore] = useState({
@@ -22,7 +26,8 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
       provincia: user?.provincia || '',
       distrito: user?.distrito || '',
       logo: user?.logoUrl || '', 
-      id:user?.id || ''
+      id: user?.id || '',
+      paysIVA: false, // Novo campo para indicar se paga IVA
     },
   });
   const [logoFile, setLogoFile] = useState(null); 
@@ -31,6 +36,28 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setStore({ ...store, [name]: value });
+  };
+
+  const handleCompanyInputChange = (e) => {
+    const { name, value } = e.target;
+    setStore({ 
+      ...store, 
+      company: {
+        ...store.company,
+        [name]: value 
+      } 
+    });
+  };
+
+  const handleCheckboxChange = (e) => {
+    const { name, checked } = e.target;
+    setStore({ 
+      ...store, 
+      company: {
+        ...store.company,
+        [name]: checked 
+      } 
+    });
   };
 
   const handleLogoChange = (e) => {
@@ -49,7 +76,6 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
 
   const handlePayment = async () => {
     setIsLoading(true);
-
     try {
       return true;
     } catch (error) {
@@ -85,7 +111,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         if (logoFile) {
           const logoStorageRef = storageRef(storage, `store-logos/${storeId}/${logoFile.name}`);
           await uploadBytes(logoStorageRef, logoFile);
-          logoUrl = await getDownloadURL(logoStorageRef); // Obtém a URL do Firebase Storage
+          logoUrl = await getDownloadURL(logoStorageRef);
   
           setStore((prevStore) => ({
             ...prevStore,
@@ -103,6 +129,8 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
             ...store.company,
             logo: logoUrl, 
           },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
   
         alert('Loja criada com sucesso!');
@@ -161,8 +189,31 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         onChange={handleInputChange}
         multiline
         rows={3}
-        sx={{ marginBottom: 2 }}/>
+        sx={{ marginBottom: 2 }}
+      />
 
+      {/* Paga IVA */}
+      <FormGroup sx={{ marginBottom: 2 }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={store.company.paysIVA}
+              onChange={handleCheckboxChange}
+              name="paysIVA"
+            />
+          }
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <span>Esta loja paga IVA</span>
+              <Tooltip title="Esta informação não poderá ser alterada posteriormente">
+                <Info color="action" sx={{ fontSize: 16, marginLeft: 1 }} />
+              </Tooltip>
+            </Box>
+          }
+        />
+      </FormGroup>
+
+      {/* Upload de Logo */}
       <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
         <IconButton
           color="primary"
@@ -187,6 +238,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
           </Box>
         )}
       </Box>
+
       <Button
         variant="contained"
         color="primary"
