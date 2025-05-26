@@ -56,21 +56,21 @@ import {sendEmail} from '../sms/SendMail';
 const STATUS_CONFIG = {
   'Aceite': { color: 'success', icon: <CheckCircle />, label: 'Aprovada' },
   'Recusada': { color: 'error', icon: <Cancel />, label: 'Recusada' },
-  'Pendente': { color: 'warning', icon: <Info />, label: 'Pendente' }
+  'Pendente': { color: 'warning', icon: <Info />, label: 'Pendente' },
+  'default': { color: 'info', icon: <Info />, label: 'Pendente' }
 };
 
 const DetalhesPropostaDesk = ({ user }) => {
-  // Hooks and state initialization
   const { id, propostaId } = useParams();
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
   
   const [proposta, setProposta] = useState(null);
+  const [cotacao, setCotacao] = useState(null);
   const [nota, setNota] = useState('');
   const [loading, setLoading] = useState(true);
   const [notaEnviada, setNotaEnviada] = useState(false);
   
-  // Messages and dialogs
   const [message, setMessage] = useState({ open: false, text: '', type: 'success' });
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -80,24 +80,29 @@ const DetalhesPropostaDesk = ({ user }) => {
     showCancelOption: true
   });
 
-  // Constants
   const CUSTOM_URL = 'connectionmozambique.com/';
   const currentStatus = proposta?.status || 'Pendente';
-  const statusInfo = STATUS_CONFIG[currentStatus];
+  const statusInfo = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.default;
 
-  // Memoized values
   const cotacaoIdShort = useMemo(() => id?.slice(0, 8), [id]);
   const proposalLink = useMemo(() => 
     `https://${CUSTOM_URL}cotacao/${id}/proposta/${propostaId}`, 
     [CUSTOM_URL, id, propostaId]
   );
+  const cotacaoConcluida = useMemo(() => cotacao?.status === 'Concluída', [cotacao]);
 
-  // Data fetching
   useEffect(() => {
-    const fetchProposalData = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch cotação data
+        const cotacaoRef = ref(db, `cotacoes/${id}`);
+        const cotacaoUnsubscribe = onValue(cotacaoRef, (snapshot) => {
+          setCotacao(snapshot.exists() ? snapshot.val() : null);
+        });
+
+        // Fetch proposta data
         const propostaRef = ref(db, `cotacoes/${id}/proposals/${propostaId}`);
-        const unsubscribe = onValue(propostaRef, (snapshot) => {
+        const propostaUnsubscribe = onValue(propostaRef, (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
             setProposta(data);
@@ -108,17 +113,19 @@ const DetalhesPropostaDesk = ({ user }) => {
           setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+          cotacaoUnsubscribe();
+          propostaUnsubscribe();
+        };
       } catch (error) {
-        handleError(error, 'Erro ao carregar proposta');
+        handleError(error, 'Erro ao carregar dados');
         setLoading(false);
       }
     };
 
-    fetchProposalData();
+    fetchData();
   }, [id, propostaId]);
 
-  // Helper functions
   const checkApprovalTime = useCallback((proposalData) => {
     if (proposalData.status === 'Aceite' && proposalData.acceptedAt) {
       const acceptedTime = new Date(proposalData.acceptedAt).getTime();
@@ -141,9 +148,13 @@ const DetalhesPropostaDesk = ({ user }) => {
     showMessage(defaultMessage, 'error');
   }, [showMessage]);
 
-  // Proposal status management
   const updateProposalStatus = useCallback(async (status) => {
     try {
+      if (cotacaoConcluida && status !== 'Recusada') {
+        showMessage('Não é possível alterar propostas de uma cotação concluída', 'error');
+        return false;
+      }
+
       const updates = { 
         status,
         updatedAt: new Date().toISOString(),
@@ -159,7 +170,7 @@ const DetalhesPropostaDesk = ({ user }) => {
       handleError(error, 'Erro ao atualizar status da proposta');
       return false;
     }
-  }, [id, propostaId, user.id, handleError, showMessage]);
+  }, [id, propostaId, user.id, handleError, showMessage, cotacaoConcluida]);
 
   const rejectOtherProposals = useCallback(async (acceptedProposalId) => {
     try {
@@ -187,7 +198,6 @@ const DetalhesPropostaDesk = ({ user }) => {
     }
   }, [id, user.id, handleError]);
 
-  // Notification handlers
   const sendNotification = useCallback(async (recipientId, messageText) => {
     try {
       const notification = {
@@ -222,9 +232,8 @@ const DetalhesPropostaDesk = ({ user }) => {
             Atenciosamente,<br>
             Equipe Connection Mozambique
           </p>
-        </div>
-      `;
-      
+        </div>`;  
+        
       await sendEmail({
         to: email,
         subject,
@@ -235,9 +244,13 @@ const DetalhesPropostaDesk = ({ user }) => {
     }
   }, [proposalLink, handleError]);
 
-  // Action handlers
   const handleAcceptProposal = useCallback(async () => {
     try {
+      if (cotacaoConcluida) {
+        showMessage('Esta cotação já foi concluída com outra proposta', 'error');
+        return;
+      }
+
       const success = await updateProposalStatus('Aceite');
       if (!success) return;
 
@@ -279,11 +292,18 @@ const DetalhesPropostaDesk = ({ user }) => {
     id,
     propostaId,
     navigate,
-    handleError
+    handleError,
+    cotacaoConcluida,
+    showMessage
   ]);
 
   const handleRejectProposal = useCallback(async () => {
     try {
+      if (cotacaoConcluida) {
+        showMessage('Não é possível recusar propostas de uma cotação concluída', 'error');
+        return;
+      }
+
       await updateProposalStatus('Recusada');
       
       if (proposta.from?.id) {
@@ -303,25 +323,18 @@ const DetalhesPropostaDesk = ({ user }) => {
     } catch (error) {
       handleError(error, 'Erro ao recusar proposta');
     }
-  }, [proposta, updateProposalStatus, sendNotification, sendEmailNotification, cotacaoIdShort, user.nome, handleError]);
+  }, [
+    proposta,
+    updateProposalStatus,
+    sendNotification,
+    sendEmailNotification,
+    cotacaoIdShort,
+    user.nome,
+    handleError,
+    cotacaoConcluida,
+    showMessage
+  ]);
 
-  const handleCancelApproval = useCallback(async () => {
-    try {
-      if (!confirmDialog.showCancelOption) {
-        showMessage('Não é possível cancelar a aprovação após 24 horas', 'error');
-        return;
-      }
-
-      await updateProposalStatus('Pendente');
-      await update(ref(db, `cotacoes/${id}`), {
-        status: 'Em andamento',
-        selectedProposal: null,
-        updatedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      handleError(error, 'Erro ao cancelar aprovação');
-    }
-  }, [confirmDialog.showCancelOption, updateProposalStatus, id, showMessage, handleError]);
 
   const handleNotaSubmit = useCallback(async () => {
     if (!nota.trim()) {
@@ -341,7 +354,6 @@ const DetalhesPropostaDesk = ({ user }) => {
     }
   }, [nota, id, propostaId, user.id, showMessage, handleError]);
 
-  // Dialog handlers
   const showAcceptConfirmation = useCallback(() => {
     setConfirmDialog({
       open: true,
@@ -366,21 +378,8 @@ const DetalhesPropostaDesk = ({ user }) => {
     });
   }, [handleRejectProposal]);
 
-  const showCancelApprovalConfirmation = useCallback(() => {
-    setConfirmDialog({
-      open: true,
-      title: 'Cancelar Aprovação',
-      content: confirmDialog.showCancelOption 
-        ? 'Tem certeza que deseja cancelar a aprovação desta proposta? A cotação será reaberta para outras propostas.'
-        : 'A aprovação não pode ser cancelada após 24 horas da aceitação.',
-      onConfirm: confirmDialog.showCancelOption ? handleCancelApproval : null,
-      showCancelOption: confirmDialog.showCancelOption,
-      confirmText: 'Cancelar Aprovação',
-      confirmColor: 'warning'
-    });
-  }, [confirmDialog.showCancelOption, handleCancelApproval]);
 
-  // UI handlers
+
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
@@ -405,7 +404,6 @@ const DetalhesPropostaDesk = ({ user }) => {
     }
   }, [proposta, cotacaoIdShort, proposalLink, showMessage]);
 
-  // Render states
   if (loading) {
     return (
       <Box sx={{ 
@@ -452,7 +450,6 @@ const DetalhesPropostaDesk = ({ user }) => {
       backgroundColor: 'background.paper',
       position: 'relative'
     }}>
-      {/* Header Section */}
       <BackButton sx={{ mb: 2 }} />
       <Box sx={{ 
         display: 'flex', 
@@ -468,6 +465,9 @@ const DetalhesPropostaDesk = ({ user }) => {
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
               Detalhes da Proposta
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cotação #{cotacaoIdShort}
             </Typography>
           </Box>
         </Box>
@@ -490,41 +490,20 @@ const DetalhesPropostaDesk = ({ user }) => {
               <Lock color="error" fontSize="small" />
             </Tooltip>
           )}
+          {cotacaoConcluida && currentStatus !== 'Aceite' && (
+            <Tooltip title="Cotação já concluída com outra proposta">
+              <Lock color="error" fontSize="small" />
+            </Tooltip>
+          )}
         </Box>
       </Box>
 
-      {/* Action Buttons 
-      <Box sx={{ 
-        position: 'absolute', 
-        top: 16, 
-        right: 16,
-        display: 'flex',
-        gap: 1
-      }}>
-        <Tooltip title="Imprimir proposta">
-          <IconButton onClick={handlePrint} size="small">
-            <Print fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Compartilhar proposta">
-          <IconButton onClick={handleShare} size="small">
-            <Share fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
-*/}
       <Divider sx={{ my: 3 }} />
 
-      {/* Company Information Section */}
       <CompanyInfoSection proposta={proposta} />
-
-      {/* Proposal Content Section */}
       <ProposalContentSection proposta={proposta} />
-
-      {/* Products/Services Section */}
       <ProductsServicesSection proposta={proposta} />
-
-      {/* Notes Section */}
+      
       <NotesSection 
         nota={nota} 
         notaEnviada={notaEnviada} 
@@ -532,7 +511,6 @@ const DetalhesPropostaDesk = ({ user }) => {
         handleNotaSubmit={handleNotaSubmit}
       />
 
-      {/* Status Timeline */}
       {proposta.acceptedAt && (
         <StatusTimeline 
           status={currentStatus}
@@ -541,25 +519,22 @@ const DetalhesPropostaDesk = ({ user }) => {
         />
       )}
 
-      {/* Action Buttons Section */}
       {currentStatus !== 'Recusada' && (
         <ActionButtonsSection 
           currentStatus={currentStatus}
           confirmDialog={confirmDialog}
           showAcceptConfirmation={showAcceptConfirmation}
           showRejectConfirmation={showRejectConfirmation}
-          showCancelApprovalConfirmation={showCancelApprovalConfirmation}
           isMobile={isMobile}
+          cotacaoConcluida={cotacaoConcluida}
         />
       )}
 
-      {/* Message Snackbar */}
       <MessageSnackbar 
         message={message}
         setMessage={setMessage}
       />
 
-      {/* Confirmation Dialog */}
       <ConfirmationDialog 
         confirmDialog={confirmDialog}
         setConfirmDialog={setConfirmDialog}
@@ -569,7 +544,7 @@ const DetalhesPropostaDesk = ({ user }) => {
   );
 };
 
-// Sub-components for better organization
+// Sub-components
 const CompanyInfoSection = ({ proposta }) => (
   <Card sx={{ mb: 3, borderRadius: 2 }}>
     <CardContent>
@@ -696,7 +671,7 @@ const ProductsServicesSection = ({ proposta }) => (
   </Card>
 );
 
-const NotesSection = ({ nota, notaEnviada, setNota, setNotaEnviada, handleNotaSubmit }) => (
+const NotesSection = ({ nota, notaEnviada, setNota, handleNotaSubmit }) => (
   <Card sx={{ mb: 3, borderRadius: 2 }}>
     <CardContent>
       <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -714,7 +689,7 @@ const NotesSection = ({ nota, notaEnviada, setNota, setNotaEnviada, handleNotaSu
             {nota}
           </Typography>
           <Button
-            onClick={() => setNotaEnviada(false)}
+            onClick={() => notaEnviada(false)}
             startIcon={<Edit />}
             variant="outlined"
           >
@@ -787,7 +762,8 @@ const ActionButtonsSection = ({
   showAcceptConfirmation, 
   showRejectConfirmation, 
   showCancelApprovalConfirmation,
-  isMobile
+  isMobile,
+  cotacaoConcluida
 }) => (
   <Box sx={{ 
     display: 'flex', 
@@ -803,7 +779,7 @@ const ActionButtonsSection = ({
         color="warning"
         fullWidth
         size="large"
-        disabled={!confirmDialog.showCancelOption}
+        disabled={!confirmDialog.showCancelOption || cotacaoConcluida}
       >
         {confirmDialog.showCancelOption ? 'Cancelar Aprovação' : 'Aprovação Bloqueada'}
       </Button>
@@ -815,6 +791,7 @@ const ActionButtonsSection = ({
         color="success"
         fullWidth
         size="large"
+        disabled={cotacaoConcluida}
       >
         Aprovar Proposta
       </Button>
@@ -827,7 +804,7 @@ const ActionButtonsSection = ({
       color="error"
       fullWidth
       size="large"
-      disabled={currentStatus === 'Recusada'}
+      disabled={currentStatus === 'Recusada' || cotacaoConcluida}
     >
       Recusar Proposta
     </Button>

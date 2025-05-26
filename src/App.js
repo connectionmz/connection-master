@@ -24,7 +24,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
 
-// Lista de províncias de Moçambique
 const PROVINCIAS_MOCAMBIQUE = [
   "Maputo Cidade",
   "Maputo Província",
@@ -37,7 +36,7 @@ const PROVINCIAS_MOCAMBIQUE = [
   "Nampula",
   "Cabo Delgado",
   "Niassa"
-];
+]
 
 const App = () => {
   const [userData, setUserData] = useState(null);
@@ -60,8 +59,6 @@ const App = () => {
       const snapshotSms = await get(cotacaoSms);
       const dataSms = snapshotSms.val();
 
-      console.log(dataSms)
-  
       if (snapshot.exists()) {
         const data = snapshot.val();
         setUserData({
@@ -102,25 +99,20 @@ const App = () => {
 
   const handleVisitorSubmit = async () => {
     try {
-      // Validação básica
       if (!visitorData.nome || !visitorData.contacto || !visitorData.provincia) {
         alert('Por favor, preencha todos os campos obrigatórios');
         return;
       }
 
-      // Cria um ID único para o visitante
       const visitorId = `visitor_${Date.now()}`;
       
-      // Salva os dados do visitante no Firebase
       await set(ref(db, `visitors/${visitorId}`), {
         ...visitorData,
         timestamp: new Date().toISOString()
       });
 
-      // Marca como visitante no localStorage
       localStorage.setItem('isVisitor', 'true');
       
-      // Define os dados mínimos do usuário como visitante
       setUserData({
         id: visitorId,
         displayName: visitorData.nome,

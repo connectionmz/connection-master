@@ -722,11 +722,9 @@ const renderProtectedRoute = (path, element) => (
 </Routes>
         </Box>
         {!isFullScreenRoute && <FooterDesk sx={{ 
-  flexShrink: 0,
-  marginTop: 'auto' 
-}} />}
-
-        {/* Botão flutuante de feedback */}
+            flexShrink: 0,
+            marginTop: 'auto' 
+          }} />}
         <Fab
           color="primary"
           aria-label="feedback"

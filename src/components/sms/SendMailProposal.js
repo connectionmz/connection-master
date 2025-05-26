@@ -1,32 +1,32 @@
 import axios from 'axios';
 
-const sendEmailProposta = async (to,emailMessage) => {
-
-  console.log(emailMessage)
+const sendEmailProposta = async (to, emailMessage) => {
+  console.log('Mensagem de e-mail:', emailMessage);
 
   const textContent = `
-  Detalhes do pedido:
-  Descrição: ${emailMessage.message}
-  Clique aqui: https://connectionmozambique.com/${emailMessage.link}
+${emailMessage.message}
+Clique aqui: https://connectionmozambique.com${emailMessage.link}
 
-  Caso tenha interesse, acesse o link acima e envie sua proposta.
-  Atenciosamente,
-  Equipe de Suporte
-  suporte@connectionmozambique.com
+Caso tenha interesse, acesse o link acima e envie sua proposta.
+
+Atenciosamente,
+Equipe de Suporte
+suporte@connectionmozambique.com
 `;
 
   const emailData = {
     to,
     subject: "Nova proposta para sua cotação",
-        text:textContent, 
+    text: textContent,
   };
+
   try {
     const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData);
-    console.log('E-mail enviado com sucesso:', response.data + to);
-    return true; 
+    console.log('E-mail enviado com sucesso para:', to, '| Resposta:', response.data);
+    return true;
   } catch (error) {
-    console.error('Erro ao enviar o e-mail:', error);
-    return false; 
+    console.error('Erro ao enviar o e-mail:', error.message);
+    return false;
   }
 };
 

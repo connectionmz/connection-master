@@ -56,7 +56,6 @@ const sendEmailConcurso = async (to, emailMessage) => {
   };
 
   try {
-    // URL corrigida com protocolo http://
     const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData, {
       headers: {
         'Content-Type': 'application/json'
@@ -75,7 +74,6 @@ const SendMailProforma = async (to, emailMessage) => {
   const textContent = `
   Detalhes do pedido:
   ${emailMessage.message}
-
   `;
 
   const emailData = {

@@ -418,7 +418,7 @@ const SmsDesk = ({ user }) => {
           </Typography>
           
           <Typography paragraph>
-            <strong>Receba notificações instantâneas</strong> dos pedidos de cotação diretamente no seu celular e email.
+            Receba alertas instantâneos sobre novos pedidos de cotação e concursos públicos do seu setor, diretamente no seu celular e e-mail — seja na sua província ou em todo o país. Não perca nenhuma oportunidade!
           </Typography>
           
           <Typography paragraph>
@@ -431,37 +431,30 @@ const SmsDesk = ({ user }) => {
             <li><Typography>Sem custos adicionais</Typography></li>
             <li><Typography>Renovação mensal automática</Typography></li>
           </ul>
-          
           <Typography paragraph>
             Valor mensal: <strong>{formatPrice(MONTHLY_SUBSCRIPTION_PRICE)} MT</strong>
           </Typography>
-          
           <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 3, mb: 1 }}>
             Perguntas Frequentes
           </Typography>
-          
           <Typography paragraph>
             <strong>Como ativo o plano?</strong><br />
             Basta clicar em "Ativar Assinatura" e seguir os passos para pagamento.
           </Typography>
-          
           <Typography paragraph>
             <strong>Quais métodos de pagamento aceitamos?</strong><br />
             M-Pesa e e-Mola. O pagamento é rápido e seguro.
           </Typography>
-          
           <Typography paragraph>
             <strong>Posso cancelar a qualquer momento?</strong><br />
             Sim, você pode cancelar a renovação automática quando quiser.
           </Typography>
-          
           <Typography paragraph>
             <strong>Quando recebo as notificações?</strong><br />
             Imediatamente quando um cliente faz um pedido no seu setor.
           </Typography>
         </Paper>
       )}
-
       <Dialog open={paymentModalOpen} onClose={handleClosePaymentModal}>
         <DialogTitle>Assinatura Mensal SMS + Email</DialogTitle>
         <DialogContent>
