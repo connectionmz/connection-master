@@ -10,7 +10,7 @@ import BackButton from '../BackButton';
 import { Close } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { sendEmailConcurso} from '../sms/SendMail';
+import { sendEmailConcurso } from '../sms/SendMail';
 
 const PublicarConcursoDesk = ({ user }) => {
   // Estados do componente
@@ -24,14 +24,14 @@ const PublicarConcursoDesk = ({ user }) => {
     localEntrega: '',
     dataAbertura: '',
     criterios: '',
-    valorEstimado: '',
+    valorEstimado: 'Não especificado',
     condicoesPagamento: '',
     observacoes: '',
-    provincia: [],
+    provincia: ['Todas'],
     setor: '',
-    tipoEntidade: [],
+    tipoEntidade: ['Todas'],
     modalidade: '',
-    numeroReferencia: '',
+    numeroReferencia: 'Não especificado',
     anexos: [],
     requisitosTecnicos: ''
   });
@@ -47,11 +47,12 @@ const PublicarConcursoDesk = ({ user }) => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [provincias, setProvincias] = useState([]);
   const [sectores, setSectores] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
-  const [selectedProvincias, setSelectedProvincias] = useState([]);
+  const [selectedProvincias, setSelectedProvincias] = useState(['Todas']);
   const [openProvinciaSelect, setOpenProvinciaSelect] = useState(false);
   const [openTipoEntidadeSelect, setOpenTipoEntidadeSelect] = useState(false);
 
@@ -68,9 +69,11 @@ const PublicarConcursoDesk = ({ user }) => {
         setProvincias(provinciasSnapshot.val() || []);
         setSectores(sectoresSnapshot.val() || []);
         setTiposEntidades(tiposEntidadesSnapshot.val() || []);
+        setDataLoaded(true);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
         setSnackbar({ open: true, message: 'Erro ao carregar dados', severity: 'error' });
+        setDataLoaded(true);
       }
     };
 
@@ -134,160 +137,173 @@ const PublicarConcursoDesk = ({ user }) => {
 
   // Handler para envio do formulário
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    
+    if (!dataLoaded) {
+      setSnackbar({
+        open: true,
+        message: 'Aguarde enquanto os dados são carregados',
+        severity: 'warning'
+      });
+      return;
+    }
 
-  // Validações
-  const requiredFields = ['titulo', 'prazo', 'localEntrega', 'setor', 'modalidade'];
-  const missingFields = requiredFields.filter(field => !formData[field]);
+    setLoading(true);
 
-  if (missingFields.length > 0) {
-    setSnackbar({
-      open: true,
-      message: `Preencha os campos obrigatórios: ${missingFields.join(', ')}`,
-      severity: 'error'
-    });
-    setLoading(false);
-    return;
-  }
+    // Validações
+    const requiredFields = ['titulo', 'prazo', 'localEntrega', 'setor', 'modalidade'];
+    const missingFields = requiredFields.filter(field => !formData[field]);
 
-  if (formData.provincia.length === 0) {
-    setSnackbar({
-      open: true,
-      message: 'Selecione pelo menos uma província',
-      severity: 'error'
-    });
-    setLoading(false);
-    return;
-  }
+    if (missingFields.length > 0) {
+      setSnackbar({
+        open: true,
+        message: `Preencha os campos obrigatórios: ${missingFields.join(', ')}`,
+        severity: 'error'
+      });
+      setLoading(false);
+      return;
+    }
 
-  if (formData.tipoEntidade.length === 0) {
-    setSnackbar({
-      open: true,
-      message: 'Selecione pelo menos um tipo de entidade',
-      severity: 'error'
-    });
-    setLoading(false);
-    return;
-  }
-
-  try {
-    // Preparar dados para o Firebase
-    const concursoData = {
-      ...formData,
-      ...richTextData,
-      id: '',
-      status: 'Aberta',
-      timestamp: new Date().toISOString(),
-      company: {
-        id: user?.id,
-        nome: user?.nome,
-        logoUrl: user?.logoUrl || '',
-        provincia: user?.provincia || ''
-      },
-      provincia: formData.provincia || ['Todas'],
-      tipoEntidade: formData.tipoEntidade || ['Todas'],
-      valorEstimado: formData.valorEstimado || 'Não especificado',
-      numeroReferencia: formData.numeroReferencia || 'Não especificado'
-    };
-
-    const sanitizedData = Object.fromEntries(
-      Object.entries(concursoData).filter(([_, v]) => v !== undefined)
+    // Validação de rich text
+    const richTextFields = ['objeto', 'condicoes', 'documentacao', 'criterios'];
+    const emptyRichTextFields = richTextFields.filter(field => 
+      !richTextData[field] || richTextData[field] === '<p><br></p>'
     );
 
-    const newConcursoRef = push(ref(db, 'concursos'));
-    const cotacaoId = newConcursoRef.key;
+    if (emptyRichTextFields.length > 0) {
+      setSnackbar({
+        open: true,
+        message: `Os seguintes campos não podem estar vazios: ${emptyRichTextFields.join(', ')}`,
+        severity: 'error'
+      });
+      setLoading(false);
+      return;
+    }
 
-    await set(newConcursoRef, {
-      ...sanitizedData,
-      id: cotacaoId
-    });
+    // Garantir que arrays não sejam undefined
+    if (!formData.provincia || formData.provincia.length === 0) {
+      formData.provincia = ['Todas'];
+    }
+    
+    if (!formData.tipoEntidade || formData.tipoEntidade.length === 0) {
+      formData.tipoEntidade = ['Todas'];
+    }
 
-    // BUSCAR EMPRESAS DO MESMO SETOR
-    const empresasRef = ref(db, 'company');
-    const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.setor.trim()));
-    const empresasSnapshot = await get(setorQuery);
-
-    if (empresasSnapshot.exists()) {
-      const empresas = empresasSnapshot.val();
-
-      console.log(empresas)
-
-      // Formatador de data
-      const formatDeadline = (isoString) => {
-        const date = new Date(isoString);
-        return date.toLocaleDateString('pt-PT', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      };
-
-      const formattedDeadline = formatDeadline(formData.prazo);
-      const linkDoPedido = `https://www.connectionmozambique.com/concurso/${cotacaoId}`; // substitua pela sua URL real
-
-      const message = `Título: ${formData.titulo}\nDescrição: ${formData.descricao}\nData Limite: ${formattedDeadline}\nSetor de Atividade: ${formData.setor}\nAcesse: ${linkDoPedido}`;
-
-      const mailMessage = {
-        title: formData.titulo,
-        deadline: formattedDeadline,
-        sector: formData.setor,
-        link: linkDoPedido
-      };
-
-      const smsData = {
-        mensagem: message,
-        empresaOrigemId: user.id || 'N/A',
-        empresaOrigemNome: user.nome || 'N/A',
+    try {
+      // Preparar dados para o Firebase
+      const concursoData = {
+        ...formData,
+        ...richTextData,
+        id: '',
+        status: 'Aberta',
         timestamp: new Date().toISOString(),
-        tipo: 'concurso',
-        contactos: []
+        company: {
+          id: user?.id,
+          nome: user?.nome,
+          logoUrl: user?.logoUrl || '',
+          provincia: user?.provincia || ''
+        }
       };
 
-      for (const key in empresas) {
-        const empresa = empresas[key];
+      // Sanitização profunda dos dados
+      const sanitizedData = JSON.parse(JSON.stringify(concursoData, (key, value) => {
+        if (value === undefined) return null;
+        if (Array.isArray(value) && value.length === 0) return ['Todas'];
+        return value;
+      }));
 
-        if (key === user.id) continue;
+      const newConcursoRef = push(ref(db, 'concursos'));
+      const cotacaoId = newConcursoRef.key;
 
-        // Ignorar se não tiver contacto nem email
-        if (!empresa.contacto && !empresa.email) continue;
+      await set(newConcursoRef, {
+        ...sanitizedData,
+        id: cotacaoId
+      });
 
-        // SMS
-        if (empresa.contacto) {
-          const contactos = Array.isArray(empresa.contacto)
-            ? empresa.contacto
-            : [empresa.contacto];
+      // BUSCAR EMPRESAS DO MESMO SETOR
+      const empresasRef = ref(db, 'company');
+      const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.setor.trim()));
+      const empresasSnapshot = await get(setorQuery);
 
-          contactos.forEach(contacto => {
-            if (!contacto) return;
+      if (empresasSnapshot.exists()) {
+        const empresas = empresasSnapshot.val();
 
-            smsData.contactos.push({
-              empresaId: key,
-              empresaNome: empresa.nome || 'N/A',
-              numero: contacto,
-              status: 'por enviar',
-              attempts: 0
-            });
+        // Formatador de data
+        const formatDeadline = (isoString) => {
+          const date = new Date(isoString);
+          return date.toLocaleDateString('pt-PT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
           });
+        };
+
+        const formattedDeadline = formatDeadline(formData.prazo);
+        const linkDoPedido = `https://www.connectionmozambique.com/concurso/${cotacaoId}`;
+
+        const message = `Título: ${formData.titulo}\nDescrição: ${formData.descricao}\nData Limite: ${formattedDeadline}\nSetor de Atividade: ${formData.setor}\nAcesse: ${linkDoPedido}`;
+
+        const mailMessage = {
+          title: formData.titulo,
+          deadline: formattedDeadline,
+          sector: formData.setor,
+          link: linkDoPedido
+        };
+
+        const smsData = {
+          mensagem: message,
+          empresaOrigemId: user.id || 'N/A',
+          empresaOrigemNome: user.nome || 'N/A',
+          timestamp: new Date().toISOString(),
+          tipo: 'concurso',
+          contactos: []
+        };
+
+        for (const key in empresas) {
+          const empresa = empresas[key];
+
+          if (key === user.id) continue;
+
+          // Ignorar se não tiver contacto nem email
+          if (!empresa.contacto && !empresa.email) continue;
+
+          // SMS
+          if (empresa.contacto) {
+            const contactos = Array.isArray(empresa.contacto)
+              ? empresa.contacto
+              : [empresa.contacto];
+
+            contactos.forEach(contacto => {
+              if (!contacto) return;
+
+              smsData.contactos.push({
+                empresaId: key,
+                empresaNome: empresa.nome || 'N/A',
+                numero: contacto,
+                status: 'por enviar',
+                attempts: 0
+              });
+            });
+          }
+
+          // EMAIL
+          if (empresa.email) {
+            const emails = Array.isArray(empresa.email)
+              ? empresa.email
+              : [empresa.email];
+
+            await Promise.all(emails.map(email => sendEmailConcurso(email, mailMessage)));
+          }
         }
 
-        // EMAIL
-        if (empresa.email) {
-          const emails = Array.isArray(empresa.email)
-            ? empresa.email
-            : [empresa.email];
-
-          await Promise.all(emails.map(email => sendEmailConcurso(email, mailMessage)));
-        }
+        // Guardar envio de SMS
+        const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
+        await set(smsRef, smsData);
       }
 
-      // Guardar envio de SMS
-      const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
-      await set(smsRef, smsData);
-
-            
+      // Resetar formulário
       setFormData({
         titulo: '',
         entidade: user?.nome || '',
@@ -298,14 +314,14 @@ const PublicarConcursoDesk = ({ user }) => {
         localEntrega: '',
         dataAbertura: '',
         criterios: '',
-        valorEstimado: '',
+        valorEstimado: 'Não especificado',
         condicoesPagamento: '',
         observacoes: '',
-        provincia: [],
+        provincia: ['Todas'],
         setor: '',
-        tipoEntidade: [],
+        tipoEntidade: ['Todas'],
         modalidade: '',
-        numeroReferencia: '',
+        numeroReferencia: 'Não especificado',
         anexos: [],
         requisitosTecnicos: ''
       });
@@ -319,27 +335,24 @@ const PublicarConcursoDesk = ({ user }) => {
         observacoes: '',
         requisitosTecnicos: ''
       });
-      
+
+      setSnackbar({
+        open: true,
+        message: 'Concurso publicado com sucesso!',
+        severity: 'success'
+      });
+
+    } catch (error) {
+      console.error('Erro ao publicar concurso:', error);
+      setSnackbar({
+        open: true,
+        message: `Erro ao publicar concurso: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
-
-    setSnackbar({
-      open: true,
-      message: 'Concurso publicado com sucesso!',
-      severity: 'success'
-    });
-
-  } catch (error) {
-    console.error('Erro ao publicar concurso:', error);
-    setSnackbar({
-      open: true,
-      message: `Erro ao publicar concurso: ${error.message}`,
-      severity: 'error'
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   // Fechar snackbar
   const handleCloseSnackbar = () => {
@@ -427,6 +440,7 @@ const PublicarConcursoDesk = ({ user }) => {
               value={formData.setor}
               onChange={handleChange}
               label="Setor de Atividade *"
+              disabled={!dataLoaded}
             >
               <MenuItem value="">Selecione o Setor</MenuItem>
               {sectores.map((setor, index) => (
@@ -480,6 +494,7 @@ const PublicarConcursoDesk = ({ user }) => {
               onClose={() => setOpenProvinciaSelect(false)}
               label="Província(s) *"
               renderValue={(selected) => selected.join(', ')}
+              disabled={!dataLoaded}
             >
               <MenuItem onClick={() => setOpenProvinciaSelect(false)}>
                 <ListItemIcon>
@@ -521,6 +536,7 @@ const PublicarConcursoDesk = ({ user }) => {
               onClose={() => setOpenTipoEntidadeSelect(false)}
               label="Tipo de Entidade *"
               renderValue={(selected) => selected.join(', ')}
+              disabled={!dataLoaded}
             >
               <MenuItem onClick={() => setOpenTipoEntidadeSelect(false)}>
                 <ListItemIcon>
@@ -667,11 +683,13 @@ const PublicarConcursoDesk = ({ user }) => {
             type="submit"
             variant="contained"
             size="large"
-            disabled={loading}
+            disabled={loading || !dataLoaded || formData.provincia.length === 0 || formData.tipoEntidade.length === 0}
             sx={{ minWidth: '200px' }}
           >
             {loading ? (
               <CircularProgress size={24} />
+            ) : !dataLoaded ? (
+              'Carregando dados...'
             ) : (
               'Publicar Concurso'
             )}
