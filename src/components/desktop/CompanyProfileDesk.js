@@ -3,7 +3,11 @@ import {
   VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, 
   Logout, Edit, CameraAlt, Language, Store, RequestQuote, 
   Message, Phone, WhatsApp, Facebook, Email, Report, Block, LockOpen,
-  LinkOff
+  LinkOff,
+  Code,
+  Article,
+  Info,
+  Home
 } from "@mui/icons-material";
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push, set, onValue, remove } from 'firebase/database';
@@ -895,18 +899,38 @@ const CompanyProfile = ({ user }) => {
 
       {/* Tabs */}
       <Box mt={4} borderBottom={1} borderColor="divider">
-        <Tabs
-          value={activeTab}
-          onChange={(_, value) => setActiveTab(value)}
-          centered
-          variant={isMobile ? "scrollable" : "standard"}
-          scrollButtons="auto"
-        >
-          <Tab label="Início" value="inicio" />
-          <Tab label="Sobre" value="sobre" />
-          <Tab label="Publicações" value="Publicados" />
-          <Tab label="Repositório" value="Repositorio" />
-        </Tabs>
+       <Tabs
+  value={activeTab}
+  onChange={(_, value) => setActiveTab(value)}
+  centered
+  variant={isMobile ? "scrollable" : "standard"}
+  scrollButtons="auto"
+>
+  <Tab 
+    label="Início" 
+    value="inicio" 
+    icon={<Home fontSize="small" />} 
+    iconPosition="start"
+  />
+  <Tab 
+    label="Sobre" 
+    value="sobre" 
+    icon={<Info fontSize="small" />} 
+    iconPosition="start"
+  />
+  <Tab 
+    label="Publicações" 
+    value="Publicados" 
+    icon={<Article fontSize="small" />} 
+    iconPosition="start"
+  />
+  <Tab 
+    label="Repositório" 
+    value="Repositorio" 
+    icon={<Code fontSize="small" />} 
+    iconPosition="start"
+  />
+</Tabs>
       </Box>
 
       {/* Tab Content */}

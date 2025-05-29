@@ -368,25 +368,32 @@ const ProductDetailsDesk = ({user}) => {
                   <Typography variant="subtitle1" gutterBottom>
                     Quantidade:
                   </Typography>
-                  <TextField
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || (Number(value) >= 1 && Number(value) <= 10)) {
-                          setQuantity(value);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        let val = parseInt(e.target.value);
-                        if (isNaN(val) || val < 1) val = 1;
-                        if (val > 10) val = 10;
-                        setQuantity(val);
-                      }}
-                      inputProps={{ min: 1, max: 10 }}
-                      size="small"
-                      sx={{ width: "100px", mr: 2 }}
-                    />
+          <TextField
+  type="number"
+  value={quantity}
+  onChange={(e) => {
+    const value = e.target.value;
+    // Verifica se está vazio ou é um número entre 1 e a quantidade máxima disponível
+    if (value === '' || (Number(value) >= 1 && Number(value) <= product.qtd)) {
+      setQuantity(value);
+    }
+  }}
+  onBlur={(e) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val) || val < 1) val = 1; // Mínimo de 1
+    if (val > product.qtd) val = product.qtd; // Máximo da quantidade disponível
+    setQuantity(val);
+  }}
+  inputProps={{ 
+    min: 1, 
+    max: product.qtd,
+    'aria-label': `Quantidade (disponível: ${product.qtd})`
+  }}
+  size="small"
+  sx={{ width: "100px", mr: 2 }}
+  error={quantity > product.qtd}
+  helperText={quantity > product.qtd ? `Quantidade máxima: ${product.qtd}` : ''}
+/>
 
                 </Box>
                 

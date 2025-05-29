@@ -15,122 +15,213 @@ import {
 import { db } from "../../fb";
 import BackButton from "../BackButton";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { formatPrice } from "../../utils/utils";
+import { formatarValor, formatPrice } from "../../utils/utils";
 
-const EditalConcursoPDF = ({ user }) => {
+const EditalConcurso = ({ user }) => {
   const { id } = useParams();
-  const [cot, setCotacao] = useState(null);
+  const [concurso, setConcurso] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   useEffect(() => {
-    const fetchProforma = async () => {
+    const fetchConcurso = async () => {
       try {
-        const proformaSnap = await get(ref(db, `concursos/${id}`));
-        if (proformaSnap.exists()) {
-          setCotacao(proformaSnap.val());
+        const concursoSnap = await get(ref(db, `concursos/${id}`));
+        if (concursoSnap.exists()) {
+          setConcurso(concursoSnap.val());
+        } else {
+          setError("Concurso não encontrado.");
         }
       } catch (err) {
-        setError("Erro ao carregar cotação.");
+        setError("Erro ao carregar edital do concurso.");
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
 
     if (id) {
-      fetchProforma();
+      fetchConcurso();
     }
-  }, [user, id]);
+  }, [id]);
 
-  // Função para formatar datas
   const formatDate = (dateString) => {
     if (!dateString) return "Não especificado";
-    const date = new Date(dateString);
-    return date.toLocaleString("pt-PT", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("pt-PT", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+    } catch {
+      return "Data inválida";
+    }
   };
 
-  // Função para remover tags HTML
-  const stripHtml = (html) => {
+  const convertQuillToText = (html) => {
     if (!html) return "";
-    return html.replace(/<[^>]*>/g, "");
+    
+    let text = html.replace(/<ol[^>]*>/g, '')
+                   .replace(/<\/ol>/g, '')
+                   .replace(/<li>/g, '\n• ')
+                   .replace(/<\/li>/g, '');
+    
+    text = text.replace(/<ul[^>]*>/g, '')
+               .replace(/<\/ul>/g, '')
+               .replace(/<li>/g, '\n• ');
+    
+    text = text.replace(/<[^>]*>/g, '');
+    text = text.replace(/ +/g, ' ')
+               .replace(/\n\s+/g, '\n')
+               .trim();
+    
+    return text;
   };
 
-  // Componente PDF personalizado
+  const renderQuillContentForPDF = (html) => {
+    if (!html) return null;
+    
+    const text = convertQuillToText(html);
+    return (
+      <View>
+        {text.split('\n').map((paragraph, i) => (
+          paragraph.startsWith('•') ? (
+            <View key={i} style={styles.listItem}>
+              <Text style={styles.bulletPoint}>•</Text>
+              <Text style={styles.listItemContent}>{paragraph.substring(1).trim()}</Text>
+            </View>
+          ) : (
+            <Text key={i} style={styles.sectionContent}>
+              {paragraph || ' '}
+            </Text>
+          )
+        ))}
+      </View>
+    );
+  };
+
   const MyDocument = () => (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.companyName}>{cot?.company?.nome}</Text>
+          <Text style={styles.companyName}>{concurso?.company?.nome || "Entidade não especificada"}</Text>
           <Text style={styles.title}>PROCESSO DE CONCURSO PÚBLICO</Text>
-          <Text style={styles.subtitle}>{cot?.titulo}</Text>
-          <Text>Número de Referência: {cot?.numeroReferencia || "Não especificado"}</Text>
-          <Text>Modalidade: {cot?.modalidade}</Text>
-          <Text>Setor: {cot?.setor}</Text>
-          <Text>Valor Estimado: {formatPrice(cot?.valorEstimado)} MT</Text>
+          <Text style={styles.subtitle}>{concurso?.titulo || "Sem título"}</Text>
+          <Text>Número de Referência: {concurso?.numeroReferencia || "Não especificado"}</Text>
+          <Text>Modalidade: {concurso?.modalidade || "Não especificada"}</Text>
+          <Text>Setor: {concurso?.setor || "Não especificado"}</Text>
+          {concurso?.valorEstimado && (
+            <Text>Valor Estimado: {formatarValor(concurso.valorEstimado)} MT</Text>
+          )}
         </View>
 
         <View style={styles.info}>
-          <Text>Data de Abertura: {formatDate(cot?.dataAbertura)}</Text>
-          <Text style={{ color: "#d32f2f" }}>Prazo: {formatDate(cot?.prazo)}</Text>
+          <Text>Data de Abertura: {formatDate(concurso?.dataAbertura)}</Text>
+          <Text style={{ color: "#d32f2f" }}>Prazo: {formatDate(concurso?.prazo)}</Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Objeto</Text>
-          <Text style={styles.sectionContent}>{stripHtml(cot?.objeto)}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Requisitos Técnicos</Text>
-          <Text style={styles.sectionContent}>{stripHtml(cot?.requisitosTecnicos)}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Critérios de Avaliação</Text>
-          <Text style={styles.sectionContent}>{stripHtml(cot?.criterios)}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Condições</Text>
-          <Text style={styles.sectionContent}>{stripHtml(cot?.condicoes)}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Documentação Necessária</Text>
-          <Text style={styles.sectionContent}>{stripHtml(cot?.documentacao)}</Text>
-        </View>
+        {[
+          { title: "Objeto", content: concurso?.objeto },
+          { title: "Requisitos Técnicos", content: concurso?.requisitosTecnicos },
+          { title: "Critérios de Avaliação", content: concurso?.criterios },
+          { title: "Condições", content: concurso?.condicoes },
+          { title: "Documentação Necessária", content: concurso?.documentacao },
+        ].map((section, index) => (
+          <View key={index} style={styles.section}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            {renderQuillContentForPDF(section.content)}
+          </View>
+        ))}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Local de Entrega</Text>
-          <Text style={styles.sectionContent}>{cot?.localEntrega || "Não especificado"}</Text>
+          <Text style={styles.sectionContent}>{concurso?.localEntrega || "Não especificado"}</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Províncias Abrangidas</Text>
           <Text style={styles.sectionContent}>
-            {cot?.provincia?.join(", ") || "Não especificado"}
+            {concurso?.provincia?.join(", ") || "Não especificado"}
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tipo de Entidade Elegível</Text>
           <Text style={styles.sectionContent}>
-            {cot?.tipoEntidade?.join(", ") || "Não especificado"}
+            {concurso?.tipoEntidade?.join(", ") || "Não especificado"}
           </Text>
         </View>
 
         <View style={styles.footer}>
-          <Text>Entidade: {cot?.entidade}</Text>
-          <Text>Status: {cot?.status}</Text>
-          <Text>Publicado em: {formatDate(cot?.timestamp)}</Text>
+          <Text>Entidade: {concurso?.entidade || "Não especificada"}</Text>
+          <Text>Gerado por:Connection Mozambique, LDA</Text>
+          <Text>Publicado em: {formatDate(concurso?.timestamp)}</Text>
         </View>
       </Page>
     </Document>
   );
+
+  const renderQuillContent = (html) => {
+    if (!html) return (
+      <Typography variant="body2" color="textSecondary">
+        Não especificado
+      </Typography>
+    );
+    
+    return (
+      <Box sx={{
+        '& ol, & ul': {
+          pl: 3,
+          my: 1,
+        },
+        '& li': {
+          mb: 1,
+        },
+        '& p': {
+          my: 1,
+        },
+        fontSize: '0.875rem',
+        lineHeight: 1.6,
+      }}>
+        <div dangerouslySetInnerHTML={{ __html: html }} />
+      </Box>
+    );
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress size={isMobile ? 40 : 60} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <BackButton />
+      </Box>
+    );
+  }
+
+  if (!concurso) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Nenhum concurso encontrado
+        </Alert>
+        <BackButton />
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -144,7 +235,6 @@ const EditalConcursoPDF = ({ user }) => {
         flexDirection: "column",
       }}
     >
-      {/* Botões no topo */}
       <Box sx={{ 
         width: "100%", 
         display: "flex", 
@@ -154,59 +244,50 @@ const EditalConcursoPDF = ({ user }) => {
         gap: isMobile ? 2 : 0
       }}>
         <BackButton 
-          sx={{ mb: isMobile ? 0 : 2 }} 
+          sx={{ alignSelf: isMobile ? 'center' : 'flex-start' }} 
           variant="contained" 
           color="primary" 
           size={isMobile ? 'small' : 'medium'}
         />
-        {cot && (
-          <Button 
-            variant="contained" 
-            color="primary" 
-            sx={{ mt: isMobile ? 0 : 3 }}
-            size={isMobile ? 'small' : 'medium'}
+        
+        <Button 
+          variant="contained" 
+          color="primary" 
+          sx={{ alignSelf: isMobile ? 'center' : 'flex-end' }}
+          size={isMobile ? 'small' : 'medium'}
+        >
+          <PDFDownloadLink 
+            document={<MyDocument />} 
+            fileName={`Edital_Concurso_${concurso.titulo || 'sem_titulo'}.pdf`}
+            style={{ 
+              color: 'inherit', 
+              textDecoration: 'none',
+              fontSize: isMobile ? '0.8rem' : '1rem',
+              padding: isMobile ? '6px 8px' : '8px 16px'
+            }}
           >
-            <PDFDownloadLink 
-              document={<MyDocument />} 
-              fileName={`Processo_Concurso_${cot.titulo}.pdf`}
-              style={{ 
-                color: 'inherit', 
-                textDecoration: 'none',
-                fontSize: isMobile ? '0.8rem' : '1rem',
-                padding: isMobile ? '6px 8px' : '8px 16px'
-              }}
-            >
-              {({ blob, url, loading, error }) =>
-                loading ? "Carregando..." : "Baixar PDF"
-              }
-            </PDFDownloadLink>
-          </Button>
-        )}
+            {({ loading }) => loading ? "Gerando PDF..." : "Baixar Edital"}
+          </PDFDownloadLink>
+        </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {cot ? (
-        <Box sx={{ 
-          width: isMobile ? '100%' : '210mm', 
-          minHeight: isMobile ? 'auto' : '297mm', 
-          p: isMobile ? 2 : 3, 
-          border: '1px solid #F1F1F1',
-          borderRadius: 2,
-          boxShadow: 1
-        }}>
-          {/* Logo da empresa */}
+      <Box sx={{ 
+        width: isMobile ? '100%' : '210mm', 
+        minHeight: isMobile ? 'auto' : '297mm', 
+        p: isMobile ? 2 : 3, 
+        border: '1px solid #F1F1F1',
+        borderRadius: 2,
+        boxShadow: 1,
+        bgcolor: 'background.paper'
+      }}>
+        <Box sx={{ mb: 3, textAlign: 'center', borderBottom: '2px solid', borderColor: 'error.main', pb: 2 }}>
           <Typography 
             variant={isMobile ? "h5" : "h4"} 
             fontWeight="bold" 
             color="text.primary"
             gutterBottom
           >
-            {cot.company?.nome}
+            {concurso.company?.nome || "Entidade não especificada"}
           </Typography>
           
           <Typography 
@@ -223,121 +304,100 @@ const EditalConcursoPDF = ({ user }) => {
             fontWeight="bold"
             gutterBottom
           >
-            {cot.titulo}
+            {concurso.titulo || "Sem título"}
           </Typography>
-          
-          <Stack spacing={0.5} sx={{ mb: 2 }}>
-            <Typography variant="body2">Número de Referência: {cot.numeroReferencia || "Não especificado"}</Typography>
-            <Typography variant="body2">Modalidade: {cot.modalidade}</Typography>
-            <Typography variant="body2">Setor: {cot.setor}</Typography>
-            <Typography variant="body2">Valor Estimado: {formatPrice(cot.valorEstimado)} MT</Typography>
-          </Stack>
-
-          <Divider sx={{ my: 2 }} />
-
-          <Stack spacing={1} sx={{ mb: 2 }}>
-            <Typography variant="body2">Data de Abertura: {formatDate(cot.dataAbertura)}</Typography>
-            <Typography variant="body2" sx={{ color: "red" }}>
-              Prazo: {formatDate(cot.prazo)}
-            </Typography>
-          </Stack>
-
-          <Divider sx={{ my: 2 }} />
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Objeto
-            </Typography>
-            <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
-              {stripHtml(cot.objeto)}
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Requisitos Técnicos
-            </Typography>
-            <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
-              {stripHtml(cot.requisitosTecnicos)}
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Critérios de Avaliação
-            </Typography>
-            <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
-              {stripHtml(cot.criterios)}
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Condições
-            </Typography>
-            <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
-              {stripHtml(cot.condicoes)}
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Documentação Necessária
-            </Typography>
-            <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
-              {stripHtml(cot.documentacao)}
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Local de Entrega
-            </Typography>
-            <Typography variant="body2">
-              {cot.localEntrega || "Não especificado"}
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Províncias Abrangidas
-            </Typography>
-            <Typography variant="body2">
-              {cot.provincia?.join(", ") || "Não especificado"}
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Tipo de Entidade Elegível
-            </Typography>
-            <Typography variant="body2">
-              {cot.tipoEntidade?.join(", ") || "Não especificado"}
-            </Typography>
-          </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          <Stack spacing={0.5}>
-            <Typography variant="body2">
-              <strong>Entidade:</strong> {cot.entidade}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Status:</strong> {cot.status}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Publicado em:</strong> {formatDate(cot.timestamp)}
-            </Typography>
-          </Stack>
         </Box>
-      ) : !error && (
-        <CircularProgress size={isMobile ? 40 : 60} />
-      )}
+        
+        <Stack spacing={0.5} sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            <strong>Número de Referência:</strong> {concurso.numeroReferencia || "Não especificado"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Modalidade:</strong> {concurso.modalidade || "Não especificada"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Setor:</strong> {concurso.setor || "Não especificado"}
+          </Typography>
+          {concurso.valorEstimado && (
+            <Typography variant="body2">
+              <strong>Valor Estimado:</strong> {formatarValor(concurso.valorEstimado)} MT
+            </Typography>
+          )}
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Stack spacing={1} sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            <strong>Data de Abertura:</strong> {formatDate(concurso.dataAbertura)}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "error.main", fontWeight: 'bold' }}>
+            <strong>Prazo:</strong> {formatDate(concurso.prazo)}
+          </Typography>
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        {[
+          { title: "Objeto", content: concurso.objeto },
+          { title: "Requisitos Técnicos", content: concurso.requisitosTecnicos },
+          { title: "Critérios de Avaliação", content: concurso.criterios },
+          { title: "Condições", content: concurso.condicoes },
+          { title: "Documentação Necessária", content: concurso.documentacao },
+        ].map((section, index) => (
+          <Box key={index} sx={{ mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              {section.title}
+            </Typography>
+            {renderQuillContent(section.content)}
+          </Box>
+        ))}
+
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Local de Entrega
+          </Typography>
+          <Typography variant="body2">
+            {concurso.localEntrega || "Não especificado"}
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Províncias Abrangidas
+          </Typography>
+          <Typography variant="body2">
+            {concurso.provincia?.join(", ") || "Não especificado"}
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Tipo de Entidade Elegível
+          </Typography>
+          <Typography variant="body2">
+            {concurso.tipoEntidade?.join(", ") || "Não especificado"}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Stack spacing={1}>
+          <Typography variant="body2">
+            <strong>Entidade:</strong> {concurso.entidade || "Não especificada"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Status:</strong> {concurso.status || "Não especificado"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Publicado em:</strong> {formatDate(concurso.timestamp)}
+          </Typography>
+        </Stack>
+      </Box>
     </Box>
   );
 };
 
-// Estilos para o PDF
 const styles = StyleSheet.create({
   page: {
     padding: 40,
@@ -385,6 +445,21 @@ const styles = StyleSheet.create({
   sectionContent: {
     fontSize: 12,
     textAlign: "justify",
+    marginBottom: 5,
+  },
+  listItem: {
+    fontSize: 12,
+    marginBottom: 5,
+    display: 'flex',
+    flexDirection: 'row',
+  },
+  bulletPoint: {
+    width: 15,
+    fontSize: 12,
+  },
+  listItemContent: {
+    flex: 1,
+    textAlign: 'justify',
   },
   footer: {
     marginTop: 30,
@@ -396,4 +471,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EditalConcursoPDF;
+export default EditalConcurso;

@@ -61,4 +61,23 @@ const formatCurrency = (value) => {
   return numericValue;
 };
 
-export { formatPrice, formatDateTime,formatarMoeda, shuffleArray, formatCurrency  };
+function formatarValor(valor) {
+  if (typeof valor === 'string') {
+    valor = valor.replace(/\s/g, '').replace(',', '.'); // remove espaços e troca vírgula por ponto
+  }
+
+  const numero = Number(valor);
+
+  if (isNaN(numero)) {
+    return 'Valor inválido';
+  }
+
+  return numero.toLocaleString('pt-PT', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+
+
+export { formatPrice, formatDateTime,formatarMoeda, shuffleArray, formatCurrency, formatarValor };

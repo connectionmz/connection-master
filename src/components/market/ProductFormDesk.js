@@ -229,109 +229,130 @@ const ProductFormDesk = ({ user }) => {
     setOpenMobileDialog(false);
   };
 
-  // Renderização para desktop/tablet
-  const renderDesktopView = () => (
-    <Grid container spacing={3}>
-      <Grid item xs={12} md={8}>
-        <TableContainer component={Paper} sx={{ mb: 3 }}>
-          <Table size={isTablet ? 'small' : 'medium'}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ width: isTablet ? 80 : 120 }}>
-                  <Box display="flex" alignItems="center">
-                    Imagem
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box display="flex" alignItems="center">
-                    Nome
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box display="flex" alignItems="center">
-                    Descrição
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box display="flex" alignItems="center">
-                    Preço (MT)
-                  </Box>
-                </TableCell>
-                {!isTablet && (
-                  <TableCell>
-                    <Box display="flex" alignItems="center">
-                      Categoria
-                    </Box>
-                  </TableCell>
-                )}
-                <TableCell>Ações</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {products.map((product, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    {product.imageUrl ? (
-                      <Box sx={{ position: 'relative' }}>
-                        <CardMedia
-                          component="img"
-                          sx={{ 
-                            width: isTablet ? 60 : 80, 
-                            height: isTablet ? 60 : 80, 
-                            objectFit: 'cover',
-                            borderRadius: 1
-                          }}
-                          image={product.imageUrl}
-                          alt="Preview"
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRemoveImage(index)}
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            backgroundColor: 'rgba(255,255,255,0.7)',
-                            '&:hover': {
-                              backgroundColor: 'rgba(255,255,255,0.9)'
-                            }
-                          }}
-                        >
-                          <Cancel color="error" fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ) : (
-                      <Tooltip title="Imagem opcional">
-                        <Button
-                          variant="outlined"
-                          component="label"
-                          size="small"
-                          fullWidth
-                          sx={{ height: isTablet ? 60 : 80 }}
-                        >
-                          <CloudUpload fontSize="small" />
-                          {!isTablet && 'Adicionar'}
-                          <input
-                            type="file"
-                            hidden
-                            accept="image/*"
-                            onChange={(e) => handleImageChange(index, e.target.files[0])}
-                          />
-                        </Button>
-                      </Tooltip>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      placeholder="Nome*"
-                      value={product.name}
-                      onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                      size={isTablet ? 'small' : 'medium'}
-                      required
+// Renderização responsiva
+const renderDesktopView = () => (
+  <Box>
+    {/* Card de Dicas - Agora aparece antes da tabela em mobile */}
+    <Card sx={{ p: 2, mb: 3, display: { xs: 'block', md: 'none' } }}>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+        <HelpOutline sx={{ mr: 1 }} /> Dicas para Cadastro
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
+        <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
+        Imagens são opcionais mas aumentam as vendas (recomendado 500x500px)
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
+        <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
+        Você pode adicionar a imagem depois se necessário
+      </Typography>
+      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'flex-start' }}>
+        <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
+        Campos marcados com * são obrigatórios
+      </Typography>
+    </Card>
+
+    {/* Tabela de Produtos */}
+    <TableContainer component={Paper} sx={{ mb: 3 }}>
+      <Table size={isTablet ? 'small' : 'medium'}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ width: isTablet ? 80 : 120 }}>
+              <Box display="flex" alignItems="center">
+                Imagem
+              </Box>
+            </TableCell>
+            <TableCell>
+              <Box display="flex" alignItems="center">
+                Nome
+              </Box>
+            </TableCell>
+            {!isMobile && (
+              <TableCell>
+                <Box display="flex" alignItems="center">
+                  Descrição
+                </Box>
+              </TableCell>
+            )}
+            <TableCell>
+              <Box display="flex" alignItems="center">
+                Preço (MT)
+              </Box>
+            </TableCell>
+            <TableCell>
+              <Box display="flex" alignItems="center">
+                Qtd (MT)
+              </Box>
+            </TableCell>
+            
+            <TableCell>Ações</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {products.map((product, index) => (
+            <TableRow key={index}>
+              <TableCell>
+                {product.imageUrl ? (
+                  <Box sx={{ position: 'relative' }}>
+                    <CardMedia
+                      component="img"
+                      sx={{ 
+                        width: isTablet ? 60 : 80, 
+                        height: isTablet ? 60 : 80, 
+                        objectFit: 'cover',
+                        borderRadius: 1
+                      }}
+                      image={product.imageUrl}
+                      alt="Preview"
                     />
-                  </TableCell>
-                  <TableCell>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveImage(index)}
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        backgroundColor: 'rgba(255,255,255,0.7)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.9)'
+                        }
+                      }}
+                    >
+                      <Cancel color="error" fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Tooltip title="Imagem opcional">
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      size="small"
+                      fullWidth
+                      sx={{ height: isTablet ? 60 : 80 }}
+                    >
+                      <CloudUpload fontSize="small" />
+                      {!isTablet && 'Adicionar'}
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={(e) => handleImageChange(index, e.target.files[0])}
+                      />
+                    </Button>
+                  </Tooltip>
+                )}
+              </TableCell>
+              <TableCell>
+                <TextField
+                  fullWidth
+                  placeholder="Nome*"
+                  value={product.name}
+                  onChange={(e) => handleProductChange(index, 'name', e.target.value)}
+                  size={isTablet ? 'small' : 'medium'}
+                  required
+                />
+              </TableCell>
+              {!isMobile && (
+                <TableCell>
                   <TextField
                     label="Descrição"
                     fullWidth
@@ -339,111 +360,108 @@ const ProductFormDesk = ({ user }) => {
                     rows={3}
                     value={product.description}
                     onChange={(e) => handleProductChange(index, 'description', e.target.value)}
-                    sx={{ mb: 2 }}/>
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      fullWidth
-                      placeholder="Preço*"
-                      type="number"
-                      value={product.price}
-                      onChange={(e) => handleProductChange(index, 'price', e.target.value)}
-                      size={isTablet ? 'small' : 'medium'}
-                      inputProps={{ min: 0, step: 0.01 }}
-                      required
-                    />
-                  </TableCell>
-                  {!isTablet && (
-                    <TableCell>
-                      <TextField
-                        fullWidth
-                        placeholder="Categoria"
-                        value={product.category}
-                        onChange={(e) => handleProductChange(index, 'category', e.target.value)}
-                        size="small"
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <IconButton
-                      onClick={() => handleRemoveProduct(index)}
-                      color="error"
-                      disabled={loading}
-                    >
-                      <Tooltip title="Remover produto">
-                        <Delete fontSize={isTablet ? 'small' : 'medium'} />
-                      </Tooltip>
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                    sx={{ mb: 2 }}
+                  />
+                </TableCell>
+              )}
+              <TableCell>
+                <TextField
+                  fullWidth
+                  placeholder="Preço*"
+                  type="number"
+                  value={product.price}
+                  onChange={(e) => handleProductChange(index, 'price', e.target.value)}
+                  size={isTablet ? 'small' : 'medium'}
+                  inputProps={{ min: 0, step: 0.01 }}
+                  required
+                />
+              </TableCell>
+              <TableCell>
+                <TextField
+                  fullWidth
+                  placeholder="Qtd*"
+                  type="number"
+                  value={product.qtd}
+                  onChange={(e) => handleProductChange(index, 'qtd', e.target.value)}
+                  size={isTablet ? 'small' : 'medium'}
+                  inputProps={{ min: 0, step: 0.01 }}
+                  required
+                />
+              </TableCell>            
+              <TableCell>
+                <IconButton
+                  onClick={() => handleRemoveProduct(index)}
+                  color="error"
+                  disabled={loading}
+                >
+                  <Tooltip title="Remover produto">
+                    <Delete fontSize={isTablet ? 'small' : 'medium'} />
+                  </Tooltip>
+                </IconButton>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
 
-        {uploadProgress > 0 && uploadProgress < 100 && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <LinearProgress 
-              variant="determinate" 
-              value={uploadProgress} 
-              sx={{ flexGrow: 1, height: 8, mr: 2 }} 
-            />
-            <Typography variant="body2" color="text.secondary">
-              {Math.round(uploadProgress)}%
-            </Typography>
-          </Box>
-        )}
+    {uploadProgress > 0 && uploadProgress < 100 && (
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <LinearProgress 
+          variant="determinate" 
+          value={uploadProgress} 
+          sx={{ flexGrow: 1, height: 8, mr: 2 }} 
+        />
+        <Typography variant="body2" color="text.secondary">
+          {Math.round(uploadProgress)}%
+        </Typography>
+      </Box>
+    )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleAddProduct}
-            disabled={loading}
-            sx={{ flex: 1 }}
-            size={isTablet ? 'small' : 'medium'}
-          >
-            Adicionar Produto
-          </Button>
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<DoneAll />}
-            onClick={handleSubmit}
-            disabled={products.length === 0 || loading}
-            sx={{ flex: 1 }}
-            size={isTablet ? 'small' : 'medium'}
-          >
-            {loading ? 'Salvando...' : 'Salvar Produtos'}
-          </Button>
-        </Box>
-      </Grid>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 3 }}>
+      <Button
+        variant="contained"
+        startIcon={<Add />}
+        onClick={handleAddProduct}
+        disabled={loading}
+        sx={{ flex: 1 }}
+        size={isTablet ? 'small' : 'medium'}
+      >
+        Adicionar Produto
+      </Button>
+      <Button
+        variant="contained"
+        color="success"
+        startIcon={<DoneAll />}
+        onClick={handleSubmit}
+        disabled={products.length === 0 || loading}
+        sx={{ flex: 1 }}
+        size={isTablet ? 'small' : 'medium'}
+      >
+        {loading ? 'Salvando...' : 'Salvar Produtos'}
+      </Button>
+    </Box>
 
-      <Grid item xs={12} md={4}>
-        <Card sx={{ p: 2, position: 'sticky', top: 20 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-            <HelpOutline sx={{ mr: 1 }} /> Dicas para Cadastro
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-            <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
-            Imagens são opcionais mas aumentam as vendas (recomendado 500x500px)
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-            <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
-            Use categorias para organizar seus produtos
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-            <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
-            Você pode adicionar a imagem depois se necessário
-          </Typography>
-          <Typography variant="body2" sx={{ display: 'flex', alignItems: 'flex-start' }}>
-            <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
-            Campos marcados com * são obrigatórios
-          </Typography>
-        </Card>
-      </Grid>
-    </Grid>
-  );
+    {/* Card de Dicas - Aparece apenas em desktop/tablet */}
+    <Card sx={{ p: 2, display: { xs: 'none', md: 'block' } }}>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+        <HelpOutline sx={{ mr: 1 }} /> Dicas para Cadastro
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
+        <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
+        Imagens são opcionais mas aumentam as vendas (recomendado 500x500px)
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
+        <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
+        Você pode adicionar a imagem depois se necessário
+      </Typography>
+      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'flex-start' }}>
+        <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '3px' }} />
+        Campos marcados com * são obrigatórios
+      </Typography>
+    </Card>
+  </Box>
+);
 
   // Renderização para mobile
   const renderMobileView = () => (
@@ -628,13 +646,7 @@ const ProductFormDesk = ({ user }) => {
                 inputProps={{ min: 0, step: 0.01 }}
                 required
               />
-              <TextField
-                label="Categoria"
-                fullWidth
-                value={products[currentProductIndex].category}
-                onChange={(e) => handleProductChange(currentProductIndex, 'category', e.target.value)}
-                sx={{ mb: 2 }}
-              />
+
               <TextField
                 label="Descrição"
                 fullWidth

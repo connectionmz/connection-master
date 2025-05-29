@@ -21,7 +21,15 @@ import {
   Pagination,
   Avatar,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  useMediaQuery,
+  useTheme,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Divider,
+  Button
 } from '@mui/material';
 import {
   Search,
@@ -36,13 +44,16 @@ import { ptBR } from 'date-fns/locale';
 import BackButton from '../BackButton';
 
 const ListaInqueritos = ({ user }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const [inqueritos, setInqueritos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('Todos');
   const [page, setPage] = useState(1);
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
-  const itemsPerPage = 10;
+  const itemsPerPage = isMobile ? 5 : 10;
   const navigate = useNavigate();
 
   const fetchInqueritos = useCallback(async () => {
@@ -102,30 +113,24 @@ const ListaInqueritos = ({ user }) => {
     fetchData();
   }, [fetchInqueritos, fetchRespondedSurveys]);
 
-  // Filtrar inquéritos com useMemo
   const inqueritosFiltrados = useMemo(() => {
     return inqueritos.filter(inquerito => {
-      // Verificar se o inquérito não foi criado pelo próprio usuário
       if (inquerito.company?.id === user?.id) {
         return false;
       }
       
-      // Verificar se o inquérito é para a província do usuário
       const isForUserProvince = !inquerito.provincias?.length || 
                               inquerito.provincias.includes(user?.provincia);
       
-      // Verificar se o inquérito é para o setor do usuário
       const isForUserSector = !inquerito.sectores?.length || 
                             inquerito.sectores.includes(user?.sector);
       
-      // Verificar se o usuário já respondeu
       const notResponded = !hasRespondedIds.has(inquerito.id);
       
       return isForUserProvince && isForUserSector && notResponded && user;
     });
   }, [inqueritos, user, hasRespondedIds]);
 
-  // Aplicar filtros adicionais (pesquisa e tipo)
   const filteredInqueritos = inqueritosFiltrados.filter(inquerito => {
     const matchesSearch = 
       inquerito.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -139,25 +144,21 @@ const ListaInqueritos = ({ user }) => {
     return matchesSearch && matchesFilter;
   });
 
-  // Paginação
   const totalPages = Math.ceil(filteredInqueritos.length / itemsPerPage);
   const paginatedInqueritos = filteredInqueritos.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
 
-  // Tipos de inquérito únicos para filtro
   const tiposInquerito = [
     'Todos',
     ...new Set(inqueritos.map(i => i.tipoInquerito).filter(Boolean))
   ];
 
-  // Abrir página de detalhes
   const handleOpenDetails = (inquerito) => {
     navigate(`/inquerito/${inquerito.id}`);
   };
 
-  // Excluir inquérito
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este inquérito?')) {
       const inqueritoRef = ref(db, `inqueritos/${id}`);
@@ -171,58 +172,249 @@ const ListaInqueritos = ({ user }) => {
     }
   };
 
-  // Formatar data
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
     return format(new Date(timestamp), 'dd/MM/yyyy HH:mm', { locale: ptBR });
   };
 
+  // Render para dispositivos móveis
+  const renderMobileView = () => (
+    <Grid container spacing={2}>
+      {paginatedInqueritos.map((inquerito) => (
+        <Grid item xs={12} key={inquerito.id}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                {inquerito.title || 'Sem título'}
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Avatar 
+                  src={inquerito.company?.logo} 
+                  alt={inquerito.company?.nome}
+                  sx={{ width: 32, height: 32, mr: 1 }}
+                />
+                <Typography variant="body2">
+                  {inquerito.company?.nome || 'N/A'}
+                </Typography>
+              </Box>
+              
+              <Chip 
+                label={inquerito.tipoInquerito || 'Outro'} 
+                size="small" 
+                color="primary"
+                sx={{ mb: 1 }}
+              />
+              
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                <strong>Províncias:</strong> {inquerito.provincias?.join(', ') || 'Todas'}
+              </Typography>
+              
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                <strong>Setores:</strong> {inquerito.sectores?.join(', ') || 'Todos'}
+              </Typography>
+              
+              <Typography variant="caption" color="text.secondary">
+                Criado em: {formatDate(inquerito.createdAt)}
+              </Typography>
+            </CardContent>
+            
+            <Divider />
+            
+            <CardActions sx={{ justifyContent: 'space-between', px: 2 }}>
+              <Button 
+                size="small" 
+                startIcon={<Visibility />}
+                onClick={() => handleOpenDetails(inquerito)}
+              >
+                Visualizar
+              </Button>
+              
+              {user?.id === inquerito.company?.id && (
+                <Button 
+                  size="small" 
+                  startIcon={<Delete />}
+                  color="error"
+                  onClick={() => handleDelete(inquerito.id)}
+                >
+                  Excluir
+                </Button>
+              )}
+            </CardActions>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+  );
+
+  // Render para desktop
+  const renderDesktopView = () => (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Título</TableCell>
+            <TableCell>Empresa</TableCell>
+            {!isTablet && <TableCell>Tipo</TableCell>}
+            {!isTablet && <TableCell>Províncias</TableCell>}
+            {!isTablet && <TableCell>Setores</TableCell>}
+            <TableCell>Criado em</TableCell>
+            <TableCell>Ações</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {paginatedInqueritos.map((inquerito) => (
+            <TableRow key={inquerito.id} hover>
+              <TableCell>
+                <Typography fontWeight="medium">
+                  {inquerito.title || 'Sem título'}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <a href={`/perfil/${inquerito.company.id}`} style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+                    <Avatar 
+                      src={inquerito.company?.logo} 
+                      alt={inquerito.company?.nome}
+                      sx={{ width: 32, height: 32 }}
+                    />
+                    {!isTablet && <Typography>{inquerito.company?.nome || 'N/A'}</Typography>}
+                  </a>
+                </Box>
+              </TableCell>
+              {!isTablet && (
+                <TableCell>
+                  <Chip 
+                    label={inquerito.tipoInquerito || 'Outro'} 
+                    size="small" 
+                    color="primary"
+                  />
+                </TableCell>
+              )}
+              {!isTablet && (
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {inquerito.provincias?.slice(0, 2).map((p, i) => (
+                      <Chip 
+                        key={i} 
+                        label={p} 
+                        size="small" 
+                        variant="outlined"
+                      />
+                    ))}
+                    {inquerito.provincias?.length > 2 && (
+                      <Tooltip title={inquerito.provincias.slice(2).join(', ')}>
+                        <Chip 
+                          label={`+${inquerito.provincias.length - 2}`} 
+                          size="small"
+                        />
+                      </Tooltip>
+                    )}
+                  </Box>
+                </TableCell>
+              )}
+              {!isTablet && (
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {inquerito.sectores?.slice(0, 2).map((s, i) => (
+                      <Chip 
+                        key={i} 
+                        label={s} 
+                        size="small" 
+                        variant="outlined"
+                      />
+                    ))}
+                    {inquerito.sectores?.length > 2 && (
+                      <Tooltip title={inquerito.sectores.slice(2).join(', ')}>
+                        <Chip 
+                          label={`+${inquerito.sectores.length - 2}`} 
+                          size="small"
+                        />
+                      </Tooltip>
+                    )}
+                  </Box>
+                </TableCell>
+              )}
+              <TableCell>
+                {formatDate(inquerito.createdAt)}
+              </TableCell>
+              <TableCell>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Tooltip title="Visualizar">
+                    <IconButton 
+                      color="primary"
+                      onClick={() => handleOpenDetails(inquerito)}
+                    >
+                      <Visibility />
+                    </IconButton>
+                  </Tooltip>
+                  {user?.id === inquerito.company?.id && (
+                    <Tooltip title="Excluir">
+                      <IconButton 
+                        color="error"
+                        onClick={() => handleDelete(inquerito.id)}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
       <BackButton sx={{ mb: 2 }} />
-      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ mb: 3, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
         Inquéritos Disponíveis
       </Typography>
       
       {/* Barra de busca e filtros */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Pesquisar inquéritos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ flex: '1 1 300px' }}
-          />
-
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Tipo de Inquérito</InputLabel>
-            <Select
-              value={filterTipo}
-              onChange={(e) => setFilterTipo(e.target.value)}
-              label="Tipo de Inquérito"
-              startAdornment={
-                <InputAdornment position="start">
-                  <FilterList />
-                </InputAdornment>
-              }
-            >
-              {tiposInquerito.map((tipo) => (
-                <MenuItem key={tipo} value={tipo}>
-                  {tipo}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={8} md={9}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Pesquisar inquéritos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4} md={3}>
+            <FormControl fullWidth>
+              <InputLabel>Tipo de Inquérito</InputLabel>
+              <Select
+                value={filterTipo}
+                onChange={(e) => setFilterTipo(e.target.value)}
+                label="Tipo de Inquérito"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <FilterList />
+                  </InputAdornment>
+                }
+              >
+                {tiposInquerito.map((tipo) => (
+                  <MenuItem key={tipo} value={tipo}>
+                    {tipo}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
       </Paper>
 
       {/* Tabela de resultados */}
@@ -241,117 +433,7 @@ const ListaInqueritos = ({ user }) => {
         </Paper>
       ) : (
         <>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Título</TableCell>
-                  <TableCell>Empresa</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Províncias</TableCell>
-                  <TableCell>Setores</TableCell>
-                  <TableCell>Criado em</TableCell>
-                  <TableCell>Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedInqueritos.map((inquerito) => (
-                  <TableRow key={inquerito.id} hover>
-                    <TableCell>
-                      <Typography fontWeight="medium">
-                        {inquerito.title || 'Sem título'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-    <a href={`/perfil/${inquerito.company.id}`} style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
-      <Avatar 
-        src={inquerito.company?.logo} 
-        alt={inquerito.company?.nome}
-        sx={{ width: 32, height: 32 }}
-      />
-      <Typography>{inquerito.company?.nome || 'N/A'}</Typography>
-    </a>
-  </Box>
-</TableCell>
-
-                    <TableCell>
-                      <Chip 
-                        label={inquerito.tipoInquerito || 'Outro'} 
-                        size="small" 
-                        color="primary"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {inquerito.provincias?.slice(0, 2).map((p, i) => (
-                          <Chip 
-                            key={i} 
-                            label={p} 
-                            size="small" 
-                            variant="outlined"
-                          />
-                        ))}
-                        {inquerito.provincias?.length > 2 && (
-                          <Tooltip title={inquerito.provincias.slice(2).join(', ')}>
-                            <Chip 
-                              label={`+${inquerito.provincias.length - 2}`} 
-                              size="small"
-                            />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {inquerito.sectores?.slice(0, 2).map((s, i) => (
-                          <Chip 
-                            key={i} 
-                            label={s} 
-                            size="small" 
-                            variant="outlined"
-                          />
-                        ))}
-                        {inquerito.sectores?.length > 2 && (
-                          <Tooltip title={inquerito.sectores.slice(2).join(', ')}>
-                            <Chip 
-                              label={`+${inquerito.sectores.length - 2}`} 
-                              size="small"
-                            />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(inquerito.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title="Visualizar">
-                          <IconButton 
-                            color="primary"
-                            onClick={() => handleOpenDetails(inquerito)}
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                        {user?.id === inquerito.company?.id && (
-                          <Tooltip title="Excluir">
-                            <IconButton 
-                              color="error"
-                              onClick={() => handleDelete(inquerito.id)}
-                            >
-                              <Delete />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {isMobile ? renderMobileView() : renderDesktopView()}
 
           {/* Paginação */}
           {totalPages > 1 && (
@@ -361,6 +443,7 @@ const ListaInqueritos = ({ user }) => {
                 page={page}
                 onChange={(_, value) => setPage(value)}
                 color="primary"
+                size={isMobile ? "small" : "medium"}
               />
             </Box>
           )}

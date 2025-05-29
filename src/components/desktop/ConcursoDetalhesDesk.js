@@ -36,7 +36,7 @@ import {
   IconButton,
 } from '@mui/material';
 import BackButton from '../BackButton';
-import { formatPrice } from '../../utils/utils';
+import { formatarValor, formatPrice } from '../../utils/utils';
 
 const ConcursoDetalhesDesk = ({ user }) => {
   const { id } = useParams();
@@ -568,7 +568,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
     <Typography variant="subtitle1" fontWeight="bold">
       Valor Estimado:
     </Typography>
-    <Typography>{concurso.valorEstimado} MT</Typography>
+    <Typography>{formatarValor(concurso.valorEstimado)} MT</Typography>
   </Grid>
 )}
           </Grid>

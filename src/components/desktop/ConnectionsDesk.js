@@ -66,7 +66,7 @@ const ConnectionsDesk = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [filterMenuAnchor, setFilterMenuAnchor] = useState(null);
-  const [sortBy, setSortBy] = useState('recent');
+  const [sortBy, setSortBy] = useState('Recentes');
   const [disconnectDialog, setDisconnectDialog] = useState({
     open: false,
     connectionId: null,
@@ -124,7 +124,7 @@ const ConnectionsDesk = ({ user }) => {
 
   const sortConnections = (items, sortMethod) => {
     return [...items].sort((a, b) => {
-      if (sortMethod === 'recent') {
+      if (sortMethod === 'Recentes') {
         return new Date(b.connectedAt || b.timestamp) - new Date(a.connectedAt || a.timestamp);
       } else if (sortMethod === 'name') {
         return (a.fromUserName || '').localeCompare(b.fromUserName || '');
@@ -415,20 +415,20 @@ const ConnectionsDesk = ({ user }) => {
       >
         <MenuItem dense disabled>
           <Typography variant="subtitle2" color="text.secondary">
-            Sort by:
+           Ordenar por:
           </Typography>
         </MenuItem>
         <MenuItem 
-          onClick={() => handleSortChange('recent')}
-          selected={sortBy === 'recent'}
+          onClick={() => handleSortChange('Recentes')}
+          selected={sortBy === 'Recentes'}
         >
-          Most recent
+         Recentes
         </MenuItem>
         <MenuItem 
           onClick={() => handleSortChange('name')}
           selected={sortBy === 'name'}
         >
-          Alphabetical
+        Order Alfabética
         </MenuItem>
       </Menu>
 

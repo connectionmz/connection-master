@@ -375,7 +375,7 @@ const PublicarConcursoDesk = ({ user }) => {
           
           <TextField
             fullWidth
-            label="Título do Concurso *"
+            label="Título do Concurso "
             name="titulo"
             value={formData.titulo}
             onChange={handleChange}
@@ -395,7 +395,7 @@ const PublicarConcursoDesk = ({ user }) => {
           <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
             <TextField
               fullWidth
-              label="Prazo de Submissão *"
+              label="Prazo de Submissão "
               type="date"
               name="prazo"
               value={formData.prazo}
@@ -417,7 +417,7 @@ const PublicarConcursoDesk = ({ user }) => {
 
           <TextField
             fullWidth
-            label="Local de Entrega *"
+            label="Local de Entrega "
             name="localEntrega"
             value={formData.localEntrega}
             onChange={handleChange}
@@ -434,12 +434,12 @@ const PublicarConcursoDesk = ({ user }) => {
           </Typography>
 
           <FormControl fullWidth margin="normal" required>
-            <InputLabel>Setor de Atividade *</InputLabel>
+            <InputLabel>Setor de Atividade</InputLabel>
             <Select
               name="setor"
               value={formData.setor}
               onChange={handleChange}
-              label="Setor de Atividade *"
+              label="Setor de Atividade"
               disabled={!dataLoaded}
             >
               <MenuItem value="">Selecione o Setor</MenuItem>
@@ -452,12 +452,12 @@ const PublicarConcursoDesk = ({ user }) => {
           </FormControl>
 
           <FormControl fullWidth margin="normal" required>
-            <InputLabel>Modalidade *</InputLabel>
+            <InputLabel>Modalidade</InputLabel>
             <Select
               name="modalidade"
               value={formData.modalidade}
               onChange={handleChange}
-              label="Modalidade *"
+              label="Modalidade"
             >
               <MenuItem value="">Selecione a Modalidade</MenuItem>
               <MenuItem value="Concurso Público">Concurso Público</MenuItem>
@@ -483,7 +483,7 @@ const PublicarConcursoDesk = ({ user }) => {
           </Typography>
 
           <FormControl fullWidth margin="normal" required>
-            <InputLabel>Província(s) *</InputLabel>
+            <InputLabel>Província(s)</InputLabel>
             <Select
               multiple
               name="provincia"
@@ -492,7 +492,7 @@ const PublicarConcursoDesk = ({ user }) => {
               open={openProvinciaSelect}
               onOpen={() => setOpenProvinciaSelect(true)}
               onClose={() => setOpenProvinciaSelect(false)}
-              label="Província(s) *"
+              label="Província(s)"
               renderValue={(selected) => selected.join(', ')}
               disabled={!dataLoaded}
             >
@@ -525,7 +525,7 @@ const PublicarConcursoDesk = ({ user }) => {
           </FormControl>
 
           <FormControl fullWidth margin="normal" required>
-            <InputLabel>Tipo de Entidade *</InputLabel>
+            <InputLabel>Tipo de Entidade</InputLabel>
             <Select
               multiple
               name="tipoEntidade"
@@ -534,7 +534,7 @@ const PublicarConcursoDesk = ({ user }) => {
               open={openTipoEntidadeSelect}
               onOpen={() => setOpenTipoEntidadeSelect(true)}
               onClose={() => setOpenTipoEntidadeSelect(false)}
-              label="Tipo de Entidade *"
+              label="Tipo de Entidade"
               renderValue={(selected) => selected.join(', ')}
               disabled={!dataLoaded}
             >
