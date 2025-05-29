@@ -376,34 +376,36 @@ const PublicarVaga = ({
               <Grid item xs={6}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Tipo de Vaga</InputLabel>
-                  <Select
-                    value={vagaData.tipo}
-                    onChange={(e) => handleChange('tipo', e.target.value)}
-                    label="Tipo de Vaga"
-                  >
-                    <MenuItem value="Tempo Integral">Tempo Integral</MenuItem>
-                    <MenuItem value="Meio Período">Meio Período</MenuItem>
-                    <MenuItem value="Temporário">Temporário</MenuItem>
-                    <MenuItem value="Estágio">Estágio</MenuItem>
-                    <MenuItem value="Freelance">Freelance</MenuItem>
-                  </Select>
+                <Select
+                  value={vagaData.tipo}
+                  onChange={(e) => handleChange('tipo', e.target.value)}
+                  label="Tipo de Vaga"
+                >
+                  <MenuItem value="Permanente">Vaga Permanente</MenuItem>
+                  <MenuItem value="Temporária">Vaga Temporária</MenuItem>
+                  <MenuItem value="Sazonal">Vaga Sazonal</MenuItem>
+                  <MenuItem value="Ocasional">Vaga Ocasional</MenuItem>
+                  <MenuItem value="Tempo Parcial">Vaga a Tempo Parcial</MenuItem>
+                  <MenuItem value="Tempo Inteiro">Vaga a Tempo Inteiro</MenuItem>
+                </Select>
                 </FormControl>
               </Grid>
               
               <Grid item xs={6}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Tipo de Contrato</InputLabel>
-                  <Select
-                    value={vagaData.tipoContrato}
-                    onChange={(e) => handleChange('tipoContrato', e.target.value)}
-                    label="Tipo de Contrato"
-                  >
-                    <MenuItem value="CLT">CLT</MenuItem>
-                    <MenuItem value="PJ">PJ</MenuItem>
-                    <MenuItem value="Autônomo">Autônomo</MenuItem>
-                    <MenuItem value="Estágio">Estágio</MenuItem>
-                    <MenuItem value="Temporário">Temporário</MenuItem>
-                  </Select>
+      <Select
+  value={vagaData.tipoContrato}
+  onChange={(e) => handleChange('tipoContrato', e.target.value)}
+  label="Tipo de Contrato"
+>
+  <MenuItem value="Indeterminado">Contrato por tempo indeterminado</MenuItem>
+  <MenuItem value="Prazo Certo">Contrato a prazo certo</MenuItem>
+  <MenuItem value="Prazo Incerto">Contrato a prazo incerto</MenuItem>
+  <MenuItem value="Tempo Parcial">Contrato de trabalho a tempo parcial</MenuItem>
+  <MenuItem value="Obra Certa">Contrato de trabalho para tarefa ou obra certa</MenuItem>
+</Select>
+
                 </FormControl>
               </Grid>
             </Grid>
