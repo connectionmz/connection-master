@@ -63,6 +63,14 @@ const styles = StyleSheet.create({
     padding: 5,
     fontSize: 10,
   },
+    validity: {
+    backgroundColor: '#fff8e1',
+    padding: 4,
+    borderRadius: 3,
+    fontWeight: 'bold',
+    marginTop: 5,
+    fontSize: 10
+  },
   tableRow: {
     padding: 5,
     borderBottom: '1px solid #eee',
@@ -96,6 +104,9 @@ const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total }) => (
             PROFORMA <Text style={{ color: '#f44336' }}>{numeroProforma}</Text>
           </Text>
           <Text>Data: {fatura.dataEmissao}</Text>
+          <View style={styles.validity}>
+                        <Text>Validade: {fatura.dataVencimento} dias</Text>
+            </View>
         </View>
       </View>
 
@@ -250,6 +261,9 @@ const FaturaDesk = ({ user }) => {
           </Typography>
           <Typography variant="body2">
             Data: {fatura.dataEmissao}
+          </Typography>
+          <Typography variant="body2" sx={{color:'red'}} fontWeight="bold">
+                  Vencimento: {fatura.dataVencimento} dias
           </Typography>
         </Box>
       </Box>

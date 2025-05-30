@@ -232,7 +232,7 @@ const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
         switch (activeTab) {
             case 'recentes':
                 return concursos.filter(
-                    (concurso) => new Date(concurso.prazo) >= new Date() && concurso.status !== 'Fechada'
+                    (concurso) => new Date(concurso.prazo) >= new Date() && concurso.status !== 'Fechada' && concurso.company?.id !== user?.id  
                 );
             case 'expiradas':
                 return concursos.filter((concurso) => new Date() > new Date(concurso.prazo));

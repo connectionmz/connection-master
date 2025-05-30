@@ -47,14 +47,6 @@ const CriarProformaDesk = ({ user }) => {
   const [clientes, setClientes] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [selectedProduto, setSelectedProduto] = useState(null);
-  const [openModal, setOpenModal] = useState(false);
-  const [novoCliente, setNovoCliente] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    endereco: '',
-    nuit: '',
-  });
 
   useEffect(() => {
     fetchClients();
@@ -210,7 +202,6 @@ const CriarProformaDesk = ({ user }) => {
       }));
 
       const totalNumerico = total;
-      console.log(totalNumerico)
 
       const newProformaRef = ref(db, `invoices/${user.id}/${numeroProforma}`);
       
@@ -275,6 +266,7 @@ if (clienteLimpo?.email) {
   const emailSent = await SendMailProforma(clienteLimpo.email, emailMessage);
 
   if (!emailSent) {
+
     setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');
     setSnackbarSeverity('warning');
   } else {
@@ -282,9 +274,17 @@ if (clienteLimpo?.email) {
     setSnackbarSeverity('success');
   }
 }
+    setCliente(null);
+    setDataEmissao('');
+    setDataVencimento('');
+    setItens([{ descricao: '', quantidade: 1, preco: 0 }]);
+    setErrors({});
+    setOpenSnackbar(false);
+    setSnackbarMessage('');
+    setSnackbarSeverity('error');
+    setLoading(false);
+    setSelectedProduto(null);
 
-
-      //navigate('/faturacao');
     } catch (err) {
       console.error(err);
       setSnackbarMessage('Erro ao salvar a proforma. Tente novamente.');
@@ -297,41 +297,6 @@ if (clienteLimpo?.email) {
 
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);
-  };
-
-  const handleOpenModal = () => {
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(false);
-  };
-
-  const handleSaveCliente = async () => {
-    if (!novoCliente.nome) {
-      setSnackbarMessage('O nome do cliente é obrigatório.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
-      return;
-    }
-
-    try {
-      const clienteRef = ref(db, `clients/${user.id}/${Date.now()}`);
-      await set(clienteRef, {
-        id: clienteRef.key,
-        ...novoCliente,
-      });
-
-      setSnackbarMessage('Cliente adicionado com sucesso!');
-      setSnackbarSeverity('success');
-      setOpenSnackbar(true);
-      fetchClients();
-      handleCloseModal();
-    } catch (error) {
-      setSnackbarMessage('Erro ao salvar o cliente.');
-      setSnackbarSeverity('error');
-      setOpenSnackbar(true);
-    }
   };
 
   return (
@@ -364,9 +329,6 @@ if (clienteLimpo?.email) {
                 </MenuItem>
               ))}
             </TextField>
-            <Button variant="outlined" onClick={handleOpenModal}>
-              Adicionar Cliente
-            </Button>
           </Box>
           {cliente && (
             <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
@@ -523,52 +485,6 @@ if (clienteLimpo?.email) {
         </Box>
       </Paper>
 
-      {/* Modal para adicionar novo cliente */}
-      <Dialog open={openModal} onClose={handleCloseModal}>
-        <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Nome"
-            fullWidth
-            value={novoCliente.nome}
-            onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Email"
-            fullWidth
-            value={novoCliente.email}
-            onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Telefone"
-            fullWidth
-            value={novoCliente.telefone}
-            onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Endereço"
-            fullWidth
-            value={novoCliente.endereco}
-            onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="NUIT"
-            fullWidth
-            value={novoCliente.nuit}
-            onChange={(e) => setNovoCliente({ ...novoCliente, nuit: e.target.value })}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal}>Cancelar</Button>
-          <Button onClick={handleSaveCliente}>Salvar</Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <MuiAlert 
