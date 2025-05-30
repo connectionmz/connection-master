@@ -32,25 +32,25 @@ const StorieListDesk = ({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
+      
           let companyList = Object.keys(data).map((key) => ({
             id: key,
             ...data[key],
           }));
 
-          // Filtrar apenas se o usuário existir
           if (user) {
             companyList = companyList.filter(
               (company) =>
                 (company.provincia === user.provinciaTemp ||
                   company.provincia === user.provincia) &&
-                company.id !== user.id
+                company.id !== user.id &&
+                company.type !== 'singular'
             );
           }
 
-          // Embaralhar e limitar a 6 empresas
           const randomCompanies = companyList
             .sort(() => Math.random() - 0.5)
-            .slice(0, 7); // Alterado para exibir 6 itens
+            .slice(0, 7); 
           setStories(randomCompanies);
         }
       } catch (error) {
@@ -96,11 +96,11 @@ const StorieListDesk = ({ user }) => {
       sx={{
         display: "flex",
         flexDirection: "row",
-        gap: isMobile ? 1 : 2, // Espaçamento menor em mobile
-        p: isMobile ? 1 : 2, // Padding menor em mobile
+        gap: isMobile ? 1 : 2, 
+        p: isMobile ? 1 : 2, 
         overflowX: "auto",
         "&::-webkit-scrollbar": {
-          display: "none", // Esconde a barra de rolagem
+          display: "none", 
         },
       }}
     >
@@ -108,8 +108,8 @@ const StorieListDesk = ({ user }) => {
         <Card
           key={store.id}
           sx={{
-            minWidth: isMobile ? 100 : 140, // Largura mínima menor em mobile
-            width: isMobile ? 100 : 140, // Largura fixa menor em mobile
+            minWidth: isMobile ? 100 : 140, 
+            width: isMobile ? 100 : 140, 
             display: "flex",
             flexDirection: "column",
             alignItems: "center",

@@ -89,6 +89,7 @@ import VerFaturaDesk from '../desktop/VerFaturaDesk';
 import { allModules } from '../ModuleGrid';
 import EditalConcursoPDF from '../pdf/EditalConcursoPDF';
 import UserDataFormDesk from '../UserDataFormDesk';
+import HeaderDeskSingular from '../desktop/HeaderDeskSingular';
 
 const theme = createTheme({
   palette: {
@@ -134,6 +135,7 @@ const [showVerificationAlert, setShowVerificationAlert] = useState(false);
     '/email-verification',
     '/create',
     '/setup',
+    '/setupUser',
     '/forget-password',
   ];
 
@@ -396,13 +398,7 @@ const renderProtectedRoute = (path, element) => (
   const handleCloseReferrerModal = () => {
     setShowReferrerModal(false);
   };
-
-  useEffect(() => {
-    if (user===null) {
-    }
-  }, [user, navigate]);
   
-
   return (
     <ThemeProvider theme={theme}>
       <Box
@@ -413,8 +409,14 @@ const renderProtectedRoute = (path, element) => (
           flexDirection: 'column',
         }}
       >
-   {/* Renderiza o HeaderDesk apenas para rotas que não estão em fullScreenRoutes */}
-   {!isFullScreenRoute && <HeaderDesk user={user} />}
+    {!isFullScreenRoute && (
+      user.type === 'singular' ? (
+        <HeaderDeskSingular user={user} />
+      ) : (
+        <HeaderDesk user={user} />
+      )
+    )}
+
    <Box
     component="main"
     sx={{

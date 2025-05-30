@@ -58,9 +58,10 @@ const CompanyDataFormDesk = () => {
     tipoEntidade: '',
     subtipoEntidade: '',
     capacidadeProducao: '',
+    type: 'empresa',
+    createdAt: new Date().toISOString(),
   });
 
-    // Tipos de entidade que têm campos fiscais opcionais
     const optionalFiscalEntities = [
       "Organizações Não Governamentais (ONGs)",
       "Organizações da Sociedade Civil (OSC)",

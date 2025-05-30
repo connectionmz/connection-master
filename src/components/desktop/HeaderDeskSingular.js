@@ -1,0 +1,370 @@
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { ref, onValue } from "firebase/database";
+import {
+  AppBar,
+  Box,
+  IconButton,
+  Toolbar,
+  Typography,
+  useMediaQuery,
+  Button,
+  Badge,
+  Avatar,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Snackbar,
+  Alert
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
+import GavelIcon from "@mui/icons-material/Gavel";
+import DomainIcon from "@mui/icons-material/Domain";
+import DescriptionIcon from "@mui/icons-material/Description";
+import FeedIcon from "@mui/icons-material/Feed";
+import PeopleIcon from "@mui/icons-material/People";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import logo from "../../img/bg2.png";
+import { db } from "../../fb";
+
+const HeaderDeskSingular = ({ user }) => {
+  const [pendingConnections, setPendingConnections] = useState(0);
+  const [pendingQuotes, setPendingQuotes] = useState(0);
+  const [pendingContests, setPendingContests] = useState(0);
+  const [pendingNotifications, setPendingNotifications] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+  const publicPanel = user?.publicPainel;
+  const isMobile = useMediaQuery("(max-width:600px)");
+  const isVerify = user?.subscriptions?.isverify === "true";
+
+  // Protected routes configuration
+  const protectedRoutes = [
+    "/empresas",
+    "/lojas",
+    "/concursos", 
+    "/cotacoes",
+    "/feed",
+    "/inbox",
+    "/conexoes"
+  ];
+
+  const handleNavigation = (path) => {
+    if (!user) return true;
+    
+    if (!isVerify && protectedRoutes.includes(path)) {
+      setShowVerificationAlert(true);
+      return false;
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
+      const targetUserQuotesRef = ref(db, `cotacoes/`);
+      const targetUserContestsRef = ref(db, `contests/${user.id}/`);
+      const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`);
+
+      const unsubscribeConnections = onValue(targetUserConnectionRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const pendingCount = Object.values(snapshot.val()).filter(
+            (connection) => connection.status === "pending"
+          ).length;
+          setPendingConnections(pendingCount);
+        } else {
+          setPendingConnections(0);
+        }
+      });
+
+      const unsubscribeQuotes = onValue(targetUserQuotesRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const quotes = Object.values(snapshot.val());
+          const pendingCount = quotes.filter((quote) => {
+            return (
+              quote.sector === user.sector &&
+              !(quote.views && quote.views[user.id]) &&
+              quote.company.id !== user.id
+            );
+          }).length;
+          setPendingQuotes(pendingCount);
+        } else {
+          setPendingQuotes(0);
+        }
+      });
+
+      const unsubscribeContests = onValue(targetUserContestsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const pendingCount = Object.values(snapshot.val()).filter(
+            (contest) => contest.status === "pending"
+          ).length;
+          setPendingContests(pendingCount);
+        } else {
+          setPendingContests(0);
+        }
+      });
+
+      const unsubscribeNotifications = onValue(targetUserNotificationsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const notifications = Object.values(snapshot.val());
+          const pendingCount = notifications.filter(
+            (notification) => notification.status === "unread"
+          ).length;
+          setPendingNotifications(pendingCount);
+        } else {
+          setPendingNotifications(0);
+        }
+      });
+
+      return () => {
+        unsubscribeConnections();
+        unsubscribeQuotes();
+        unsubscribeContests();
+        unsubscribeNotifications();
+      };
+    }
+  }, [user?.id, user?.sector]);
+
+  const navItems = [
+    { 
+      to: "/empresas", 
+      icon: <DomainIcon />, 
+      label: "Empresas",
+      onClick: (e) => {
+        if (!handleNavigation("/empresas")) e.preventDefault();
+      }
+    },
+    { 
+      to: "/lojas", 
+      icon: <StoreMallDirectoryIcon />, 
+      label: "Lojas",
+      onClick: (e) => {
+        if (!handleNavigation("/lojas")) e.preventDefault();
+      }
+    },
+    { 
+      to: "/feed", 
+      icon: <FeedIcon />, 
+      label: "Feed",
+      onClick: (e) => {
+        if (!handleNavigation("/feed")) e.preventDefault();
+      }
+    },
+    {
+      to: user ? "/inbox" : "/auth",
+      icon: (
+        <Badge badgeContent={user ? pendingNotifications || 0 : 0} color="error" overlap="circular">
+          <NotificationsIcon />
+        </Badge>
+      ),
+      label: "Notificações",
+      onClick: (e) => {
+        if (user && !handleNavigation("/inbox")) e.preventDefault();
+      }
+    },
+    {
+      to: user ? "/app" : "/auth",
+      icon: (
+        <Avatar src={user?.logoUrl || ""} alt="Perfil">
+          {!user?.logoUrl && <AccountCircleIcon />}
+        </Avatar>
+      ),
+      label: "Perfil"
+    },
+  ];
+
+  const toggleDrawer = (open) => (event) => {
+    if (
+      event.type === "keydown" &&
+      (event.key === "Tab" || event.key === "Shift")
+    ) {
+      return;
+    }
+    setDrawerOpen(open);
+  };
+
+  const renderNavItems = () => (
+    <Box display="flex" alignItems="center" gap={isMobile ? 1 : 3}>
+      {navItems.map((item, index) => {
+        const isActive = location.pathname === item.to;
+        return (
+          <Link
+            to={item.to}
+            key={index}
+            title={item.label}
+            style={{
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textDecoration: "none",
+            }}
+            onClick={item.onClick}
+          >
+            <IconButton
+              sx={{
+                color: isActive ? "#1976d2" : "#444",
+                backgroundColor: isActive ? "#e3f2fd" : "transparent",
+                "&:hover": {
+                  color: "#1976d2",
+                  transform: "scale(1.1)",
+                  transition: "transform 0.3s ease, color 0.3s",
+                },
+              }}
+            >
+              {item.icon}
+            </IconButton>
+            {!isMobile && (
+              <Typography variant="caption" sx={{ color: isActive ? "#1976d2" : "#444" }}>
+                {item.label}
+              </Typography>
+            )}
+          </Link>
+        );
+      })}
+    </Box>
+  );
+
+  return (
+    <>
+      <AppBar position="sticky" sx={{ backgroundColor: "#FFF", boxShadow: 3 }}>
+        <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
+              <Link to="/" className="flex items-center space-x-2">
+                <img src={logo} alt="Logo" style={{ width: isMobile ? "30%" : "20%" }} />
+              </Link>
+            </Typography>
+          </Box>
+          
+          {isMobile ? (
+            <Box display="flex" alignItems="center">
+              <IconButton onClick={toggleDrawer(true)}>
+                <MenuIcon />
+              </IconButton>
+              
+              <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+                <List>
+                  {navItems.map((item, index) => (
+                    <ListItem
+                      button
+                      key={index}
+                      component={Link}
+                      to={item.to}
+                      onClick={(e) => {
+                        if (item.onClick) item.onClick(e);
+                        toggleDrawer(false)();
+                      }}
+                    >
+                      <ListItemIcon>{item.icon}</ListItemIcon>
+                      <ListItemText primary={item.label} />
+                    </ListItem>
+                  ))}
+                  {publicPanel && (
+                    <ListItem
+                      button
+                      component={Link}
+                      to="/painel"
+                      onClick={toggleDrawer(false)}
+                    >
+                      <ListItemIcon>
+                        <DomainIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Painel Público" />
+                    </ListItem>
+                  )}
+                </List>
+              </Drawer>
+            </Box>
+          ) : (
+            <Box display="flex" alignItems="center" gap={2}>
+              {renderNavItems()}
+              {publicPanel && (
+                <Button
+                  onClick={() => navigate("/painel")}
+                  sx={{
+                    backgroundColor: "#1976d2",
+                    color: "#fff",
+                    "&:hover": { backgroundColor: "#1565c0" },
+                    padding: "6px 12px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Ir para Painel Público
+                </Button>
+              )}
+            </Box>
+          )}
+        </Toolbar>
+      </AppBar>
+
+      {user && (
+        <Snackbar
+          open={showVerificationAlert}
+          autoHideDuration={8000}
+          onClose={() => setShowVerificationAlert(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            severity="warning" 
+            onClose={() => setShowVerificationAlert(false)}
+            sx={{ width: '100%', alignItems: 'center' }}
+          >
+            <Box>
+              <Typography variant="body1" fontWeight="bold">
+                Em processo de Verificação de conta
+              </Typography>
+              <Typography variant="body2">
+                Os dados da sua empresa estão a ser verificados. Assim que o processo for concluído, o acesso será concedido.
+                Você será notificado através do e-mail{' '}
+                <Link href={`mailto:${user.email}`}>{user.email}</Link>.
+              </Typography>
+              <Typography variant="body2">
+                Para suporte use{' '}
+                <a href="tel:+258xxxxxxxxx">+258 xxxxxxxx</a> ou pelo e-mail{' '}
+                <a href="mailto:suporte@connectionmozambique.com">
+                  suporte@connectionmozambique.com
+                </a>.
+              </Typography>
+            </Box>
+          </Alert>
+        </Snackbar>
+      )}
+      
+      {user && !isVerify && (
+        <Box 
+          sx={{
+            backgroundColor: 'warning.light',
+            p: 1,
+            textAlign: 'center',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' }
+          }}
+        >
+          <Typography variant="body2" sx={{ textAlign: 'center' }}>
+            Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
+          </Typography>
+          <Button 
+            color="primary" 
+            size="small" 
+            sx={{ ml: { xs: 0, sm: 2 }, mt: { xs: 1, sm: 0 } }}
+            onClick={() => navigate("/app/verification")}
+          >
+            Completar verificação
+          </Button>
+        </Box>
+      )}
+    </>
+  );
+};
+
+export default HeaderDeskSingular;
