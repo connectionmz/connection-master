@@ -384,7 +384,7 @@ const CompanyProfile = ({ user }) => {
         // Notify company about disconnection
         await saveContentToInbox(userId, {
           type: "connection_disconnect",
-          message: `${user.nome} desconectou-se da sua empresa`,
+          message: `${user.nome} bloqueou sua empresa`,
           fromUserId: user.id,
           fromUserName: user.nome,
           timestamp: new Date().toISOString(),
@@ -392,7 +392,6 @@ const CompanyProfile = ({ user }) => {
           link: `/perfil/${user.id}`
         });
       }
-
       // 3. Update local state
       setIsBlocked(true);
       setConnectionStatus(null);
@@ -737,12 +736,12 @@ const CompanyProfile = ({ user }) => {
               Denunciar Empresa
             </MenuItem>
             <Divider />
-            <MenuItem onClick={handleOpenBlockDialog}>
+            {/*<MenuItem onClick={handleOpenBlockDialog}>
               <ListItemIcon>
                 <Block color="error" />
               </ListItemIcon>
               Bloquear Empresa
-            </MenuItem>
+            </MenuItem>*/}
           </>
         )}
       </Menu>

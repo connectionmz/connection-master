@@ -495,7 +495,6 @@ const renderProtectedRoute = (path, element) => (
     </ProtectedRoute>
   } />
 
-  {/* Rotas de perfil */}
   <Route path="/perfil" element={
     <ProtectedRoute>
       <ProfileDesk user={user} />
