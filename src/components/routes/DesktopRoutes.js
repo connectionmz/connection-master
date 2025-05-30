@@ -88,6 +88,7 @@ import VerificationAccountModal from '../modal/VerificationAccountModal';
 import VerFaturaDesk from '../desktop/VerFaturaDesk';
 import { allModules } from '../ModuleGrid';
 import EditalConcursoPDF from '../pdf/EditalConcursoPDF';
+import UserDataFormDesk from '../UserDataFormDesk';
 
 const theme = createTheme({
   palette: {
@@ -453,6 +454,8 @@ const renderProtectedRoute = (path, element) => (
   <Route path="/auth" element={<AuthDesk user={user} />} />
   <Route path="/create" element={<AuthCreateDesk user={user} />} />
   <Route path="/setup" element={<CompanyDataFormDesk />} />
+  <Route path="/setupUser" element={<UserDataFormDesk />} />
+  
   <Route path="/forget-password" element={<ForgetPassword />} />
   <Route path="/change-password" element={<ChangePassword user={user} />} />
   <Route path="/email-verification" element={<EmailVerification />} />

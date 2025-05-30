@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import { auth } from "../../fb";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  Paper,
+  Stack,
+  FormControl,
+} from "@mui/material";
 
 const ChangePassword = () => {
   const [formData, setFormData] = useState({
@@ -39,76 +50,99 @@ const ChangePassword = () => {
     }
 
     try {
-      // Reautenticar o usuário
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(user, credential);
-
-      // Atualizar a senha
       await updatePassword(user, newPassword);
-      setFeedback({ message: "Senha atualizada com sucesso!", error: false });
+      setFeedback({ 
+        message: "Senha atualizada com sucesso!", 
+        error: false 
+      });
+      setFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error) {
       console.error("Erro ao atualizar senha:", error.message);
-      setFeedback({ message: "Erro ao atualizar a senha. Verifique as informações.", error: true });
+      setFeedback({ 
+        message: "Erro ao atualizar a senha. Verifique as informações.", 
+        error: true 
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Mudar Senha</h2>
-      <form onSubmit={handleChangePassword} className="space-y-4">
-        <div className="mb-4">
-          <label className="block font-medium mb-1">Senha Atual</label>
-          <input
-            type="password"
-            name="currentPassword"
-            value={formData.currentPassword}
-            onChange={handleInputChange}
-            className="border p-2 w-full rounded"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block font-medium mb-1">Nova Senha</label>
-          <input
-            type="password"
-            name="newPassword"
-            value={formData.newPassword}
-            onChange={handleInputChange}
-            className="border p-2 w-full rounded"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block font-medium mb-1">Confirmar Nova Senha</label>
-          <input
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleInputChange}
-            className="border p-2 w-full rounded"
-            required
-          />
-        </div>
-        {feedback.message && (
-          <div
-            className={`p-2 rounded ${
-              feedback.error ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-            }`}
-          >
-            {feedback.message}
-          </div>
-        )}
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded w-full"
-          disabled={loading}
-        >
-          {loading ? "Atualizando..." : "Atualizar Senha"}
-        </button>
-      </form>
-    </div>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100%",
+        p: 2
+      }}
+    >
+      <Paper elevation={3} sx={{ p: 4, width: "100%", maxWidth: "500px" }}>
+        <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 3 }}>
+          Alterar Senha
+        </Typography>
+        
+        <FormControl component="form" onSubmit={handleChangePassword} fullWidth>
+          <Stack spacing={3}>
+            <TextField
+              label="Senha Atual"
+              type="password"
+              name="currentPassword"
+              value={formData.currentPassword}
+              onChange={handleInputChange}
+              required
+              fullWidth
+              variant="outlined"
+            />
+            
+            <TextField
+              label="Nova Senha"
+              type="password"
+              name="newPassword"
+              value={formData.newPassword}
+              onChange={handleInputChange}
+              required
+              fullWidth
+              variant="outlined"
+            />
+            
+            <TextField
+              label="Confirmar Nova Senha"
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              required
+              fullWidth
+              variant="outlined"
+            />
+            
+            {feedback.message && (
+              <Alert severity={feedback.error ? "error" : "success"}>
+                {feedback.message}
+              </Alert>
+            )}
+            
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{ mt: 2 }}
+              endIcon={loading && <CircularProgress size={24} />}
+            >
+              {loading ? "Atualizando..." : "Atualizar Senha"}
+            </Button>
+          </Stack>
+        </FormControl>
+      </Paper>
+    </Box>
   );
 };
 
