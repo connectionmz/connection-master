@@ -409,8 +409,8 @@ const renderProtectedRoute = (path, element) => (
           flexDirection: 'column',
         }}
       >
-    {!isFullScreenRoute && (
-      user.type === 'singular' ? (
+    {user && !isFullScreenRoute && (
+      user?.type === 'singular' ? (
         <HeaderDeskSingular user={user} />
       ) : (
         <HeaderDesk user={user} />
