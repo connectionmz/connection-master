@@ -489,7 +489,7 @@ const TrackedStoreLink = ({ store, children }) => (
       backgroundColor: '#f8f8f8',
       minHeight: '100vh'
     }}>
-      {!hasMarket && (
+      {!hasMarket &&  user.type!=="singular" &&(
           <Alert
             severity="warning"
             action={
