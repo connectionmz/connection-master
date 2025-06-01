@@ -502,7 +502,6 @@ const TrackedStoreLink = ({ store, children }) => (
             O módulo Mercado está inativo. Para usar este serviço, ative o módulo Mercado.
           </Alert>
         )}
-      {/* Cabeçalho */}
       <Box sx={{ 
         maxWidth: 1400, 
         mx: 'auto', 
@@ -513,7 +512,6 @@ const TrackedStoreLink = ({ store, children }) => (
         justifyContent: 'space-between',
         gap: 2
       }}>
-        
         <Box>
           <Typography variant={isMobile ? "h5" : "h4"} sx={{ 
             fontWeight: "bold",
@@ -531,7 +529,6 @@ const TrackedStoreLink = ({ store, children }) => (
               'Mostrando todas lojas disponíveis'}
           </Typography>
         </Box>
-        
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <TextField
             label="Pesquisar loja ou produto..."
