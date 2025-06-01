@@ -167,7 +167,7 @@ const HeaderDeskSingular = ({ user }) => {
       }
     },
     {
-      to: user ? "/myapp" : "/auth",
+      to: user ? "/meuperfil" : "/auth",
       icon: (
         <Avatar src={user?.logoUrl || ""} alt="Perfil">
           {!user?.logoUrl && <AccountCircleIcon />}

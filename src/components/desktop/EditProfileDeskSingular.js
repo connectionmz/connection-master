@@ -166,7 +166,6 @@ const EditProfileDeskSingular = ({ user }) => {
                   
                <InputField label="Contacto" name="contacto" value={formData.contacto} onChange={handleInputChange} />
             <InputField label="Endereço" name="endereco" value={formData.endereco} onChange={handleInputChange} />
-            <InputField label="Província" name="provincia" value={formData.provincia} onChange={handleInputChange} />
      
 
             <Button type="submit" variant="contained" color="primary" fullWidth>
