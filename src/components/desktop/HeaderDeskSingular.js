@@ -49,11 +49,8 @@ const HeaderDeskSingular = ({ user }) => {
   const protectedRoutes = [
     "/empresas",
     "/lojas",
-    "/concursos", 
-    "/cotacoes",
     "/feed",
     "/inbox",
-    "/conexoes"
   ];
 
   const handleNavigation = (path) => {
@@ -170,7 +167,7 @@ const HeaderDeskSingular = ({ user }) => {
       }
     },
     {
-      to: user ? "/app" : "/auth",
+      to: user ? "/myapp" : "/auth",
       icon: (
         <Avatar src={user?.logoUrl || ""} alt="Perfil">
           {!user?.logoUrl && <AccountCircleIcon />}
@@ -267,19 +264,6 @@ const HeaderDeskSingular = ({ user }) => {
                       <ListItemText primary={item.label} />
                     </ListItem>
                   ))}
-                  {publicPanel && (
-                    <ListItem
-                      button
-                      component={Link}
-                      to="/painel"
-                      onClick={toggleDrawer(false)}
-                    >
-                      <ListItemIcon>
-                        <DomainIcon />
-                      </ListItemIcon>
-                      <ListItemText primary="Painel Público" />
-                    </ListItem>
-                  )}
                 </List>
               </Drawer>
             </Box>

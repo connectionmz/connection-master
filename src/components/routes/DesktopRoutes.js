@@ -10,16 +10,13 @@ import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
 import ApxDesk from '../desktop/ApxDesk';
 import FaturacaoDesk from '../desktop/FaturacaoDesk';
-
 import MarketDesk from '../desktop/MarketDesk';
 import ProductFormDesk from '../market/ProductFormDesk';
 import AnunciarDesk from '../desktop/AnunciarDesk';
-
 import SmsDesk from '../sms/SmsDesk';
 import CallCenterModuleDesk from '../desktop/CallCenterModuleDesk';
 import InqueritosModuleDesk from '../desktop/InqueritosModuleDesk';
 import LogisticaModuleDesk from '../desktop/LogisticaModuleDesk';
-
 import InboxDesk from '../desktop/InboxDesk';
 import StoresDesk from '../desktop/StoresDesk';
 import StoreDetailDesk from '../desktop/StoreDetailsDesk';
@@ -28,10 +25,8 @@ import FooterDesk from '../desktop/FooterDesk';
 import ProposalDesk from '../desktop/ProposalDesk';
 import ProductDetailsDesk from '../market/ProductDetailsDesk';
 import Sobre from '../Sobre';
-
 import EmailVerification from '../EmailVerification';
 import CompanyVerificationNotice from '../CompanyVerificationNotice';
-
 import AuthDesk from '../AuthDesk';
 import ProfileDesk from '../desktop/ProfileDesk';
 import EditProfileDesk from '../desktop/EditProfileDesk';
@@ -43,7 +38,6 @@ import ParceirosInvestidoresDesk from '../desktop/ParceirosInvestidoresDesk';
 import ConcursoDesk from '../desktop/ConcursoDesk';
 import ConnectionsDesk from '../desktop/ConnectionsDesk';
 import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
-
 import TermsAndPrivacy from '../modal/TermsAndPrivacy';
 import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
@@ -90,6 +84,9 @@ import { allModules } from '../ModuleGrid';
 import EditalConcursoPDF from '../pdf/EditalConcursoPDF';
 import UserDataFormDesk from '../UserDataFormDesk';
 import HeaderDeskSingular from '../desktop/HeaderDeskSingular';
+import ProfileDeskSingular from '../desktop/ProfileDeskSingular';
+import ApxDeskSingular from '../desktop/ApxDeskSingular';
+import EditProfileDeskSingular from '../desktop/EditProfileDeskSingular';
 
 const theme = createTheme({
   palette: {
@@ -409,13 +406,9 @@ const renderProtectedRoute = (path, element) => (
           flexDirection: 'column',
         }}
       >
-    {user && !isFullScreenRoute && (
-      user?.type === 'singular' ? (
-        <HeaderDeskSingular user={user} />
-      ) : (
-        <HeaderDesk user={user} />
-      )
-    )}
+   {user && !isFullScreenRoute && (
+  <>{user?.type === 'singular' ? <HeaderDeskSingular user={user} /> : <HeaderDesk user={user} />}</>
+)}
 
    <Box
     component="main"
@@ -493,7 +486,7 @@ const renderProtectedRoute = (path, element) => (
       <ApxDesk user={user} />
     </ProtectedRoute>
   } />
-
+  
   <Route path="/inbox" element={
     <ProtectedRoute>
       <InboxDesk user={user} />
@@ -506,9 +499,24 @@ const renderProtectedRoute = (path, element) => (
     </ProtectedRoute>
   } />
 
+  
+  <Route path="/meuperfil" element={
+    <ProtectedRoute>
+      <ProfileDeskSingular user={user} />
+    </ProtectedRoute>
+  } />
+
+  
+
   <Route path="/editar-perfil" element={
     <ProtectedRoute>
       <EditProfileDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+    <Route path="/editar-meuperfil" element={
+    <ProtectedRoute>
+      <EditProfileDeskSingular user={user} />
     </ProtectedRoute>
   } />
 
