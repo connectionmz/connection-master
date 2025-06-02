@@ -64,8 +64,7 @@ const StoresDesk = ({ user }) => {
 
 
   const hasMarket = user?.activeModules?.moduloMarket?.status=== "active"
-
-
+  
   // Registrar impressão ou clique
   const trackInteraction = async (type, action, itemId, storeId = null) => {
     try {
@@ -489,19 +488,20 @@ const TrackedStoreLink = ({ store, children }) => (
       backgroundColor: '#f8f8f8',
       minHeight: '100vh'
     }}>
-      {!hasMarket &&  user.type!=="singular" &&(
+        {user && !hasMarket && user.type !== 'singular' && (
           <Alert
             severity="warning"
             action={
-              <Button color="inherit" size="small" onClick={() =>window.location='/market'}>
+              <Button color="inherit" size="small" onClick={() => window.location = '/market'}>
                 Ativar Módulo Mercado
               </Button>
             }
             sx={{ mb: 2 }}
-            >
+          >
             O módulo Mercado está inativo. Para usar este serviço, ative o módulo Mercado.
           </Alert>
         )}
+
       <Box sx={{ 
         maxWidth: 1400, 
         mx: 'auto', 
@@ -551,10 +551,16 @@ const TrackedStoreLink = ({ store, children }) => (
             }}
           />
           <Tooltip title="Carrinho de Compras">
-            <IconButton 
-              onClick={() => setCartOpen(true)}
-              sx={{ position: 'relative' }}
-            >
+           <IconButton 
+                onClick={() => {
+                  if (!user) {
+                    window.location.href = '/auth';
+                  } else {
+                    setCartOpen(true);
+                  }
+                }}
+                sx={{ position: 'relative' }}
+              >
               <Badge 
                 badgeContent={cartItemCount} 
                 color="primary"
@@ -788,22 +794,27 @@ const TrackedStoreLink = ({ store, children }) => (
   {/* Botão de Adicionar ao Carrinho */}
   <Tooltip title="Adicionar ao carrinho">
     <Button
-      variant="contained"
-      size="small"
-      color="primary"
-      startIcon={<AddShoppingCart fontSize={isMobile ? "small" : "medium"} />}
-      onClick={(e) => {
-        e.stopPropagation();
-        addToCart(product);
-      }}
-      sx={{
-        ml: 1,
-        textTransform: 'none',
-        fontSize: isMobile ? '0.75rem' : '0.875rem'
-      }}
-    >
-      {isMobile ? 'Adicionar' : 'Adicionar ao carrinho'}
-    </Button>
+  variant="contained"
+  size="small"
+  color="primary"
+  startIcon={<AddShoppingCart fontSize={isMobile ? "small" : "medium"} />}
+  onClick={(e) => {
+    e.stopPropagation();
+    if (!user) {
+      window.location.href = '/auth';
+    } else {
+      addToCart(product);
+    }
+  }}
+  sx={{
+    ml: 1,
+    textTransform: 'none',
+    fontSize: isMobile ? '0.75rem' : '0.875rem'
+  }}
+>
+  {isMobile ? 'Adicionar' : 'Adicionar ao carrinho'}
+</Button>
+
   </Tooltip>
 
   {/* Botão de Compartilhar */}

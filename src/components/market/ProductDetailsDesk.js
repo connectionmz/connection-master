@@ -368,32 +368,43 @@ const ProductDetailsDesk = ({user}) => {
                   <Typography variant="subtitle1" gutterBottom>
                     Quantidade:
                   </Typography>
-          <TextField
+<TextField
   type="number"
   value={quantity}
   onChange={(e) => {
     const value = e.target.value;
-    // Verifica se está vazio ou é um número entre 1 e a quantidade máxima disponível
-    if (value === '' || (Number(value) >= 1 && Number(value) <= product.qtd)) {
+    if (
+      value === '' ||
+      (Number(value) >= 1 && Number(value) <= Number(product.qtd))
+    ) {
       setQuantity(value);
     }
   }}
   onBlur={(e) => {
     let val = parseInt(e.target.value);
-    if (isNaN(val) || val < 1) val = 1; // Mínimo de 1
-    if (val > product.qtd) val = product.qtd; // Máximo da quantidade disponível
+    if (isNaN(val) || val < 1) val = 1;
+    if (val > Number(product.qtd)) val = Number(product.qtd);
     setQuantity(val);
   }}
-  inputProps={{ 
-    min: 1, 
-    max: product.qtd,
+  inputProps={{
+    min: 1,
+    max: Number(product.qtd),
     'aria-label': `Quantidade (disponível: ${product.qtd})`
   }}
   size="small"
-  sx={{ width: "100px", mr: 2 }}
-  error={quantity > product.qtd}
-  helperText={quantity > product.qtd ? `Quantidade máxima: ${product.qtd}` : ''}
+  sx={{ width: '100px', mr: 2 }}
+  error={quantity > Number(product.qtd)}
+  helperText={
+    !product.qtd || Number(product.qtd) === 0
+      ? 'Sem stock disponível'
+      : quantity > Number(product.qtd)
+      ? `Quantidade máxima: ${product.qtd}`
+      : ''
+  }
+  disabled={!product.qtd || Number(product.qtd) === 0}
 />
+
+
 
                 </Box>
                 
