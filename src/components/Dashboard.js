@@ -3,18 +3,10 @@ import {
   Box,
   Container,
   Grid,
-  Paper,
-  Button,
-  Typography,
-  CircularProgress,
   Snackbar,
   Alert,
   useMediaQuery,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
+
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { get, limitToFirst, onValue, orderByKey, query, ref, set } from "firebase/database";
@@ -42,23 +34,7 @@ const Dashboard = ({ user }) => {
 
 const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!user?.id) return;
 
-    const checkDemoRequest = async () => {
-      try {
-        const demoRef = ref(db, `request_demo/${user.id}`);
-        const snapshot = await get(demoRef);
-        if (snapshot.exists()) {
-          setHasRequestedDemo(false); 
-        }
-      } catch (error) {
-        console.error("Erro ao verificar solicitação de demo:", error);
-      }
-    };
-
-    checkDemoRequest();
-  }, [user]);
 
   useEffect(() => {
     const fetchCampanhasAtivas = async () => {
@@ -108,34 +84,7 @@ const navigate = useNavigate();
     fetchRespondedInqueritos();
   }, [user]);
 
-  const requestDemo = async () => {
-    const confirmRequest = window.confirm("Tem certeza que deseja solicitar uma demonstração?");
-    if (!confirmRequest) return;
 
-    if (!user?.nome || !user?.email || !user?.contacto) {
-      setSnackbarMessage("Dados do usuário incompletos. Verifique seu perfil.");
-      setOpenSnackbar(true);
-      return;
-    }
-
-    try {
-      const demoRef = ref(db, `request_demo/${user.id}`);
-      await set(demoRef, {
-        user: user.nome,
-        id: user.id,
-        email: user.email,
-        contacto: user.contacto,
-        timestamp: new Date().toISOString(),
-      });
-      setHasRequestedDemo(false); // Marca como solicitado
-      setSnackbarMessage("Solicitação de demonstração enviada com sucesso!");
-      setOpenSnackbar(true);
-    } catch (error) {
-      console.error("Erro ao enviar solicitação de demonstração:", error);
-      setSnackbarMessage("Erro ao enviar solicitação. Tente novamente.");
-      setOpenSnackbar(true);
-    }
-  };
 
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);

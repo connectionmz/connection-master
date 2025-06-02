@@ -406,8 +406,16 @@ const renderProtectedRoute = (path, element) => (
           flexDirection: 'column',
         }}
       >
-   {user && !isFullScreenRoute && (
-  <>{user?.type === 'singular' ? <HeaderDeskSingular user={user} /> : <HeaderDesk user={user} />}</>
+  {!isFullScreenRoute && (
+  <>
+    {!user ? (
+      <HeaderDesk />
+    ) : user.type === 'singular' ? (
+      <HeaderDeskSingular user={user} />
+    ) : (
+      <HeaderDesk user={user} />
+    )}
+  </>
 )}
 
    <Box

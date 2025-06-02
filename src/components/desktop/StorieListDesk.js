@@ -38,21 +38,19 @@ const StorieListDesk = ({ user }) => {
             ...data[key],
           }));
 
-          if (user) {
-            companyList = companyList.filter(
-              (company) =>
-                (company.provincia === user.provinciaTemp ||
-                  company.provincia === user.provincia) &&
-                company.id !== user.id &&
-                company.type !== 'singular'
-            );
-          }
+        companyList = companyList.filter((company) => {
+          if (!company) return false; 
+          
+          const type = (company.type || '').trim().toLowerCase();
+          return type !== 'singular'; 
+        });
 
-          const randomCompanies = companyList
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 7); 
-          setStories(randomCompanies);
-        }
+        const randomCompanies = companyList
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 7);
+        
+        setStories(randomCompanies);
+      }
       } catch (error) {
         setError("Erro ao carregar empresas: " + error.message);
       } finally {
