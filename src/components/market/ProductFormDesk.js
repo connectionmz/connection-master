@@ -280,7 +280,7 @@ const renderDesktopView = () => (
             </TableCell>
             <TableCell>
               <Box display="flex" alignItems="center">
-                Qtd (MT)
+                Qtd
               </Box>
             </TableCell>
             
@@ -637,13 +637,23 @@ const renderDesktopView = () => (
                 required
               />
               <TextField
-                label="Preço (MT)*"
+                label="Preço (MT)"
                 fullWidth
                 type="number"
                 value={products[currentProductIndex].price}
                 onChange={(e) => handleProductChange(currentProductIndex, 'price', e.target.value)}
                 sx={{ mb: 2 }}
                 inputProps={{ min: 0, step: 0.01 }}
+                required
+              />
+                     <TextField
+                label="Qtd"
+                fullWidth
+                type="number"
+                value={products[currentProductIndex].qtd}
+                onChange={(e) => handleProductChange(currentProductIndex, 'qtd', e.target.value)}
+                sx={{ mb: 2 }}
+                inputProps={{ min: 0, }}
                 required
               />
 
