@@ -373,8 +373,6 @@ const ReceiptsPage = ({ user }) => {
           />
         </Box>
       </Card>
-
-      {/* Lista de Comprovativos */}
       <Card>
         <TableContainer component={Paper}>
           <Table>
