@@ -25,7 +25,9 @@ import {
   useMediaQuery,
   LinearProgress,
   Tooltip,
-  Chip
+  Chip,
+  Avatar,
+  DialogTitle
 } from '@mui/material';
 import {
   Search,
@@ -35,19 +37,22 @@ import {
   PictureAsPdf,
   Download,
   DateRange,
-  Add
+  Add,
+  Image,
+  Receipt
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { Document, Page, PDFDownloadLink, StyleSheet, Text, View } from '@react-pdf/renderer';
-
 
 const ReceiptsPage = ({ user }) => {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openImageDialog, setOpenImageDialog] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const theme = useTheme();
@@ -55,34 +60,23 @@ const ReceiptsPage = ({ user }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const receiptsRef = ref(db, `subscriptions/${user.id}`);
+    const paymentsRef = ref(db, 'payments');
     
-    const fetchData = onValue(receiptsRef, (snapshot) => {
+    const fetchData = onValue(paymentsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Processar a estrutura aninhada de recibos
         const allReceipts = [];
         
-        // Ignorar objetos com status "active" e processar anos/meses
-        Object.keys(data).forEach(year => {
-          if (year !== "status" && typeof data[year] === 'object') {
-            Object.keys(data[year]).forEach(month => {
-              if (typeof data[year][month] === 'object') {
-                Object.keys(data[year][month]).forEach(receiptId => {
-                  const receipt = data[year][month][receiptId];
-                  // Ignorar objetos que não são recibos (como status)
-                  if (receipt && typeof receipt === 'object' && receipt.paidAt) {
-                    allReceipts.push({
-                      id: receiptId,
-                      receiptNumber: receiptId,
-                      ...receipt,
-                      issuedDate: receipt.paidAt,
-                      clientName: receipt.userName,
-                      status: 'paid' // Todos os pagamentos na estrutura são considerados pagos
-                    });
-                  }
-                });
-              }
+        Object.keys(data).forEach(paymentId => {
+          const payment = data[paymentId];
+          if (payment.userId === user.id) {
+            allReceipts.push({
+              id: paymentId,
+              ...payment,
+              issuedDate: payment.timestamp || payment.paidAt,
+              clientName: payment.userName || user.displayName,
+              status: payment.status || 'pending',
+              type: payment.comprovativoUrl ? 'comprovativo' : 'digital'
             });
           }
         });
@@ -99,18 +93,22 @@ const ReceiptsPage = ({ user }) => {
       setLoading(false);
     });
 
-    return () => off(receiptsRef, 'value', fetchData);
+    return () => off(paymentsRef, 'value', fetchData);
   }, [user.id]);
 
   const filteredReceipts = receipts.filter(receipt => {
     // Filtro por termo de busca
     const matchesSearch = 
       receipt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.receiptNumber?.toString().includes(searchTerm) ||
+      receipt.id?.toString().includes(searchTerm) ||
+      receipt.moduleName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       receipt.amount?.toString().includes(searchTerm);
 
-    // Filtro por status (todos são considerados pagos na estrutura fornecida)
-    const matchesStatus = filterStatus === 'all' || filterStatus === 'paid';
+    // Filtro por status
+    const matchesStatus = filterStatus === 'all' || receipt.status === filterStatus;
+    
+    // Filtro por tipo
+    const matchesType = filterType === 'all' || receipt.type === filterType;
 
     // Filtro por data
     const receiptDate = new Date(receipt.issuedDate);
@@ -118,16 +116,21 @@ const ReceiptsPage = ({ user }) => {
       (!startDate || receiptDate >= new Date(startDate)) && 
       (!endDate || receiptDate <= new Date(endDate));
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
-  const handlePrint = (receipt) => {
+  const handleViewReceipt = (receipt) => {
     setSelectedReceipt(receipt);
-    setOpenDialog(true);
+    if (receipt.comprovativoUrl) {
+      setOpenImageDialog(true);
+    } else {
+      setOpenDialog(true);
+    }
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
+    setOpenImageDialog(false);
   };
 
   const formatCurrency = (value) => {
@@ -143,25 +146,35 @@ const ReceiptsPage = ({ user }) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
 
-    // Formato: "04 Mar 2025 12:34"
-    const months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-    ];
-    
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = months[date.getMonth()];
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-
-    return `${day} ${month} ${year} ${hours}:${minutes}`;
+    const options = { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return new Intl.DateTimeFormat('pt-MZ', options).format(date);
   };
 
-  const getStatusChip = () => {
-    return <Chip label="Pago" color="success" size="small" />;
+  const getStatusChip = (status) => {
+    switch(status) {
+      case 'aprovado':
+        return <Chip label="Aprovado" color="success" size="small" />;
+      case 'pendente':
+        return <Chip label="Pendente" color="warning" size="small" />;
+      case 'recusado':
+        return <Chip label="Recusado" color="error" size="small" />;
+      default:
+        return <Chip label={status} size="small" />;
+    }
   };
-  
+
+  const getTypeIcon = (type) => {
+    return type === 'comprovativo' ? 
+      <Image color="primary" /> : 
+      <Receipt color="secondary" />;
+  };
+
   // Estilos para o PDF
   const styles = StyleSheet.create({
     page: {
@@ -214,11 +227,6 @@ const ReceiptsPage = ({ user }) => {
       borderTop: '1px solid #000',
       textAlign: 'center',
       paddingTop: 5
-    },
-    logo: {
-      width: 100,
-      height: 50,
-      marginBottom: 10
     }
   });
 
@@ -233,42 +241,45 @@ const ReceiptsPage = ({ user }) => {
           <Text style={{ fontSize: 12 }}>{user.email || 'connectionmozambique@gmail.com'}</Text>
         </View>
         
-        <View style={styles.invoiceDetails}>
-          <Text style={{ fontSize: 16, fontWeight: 'bold' }}>RECIBO DE PAGAMENTO</Text>
-          <Text style={{ fontSize: 12 }}>ID do Recibo: {receipt.id.substring(0, 8)}</Text>
-          <Text style={{ fontSize: 12 }}>Data de Emissão: {formatDate(receipt.issuedDate)}</Text>
+        <View style={styles.title}>
+          <Text>RECIBO DE PAGAMENTO</Text>
         </View>
-  
+
         <View style={styles.section}>
-          <Text style={{ fontSize: 12 }}>Recebemos de:</Text>
-          <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{receipt.clientName || 'Cliente Particular'}</Text>
-          <Text style={{ fontSize: 12 }}>NUIT: {receipt.clientNif || 'N/A'}</Text>
-          <Text style={{ fontSize: 12 }}>Contacto: {receipt.clientContact || 'N/A'}</Text>
-        </View>
-  
-        <View style={styles.table}>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableHeader}>Descrição</Text>
-            <Text style={styles.tableHeader}>Montante</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Número:</Text>
+            <Text style={styles.value}>{receipt.id.substring(0, 8)}</Text>
           </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>{receipt.description || 'Pagamento de serviço'}</Text>
-            <Text style={styles.tableCell}>{formatCurrency(receipt.amount)} MZN</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Data:</Text>
+            <Text style={styles.value}>{formatDate(receipt.issuedDate)}</Text>
           </View>
         </View>
-  
+
+        <View style={styles.section}>
+          <Text style={{ marginBottom: 5 }}>Recebemos de:</Text>
+          <Text style={{ fontWeight: 'bold' }}>{receipt.clientName || 'Cliente Particular'}</Text>
+          <Text>Contacto: {receipt.telefone || receipt.contactoOpcional || 'N/A'}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={{ marginBottom: 5 }}>Detalhes do Pagamento:</Text>
+          <Text>Módulo: {receipt.moduleName || 'N/A'}</Text>
+          <Text>Referência: {receipt.referencia || 'N/A'}</Text>
+          <Text>Método: {receipt.method || 'Transferência Bancária'}</Text>
+        </View>
+
         <View style={styles.total}>
-          <Text>Total Pago: {formatCurrency(receipt.amount)} MZN</Text>
+          <Text>Total Pago: {formatCurrency(receipt.amount)}</Text>
         </View>
-  
-        <View style={styles.paymentStatus}>
-          <Text style={{ fontSize: 12, fontWeight: 'bold', color: 'green' }}>PAGO</Text>
-          <Text style={{ fontSize: 10 }}>Data do Pagamento: {formatDate(receipt.paymentDate)}</Text>
-        </View>
-  
-        <View style={styles.footer}>
-          <Text style={{ fontSize: 10, textAlign: 'center' }}>Obrigado pelo seu pagamento</Text>
-          <Text style={{ fontSize: 10, textAlign: 'center' }}>Este documento foi gerado eletronicamente e não requer assinatura</Text>
+
+        <View style={styles.signatures}>
+          <View style={styles.signatureLine}>
+            <Text>Assinatura do Emitente</Text>
+          </View>
+          <View style={styles.signatureLine}>
+            <Text>Assinatura do Cliente</Text>
+          </View>
         </View>
       </Page>
     </Document>
@@ -286,7 +297,7 @@ const ReceiptsPage = ({ user }) => {
     <Box sx={{ p: isMobile ? 1 : 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
-          Histórico de Pagamentos
+          Comprovativos de Pagamento
         </Typography>
       </Box>
 
@@ -318,10 +329,22 @@ const ReceiptsPage = ({ user }) => {
               </InputAdornment>
             }
             sx={{ minWidth: 180 }}
-            disabled // Todos são pagos na estrutura fornecida
           >
             <MenuItem value="all">Todos</MenuItem>
-            <MenuItem value="paid">Pago</MenuItem>
+            <MenuItem value="aprovado">Aprovados</MenuItem>
+            <MenuItem value="pendente">Pendentes</MenuItem>
+            <MenuItem value="recusado">Recusados</MenuItem>
+          </Select>
+
+          <Select
+            size="small"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            sx={{ minWidth: 180 }}
+          >
+            <MenuItem value="all">Todos Tipos</MenuItem>
+            <MenuItem value="comprovativo">Com Imagem</MenuItem>
+            <MenuItem value="digital">Digitais</MenuItem>
           </Select>
 
           <TextField
@@ -351,18 +374,16 @@ const ReceiptsPage = ({ user }) => {
         </Box>
       </Card>
 
-      {/* Lista de Recibos */}
+      {/* Lista de Comprovativos */}
       <Card>
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Número</TableCell>
                 <TableCell>Módulo</TableCell>
                 <TableCell>Data</TableCell>
-                <TableCell>Valor</TableCell>
-                <TableCell>Método</TableCell>
-                <TableCell>Status</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell>Comprovativo</TableCell>
                 <TableCell align="right">Ações</TableCell>
               </TableRow>
             </TableHead>
@@ -370,19 +391,25 @@ const ReceiptsPage = ({ user }) => {
               {filteredReceipts.length > 0 ? (
                 filteredReceipts.map((receipt) => (
                   <TableRow key={receipt.id} hover>
-                    <TableCell>#{receipt.id.substring(0, 8)}</TableCell>
-                    <TableCell>
-                      {receipt.moduleKey?.replace('modulo', '').replace(/([A-Z])/g, ' $1').trim()}
-                    </TableCell>
+                    <TableCell>{receipt.moduleName}</TableCell>
                     <TableCell>{formatDate(receipt.issuedDate)}</TableCell>
-                    <TableCell>{formatCurrency(receipt.amount)}</TableCell>
-                    <TableCell>{receipt.method}</TableCell>
+                    <TableCell>{getStatusChip(receipt.status)}</TableCell>
                     <TableCell>
-                      {getStatusChip()}
+                      {receipt.comprovativoUrl ? (
+                        <Button 
+                          size="small" 
+                          onClick={() => handleViewReceipt(receipt)}
+                          startIcon={<Image />}
+                        >
+                          Visualizar
+                        </Button>
+                      ) : (
+                        <Typography variant="body2">N/A</Typography>
+                      )}
                     </TableCell>
                     <TableCell align="right">
-                      <Tooltip title="Imprimir">
-                        <IconButton onClick={() => handlePrint(receipt)} size="small">
+                      <Tooltip title="Ver detalhes">
+                        <IconButton onClick={() => handleViewReceipt(receipt)} size="small">
                           <Print fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -393,7 +420,7 @@ const ReceiptsPage = ({ user }) => {
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     <Typography variant="body1" sx={{ py: 3 }}>
-                      {receipts.length === 0 ? 'Nenhum pagamento encontrado' : 'Nenhum pagamento corresponde aos filtros'}
+                      {receipts.length === 0 ? 'Nenhum comprovativo encontrado' : 'Nenhum comprovativo corresponde aos filtros'}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -403,20 +430,21 @@ const ReceiptsPage = ({ user }) => {
         </TableContainer>
       </Card>
 
-      {/* Modal de Visualização/Impressão */}
+      {/* Modal de Visualização de Comprovativo Digital */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
         maxWidth="md"
         fullWidth
       >
+        <DialogTitle>Detalhes do Pagamento</DialogTitle>
         <DialogContent>
           {selectedReceipt && (
             <Box sx={{ p: 3 }} id="receipt-to-print">
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h5">Recibo #{selectedReceipt.id.substring(0, 8)}</Typography>
-                              <Box>
-                <PDFDownloadLink 
+                <Typography variant="h5">Recibo #{selectedReceipt.id.substring(0, 8)}</Typography>
+                <Box>
+                  <PDFDownloadLink 
                     document={<ReceiptPDF receipt={selectedReceipt} user={user} />} 
                     fileName={`recibo_${selectedReceipt.id.substring(0, 8)}.pdf`}
                   >
@@ -436,7 +464,6 @@ const ReceiptsPage = ({ user }) => {
                     variant="outlined"
                     startIcon={<Print />}
                     onClick={() => window.print()}
-                    sx={{ mr: 1 }}
                     size="small"
                   >
                     Imprimir
@@ -453,9 +480,12 @@ const ReceiptsPage = ({ user }) => {
                     <Typography variant="body2">{user.provincia || 'Localização'}</Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="h6">COMPROVANTE</Typography>
+                    <Typography variant="h6">COMPROVANTE DE PAGAMENTO</Typography>
                     <Typography variant="body2">
                       Data: {formatDate(selectedReceipt.issuedDate)}
+                    </Typography>
+                    <Typography variant="body2">
+                      Estado: {getStatusChip(selectedReceipt.status)}
                     </Typography>
                   </Box>
                 </Box>
@@ -464,6 +494,9 @@ const ReceiptsPage = ({ user }) => {
                   <Typography variant="subtitle1" sx={{ mb: 1 }}>
                     Cliente: {selectedReceipt.clientName || 'Cliente Anônimo'}
                   </Typography>
+                  <Typography variant="body2">
+                    Contacto: {selectedReceipt.telefone || selectedReceipt.contactoOpcional || 'N/A'}
+                  </Typography>
                 </Box>
 
                 <Box sx={{ mb: 4 }}>
@@ -471,10 +504,13 @@ const ReceiptsPage = ({ user }) => {
                     Detalhes do Pagamento:
                   </Typography>
                   <Typography variant="body1">
-                    Módulo: {selectedReceipt.moduleKey?.replace('modulo', '').replace(/([A-Z])/g, ' $1').trim()}
+                    Módulo: {selectedReceipt.moduleName}
                   </Typography>
                   <Typography variant="body1">
-                    Método: {selectedReceipt.method}
+                    Referência: {selectedReceipt.referencia || 'N/A'}
+                  </Typography>
+                  <Typography variant="body1">
+                    Método: {selectedReceipt.method || 'Transferência Bancária'}
                   </Typography>
                 </Box>
 
@@ -493,6 +529,97 @@ const ReceiptsPage = ({ user }) => {
                   </Box>
                 </Box>
               </Card>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} startIcon={<ArrowBack />}>
+            Voltar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Visualização de Imagem do Comprovativo */}
+      <Dialog
+        open={openImageDialog}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Comprovativo de Pagamento</DialogTitle>
+        <DialogContent>
+          {selectedReceipt && (
+            <Box sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Módulo: {selectedReceipt.moduleName}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                Valor: {formatCurrency(selectedReceipt.amount)}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Data: {formatDate(selectedReceipt.issuedDate)}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Estado: {getStatusChip(selectedReceipt.status)}
+              </Typography>
+              
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <img 
+                  src={selectedReceipt.comprovativoUrl} 
+                  alt="Comprovativo de pagamento" 
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '70vh',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }} 
+                />
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  href={selectedReceipt.comprovativoUrl}
+                  download={`comprovativo_${selectedReceipt.id.substring(0, 8)}.jpg`}
+                >
+                  Baixar Imagem
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Print />}
+                  onClick={() => {
+                    const win = window.open('', '_blank');
+                    win.document.write(`
+                      <html>
+                        <head>
+                          <title>Comprovativo ${selectedReceipt.id.substring(0, 8)}</title>
+                          <style>
+                            body { text-align: center; padding: 20px; }
+                            img { max-width: 100%; height: auto; }
+                          </style>
+                        </head>
+                        <body>
+                          <h3>Comprovativo de Pagamento</h3>
+                          <p>Módulo: ${selectedReceipt.moduleName}</p>
+                          <p>Valor: ${formatCurrency(selectedReceipt.amount)}</p>
+                          <img src="${selectedReceipt.comprovativoUrl}" />
+                          <script>
+                            window.onload = function() {
+                              setTimeout(function() {
+                                window.print();
+                              }, 500);
+                            }
+                          </script>
+                        </body>
+                      </html>
+                    `);
+                    win.document.close();
+                  }}
+                >
+                  Imprimir
+                </Button>
+              </Box>
             </Box>
           )}
         </DialogContent>
