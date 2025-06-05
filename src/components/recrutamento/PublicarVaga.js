@@ -410,15 +410,29 @@ const PublicarVaga = ({
               </Grid>
             </Grid>
             
-            <TextField
-              label="Salário (opcional)"
-              value={vagaData.salario}
-              onChange={(e) => handleChange('salario', e.target.value)}
-              fullWidth
-              size="small"
-              placeholder="Ex: 20.000,00 MZN"
-            />
+           <TextField
+  label="Salário (opcional)"
+  value={vagaData.salario}
+  onChange={(e) => {
+    const rawValue = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+    if (!rawValue) {
+      handleChange('salario', '');
+      return;
+    }
 
+    const number = parseFloat(rawValue) / 100;
+
+    const formatted = number.toLocaleString('pt-PT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    handleChange('salario', formatted);
+  }}
+  fullWidth
+  size="small"
+  placeholder="Ex: 20.000,00 MZN"
+/>
             {/* Localização */}
             <Box>
               <Typography variant="subtitle2" gutterBottom>

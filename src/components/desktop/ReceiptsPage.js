@@ -318,7 +318,6 @@ const ReceiptsPage = ({ user }) => {
             }}
             sx={{ flexGrow: 1, minWidth: 200 }}
           />
-
           <Select
             size="small"
             value={filterStatus}

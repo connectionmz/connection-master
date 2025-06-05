@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { 
   VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, 
   Logout, Edit, CameraAlt, Language, Store, RequestQuote, 
@@ -96,6 +96,8 @@ const CompanyProfile = ({ user }) => {
     "Outro motivo"
   ];
 
+
+
   // Check if company is blocked
   useEffect(() => {
     if (user && userId) {
@@ -109,7 +111,10 @@ const CompanyProfile = ({ user }) => {
 
   // Load company data
   useEffect(() => {
-    if (userId) {
+      if(user.id ==userId){
+     navigate('/perfil');
+  }else{
+     if (userId) {
       const fetchData = async () => {
         try {
           const companyRef = ref(db, `company/${userId}`);
@@ -184,6 +189,8 @@ const CompanyProfile = ({ user }) => {
       };
       fetchData();
     }
+  }
+   
   }, [userId, navigate, user]);
 
   // Check connection status
