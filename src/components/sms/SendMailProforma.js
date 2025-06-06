@@ -22,7 +22,6 @@ const SendMailProforma = async (to,emailMessage) => {
   };
   try {
     const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData);
-    console.log('E-mail enviado com sucesso:', response.data + to);
     return true; 
   } catch (error) {
     console.error('Erro ao enviar o e-mail:', error);

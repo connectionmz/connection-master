@@ -244,9 +244,7 @@ if (clienteLimpo?.email) {
     
     - Número da Proforma: ${numeroProforma}
     - Data de Emissão: ${dataEmissao}
-    - Data de Vencimento: ${dataVencimento}
-    - Total: ${formatPrice(totalNumerico)} MZN
-  
+    - Data de Vencimento: ${dataVencimento} dias
 
     Clique em: https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id} para visualizar a proforma.
     
@@ -293,7 +291,7 @@ if (clienteLimpo?.email) {
       setLoading(false);
       setOpenSnackbar(true);
     }
-  };
+  }
 
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);

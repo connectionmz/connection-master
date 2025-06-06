@@ -21,6 +21,7 @@ import {
   DialogActions,
 } from '@mui/material';
 import BackButton from './BackButton';
+import PagamentoAccordion from '../according/PagamentoAccordion';
 
 const PagamentoModulo = ({ user }) => {
   const { moduleKey } = useParams();
@@ -50,10 +51,12 @@ const PagamentoModulo = ({ user }) => {
           ...data[key]
         }));
         setModules(modulesArray);
+        console.log('Módulos carregados:', modulesArray);
       }
     });
     return () => unsubscribe();
   }, []);
+
 
   useEffect(() => {
     if (modules.length > 0 && moduleKey) {
@@ -62,6 +65,8 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [modules, moduleKey]);
 
+
+  // Verifica se já existe um pagamento para o usuário e módulo
   useEffect(() => {
     if (user?.id && moduleKey) {
       const checkExistingPayment = async () => {
@@ -109,10 +114,6 @@ const PagamentoModulo = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!comprovativo && !existingPayment?.comprovativoUrl) {
-      setError('Por favor, anexe o comprovativo de pagamento.');
-      return;
-    }
     
     if (!user?.id) {
       setError('Usuário não autenticado. Por favor, faça login novamente.');
@@ -238,36 +239,16 @@ const PagamentoModulo = ({ user }) => {
             {currentModule.description}
           </Typography>
           <Typography variant="h6" color="primary" fontWeight="bold">
-            {currentModule.price || ''}
+            {currentModule.price || ''} MT
           </Typography>
           <Box sx={{ mt: 2, p: 2, backgroundColor: '#f0f0f0', borderRadius: 1 }}>
-            <Typography variant="body2">
-              Para ativar este módulo, faça a transferência ou depósito para:
-            </Typography>
-            <Typography variant="body2" fontWeight="medium">
-              Conta Bancária / Carteira Móvel: 1234 5678 9012
-            </Typography>
-            <Typography variant="body2" fontWeight="medium">
-              Referência: {referencia || user?.phoneNumber || 'Use seu número de telefone'}
-            </Typography>
-            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-              Após o envio, aguarde confirmação. Prazo: até 24h.
-            </Typography>
+           <PagamentoAccordion
+            data={currentModule} />
           </Box>
         </CardContent>
         <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
           {!paymentSuccess ? (
             <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-              <TextField
-                label="Nome Completo"
-                value={user.nome || ''}
-                fullWidth
-                margin="normal"
-                InputProps={{
-                  readOnly: true,
-                }}
-              />
-              
               <TextField
                 label="Telefone Principal"
                 value={user.contacto || ''}
@@ -276,15 +257,15 @@ const PagamentoModulo = ({ user }) => {
                 InputProps={{
                   readOnly: true,
                 }}
+              helperText="Como via principal de contacto contacto com a sua empresa usaremos este número."
               />
-              
               <TextField
                 label="Telefone Opcional"
                 value={contactoOpcional}
                 onChange={(e) => setContactoOpcional(e.target.value)}
                 fullWidth
                 margin="normal"
-                helperText="Caso queira ser contactado por outro número"
+                helperText="Em caso de necessidade de contacto com a sua empresa usaremos este número."
                 inputProps={{ maxLength: 15 }}
               />
               
@@ -312,7 +293,6 @@ const PagamentoModulo = ({ user }) => {
                   accept="image/*,application/pdf"
                   hidden
                   onChange={handleFileChange}
-                  required={!existingPayment?.comprovativoUrl}
                 />
               </Button>
               
