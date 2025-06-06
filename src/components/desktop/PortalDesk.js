@@ -106,14 +106,12 @@ const PortalDesk = ({ user }) => {
       let attachmentUrl = '';
       let attachmentFormat = '';
 
-      // Upload da imagem
       if (imageFile) {
         const imageRef = storageRef(storage, `announcements/images/${imageFile.name}`);
         await uploadBytes(imageRef, imageFile);
         imageUrl = await getDownloadURL(imageRef);
       }
 
-      // Upload do anexo
       if (attachmentFile) {
         const fileNameParts = attachmentFile.name.split('.');
         attachmentFormat = fileNameParts[fileNameParts.length - 1].toLowerCase();
@@ -145,7 +143,6 @@ const PortalDesk = ({ user }) => {
 
       await set(ref(db, `publicAnnouncements/${announcementId}`), newAnnouncement);
 
-      // Reset form
       setTitle('');
       setContent('');
       setValidity('');
@@ -255,7 +252,6 @@ const PortalDesk = ({ user }) => {
       await set(ref(db, `publicAnnouncements/${editingId}`), updatedAnnouncement);
       showSnackbar('Anúncio atualizado com sucesso!');
       
-      // Reset states
       setEditingId(null);
       setEditingData({});
       setImageFile(null);
@@ -300,10 +296,8 @@ const PortalDesk = ({ user }) => {
       width: '100%', 
       p: 3,
       bgcolor: theme.palette.background.default,
-      minHeight: 'calc(100vh - 64px)'
     }}>
       <BackButton sx={{ mb: 3 }} />
-      
       <Typography variant="h4" component="h1" sx={{ 
         mb: 3,
         fontWeight: 600,
@@ -325,9 +319,9 @@ const PortalDesk = ({ user }) => {
       </Tabs>
 
       {activeTab === 'publish' && (
-        <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 800 }}>
+        <Box component="form" onSubmit={handleSubmit}>
           <TextField
-            label="Título do Anúncio *"
+            label="Título do Anúncio"
             variant="outlined"
             fullWidth
             margin="normal"
@@ -356,7 +350,7 @@ const PortalDesk = ({ user }) => {
           </Box>
           
           <TextField
-            label="Validade *"
+            label="Validade"
             type="date"
             InputLabelProps={{ shrink: true }}
             fullWidth
@@ -413,7 +407,6 @@ const PortalDesk = ({ user }) => {
               )}
             </Grid>
           </Grid>
-          
           <Button
             variant="contained"
             color="primary"
@@ -421,15 +414,14 @@ const PortalDesk = ({ user }) => {
             disabled={loading}
             sx={{ minWidth: 200 }}
           >
-            {loading ? <CircularProgress size={24} color="inherit" /> : 'Publicar Anúncio'}
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Publicar'}
           </Button>
         </Box>
       )}
-
       {activeTab === 'edit' && (
         <Box component="form" onSubmit={handleUpdate} sx={{ maxWidth: 800 }}>
           <TextField
-            label="Título do Anúncio *"
+            label="Título do Anúncio"
             variant="outlined"
             fullWidth
             margin="normal"
@@ -550,7 +542,6 @@ const PortalDesk = ({ user }) => {
           </Box>
         </Box>
       )}
-
       {activeTab === 'view' && (
         <Box>
           <TextField

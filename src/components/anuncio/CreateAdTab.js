@@ -159,14 +159,9 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       setImageUrl(URL.createObjectURL(selectedFile));
     }
   };
-
   const validateForm = () => {
     if (!file && !isDestacarPerfil) {
       showSnackbar('Por favor, selecione uma imagem para o anúncio.', 'error');
-      return false;
-    }
-    if (!phoneNumber) {
-      showSnackbar('Por favor, insira um número de telefone.', 'error');
       return false;
     }
     if (!days || days < 1 || days > 30) {
@@ -202,6 +197,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       
       await saveToDatabase(url);
       showSnackbar('Anúncio publicado com sucesso!', 'success');
+      
       resetForm();
       onAdCreated();
     } catch (error) {
@@ -230,7 +226,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       sectores: selectedSectores,
       tipoAnuncio,
       phoneNumber,
-      status: 'active'
+      status: 'false'
     };
 
     if (imageUrl) {
@@ -282,11 +278,9 @@ const CreateAdTab = ({ user, onAdCreated }) => {
           <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
           <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
           <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
-          <FormControlLabel 
-            value="destacar_perfil" 
-            control={<Radio />} 
-            label="Destacar Perfil" 
-          />
+         
+
+
         </RadioGroup>
       </FormControl>
 
@@ -428,16 +422,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
         Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
       </Typography>
-
-      <TextField
-        label="Número de celular *"
-        variant="outlined"
-        fullWidth
-        value={phoneNumber}
-        onChange={(e) => setPhoneNumber(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-
+  
       <Button
         variant="contained"
         color="primary"

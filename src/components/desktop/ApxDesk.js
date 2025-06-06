@@ -82,7 +82,7 @@ const ApxDesk = ({ user }) => {
       }}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" component="div" sx={{ mb: 1, fontWeight: 600 }}>
-          {userData.nome}!
+          {userData.nome}
           </Typography>
           <Typography variant="body1" sx={{ opacity: 0.9 }}>
             Tenha todas as ferramentas essenciais para impulsionar seu negócio.
@@ -196,10 +196,10 @@ const ApxDesk = ({ user }) => {
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                <Receipt color="primary" sx={{ mr: 1 }} /> Transações
+                <Receipt color="primary" sx={{ mr: 1 }} /> Pagamentos
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Acompanhe seus pagamentos e recibos
+               Verifique seus comprovativos de pagamento
               </Typography>
             </Box>
             <Button

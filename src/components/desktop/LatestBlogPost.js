@@ -117,7 +117,7 @@ const LatestBlogPost = () => {
                   alt={latestBlog.title}
                   style={{
                     width: "100%",
-                    height: isMobile ? "100px" : "150px",
+                    height: isMobile ? "250px" : "250px",
                     objectFit: "cover",
                     borderRadius: "8px",
                   }}
@@ -127,20 +127,29 @@ const LatestBlogPost = () => {
                 />
               )}
               
-              <Typography
-                variant="subtitle1"
-                sx={{ 
-                  fontWeight: "bold", 
-                  mt: 1, 
-                  fontSize: isMobile ? "0.9rem" : "1rem",
-                  '&:hover': {
-                    color: 'primary.main'
-                  }
-                }}
-              >
-                {latestBlog.title}
-              </Typography>
-            
+       <Typography
+          variant="subtitle1"
+          sx={{ 
+            fontWeight: "bold", 
+            mt: 1, 
+            fontSize: isMobile ? "0.9rem" : "1rem",
+            '&:hover': {
+              color: 'primary.main'
+            },
+            display: '-webkit-box',
+            WebkitLineClamp: 2, // Mostra até 2 linhas
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '100%',
+            lineHeight: '1.4', // Melhor espaçamento entre linhas
+            maxHeight: '3em' // Calculado como 2 linhas * 1.4 lineHeight
+          }}
+          title={latestBlog.title} >
+          {latestBlog.title.length > 250 
+            ? `${latestBlog.title.substring(0, 250)}...` 
+            : latestBlog.title}
+        </Typography>
             </Box>     
             <Button
               onClick={handleNavigateToAllBlogs}

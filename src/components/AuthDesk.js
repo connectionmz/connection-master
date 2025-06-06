@@ -299,9 +299,6 @@ const AuthDesk = ({ data }) => {
           <Fade in={true} timeout={500}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 400, width: '100%', p: 4 }}>
               <Box component="img" src={logo} alt="Logo" sx={{ width: 144, mb: 4, transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.05)' } }} />
-              
-              <Typography component="h1" variant="h5" sx={{ mb: 2 }}>Acesse sua conta</Typography>
-              
               <Box component="form" onSubmit={handleEmailSignIn} noValidate sx={{ width: '100%', mt: 1 }}>
                 <TextField
                   margin="normal"

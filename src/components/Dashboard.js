@@ -6,7 +6,7 @@ import {
   Snackbar,
   Alert,
   useMediaQuery,
-
+  Typography,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { get, limitToFirst, onValue, orderByKey, query, ref, set } from "firebase/database";
@@ -18,6 +18,7 @@ import StorieListDesk from "./desktop/StorieListDesk";
 import CategoriaList from "./desktop/CategoriasList";
 import InqueritosList from "./desktop/InqueritosList";
 import LatestBlogPost from "./desktop/LatestBlogPost";
+import { LocationCity } from "@mui/icons-material";
 
 const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
@@ -48,7 +49,6 @@ const navigate = useNavigate();
               const campanhasInternas = data[campanhaKey];
               Object.keys(campanhasInternas).forEach((subKey) => {
                 const campanha = campanhasInternas[subKey];
-                // Verifica se o componente é "home"
                 if (campanha.component === "home") {
                   if (!user || (user.provinciaTemp || user.provincia) === campanha.company?.provincia) {
                     campanhasArray.push({ id: subKey, ...campanha });
@@ -84,16 +84,49 @@ const navigate = useNavigate();
     fetchRespondedInqueritos();
   }, [user]);
 
-
-
   const handleCloseSnackbar = () => {
     setOpenSnackbar(false);
   };
 
   return (
     <Box>
-      <Container sx={{ marginTop: 10 }}>
-      <MarqueeParceiros />
+      <Container>
+<Box 
+  sx={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    mb: 2,
+    p: 2,
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+    borderLeft: '4px solid #1976d2',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+  }}
+>
+  <LocationCity sx={{ color: '#1976d2' }} />
+  <Typography 
+    variant="subtitle1"
+    sx={{ 
+      fontWeight: 700, 
+      color: '#1976d2',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      '& span': {
+        color: '#333',
+        fontWeight: 600,
+        textTransform: 'none',
+        ml: 1
+      }
+    }}
+  >
+    Exibindo conteúdo de: 
+    <span>
+      {user?.provinciaTemp || user?.provincia}
+    </span>
+  </Typography>
+</Box>    
+<MarqueeParceiros />
         <CategoriaList />
         <StorieListDesk user={user} />
         <Grid container spacing={2}>
@@ -105,54 +138,11 @@ const navigate = useNavigate();
             </Box>
           </Grid>
           <Grid item xs={12} sm={3}>
-  {/* Seção de Publicidade para PHC CS 
-  <Paper
-    sx={{
-      padding: 2,
-      marginBottom: 2,
-      backgroundColor: "#FF5050",
-      borderRadius: "8px",
-      boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-    }}
-  >
-    <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2, color: "#FFF" }}>
-      Software PHC CS
-    </Typography>
-    <img
-      src="https://phcsoftware.com/mz/wp-content/uploads/sites/6/2024/03/phc_cs_1_banner.png"
-      alt="PHC CS"
-      style={{ width: "100%", borderRadius: "8px", marginBottom: "16px" }}
-    />
-    <Typography variant="body1" sx={{ mb: 2, color: "#fff", lineHeight: "1.6" }}>
-      Automatize processos, aumente a produtividade e tome decisões mais inteligentes.
-    </Typography>
-    {hasRequestedDemo ? (
-      <Typography variant="body2" sx={{ color: "#fff", textAlign: "center", mb: 2 }}>
-        Você já solicitou uma demonstração.
-      </Typography>
-    ) : (
-      <Button
-        variant="contained"
-        sx={{
-          backgroundColor: "#FF5050",
-          color: "#ffffff",
-          fontWeight: "bold",
-          "&:hover": { backgroundColor: "#FF3030" },
-        }}
-        fullWidth
-        onClick={requestDemo}
-      >
-        Demonstração
-      </Button>
-    )}
-  </Paper>
-  */}
   <InqueritosList 
   user={user} />
         </Grid>
         </Grid>
       </Container>
-
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}

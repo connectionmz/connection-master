@@ -25,7 +25,6 @@ import {
   Star as PatrocinadorIcon
 } from '@mui/icons-material';
 
-// Componente para exibir um card de empresa
 const CompanyCard = ({ item, categoryIndex, onClick }) => {
   const theme = useTheme();
   
@@ -95,7 +94,6 @@ const CompanyCard = ({ item, categoryIndex, onClick }) => {
           pb: 2
         }}>
           <Typography
-            variant="h6"
             sx={{
               fontWeight: 'bold',
               mb: 1,
@@ -119,6 +117,17 @@ const CompanyCard = ({ item, categoryIndex, onClick }) => {
               }}
             />
           )}
+          {item.provincia && (
+            <Chip
+              label={item.provincia}
+              size="small"
+              sx={{
+                mb: 1,
+                backgroundColor: theme.palette.action.selected,
+                color: theme.palette.text.secondary
+              }}
+            />
+          )}
 
           <Divider sx={{ my: 1 }} />
         </CardContent>
@@ -127,7 +136,6 @@ const CompanyCard = ({ item, categoryIndex, onClick }) => {
   );
 };
 
-// Componente para exibir skeleton loading
 const CompanySkeleton = () => (
   <Grid item xs={12} sm={6} md={4} lg={3}>
     <Card sx={{ height: '100%' }}>
@@ -141,7 +149,6 @@ const CompanySkeleton = () => (
   </Grid>
 );
 
-// Componente para exibir quando não há dados
 const EmptyState = ({ message }) => {
   const theme = useTheme();
   
@@ -159,7 +166,6 @@ const EmptyState = ({ message }) => {
   );
 };
 
-// Componente principal
 const ParceirosInvestidoresDesk = () => {
   const [value, setValue] = useState(0);
   const [companies, setCompanies] = useState({
@@ -274,7 +280,6 @@ const ParceirosInvestidoresDesk = () => {
         py: 4
       }}
     >
-      {/* Cabeçalho */}
       <Box sx={{ textAlign: 'center', mb: 4 }}>
         <Typography
           variant={isMobile ? 'h5' : 'h4'}
@@ -282,8 +287,7 @@ const ParceirosInvestidoresDesk = () => {
             fontWeight: 'bold',
             mb: 2,
             color: theme.palette.primary.main
-          }}
-        >
+          }}>
           Nossos Parceiros e Apoiadores
         </Typography>
         <Typography

@@ -49,15 +49,16 @@ const App = () => {
     provincia: ''
   });
 
-  const fetchUserDataRealtime = async (user) => {
-    try {
-      const userRef = ref(db, `company/${user.uid}`);
-      const snapshot = await get(userRef);
 
-       const cotacaoSms = ref(db, `smsEnvio/`);
-      const snapshotSms = await get(cotacaoSms);
-      const dataSms = snapshotSms.val();
-
+  const fetchUserDataRealtime = (user) => {
+  try {
+    setLoading(true);
+    
+    // Referência para os dados do usuário
+    const userRef = ref(db, `company/${user.uid}`);
+    
+    // Ouvinte em tempo real para dados do usuário
+    onValue(userRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
         setUserData({
@@ -70,13 +71,18 @@ const App = () => {
       } else {
         setUserData(null);
       }
-    } catch (error) {
-      SaveLogError('app', error);
-      setError('Erro ao carregar dados do usuário. Tente novamente mais tarde.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
+
+
+
+  } catch (error) {
+    SaveLogError('app', error);
+    setError('Erro ao carregar dados do usuário. Tente novamente mais tarde.');
+  } finally {
+    setLoading(false);
+  }
+};
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -84,14 +90,10 @@ const App = () => {
       } else {
         setUserData(null);
         setLoading(false);
-  
       }
     });
-  
     return () => unsubscribeAuth();
   }, []);
-  
-
 
   if (loading) {
     return (

@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Expand, InfoIcon } from 'lucide-react';
+import { LocationCity } from '@mui/icons-material';
 
 const FeedDesk = ({ user }) => {
   const navigate = useNavigate();
@@ -88,13 +89,11 @@ const FeedDesk = ({ user }) => {
     }
   };
 
-  // Função para truncar texto longo
   const truncateText = (text, maxLength = 100) => {
     if (!text) return '';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
-
   return (
     <Box sx={{ 
       width: '100%', 
@@ -102,6 +101,41 @@ const FeedDesk = ({ user }) => {
       bgcolor: theme.palette.background.default,
       minHeight: 'calc(100vh - 64px)'
     }}>
+      <Box 
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 2,
+          p: 2,
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px',
+          borderLeft: '4px solid #1976d2',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}
+      >
+        <LocationCity sx={{ color: '#1976d2' }} />
+        <Typography 
+          variant="subtitle1"
+          sx={{ 
+            fontWeight: 700, 
+            color: '#1976d2',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            '& span': {
+              color: '#333',
+              fontWeight: 600,
+              textTransform: 'none',
+              ml: 1
+            }
+          }}
+        >
+          Exibindo conteúdo de: 
+          <span>
+            {user.provinciaTemp || user.provincia}
+          </span>
+        </Typography>
+      </Box>
             <Accordion defaultExpanded sx={{ mb: 3, borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
         <AccordionSummary expandIcon={<Expand />}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>

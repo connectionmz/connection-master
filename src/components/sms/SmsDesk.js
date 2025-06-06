@@ -223,7 +223,6 @@ const SmsDesk = ({ user }) => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={item.fullMessage}>
                           <Typography variant="body2" sx={{ 
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -233,7 +232,6 @@ const SmsDesk = ({ user }) => {
                           }}>
                             {item.message}
                           </Typography>
-                        </Tooltip>
                       </TableCell>
                       <TableCell>
                         <Chip 

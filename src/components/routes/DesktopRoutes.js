@@ -190,7 +190,6 @@ const ProtectedRoute = ({ children, requiredModule }) => {
     dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
   );
 
-  // Se não há usuário logado, permite acesso (será redirecionado pelo sistema de autenticação)
   if (!user) {
     return children;
   }
@@ -251,6 +250,7 @@ const ProtectedRoute = ({ children, requiredModule }) => {
 const isActiveModule = (user, moduleKey) => {
   // Se o módulo tem alwaysEnabled, sempre permite acesso
   const module = allModules.find(m => m.key === moduleKey);
+
   if (module?.alwaysEnabled) return true;
   
   // Se não há usuário logado, permite acesso (será tratado pelo sistema de autenticação)
@@ -258,8 +258,11 @@ const isActiveModule = (user, moduleKey) => {
   
   // Verifica se o usuário tem o módulo ativo
   return user?.activeModules?.[moduleKey]
+
 };
 
+
+console.log('User:', isActiveModule);
 
 
 // Função auxiliar para renderizar rotas protegidas

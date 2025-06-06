@@ -62,6 +62,7 @@ const Blogs = () => {
       const snapshot = await get(ref(db, 'blogPost'));
       if (snapshot.exists()) {
         const data = snapshot.val();
+        console.log('Dados recebidos:', data);
         const postsArray = Object.keys(data).map((key) => ({
           id: key,
           ...data[key],
@@ -272,21 +273,19 @@ const Blogs = () => {
                     transform: 'translateY(-4px)',
                     boxShadow: theme.shadows[6]
                   },
-                }}
-              >
+                }}>
                 <Link
                   to={`/blog/${post.id}`}
-                  style={{ textDecoration: 'none', color: 'inherit' }}
-                >
+                  style={{ textDecoration: 'none', color: 'inherit' }}>
                   {post.imageUrl && (
                     <CardMedia
                       component="img"
                       image={post.imageUrl}
                       alt={post.title}
                       sx={{ 
-                        height: 180,
+                        height: 250,
                         width: '100%',
-                        objectFit: 'cover'
+                        objectFit: 'contain',
                       }}
                     />
                   )}

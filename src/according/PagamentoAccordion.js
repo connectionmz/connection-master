@@ -157,22 +157,152 @@ const PagamentoAccordion = ({ data }) => {
   </Typography>
 ))}
 
-          <Box sx={{ 
-            mt: 3, 
-            p: 2,
-            backgroundColor: '#f5f5f5',
-            borderRadius: '8px',
-            borderLeft: '4px solid rgb(255, 0, 30)'
-          }}>
-            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <CheckCircleIcon color="warning" sx={{ mr: 1 }} />
-              Certifique-se de ter saldo suficiente na sua conta M-Pesa
-            </Typography>
-            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
-              <CheckCircleIcon color="warning" sx={{ mr: 1 }} />
-              O pagamento é processado instantaneamente
-            </Typography>
-          </Box>
+<Accordion sx={{ 
+  mt: 3, 
+  backgroundColor: '#f5f5f5',
+  borderRadius: '8px',
+  borderLeft: '4px solid rgb(255, 0, 30)'
+}}>
+  <Accordion 
+  sx={{ 
+    mt: 3,
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    overflow: 'hidden',
+    '&:before': {
+      display: 'none'
+    }
+  }}
+>
+  <AccordionSummary 
+    expandIcon={<ExpandMoreIcon />}
+    sx={{
+      backgroundColor: theme.palette.mode === 'light' ? '#f5f5f5' : '#121212',
+      borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
+    }}
+  >
+    <Box display="flex" alignItems="center" gap={2}>
+      <CheckCircleIcon sx={{color: '#d32f2f'}} />
+      <Typography variant="h6" fontWeight="bold" sx={{color: '#d32f2f'}}>
+        Validação do Pagamento
+      </Typography>
+    </Box>
+  </AccordionSummary>
+  
+  <AccordionDetails sx={{ pt: 3, pb: 3 }}>
+    <Typography variant="body1" paragraph>
+      Para garantir que o seu pagamento seja confirmado rapidamente, siga estes passos:
+    </Typography>
+
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+        1. Capture o Comprovativo
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2">
+          Se recebeu uma mensagem (SMS) de confirmação: Tire um print (captura de tela) dessa mensagem.
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2">
+          Se usou o aplicativo M-Pesa: Faça o download do recibo (factura) do pagamento.
+        </Typography>
+      </Box>
+    </Box>
+
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+        2. Preencha o Formulário
+      </Typography>
+      <Typography variant="body2" paragraph>
+        No formulário de validação, informe:
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2">
+          Nome da conta que fez o pagamento (copie da mensagem ou recibo).
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2">
+          Número de referência do pagamento (copie da mensagem ou recibo).
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2">
+          Um contacto telefónico alternativo (caso precisemos de confirmar algo).
+        </Typography>
+      </Box>
+    </Box>
+
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+        3. Anexe o Comprovativo
+      </Typography>
+      <Typography variant="body2">
+        No campo "Carregar comprovativo", anexe:
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2">
+          A captura de tela da mensagem ou o recibo (factura) do pagamento.
+        </Typography>
+      </Box>
+    </Box>
+
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+        4. Finalize o Envio
+      </Typography>
+      <Typography variant="body2">
+        Clique em "Enviar comprovativo" para concluir.
+      </Typography>
+    </Box>
+
+    <Box sx={{ 
+      backgroundColor: '#e8f5e9',
+      p: 2,
+      borderRadius: '8px',
+      mb: 3,
+      borderLeft: '4px solid #2e7d32'
+    }}>
+      <Typography variant="subtitle1" fontWeight="bold" color="#2e7d32" gutterBottom>
+        Por que esses passos são importantes?
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2" color="#2e7d32">
+          Garantem a validação rápida do seu pagamento.
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <CheckCircleIcon sx={{ color: '#2e7d32', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2" color="#2e7d32">
+          Evitam atrasos no processamento.
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <CloseIcon sx={{ color: '#d32f2f', fontSize: '1rem', mr: 1 }} />
+        <Typography variant="body2" color="#d32f2f">
+          Ignorar esses passos pode dificultar ou até impedir a confirmação do pagamento.
+        </Typography>
+      </Box>
+    </Box>
+
+    <Typography variant="body2" paragraph>
+      Agradecemos sua colaboração! Siga essas instruções para que tudo seja concluído sem problemas. 😊
+    </Typography>
+
+    <Typography variant="body2" fontStyle="italic">
+      Nota: Se tiver dúvidas, entre em contacto com o nosso suporte.
+    </Typography>
+  </AccordionDetails>
+</Accordion>
+</Accordion>
 
           {/* Botão de demonstração */}
           <Box sx={{ mt: 4, textAlign: 'center' }}>
