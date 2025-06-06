@@ -45,7 +45,6 @@ const CotacoesPDF = ({ user }) => {
     }
   }, [user, id]);
 
-  // Função para formatar datas
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString("pt-PT", {
       year: "numeric",
@@ -56,7 +55,22 @@ const CotacoesPDF = ({ user }) => {
     });
   };
 
-  // Componente PDF personalizado
+  // Function to convert HTML to plain text with basic formatting
+  const formatHtmlForPdf = (html) => {
+    if (!html) return '';
+    
+    // Basic replacements for common HTML elements
+    return html
+      .replace(/<p>/g, '\n')
+      .replace(/<\/p>/g, '\n')
+      .replace(/<br\s*\/?>/g, '\n')
+      .replace(/<strong>|<\/strong>|<b>|<\/b>/g, '**')
+      .replace(/<em>|<\/em>|<i>|<\/i>/g, '*')
+      .replace(/<[^>]+>/g, '') // Remove all remaining HTML tags
+      .replace(/\n+/g, '\n')    // Collapse multiple newlines
+      .trim();
+  };
+
   const MyDocument = () => (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -68,13 +82,19 @@ const CotacoesPDF = ({ user }) => {
           <Text>{cot?.company?.morada}</Text>
           <Text>Nuit: {cot?.company?.nuit}</Text>
           <Text>Sector: {cot?.company?.sector}</Text>
-          <Text>Valor Máximo de Propostas:{cot?.valor || cot?.maxProposals}MT</Text>
-          
+          <Text>Valor Máximo de Propostas: {cot?.valor || cot?.maxProposals} MT</Text>
         </View>
 
         <View style={styles.info}>
           <Text>Publicado: {formatDate(cot?.timestamp)}</Text>
           <Text style={{ color: "#d32f2f" }}>Data Limite: {formatDate(cot?.datalimite)}</Text>
+        </View>
+
+        <View style={styles.descriptionContainer}>
+          <Text style={styles.sectionTitle}>Descrição</Text>
+          <Text style={styles.htmlContent}>
+            {formatHtmlForPdf(cot?.description)}
+          </Text>
         </View>
 
         <View style={styles.tableContainer}>
@@ -125,7 +145,6 @@ const CotacoesPDF = ({ user }) => {
         flexDirection: "column",
       }}
     >
-      {/* Botões no topo */}
       <Box sx={{ 
         width: "100%", 
         display: "flex", 
@@ -180,7 +199,6 @@ const CotacoesPDF = ({ user }) => {
           borderRadius: 2,
           boxShadow: 1
         }}>
-          {/* Logo da empresa */}
           <Typography 
             variant={isMobile ? "h5" : "h4"} 
             fontWeight="bold" 
@@ -212,7 +230,7 @@ const CotacoesPDF = ({ user }) => {
             <Typography variant="body2">{cot.company?.morada}</Typography>
             <Typography variant="body2">Nuit: {cot.company?.nuit}</Typography>
             <Typography variant="body2">Sector: {cot.company?.sector}</Typography>
-            <Typography variant="body2">Valor Máximo de Propostas:{cot?.valor || cot?.maxProposals}MT</Typography>
+            <Typography variant="body2">Valor Máximo de Propostas: {cot?.valor || cot?.maxProposals} MT</Typography>
           </Stack>
 
           <Divider sx={{ my: 2 }} />
@@ -226,7 +244,15 @@ const CotacoesPDF = ({ user }) => {
 
           <Divider sx={{ my: 2 }} />
 
-          {/* Verificação para cot.items */}
+          <Stack spacing={1} sx={{ mb: 2 }}>
+            <Typography variant="body1" fontWeight="bold">
+              Descrição:
+            </Typography>
+            <Typography dangerouslySetInnerHTML={{ __html: cot.description }} />
+          </Stack>
+
+          <Divider sx={{ my: 2 }} />
+
           {cot && cot.items && cot.items.length > 0 ? (
             <>
               <Typography 
@@ -283,7 +309,6 @@ const CotacoesPDF = ({ user }) => {
   );
 };
 
-// Estilos para o PDF (mantidos os mesmos)
 const styles = StyleSheet.create({
   page: {
     padding: 40,
@@ -318,6 +343,18 @@ const styles = StyleSheet.create({
   info: {
     marginBottom: 20,
     textAlign: "center",
+  },
+  descriptionContainer: {
+    marginBottom: 20,
+    border: "1px solid #eee",
+    borderRadius: 4,
+    padding: 15,
+  },
+  htmlContent: {
+    fontSize: 12,
+    lineHeight: 1.6,
+    textAlign: 'left',
+    whiteSpace: 'pre-wrap',
   },
   tableContainer: {
     marginBottom: 30,

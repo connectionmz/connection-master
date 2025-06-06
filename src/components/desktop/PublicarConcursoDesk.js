@@ -505,7 +505,6 @@ const PublicarConcursoDesk = ({ user }) => {
               <MenuItem value="all">
                 <ListItemIcon>
                   <Checkbox
-                    checked={selectedProvincias.length === provincias.length}
                     indeterminate={
                       selectedProvincias.length > 0 && 
                       selectedProvincias.length < provincias.length
@@ -517,7 +516,7 @@ const PublicarConcursoDesk = ({ user }) => {
               <Divider />
               {provincias.map((provincia, index) => (
                 <MenuItem key={index} value={provincia.provincia}>
-                  <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                  <Checkbox />
                   <ListItemText primary={provincia.provincia} />
                 </MenuItem>
               ))}
@@ -547,7 +546,6 @@ const PublicarConcursoDesk = ({ user }) => {
               <MenuItem value="all">
                 <ListItemIcon>
                   <Checkbox
-                    checked={formData.tipoEntidade.length === tiposEntidades.length}
                     indeterminate={
                       formData.tipoEntidade.length > 0 && 
                       formData.tipoEntidade.length < tiposEntidades.length

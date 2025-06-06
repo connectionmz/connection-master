@@ -291,12 +291,6 @@ const BlogDetalheDesk = ({ user }) => {
         
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Chip 
-              label={post.category || 'Geral'} 
-              color="primary" 
-              size="small"
-              sx={{ fontWeight: 500 }}
-            />
             <Typography variant="caption" color="text.secondary">
               {formatPostDate(post.date, post.time)}
             </Typography>

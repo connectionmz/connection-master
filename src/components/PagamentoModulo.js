@@ -268,23 +268,20 @@ const PagamentoModulo = ({ user }) => {
                 helperText="Em caso de necessidade de contacto com a sua empresa usaremos este número."
                 inputProps={{ maxLength: 15 }}
               />
-              
               <TextField
-                label="Referência de Pagamento(opcional)"
-                placeholder="Número da transação ou outro identificador"
+                label="Referência de Pagamento"
+                placeholder="Após o pagamento, coloque aqui o número da referência" 
                 value={referencia}
                 onChange={(e) => setReferencia(e.target.value)}
                 fullWidth
                 margin="normal"
                 helperText="Número da transação ou outro identificador"
               />
-              
               <Button
                 variant="contained"
                 component="label"
                 sx={{ mt: 2 }}
-                color={existingPayment?.comprovativoUrl && !comprovativo ? 'secondary' : 'primary'}
-              >
+                color={existingPayment?.comprovativoUrl && !comprovativo ? 'secondary' : 'primary'}>
                 {existingPayment?.comprovativoUrl && !comprovativo 
                   ? 'Substituir Comprovativo (JPEG, PNG ou PDF)'
                   : 'Selecionar Comprovativo (JPEG, PNG ou PDF)'}

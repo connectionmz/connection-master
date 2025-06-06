@@ -55,14 +55,6 @@ const Blogs = () => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Categorias baseadas na estrutura de dados
-  const categories = [
-    { id: 'all', name: 'Todos' },
-    { id: 'public', name: 'Avisos Públicos' },
-    { id: 'government', name: 'Governo' },
-    { id: 'business', name: 'Empresas' },
-    { id: 'events', name: 'Eventos' }
-  ];
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -73,8 +65,6 @@ const Blogs = () => {
         const postsArray = Object.keys(data).map((key) => ({
           id: key,
           ...data[key],
-          // Garante que cada post tenha uma categoria válida
-          category: data[key].category || 'public',
           // Processa os comentários se existirem
           comments: data[key].comments ? Object.entries(data[key].comments).map(([commentId, comment]) => ({
             id: commentId,
@@ -136,6 +126,25 @@ const Blogs = () => {
     
     setFilteredPosts(result);
   }, [posts, searchQuery, selectedCategory, sortBy]);
+
+
+  const formatPostDate = (dateStr, timeStr) => {
+    try {
+      const [day, month, year] = dateStr.split('/');
+      const [hours, minutes] = timeStr.split(':');
+      const date = new Date(year, month - 1, day, hours, minutes);
+      return date.toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateStr || 'Data desconhecida';
+    }
+  };
+
 
   const formatDate = (dateString, timeString) => {
     try {
@@ -289,18 +298,8 @@ const Blogs = () => {
                   }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="caption" color="text.secondary">
-                        {formatDate(post.date, post.time)}
-                      </Typography>
-                      <Chip 
-                        label={post.category || 'Geral'} 
-                        size="small" 
-                        sx={{ 
-                          fontSize: '0.6rem',
-                          height: 24,
-                          bgcolor: 'primary.light',
-                          color: 'primary.contrastText'
-                        }} 
-                      />
+                        {formatPostDate(post.date, post.time)}
+                        </Typography>
                     </Box>
                     
                     <Typography 
