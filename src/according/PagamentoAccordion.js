@@ -78,59 +78,85 @@ const PagamentoAccordion = ({ data }) => {
             <SmartphoneIcon sx={{ verticalAlign: 'middle', mr: 1, color:'#d32f2f' }} />
             Procedimento de Pagamento:
           </Typography>
+        {[
+  `Digita *150#`,
+  `Escolha a opção 6. Pagamentos`,
+  `Escolha a opção 7. Digita o código do serviço`,
+  `Digita 902444 (código de serviço)`,
+  `Digita a referência ${data.key}`,
+  `Digita o valor a pagar ${data.price} MT`,
+  `Confirme a Entidade: Connection Mozambique`,
+  `Digita o teu PIN`,
+  `Confirma a transação`
+].map((step, index) => (
+  <Typography
+    key={index}
+    variant="body2"
+    sx={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      mb: 1.5,
+      '&:before': {
+        content: `"${index + 1}"`,
+        display: 'inline-flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '24px',
+        height: '24px',
+        background: '#e8f5e9',
+        borderRadius: '50%',
+        mr: 1.5,
+        flexShrink: 0,
+        color: '#2e7d32',
+        fontWeight: 'bold',
+        fontSize: '0.75rem'
+      }
+    }}
+  >
+    {step.split(' ').map((word, i) => {
+      // Words to highlight
+      const highlightWords = [
+        '*150#',
+        '6.',
+        '7.',
+        '902444',
+        data.key,
+        `${data.price}`,
+        `${data.price} MT`,
+        'Connection',
+        'Mozambique',
+        'PIN'
+      ];
+      
+      // Clean word for comparison (remove punctuation)
+      const cleanedWord = word.replace(/[.,:;()#]/g, '');
+      
+      return (
+        <React.Fragment key={i}>
+          {highlightWords.includes(cleanedWord) ? (
+            <Box 
+              component="span" 
+              sx={{
+                color: '#d32f2f',
+                fontWeight: 'bold',
+                bgcolor: i === 0 ? 'transparent' : 'rgba(211, 47, 47, 0.08)',
+                px: i === 0 ? 0 : 0.5,
+                borderRadius: i === 0 ? 0 : '4px',
+                display: 'inline-block'
+              }}
+            >
+              {word}
+            </Box>
+          ) : (
+            word
+          )}
+          {' '}
+        </React.Fragment>
+      );
+    })}
+  </Typography>
+))}
 
-          <Box sx={{ 
-            ml: 2,
-            '& .MuiTypography-body2': {
-              display: 'flex',
-              alignItems: 'flex-start',
-              mb: 1.5,
-              '&:before': {
-                content: '""',
-                display: 'inline-block',
-                width: '24px',
-                height: '24px',
-                background: '#e8f5e9',
-                borderRadius: '50%',
-                mr: 1.5,
-                flexShrink: 0,
-                textAlign: 'center',
-                lineHeight: '24px',
-                color: '#4caf50',
-                fontWeight: 'bold'
-              }
-            }
-          }}>
-            {[
-              `Digita *150#`,
-              `Escolha a opção 6. Pagamentos`,
-              `Escolha a opção 7. Digita o código do serviço`,
-              `Digita  902444 (código de serviço)`,
-              `Digita a referência ${data.key}`,
-              `Digita o valor a pagar ${data.price} MT`,
-              `Confirme a Entidade: Connection Mozambique`,
-              `Digita o teu PIN`,
-              `Confirma a transação`
-            ].map((step, index) => (
-              <Typography 
-                key={index} 
-                variant="body2"
-                sx={{
-                  '&:before': {
-                    content: `"${index + 1}"`,
-                  }
-                }}
-              >
-                {step.split(' ').map((word, i) => 
-                  word === '902444' || word === data.key || word === `${data.price} MT` ? 
-                  <strong key={i} style={{ color: '#d32f2f' }}>{word} </strong> : 
-                  `${word} `
-                )}
-              </Typography>
-            ))}
-          </Box>
-
-          {/* Dicas e informações adicionais */}
           <Box sx={{ 
             mt: 3, 
             p: 2,
