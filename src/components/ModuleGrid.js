@@ -48,7 +48,6 @@ const ModuleGrid = ({ activeModules }) => {
       handleAcquireModule(module);
     }
   };
-
   return (
     <Box sx={{ mt: 4 }}>
       <Typography variant="h6" component="h2" sx={{ fontWeight: 'medium', mb: 2 }}>
