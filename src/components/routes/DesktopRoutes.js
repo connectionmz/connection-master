@@ -112,11 +112,12 @@ const [isLoading, setIsLoading] = useState(false)
 const [showReferrerModal, setShowReferrerModal] = useState(false)
 const [referrerData, setReferrerData] = useState(null)
 const [feedbackForm, setFeedbackForm] = useState({
-nome: '',
-email: '',
-contacto: '',
-feedback: ''
+  nome: '',
+  email: '',
+  contacto: '',
+  feedback: ''
 });
+
 const [showVerificationAlert, setShowVerificationAlert] = useState(false);
 
   const isVerify = user?.subscriptions?.isverify
@@ -181,32 +182,19 @@ const dynamicProtectedPatterns = [
 ];
 
 const ProtectedRoute = ({ children, requiredModule }) => {
+
   const currentLocation = useLocation();
-  
   const isProtected = protectedRoutes.some(route => 
     currentLocation.pathname.startsWith(route) ||
     dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
   );
 
-  console.log('--- Informações da Rota ---');
-  console.log('Rota atual:', currentLocation.pathname);
-  console.log('Módulo requerido:', requiredModule || 'Nenhum');
-  console.log('É rota protegida?', isProtected ? 'Sim' : 'Não');
-  
   if (!user) {
-    console.log('Status: Usuário não autenticado');
     if (isProtected) {
       return <Navigate to="/auth" replace />;
     }
     return children;
-  }
-
-  // Log do status do usuário
-  console.log('Status do usuário:', {
-    autenticado: true,
-    verificado: isVerify,
-    módulosAtivos: user?.activeModules || {}
-  });
+  } 
 
   if (requiredModule && !isActiveModule(user, requiredModule)) {
     return (
@@ -220,21 +208,20 @@ const ProtectedRoute = ({ children, requiredModule }) => {
         backgroundColor: 'background.paper',
         boxShadow: 3,
       }}>
-      <Typography variant="h4" gutterBottom color="error.main" fontWeight={600}>
-        Módulo não disponível
-      </Typography>
-      <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-        Você não tem acesso ao módulo <strong>{requiredModule}</strong>. <br />
-      </Typography>
-      <Button
-        variant="contained"
-        color="primary"
-        size="large"
-        sx={{ borderRadius: 3, textTransform: 'none', px: 4 }}
-        onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}
-      >
-        Ativar Módulo
-      </Button>
+        <Typography variant="h4" gutterBottom color="error.main" fontWeight={600}>
+          Módulo não disponível
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+          Você não tem acesso ao módulo <strong>{requiredModule}</strong>. <br />
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          sx={{ borderRadius: 3, textTransform: 'none', px: 4 }}
+          onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}>
+          Ativar Módulo
+        </Button>
     </Box>
     );
   }
@@ -247,19 +234,16 @@ const ProtectedRoute = ({ children, requiredModule }) => {
           open={true}
           autoHideDuration={6000}
           onClose={() => {}}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
           <Alert 
             severity="warning"
-            sx={{ width: '100%' }}
-          >
+            sx={{ width: '100%' }}>
             Sua conta precisa ser verificada para acessar esta funcionalidade.
             <Button 
               color="inherit" 
               size="small" 
               onClick={() => navigate('/app/verification')}
-              sx={{ ml: 1 }}
-            >
+              sx={{ ml: 1 }}>
               Verificar agora
             </Button>
           </Alert>

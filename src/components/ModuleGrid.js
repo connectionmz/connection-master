@@ -1,31 +1,41 @@
 import { useNavigate } from 'react-router-dom';
 import { 
-  FaReceipt, 
-  FaStore, 
-  FaAd, 
-  FaSms, 
-  FaPhone, 
-  FaPoll, 
-  FaTruckLoading, 
-  FaStar, 
-  FaChartLine,
-  FaUserTie 
-} from 'react-icons/fa';
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  IconButton,
+  useTheme,
+  Tooltip
+} from '@mui/material';
+import { 
+  Receipt as ReceiptIcon,
+  Store as StoreIcon,
+  AdsClick as AdIcon,
+  Sms as SmsIcon,
+  Phone as PhoneIcon,
+  Poll as PollIcon,
+  LocalShipping as TruckIcon,
+  Star as StarIcon,
+  ShowChart as ChartIcon,
+  Person as PersonIcon
+} from '@mui/icons-material';
 
 export const allModules = [
-  { name: 'Proforma', link: '/faturacao', icon: <FaReceipt size={40} />, key: 'moduloProforma' },
-  { name: 'Market', link: '/market', icon: <FaStore size={40} />, key: 'moduloMarket' },
-  { name: 'Anunciar', link: '/anunciar', icon: <FaAd size={40} />, key: 'moduloAnunciar', alwaysEnabled: true },
-  { name: 'SMS', link: '/sms', icon: <FaSms size={40} />, key: 'moduloSMS' },
-  { name: 'Call Center', link: '/callcenter', icon: <FaPhone size={40} />, key: 'moduloCallCenter', alwaysEnabled: true },
-  { name: 'Procurement', link: '/procurement', icon: <FaTruckLoading size={40} />, key: 'moduloProcurement', alwaysEnabled: true },
-  { name: 'Inquéritos', link: '/inquerito', icon: <FaPoll size={40} />, key: 'moduloInquerito' },
-  { name: 'Análises', link: '/analises', icon: <FaChartLine size={40} />, key: 'moduloAnalises' },
-  { name: 'Recrutamento', link: '/recrutamento', icon: <FaUserTie size={40} />, key: 'moduloRecrutamento', alwaysEnabled: true }
+  { name: 'Proforma', link: '/faturacao', icon: <ReceiptIcon fontSize="large" />, key: 'moduloProforma' },
+  { name: 'Market', link: '/market', icon: <StoreIcon fontSize="large" />, key: 'moduloMarket' },
+  { name: 'Anunciar', link: '/anunciar', icon: <AdIcon fontSize="large" />, key: 'moduloAnunciar', alwaysEnabled: true },
+  { name: 'SMS', link: '/sms', icon: <SmsIcon fontSize="large" />, key: 'moduloSMS' },
+  { name: 'Call Center', link: '/callcenter', icon: <PhoneIcon fontSize="large" />, key: 'moduloCallCenter', alwaysEnabled: true },
+  { name: 'Procurement', link: '/procurement', icon: <TruckIcon fontSize="large" />, key: 'moduloProcurement', alwaysEnabled: true },
+  { name: 'Inquéritos', link: '/inquerito', icon: <PollIcon fontSize="large" />, key: 'moduloInquerito' },
+  { name: 'Recrutamento', link: '/recrutamento', icon: <PersonIcon fontSize="large" />, key: 'moduloRecrutamento', alwaysEnabled: true }
 ];
 
 const ModuleGrid = ({ activeModules }) => {
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const handleAcquireModule = (module) => {
     navigate(`/pagamento-modulo/${module.key}`);
@@ -40,23 +50,60 @@ const ModuleGrid = ({ activeModules }) => {
   };
 
   return (
-    <div className="mt-6">
-      <h2 className="text-gray-700 text-lg font-semibold">Módulos Disponíveis</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mt-4">
+    <Box sx={{ mt: 4 }}>
+      <Typography variant="h6" component="h2" sx={{ fontWeight: 'medium', mb: 2 }}>
+        Módulos Disponíveis
+      </Typography>
+      <Grid container spacing={3}>
         {allModules.map((module) => (
-          <div
-            key={module.name}
-            className={`flex flex-col items-center cursor-pointer p-4 rounded-md transition-all duration-150 ${
-              module.alwaysEnabled || activeModules[module.key] ? 'hover:bg-gray-200' : 'opacity-50 hover:bg-gray-300'
-            }`}
-            onClick={() => handleModuleClick(module)}
-          >
-            <div className="bg-gray-100 p-4 rounded-md">{module.icon}</div>
-            <p className="mt-2 text-sm text-center text-gray-600">{module.name}</p>
-          </div>
+          <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={module.name}>
+            <Tooltip 
+              title={module.alwaysEnabled || activeModules[module.key] ? '' : 'Clique para adquirir este módulo'}
+              arrow
+            >
+              <Card
+                onClick={() => handleModuleClick(module)}
+                sx={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: 2,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  opacity: module.alwaysEnabled || activeModules[module.key] ? 1 : 0.6,
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: theme.shadows[6],
+                    backgroundColor: module.alwaysEnabled || activeModules[module.key] 
+                      ? theme.palette.action.hover 
+                      : theme.palette.action.selected
+                  }
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center' }}>
+                  <Box
+                    sx={{
+                      backgroundColor: theme.palette.grey[100],
+                      borderRadius: 1,
+                      p: 2,
+                      mb: 1,
+                      display: 'inline-flex'
+                    }}
+                  >
+                    {module.icon}
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {module.name}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Tooltip>
+          </Grid>
         ))}
-      </div>
-    </div>
+      </Grid>
+    </Box>
   );
 };
 
