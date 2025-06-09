@@ -29,6 +29,7 @@ const PagamentoModulo = ({ user }) => {
   const [currentModule, setCurrentModule] = useState(null);
   const [referencia, setReferencia] = useState('');
   const [contactoOpcional, setContactoOpcional] = useState('');
+  const [nomeContaPagamento, setNomeContaPagamento] = useState('');
   const [comprovativo, setComprovativo] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,7 +58,6 @@ const PagamentoModulo = ({ user }) => {
     return () => unsubscribe();
   }, []);
 
-
   useEffect(() => {
     if (modules.length > 0 && moduleKey) {
       const foundModule = modules.find((mod) => mod.key === moduleKey);
@@ -65,8 +65,6 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [modules, moduleKey]);
 
-
-  // Verifica se já existe um pagamento para o usuário e módulo
   useEffect(() => {
     if (user?.id && moduleKey) {
       const checkExistingPayment = async () => {
@@ -91,6 +89,7 @@ const PagamentoModulo = ({ user }) => {
             setPaymentSuccess(true);
             setReferencia(paymentData.referencia || '');
             setContactoOpcional(paymentData.contactoOpcional || '');
+            setNomeContaPagamento(paymentData.nomeContaPagamento || '');
           }
         } catch (err) {
           console.error('Erro ao verificar pagamentos existentes:', err);
@@ -114,9 +113,13 @@ const PagamentoModulo = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    
     if (!user?.id) {
       setError('Usuário não autenticado. Por favor, faça login novamente.');
+      return;
+    }
+
+    if (!nomeContaPagamento) {
+      setError('Por favor, insira o nome da conta que fez o pagamento.');
       return;
     }
 
@@ -153,6 +156,7 @@ const PagamentoModulo = ({ user }) => {
         nome: user.nome || '',
         telefone: user.contacto || '',
         contactoOpcional: contactoOpcional || '',
+        nomeContaPagamento: nomeContaPagamento || '',
         referencia,
         comprovativoUrl,
         status: existingPayment?.status === 'aprovado' ? 'aprovado' : 'pendente',
@@ -242,8 +246,7 @@ const PagamentoModulo = ({ user }) => {
             {currentModule.price || ''} MT
           </Typography>
           <Box sx={{ mt: 2, p: 2, backgroundColor: '#f0f0f0', borderRadius: 1 }}>
-           <PagamentoAccordion
-            data={currentModule} />
+           <PagamentoAccordion data={currentModule} />
           </Box>
         </CardContent>
         <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
@@ -257,7 +260,7 @@ const PagamentoModulo = ({ user }) => {
                 InputProps={{
                   readOnly: true,
                 }}
-              helperText="Como via principal de contacto contacto com a sua empresa usaremos este número."
+                helperText="Como via principal de contacto contacto com a sua empresa usaremos este número."
               />
               <TextField
                 label="Telefone Opcional"
@@ -267,6 +270,15 @@ const PagamentoModulo = ({ user }) => {
                 margin="normal"
                 helperText="Em caso de necessidade de contacto com a sua empresa usaremos este número."
                 inputProps={{ maxLength: 15 }}
+              />
+              <TextField
+                label="Nome da conta que fez o pagamento"
+                value={nomeContaPagamento}
+                onChange={(e) => setNomeContaPagamento(e.target.value)}
+                fullWidth
+                margin="normal"
+                helperText="Nome do titular da conta que realizou o pagamento"
+                required
               />
               <TextField
                 label="Referência de Pagamento"
@@ -284,7 +296,7 @@ const PagamentoModulo = ({ user }) => {
                 color={existingPayment?.comprovativoUrl && !comprovativo ? 'secondary' : 'primary'}>
                 {existingPayment?.comprovativoUrl && !comprovativo 
                   ? 'Substituir Comprovativo (JPEG, PNG ou PDF)'
-                  : 'Selecionar Comprovativo (JPEG, PNG ou PDF)'}
+                  : 'Carregar Comprovativo (JPEG, PNG ou PDF)'}
                 <input
                   type="file"
                   accept="image/*,application/pdf"
@@ -310,7 +322,6 @@ const PagamentoModulo = ({ user }) => {
                   {error}
                 </Alert>
               )}
-              
               <Button
                 type="submit"
                 variant="contained"

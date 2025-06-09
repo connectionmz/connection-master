@@ -25,40 +25,55 @@ const StorieListDesk = ({ user }) => {
 
   const defaultLogoUrl = "https://via.placeholder.com/150";
 
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const companiesRef = ref(db, "company");
-        const snapshot = await get(companiesRef);
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-      
-          let companyList = Object.keys(data).map((key) => ({
+useEffect(() => {
+  const fetchCompanies = async () => {
+    try {
+      const companiesRef = ref(db, "company");
+      const snapshot = await get(companiesRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+
+        if (!user) {
+          setError("Usuário não disponível.");
+          setLoading(false);
+          return;
+        }
+
+        const provinciaFiltro = user.provinciaTemp || user.provincia;
+
+        let companyList = Object.keys(data)
+          .map((key) => ({
             id: key,
             ...data[key],
-          }));
+          }))
+          .filter((empresa) => empresa.provincia === provinciaFiltro);
 
         companyList = companyList.filter((company) => {
-          if (!company) return false; 
-          
+          if (!company) return false;
+
           const type = (company.type || '').trim().toLowerCase();
-          return type !== 'singular'; 
+          return type !== 'singular';
         });
 
         const randomCompanies = companyList
           .sort(() => Math.random() - 0.5)
           .slice(0, 7);
-        
+
         setStories(randomCompanies);
       }
-      } catch (error) {
-        setError("Erro ao carregar empresas: " + error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    } catch (error) {
+      setError("Erro ao carregar empresas: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (user) {
     fetchCompanies();
-  }, [user]);
+  }
+}, [user]);
+
+
 
   const handleCompanyClick = (companyId) => {
     navigate(`/perfil/${companyId}`);

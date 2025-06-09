@@ -32,6 +32,7 @@ import logo from "../../img/bg2.png";
 import { db } from "../../fb";
 
 const HeaderDesk = ({ user }) => {
+
   const [pendingConnections, setPendingConnections] = useState(0);
   const [pendingQuotes, setPendingQuotes] = useState(0);
   const [pendingContests, setPendingContests] = useState(0);
@@ -45,7 +46,6 @@ const HeaderDesk = ({ user }) => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const isVerify = user?.subscriptions?.isverify === "true";
 
-  // Protected routes configuration
   const protectedRoutes = [
     "/empresas",
     "/lojas",
@@ -70,7 +70,7 @@ const HeaderDesk = ({ user }) => {
     if (user?.id) {
       const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
       const targetUserQuotesRef = ref(db, `cotacoes/`);
-      const targetUserContestsRef = ref(db, `contests/${user.id}/`);
+      const targetUserContestsRef = ref(db, `concursos/`);
       const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`);
 
       const unsubscribeConnections = onValue(targetUserConnectionRef, (snapshot) => {
@@ -384,8 +384,7 @@ const HeaderDesk = ({ user }) => {
             justifyContent: 'center',
             alignItems: 'center',
             flexDirection: { xs: 'column', sm: 'row' }
-          }}
-        >
+          }}>
           <Typography variant="body2" sx={{ textAlign: 'center' }}>
             Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
           </Typography>
@@ -402,5 +401,4 @@ const HeaderDesk = ({ user }) => {
     </>
   );
 };
-
 export default HeaderDesk;
