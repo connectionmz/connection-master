@@ -180,8 +180,6 @@ const dynamicProtectedPatterns = [
   /^\/inquerito\/.+/
 ];
 
-// Componente para verificação de rotas protegidas
-// Componente para verificação de rotas protegidas
 const ProtectedRoute = ({ children, requiredModule }) => {
   const currentLocation = useLocation();
   
@@ -190,31 +188,57 @@ const ProtectedRoute = ({ children, requiredModule }) => {
     dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
   );
 
+  console.log('--- Informações da Rota ---');
+  console.log('Rota atual:', currentLocation.pathname);
+  console.log('Módulo requerido:', requiredModule || 'Nenhum');
+  console.log('É rota protegida?', isProtected ? 'Sim' : 'Não');
+  
   if (!user) {
+    console.log('Status: Usuário não autenticado');
+    if (isProtected) {
+      return <Navigate to="/auth" replace />;
+    }
     return children;
   }
 
-  // Verifica se a rota requer um módulo específico e se o usuário não tem acesso
+  // Log do status do usuário
+  console.log('Status do usuário:', {
+    autenticado: true,
+    verificado: isVerify,
+    módulosAtivos: user?.activeModules || {}
+  });
+
   if (requiredModule && !isActiveModule(user, requiredModule)) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h5" gutterBottom>
-          Módulo não disponível
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 2 }}>
-          Você não tem acesso a este módulo. Entre em contato com o administrador para ativá-lo.
-        </Typography>
-        <Button 
-          variant="contained" 
-          onClick={() => navigate('/')}
-        >
-          Voltar para a página inicial
-        </Button>
-      </Box>
+      <Box
+      sx={{
+        p: 4,
+        maxWidth: 500,
+        margin: 'auto',
+        mt: 8,
+        textAlign: 'center',
+        backgroundColor: 'background.paper',
+        boxShadow: 3,
+      }}>
+      <Typography variant="h4" gutterBottom color="error.main" fontWeight={600}>
+        Módulo não disponível
+      </Typography>
+      <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+        Você não tem acesso ao módulo <strong>{requiredModule}</strong>. <br />
+      </Typography>
+      <Button
+        variant="contained"
+        color="primary"
+        size="large"
+        sx={{ borderRadius: 3, textTransform: 'none', px: 4 }}
+        onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}
+      >
+        Ativar Módulo
+      </Button>
+    </Box>
     );
   }
 
-  // Se há usuário logado mas não está verificado e a rota é protegida
   if (!isVerify && isProtected) {
     return (
       <>
@@ -245,27 +269,17 @@ const ProtectedRoute = ({ children, requiredModule }) => {
   }
 
   return children;
+
 };
 
 const isActiveModule = (user, moduleKey) => {
-  // Se o módulo tem alwaysEnabled, sempre permite acesso
+ 
   const module = allModules.find(m => m.key === moduleKey);
-
-  if (module?.alwaysEnabled) return true;
-  
-  // Se não há usuário logado, permite acesso (será tratado pelo sistema de autenticação)
-  if (!user) return true;
-  
-  // Verifica se o usuário tem o módulo ativo
-  return user?.activeModules?.[moduleKey]
+  const hasModule = user?.activeModules?.[moduleKey];  
+  return hasModule;
 
 };
 
-
-console.log('User:', isActiveModule);
-
-
-// Função auxiliar para renderizar rotas protegidas
 const renderProtectedRoute = (path, element) => (
   <Route 
     path={path} 
@@ -469,7 +483,7 @@ const renderProtectedRoute = (path, element) => (
 
   {/* Rotas protegidas */}
   <Route path="/addProduct" element={
-    <ProtectedRoute>
+    <ProtectedRoute requiredModule={"moduloProforma"}>
       <ProductFormDesk user={user} />
     </ProtectedRoute>
   } />
@@ -533,7 +547,7 @@ const renderProtectedRoute = (path, element) => (
 
   {/* Cotações e propostas */}
   <Route path="/cotacoes" element={
-    <ProtectedRoute>
+    <ProtectedRoute requiredModule={"moduloSMS"}>
       <CotacoesDesk user={user} />
     </ProtectedRoute>
   } />
@@ -550,14 +564,13 @@ const renderProtectedRoute = (path, element) => (
     </ProtectedRoute>
   } />
 
-
   <Route path="/cotacaoPdf/:id" element={
     <ProtectedRoute requiredModule="moduloSMS">
       <CotacoesPDF user={user}/>
     </ProtectedRoute>
   } />
   <Route path="/proposta/:id/:cotId" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloSMS">
     <ProposalDesk user={user} />
   </ProtectedRoute>
 } />
@@ -578,14 +591,14 @@ const renderProtectedRoute = (path, element) => (
   }
 />
 
-
 <Route path="/proforma/:numeroProforma" element={
   <ProtectedRoute>
     <FaturaDesk user={user} />
   </ProtectedRoute>
 } />
+
 <Route path="/concurso" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloSMS">
     <PublicarConcursoDesk user={user} />
   </ProtectedRoute>
 } />
@@ -644,7 +657,6 @@ const renderProtectedRoute = (path, element) => (
   </ProtectedRoute>
 } />
 
-
 <Route path="/enviar-proposta/:id/:companyId" element={
   <ProtectedRoute>
     <EnviarPropostaDesk user={user} />
@@ -681,14 +693,12 @@ const renderProtectedRoute = (path, element) => (
   </ProtectedRoute>
 } />
 
-
   {/* Concursos */}
   <Route path="/concursos" element={
-    <ProtectedRoute>
+    <ProtectedRoute requiredModule="moduloSMS">
       <ConcursoDesk user={user} />
     </ProtectedRoute>
   } />
-
 
 <Route path="/faturacao" element={
   <ProtectedRoute>

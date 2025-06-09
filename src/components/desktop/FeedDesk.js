@@ -24,6 +24,7 @@ import { Expand, InfoIcon } from 'lucide-react';
 import { LocationCity } from '@mui/icons-material';
 
 const FeedDesk = ({ user }) => {
+  console.log(user)
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const theme = useTheme();

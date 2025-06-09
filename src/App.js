@@ -50,30 +50,26 @@ const App = () => {
   });
 
 
-  const fetchUserDataRealtime = (user) => {
+const fetchUserDataRealtime = async (user) => {
   try {
     setLoading(true);
     
-    // Referência para os dados do usuário
     const userRef = ref(db, `company/${user.uid}`);
     
-    // Ouvinte em tempo real para dados do usuário
-    onValue(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        setUserData({
-          ...data,
-          photoURL: data.logoUrl || 'https://via.placeholder.com/150',
-          displayName: data.nome || 'Nome da Empresa',
-          endereco: data.endereco || 'Endereço não informado',
-          isAnonymous: user.isAnonymous,
-        });
-      } else {
-        setUserData(null);
-      }
-    });
-
-
+    const snapshot = await get(userRef);
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      setUserData({
+        ...data,
+        photoURL: data.logoUrl || 'https://via.placeholder.com/150',
+        displayName: data.nome || 'Nome da Empresa',
+        endereco: data.endereco || 'Endereço não informado',
+        isAnonymous: user.isAnonymous,
+      });
+    } else {
+      setUserData(null);
+    }
 
   } catch (error) {
     SaveLogError('app', error);
@@ -82,7 +78,6 @@ const App = () => {
     setLoading(false);
   }
 };
-
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
