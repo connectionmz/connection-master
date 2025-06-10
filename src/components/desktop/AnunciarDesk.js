@@ -1,7 +1,7 @@
 // AnunciarDesk.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../../fb';
-import { ref, query, orderByChild, equalTo, onValue } from 'firebase/database';
+import { ref, query, orderByChild, equalTo, onValue, remove } from 'firebase/database';
 import {
   Box,
   Typography,
@@ -54,6 +54,18 @@ const AnunciarDesk = ({ user }) => {
     }
   }, [user]);
 
+const handleAdDeleted = (adId) => {
+  const adRef = ref(db, `banners/${adId}`);
+
+  remove(adRef)
+    .then(() => {
+      console.log("Anúncio removido com sucesso!");
+    })
+    .catch((error) => {
+      console.error("Erro ao remover o anúncio:", error);
+    });
+};
+
   useEffect(() => {
     if (activeTab === 0) {
       loadUserAds();
@@ -82,6 +94,7 @@ const AnunciarDesk = ({ user }) => {
             myAds={myAds} 
             loading={loadingAds} 
             onAdCreated={loadUserAds} 
+            onAdDeleted={handleAdDeleted}
           />
         ) : (
           <CreateAdTab 

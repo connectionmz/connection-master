@@ -85,7 +85,7 @@ const PagamentoAccordion = ({ data }) => {
   `Digita 902444 (código de serviço)`,
   `Digita a referência ${data.key}`,
   `Digita o valor a pagar ${data.price} MT`,
-  `Confirme a Entidade: Connection Mozambique`,
+  `Confirme a Entidade: Connection Mozambique, LDA`,
   `Digita o teu PIN`,
   `Confirma a transação`
 ].map((step, index) => (

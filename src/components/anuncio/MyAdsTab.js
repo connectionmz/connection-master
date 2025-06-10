@@ -13,14 +13,23 @@ import {
   Chip,
   Button,
   Paper,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import DeleteIcon from '@mui/icons-material/Delete';
 import AdDetailsDialog from './AdDetailsDialog';
 import { formatPrice, formatDate, getStatusColor } from './adUtils';
 
-const MyAdsTab = ({ myAds, loading, onAdCreated }) => {
+const MyAdsTab = ({ myAds, loading, onAdCreated, onAdDeleted }) => {
   const [selectedAd, setSelectedAd] = useState(null);
   const [openDetails, setOpenDetails] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [adToDelete, setAdToDelete] = useState(null);
 
   const handleViewAd = (ad) => {
     setSelectedAd(ad);
@@ -29,6 +38,23 @@ const MyAdsTab = ({ myAds, loading, onAdCreated }) => {
 
   const handleCloseDetails = () => {
     setOpenDetails(false);
+  };
+
+  const handleOpenDeleteDialog = (ad) => {
+    setAdToDelete(ad);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setAdToDelete(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (adToDelete) {
+      onAdDeleted(adToDelete.id);
+      handleCloseDeleteDialog();
+    }
   };
 
   if (loading) {
@@ -48,6 +74,7 @@ const MyAdsTab = ({ myAds, loading, onAdCreated }) => {
       </Box>
     );
   }
+
   return (
     <>
       <TableContainer component={Paper}>
@@ -100,9 +127,19 @@ const MyAdsTab = ({ myAds, loading, onAdCreated }) => {
                     variant="outlined"
                     onClick={() => handleViewAd(ad)}
                     startIcon={<BarChartIcon />}
+                    size="small"
+                    sx={{ mr: 1 }}
                   >
                     Estatísticas
                   </Button>
+                  <IconButton
+                    aria-label="delete"
+                    onClick={() => handleOpenDeleteDialog(ad)}
+                    color="error"
+                    size="small"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -117,6 +154,26 @@ const MyAdsTab = ({ myAds, loading, onAdCreated }) => {
           ad={selectedAd}
         />
       )}
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">Confirmar eliminação</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Tem certeza que deseja eliminar este anúncio? Esta ação não pode ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog}>Cancelar</Button>
+          <Button onClick={handleConfirmDelete} color="error" autoFocus>
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
