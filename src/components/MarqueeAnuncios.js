@@ -51,7 +51,7 @@ const MarqueeAnuncios = ({ user }) => {
   };
 
   const handleAnuncioClick = (id) => {
-    navigate(`/anuncio/${id}`); // Redireciona para a página de detalhes do anúncio
+    navigate(`/noticia/${id}`); // Redireciona para a página de detalhes do anúncio
   };
 
   return (
