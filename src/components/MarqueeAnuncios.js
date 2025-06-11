@@ -29,13 +29,12 @@ const MarqueeAnuncios = ({ user }) => {
       try {
         const data = await fetchAnuncios();
 
-        // Verifica se o usuário existe e tem as propriedades necessárias
         const anunciosFiltrados = user && (user.provinciaTemp || user.provincia)
           ? data.filter(anuncio =>
               anuncio.company?.provincia === user.provinciaTemp ||
               anuncio.company?.provincia === user.provincia
             )
-          : data; // Se o usuário não existir ou não tiver as propriedades, lista todos os anúncios
+          : data; 
 
         setAnuncios(anunciosFiltrados);
       } catch (error) {
@@ -51,7 +50,7 @@ const MarqueeAnuncios = ({ user }) => {
   };
 
   const handleAnuncioClick = (id) => {
-    navigate(`/noticia/${id}`); // Redireciona para a página de detalhes do anúncio
+    navigate(`/noticia/${id}`);
   };
 
   return (
