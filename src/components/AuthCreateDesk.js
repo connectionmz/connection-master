@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Card, CardActions, CardContent, Dialog, Divider, useMediaQuery, useTheme } from '@mui/material';
-import { ArrowForward, Business, Email, Person, Visibility, VisibilityOff } from '@mui/icons-material';
+import { 
+  useMediaQuery, 
+  useTheme 
+} from '@mui/material';
+import { 
+  Email, 
+  Visibility, 
+  VisibilityOff 
+} from '@mui/icons-material';
 import { 
   Snackbar, 
   Alert, 
@@ -26,207 +33,109 @@ import {
   createUserWithEmailAndPassword, 
   sendEmailVerification 
 } from 'firebase/auth';
-import { ref, set } from 'firebase/database';
+import { get, ref, set } from 'firebase/database';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
 
-const AccountTypeSelector = ({ onSelect }) => {
-  const [selectedType, setSelectedType] = useState(null);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+// Email validation helper
+const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};
 
-  const handleSelect = (type) => {
-    setSelectedType(type);
-  };
-
-  const handleConfirm = () => {
-    if (selectedType) {
-      onSelect(selectedType);
-    }
-  };
-
-  const accountTypes = [
-    {
-      id: 'personal',
-      title: 'Conta Pessoal',
-      description: 'Ideal para uso individual, com possibilidade de fazer pedidos de cotação, acesso a lojas e outros serviços disponíveis na plataforma.',
-      icon: <Person fontSize="large" />,
-      color: theme.palette.primary.main
-    },
-    {
-      id: 'business',
-      title: 'Conta Empresarial',
-      description: 'Para empresas, com acesso aos módulos de Cotações, Concursos e mais, permitindo a gestão do seu negócio e networking a nível nacional.',
-      icon: <Business fontSize="large" />,
-      color: theme.palette.secondary.main
-    }
-  ];
-
-  return (
-    <Box sx={{ maxWidth: 800, margin: '0 auto', p: isMobile ? 2 : 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'center', fontWeight: 700, mb: 4 }}>
-        Qual tipo de conta você precisa?
-      </Typography>
-      
-      <Typography variant="subtitle1" sx={{ textAlign: 'center', mb: 4, color: 'text.secondary' }}>
-        Escolha o tipo de conta que melhor atende suas necessidades. Você poderá adicionar detalhes depois.
-      </Typography>
-      
-      <Grid container spacing={3} justifyContent="center">
-        {accountTypes.map((type) => (
-          <Grid item xs={12} sm={6} key={type.id}>
-            <Card
-              onClick={() => handleSelect(type.id)}
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                cursor: 'pointer',
-                border: selectedType === type.id ? `2px solid ${type.color}` : '2px solid transparent',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-5px)',
-                  boxShadow: 6
-                }
-              }}
-            >
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                  <Avatar sx={{ bgcolor: `${type.color}20`, color: type.color, width: 60, height: 60 }}>
-                    {type.icon}
-                  </Avatar>
-                </Box>
-                <Typography gutterBottom variant="h5" component="h2" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                  {type.title}
-                </Typography>
-                <Divider sx={{ my: 2 }} />
-                <Typography sx={{ textAlign: 'center', color: 'text.secondary' }}>
-                  {type.description}
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
-                <Button
-                  size="small"
-                  endIcon={<ArrowForward />}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    color: selectedType === type.id ? type.color : 'text.secondary'
-                  }}
-                >
-                  {selectedType === type.id ? 'Selecionado' : 'Selecionar'}
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-      
-      <Box sx={{ mt: 4, textAlign: 'center' }}>
-        <Button
-          variant="contained"
-          size="large"
-          disabled={!selectedType}
-          onClick={handleConfirm}
-          sx={{
-            px: 6,
-            py: 1.5,
-            borderRadius: 2,
-            textTransform: 'none',
-            fontSize: '1.1rem',
-            fontWeight: 600,
-            '&:disabled': {
-              opacity: 0.7
-            }
-          }}
-        >
-          Continuar
-        </Button>
-      </Box>
-    </Box>
-  );
+const validatePassword = (password) => {
+  return password.length >= 6;
 };
 
 const AuthCreateDesk = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [emailError, setEmailError] = useState(false);
-  const [passwordError, setPasswordError] = useState(false);
-  const [showAccountTypeDialog, setShowAccountTypeDialog] = useState(false);
-  
-  const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const [errors, setErrors] = useState({
+    email: false,
+    password: false
+  });
 
-  // Save user data to database
-  const saveUserData = async (user) => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const saveUserData = useCallback(async (user) => {
     const userRef = ref(db, 'users/' + user.uid);
     const userData = {
-      displayName: user.displayName || '',
+      displayName: user.displayName || 'Usuário Anônimo',
       uid: user.uid,
-      email: user.email || '',
+      email: user.email || 'anonimo@exemplo.com',
       profilepic: user.photoURL || '',
-      provider: user.providerData[0]?.providerId || 'email',
+      provider: user.providerData[0]?.providerId || 'anonymous',
       country: 'Unknown',
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
-      emailVerified: user.emailVerified,
     };
 
     await set(userRef, userData);
-  };
+  }, []);
 
-  // Validate email format
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
+  const handleInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: false
+      }));
+    }
+  }, [errors]);
 
-  // Validate password strength
-  const validatePassword = (password) => {
-    return password.length >= 6;
-  };
-
-  // Handle form submission
-  const handleEmailSignIn = async (e) => {
+  const handleEmailSignIn = useCallback(async (e) => {
     e.preventDefault();
     
-    // Reset errors
-    setEmailError(false);
-    setPasswordError(false);
+    setErrors({
+      email: false,
+      password: false
+    });
     
-    // Validate inputs
-    if (!email) {
-      setEmailError(true);
+    let hasError = false;
+    const newErrors = { ...errors };
+    
+    if (!formData.email) {
+      newErrors.email = true;
+      hasError = true;
       setErrorMessage('Por favor, insira seu email');
-      return;
-    }
-    
-    if (!validateEmail(email)) {
-      setEmailError(true);
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = true;
+      hasError = true;
       setErrorMessage('Por favor, insira um email válido');
-      return;
     }
     
-    if (!password) {
-      setPasswordError(true);
+    if (!formData.password) {
+      newErrors.password = true;
+      hasError = true;
       setErrorMessage('Por favor, insira sua senha');
-      return;
-    }
-    
-    if (!validatePassword(password)) {
-      setPasswordError(true);
+    } else if (!validatePassword(formData.password)) {
+      newErrors.password = true;
+      hasError = true;
       setErrorMessage('A senha deve ter pelo menos 6 caracteres');
-      return;
     }
     
     if (!termsAccepted) {
+      hasError = true;
       setErrorMessage('Você deve aceitar os Termos de Uso e a Política de Privacidade.');
+    }
+    
+    if (hasError) {
+      setErrors(newErrors);
       return;
     }
     
@@ -235,45 +144,34 @@ const AuthCreateDesk = () => {
     setSuccessMessage('');
 
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       await sendEmailVerification(result.user);
       await saveUserData(result.user);
 
       setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
-      setEmail('');
-      setPassword('');
+      setFormData({ email: '', password: '' });
       setTermsAccepted(false);
       
-      // Show account type selector dialog after successful registration
-      setShowAccountTypeDialog(true);
+      navigate('/auth');
     } catch (error) {
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);
       setErrorMessage(userFriendlyMessage);
       
-      // Highlight problematic fields
-      if (error.code.includes('email')) setEmailError(true);
-      if (error.code.includes('password')) setPasswordError(true);
+      const errorFields = { email: false, password: false };
+      if (error.code.includes('email')) errorFields.email = true;
+      if (error.code.includes('password')) errorFields.password = true;
+      setErrors(errorFields);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData, termsAccepted, saveUserData, navigate]);
 
-  const handleAccountTypeSelect = (type) => {
-    setShowAccountTypeDialog(false);
-    if (type === 'business') {
-      navigate('/setup');
-    } else {
-      navigate('/setupUser');
-    }
-  };
-
-  const togglePasswordVisibility = () => {
+  const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
-  };
+  }, []);
 
   return (
     <Grid container component="main" sx={{ height: '100vh' }}>
-      {/* Left side - Form */}
       <Grid 
         item 
         xs={12} 
@@ -317,7 +215,6 @@ const AuthCreateDesk = () => {
             <Box 
               component="form" 
               onSubmit={handleEmailSignIn} 
-              noValidate 
               sx={{ 
                 width: '100%',
                 mt: 1 
@@ -332,9 +229,9 @@ const AuthCreateDesk = () => {
                 name="email"
                 autoComplete="email"
                 autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={emailError}
+                value={formData.email}
+                onChange={handleInputChange}
+                error={errors.email}
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
@@ -357,9 +254,9 @@ const AuthCreateDesk = () => {
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={passwordError}
+                value={formData.password}
+                onChange={handleInputChange}
+                error={errors.password}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -462,7 +359,6 @@ const AuthCreateDesk = () => {
         </Fade>
       </Grid>
       
-      {/* Right side - Marketing image */}
       {!isMobile && (
         <Grid 
           item 
@@ -486,7 +382,6 @@ const AuthCreateDesk = () => {
         />
       )}
       
-      {/* Error snackbar */}
       <Snackbar
         open={!!errorMessage}
         autoHideDuration={6000}
@@ -505,18 +400,6 @@ const AuthCreateDesk = () => {
         </Alert>
       </Snackbar>
       
-      {/* Account type selector dialog */}
-      <Dialog
-        open={showAccountTypeDialog}
-        onClose={() => setShowAccountTypeDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 2, p: 0, overflow: 'visible' } }}
-      >
-        <AccountTypeSelector onSelect={handleAccountTypeSelect} />
-      </Dialog>
-      
-      {/* Success snackbar */}
       <Snackbar
         open={!!successMessage}
         autoHideDuration={6000}

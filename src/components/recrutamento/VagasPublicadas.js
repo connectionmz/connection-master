@@ -39,6 +39,7 @@ import { useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import PropTypes from 'prop-types';
+import EditarVaga from './EditarVaga'; // Importe o componente EditarVaga
 
 const StatusChip = React.memo(({ status }) => {
   const theme = useTheme();
@@ -328,11 +329,14 @@ const VagasPublicadas = ({
   searchTerm, 
   setSearchTerm, 
   onDeleteVaga,
-  
+  onEditarVaga,
+  areasFormacao,
+  areasAtuacao
 }) => {
   const navigate = useNavigate();
   const [selectedVaga, setSelectedVaga] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editarDialogOpen, setEditarDialogOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -384,9 +388,24 @@ const VagasPublicadas = ({
     setPage(0);
   };
 
-  const handleEdit = useCallback((vagaId) => {
-    navigate(`/vagas/editar/${vagaId}`);
-  }, [navigate]);
+  const handleEditClick = useCallback((vaga) => {
+    setSelectedVaga(vaga);
+    setEditarDialogOpen(true);
+  }, []);
+
+  const handleCloseEditarDialog = useCallback(() => {
+    setEditarDialogOpen(false);
+    setSelectedVaga(null);
+  }, []);
+
+  const handleSubmitEdicao = useCallback(async (vagaEditada) => {
+    try {
+      await onEditarVaga(vagaEditada);
+      setEditarDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao editar vaga:', error);
+    }
+  }, [onEditarVaga]);
 
   return (
     <Card sx={{ p: { xs: 2, md: 3 }, boxShadow: 3 }}>
@@ -502,7 +521,7 @@ const VagasPublicadas = ({
                         </Tooltip>
                         <Tooltip title="Editar vaga">
                           <IconButton 
-                            onClick={() => handleEdit(vaga.id)}
+                            onClick={() => handleEditClick(vaga)}
                             aria-label={`editar ${vaga.titulo}`}
                             size="small"
                           >
@@ -543,8 +562,21 @@ const VagasPublicadas = ({
             vaga={selectedVaga}
             open={dialogOpen}
             onClose={handleCloseDialog}
-            onEdit={() => handleEdit(selectedVaga?.id)}
+            onEdit={() => handleEditClick(selectedVaga)}
           />
+
+          {/* Modal de Edição */}
+          {selectedVaga && (
+            <EditarVaga
+              open={editarDialogOpen}
+              onClose={handleCloseEditarDialog}
+              vagaParaEditar={selectedVaga}
+              onEditarVaga={handleSubmitEdicao}
+              areasAtuacao={areasAtuacao}
+              areasFormacao={areasFormacao}
+              loading={loading}
+            />
+          )}
         </>
       )}
     </Card>
@@ -557,7 +589,9 @@ VagasPublicadas.propTypes = {
   searchTerm: PropTypes.string.isRequired,
   setSearchTerm: PropTypes.func.isRequired,
   onDeleteVaga: PropTypes.func.isRequired,
-  onRefresh: PropTypes.func.isRequired
+  onEditarVaga: PropTypes.func.isRequired,
+  areasFormacao: PropTypes.array.isRequired,
+  areasAtuacao: PropTypes.object.isRequired
 };
 
 export default React.memo(VagasPublicadas);

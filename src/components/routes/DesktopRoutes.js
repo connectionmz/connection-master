@@ -345,53 +345,64 @@ const renderProtectedRoute = (path, element) => (
     }));
   };
 
-  const handleSubmitFeedback = async () => {
-    if (!feedbackForm.feedback.trim()) {
-      alert('Por favor, insira seu feedback.');
-      return;
-    }
+const handleSubmitFeedback = async () => {
+  if (!feedbackForm.feedback.trim()) {
+    alert('Por favor, insira seu feedback.');
+    return;
+  }
 
-    if (!user && (!feedbackForm.nome.trim() || !feedbackForm.email.trim())) {
+  if (!user) {
+    if (!feedbackForm.nome.trim() || !feedbackForm.email.trim()) {
       alert('Por favor, preencha seu nome e email.');
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const feedbackData = user ? {
-        nome: user.displayName || 'Usuário Anônimo',
-        email: user.email || 'anonimo@exemplo.com',
-        userId: user.id,
-        feedback: feedbackForm.feedback,
-        timestamp: new Date().toISOString(),
-      } : {
-        nome: feedbackForm.nome,
-        email: feedbackForm.email,
-        contacto: feedbackForm.contacto,
-        feedback: feedbackForm.feedback,
-        timestamp: new Date().toISOString(),
-      };
-
-      const feedbackRef = user ? ref(db, `feedback/${user.id}`) : ref(db, 'feedback/anonymous');
-      const newFeedbackRef = push(feedbackRef);
-      await set(newFeedbackRef, feedbackData);
-
-      setHasFeedback(true);
-      setFeedbackForm({
-        nome: '',
-        email: '',
-        contacto: '',
-        feedback: ''
-      });
-      handleCloseFeedbackModal();
-    } catch (error) {
-      console.error('Erro ao salvar feedback:', error);
-      alert('Erro ao enviar feedback. Tente novamente.');
-    } finally {
-      setIsLoading(false);
+    const isEmailValid = /\S+@\S+\.\S+/.test(feedbackForm.email.trim());
+    if (!isEmailValid) {
+      alert('Por favor, insira um email válido.');
+      return;
     }
-  };
+  }
+
+  setIsLoading(true);
+
+  try {
+    const feedbackData = user ? {
+      nome: user.displayName || 'Usuário Anônimo',
+      email: user.email || 'anonimo@exemplo.com',
+      userId: user.id,
+      feedback: feedbackForm.feedback,
+      timestamp: new Date().toISOString(),
+    } : {
+      nome: feedbackForm.nome,
+      email: feedbackForm.email,
+      contacto: feedbackForm.contacto || '',
+      feedback: feedbackForm.feedback,
+      timestamp: new Date().toISOString(),
+    };
+
+    const feedbackRef = user 
+      ? ref(db, `feedback/${user.id}`) 
+      : ref(db, 'feedback/anonymousFeedbacks');
+
+    const newFeedbackRef = push(feedbackRef);
+    await set(newFeedbackRef, feedbackData);
+
+    setHasFeedback(true);
+    setFeedbackForm({
+      nome: '',
+      email: '',
+      contacto: '',
+      feedback: ''
+    });
+    handleCloseFeedbackModal();
+  } catch (error) {
+    console.error('Erro ao salvar feedback:', error);
+    alert('Erro ao enviar feedback. Tente novamente.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleCloseReferrerModal = () => {
     setShowReferrerModal(false);

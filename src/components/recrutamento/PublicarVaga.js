@@ -686,5 +686,4 @@ const PublicarVaga = ({
     </>
   );
 };
-
 export default PublicarVaga;

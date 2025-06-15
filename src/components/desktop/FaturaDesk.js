@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     padding: 5,
     fontSize: 10,
   },
-    validity: {
+  validity: {
     backgroundColor: '#fff8e1',
     padding: 4,
     borderRadius: 3,
@@ -87,14 +87,16 @@ const styles = StyleSheet.create({
 });
 
 // PDF Document Component
-const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total }) => (
+const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total, logoBase64 }) => (
   <Document>
     <Page size="A4" style={styles.page}>
       {/* Header */}
       <View style={styles.header}>
         <View>
-          {user?.logoUrl && (
-            <Image src={user.logoUrl} style={{ width: 100 }} />
+          {logoBase64 ? (
+            <Image src={logoBase64} style={{ width: 100 }} />
+          ) : (
+            <Image src={logoBase64} style={{ width: 100 }} />
           )}
           <Text style={{ fontWeight: 'bold', color: '#f44336' }}>{user.nome}</Text>
           <Text>{user.endereco}, {user.distrito}</Text>
@@ -105,28 +107,28 @@ const FaturaPDF = ({ fatura, user, numeroProforma, subtotal, iva, total }) => (
           </Text>
           <Text>Data: {fatura.dataEmissao}</Text>
           <View style={styles.validity}>
-                        <Text>Validade: {fatura.dataVencimento} dias</Text>
-            </View>
+            <Text>Validade: {fatura.dataVencimento} dias</Text>
+          </View>
         </View>
       </View>
 
       {/* Client Info */}
       <View style={styles.row}>
         <View style={styles.section}>
-          <Text style={{ fontWeight: 'bold' }}>Para:</Text>
-          <Text>{fatura.cliente?.nome || "Cliente Desconhecido"}</Text>
-          <Text>{fatura.cliente?.morada}</Text>
-          <Text>Nuit: {fatura.cliente?.nuit}</Text>
-          <Text>{fatura.cliente?.contacto}</Text>
-          <Text>{fatura.cliente?.email}</Text>
-        </View>
-        <View style={[styles.section, { textAlign: 'right' }]}>
           <Text style={{ fontWeight: 'bold' }}>De:</Text>
           <Text>{user.nome}</Text>
           <Text>Nuit: {user.nuit}</Text>
           <Text>{user.contacto}</Text>
           <Text>{user.email}</Text>
           <Text>{user.endereco}</Text>
+        </View>
+        <View style={[styles.section, { textAlign: 'right' }]} >
+          <Text style={{ fontWeight: 'bold' }}>Para:</Text>
+          <Text>{fatura.cliente?.nome || "Cliente Desconhecido"}</Text>
+          <Text>{fatura.cliente?.morada}</Text>
+          <Text>Nuit: {fatura.cliente?.nuit}</Text>
+          <Text>{fatura.cliente?.contacto}</Text>
+          <Text>{fatura.cliente?.email}</Text>
         </View>
       </View>
 
@@ -186,6 +188,7 @@ const FaturaDesk = ({ user }) => {
   const barcodeRef = useRef();
   const [fatura, setFatura] = useState(null);
   const [error, setError] = useState(null);
+  const [logoBase64, setLogoBase64] = useState(null);
   const { numeroProforma } = useParams();
 
   useEffect(() => {
@@ -216,6 +219,29 @@ const FaturaDesk = ({ user }) => {
       });
     }
   }, [numeroProforma]);
+
+  useEffect(() => {
+    if (user?.logoUrl) {
+      const getBase64FromUrl = async (url) => {
+        try {
+          const data = await fetch(url);
+          const blob = await data.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob); 
+            reader.onloadend = () => {
+              resolve(reader.result);
+            };
+          });
+        } catch (error) {
+          console.error("Erro ao carregar imagem:", error);
+          return null;
+        }
+      };
+
+      getBase64FromUrl(user.logoUrl).then(setLogoBase64);
+    }
+  }, [user?.logoUrl]);
 
   const subtotal = fatura?.itens?.reduce(
     (acc, item) => acc + Number(item.quantidade) * Number(item.preco),
@@ -263,7 +289,7 @@ const FaturaDesk = ({ user }) => {
             Data: {fatura.dataEmissao}
           </Typography>
           <Typography variant="body2" sx={{color:'red'}} fontWeight="bold">
-                  Vencimento: {fatura.dataVencimento} dias
+            Vencimento: {fatura.dataVencimento} dias
           </Typography>
         </Box>
       </Box>
@@ -278,6 +304,14 @@ const FaturaDesk = ({ user }) => {
         }}
       >
         <Box>
+          <Typography fontWeight="bold">De:</Typography>
+          <Typography>{user.nome}</Typography>
+          <Typography>Nuit: {user.nuit}</Typography>
+          <Typography>{user.contacto}</Typography>
+          <Typography>{user.email}</Typography>
+          <Typography>{user.endereco}</Typography>
+        </Box>
+        <Box textAlign="right">
           <Typography fontWeight="bold">Para:</Typography>
           <Typography>
             {fatura.cliente?.nome || "Cliente Desconhecido"}
@@ -287,15 +321,8 @@ const FaturaDesk = ({ user }) => {
           <Typography>{fatura.cliente?.contacto}</Typography>
           <Typography>{fatura.cliente?.email}</Typography>
         </Box>
-        <Box textAlign="right">
-          <Typography fontWeight="bold">De:</Typography>
-          <Typography>{user.nome}</Typography>
-          <Typography>Nuit: {user.nuit}</Typography>
-          <Typography>{user.contacto}</Typography>
-          <Typography>{user.email}</Typography>
-          <Typography>{user.endereco}</Typography>
-        </Box>
       </Box>
+
       {/* Table */}
       <TableContainer>
         <Table>
@@ -491,6 +518,7 @@ const FaturaDesk = ({ user }) => {
                   subtotal={subtotal}
                   iva={iva}
                   total={total}
+                  logoBase64={logoBase64}
                 />
               }
               fileName={`Proforma_${numeroProforma}.pdf`}

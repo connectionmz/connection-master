@@ -58,6 +58,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                     const concursosData = snapshot.val();
                     const clickedStatus = {};
 
+
                     if (concursosData) {
                         Object.entries(concursosData).forEach(([concursoId, concurso]) => {
                             if (concurso.views && concurso.views[user.id]) {
@@ -135,6 +136,9 @@ const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
             
             const sortedConcursos = filteredConcursos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             setConcursos(sortedConcursos);
+            
+            console.log(sortedConcursos)
+
             return prevClickedConcursos;
         });
     } else {

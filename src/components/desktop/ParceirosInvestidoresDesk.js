@@ -48,11 +48,11 @@ const CompanyCard = ({ item, categoryIndex, onClick }) => {
           '&:hover': {
             transform: 'translateY(-5px)',
             boxShadow: theme.shadows[6],
-            cursor: 'pointer'
           },
           borderRadius: 2,
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          cursor: 'pointer'
         }}
         onClick={onClick}
       >
@@ -113,7 +113,8 @@ const CompanyCard = ({ item, categoryIndex, onClick }) => {
               sx={{
                 mb: 1,
                 backgroundColor: theme.palette.action.selected,
-                color: theme.palette.text.secondary
+                color: theme.palette.text.secondary,
+                cursor: 'pointer'
               }}
             />
           )}
@@ -124,7 +125,8 @@ const CompanyCard = ({ item, categoryIndex, onClick }) => {
               sx={{
                 mb: 1,
                 backgroundColor: theme.palette.action.selected,
-                color: theme.palette.text.secondary
+                color: theme.palette.text.secondary,
+                cursor: 'pointer'
               }}
             />
           )}
@@ -302,7 +304,6 @@ const ParceirosInvestidoresDesk = () => {
         </Typography>
       </Box>
 
-      {/* Tabs */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
         <Tabs
           value={value}
@@ -311,6 +312,9 @@ const ParceirosInvestidoresDesk = () => {
           scrollButtons={isMobile ? 'auto' : false}
           allowScrollButtonsMobile
           sx={{
+            '& .MuiTabs-scrollButtons': {
+              cursor: 'pointer',
+            },
             '& .MuiTabs-indicator': {
               height: 4,
               borderRadius: 2
@@ -324,6 +328,7 @@ const ParceirosInvestidoresDesk = () => {
               textTransform: 'none',
               fontWeight: 'bold',
               fontSize: isMobile ? '0.875rem' : '1rem',
+              cursor: 'pointer',
               '&.Mui-selected': {
                 color: theme.palette.primary.contrastText,
                 backgroundColor: theme.palette.primary.main,
@@ -338,7 +343,6 @@ const ParceirosInvestidoresDesk = () => {
         </Tabs>
       </Box>
 
-      {/* Conteúdo */}
       <Box sx={{ mt: 2 }}>
         {renderContent()}
       </Box>

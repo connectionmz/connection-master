@@ -531,7 +531,7 @@ const TrackedStoreLink = ({ store, children }) => (
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <TextField
-            label="Pesquisar loja ou produto..."
+            label="Pesquisar produto..."
             variant="outlined"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

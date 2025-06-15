@@ -234,6 +234,7 @@ const UserDataFormDesk = () => {
                 name="nome"
                 value={companyData.nome}
                 onChange={handleChange}
+                required
                 fullWidth
                 margin="normal"
               />
@@ -267,6 +268,7 @@ const UserDataFormDesk = () => {
             <TextField
               label="Contacto *"
               name="contacto"
+              required
               value={companyData.contacto || ""}
               onChange={handleChange}
               fullWidth
@@ -279,6 +281,7 @@ const UserDataFormDesk = () => {
               select
               label="Província *"
               name="provincia"
+              required
               value={companyData.provincia}
               onChange={handleProvinceChange}
               fullWidth

@@ -96,9 +96,7 @@ const CompanyProfile = ({ user }) => {
     "Outro motivo"
   ];
 
-
-
-  // Check if company is blocked
+  // Check if company is blocked (only if user is logged in)
   useEffect(() => {
     if (user && userId) {
       const blockedRef = ref(db, `blocked/${user.id}/${userId}`);
@@ -111,10 +109,12 @@ const CompanyProfile = ({ user }) => {
 
   // Load company data
   useEffect(() => {
-      if(user.id ==userId){
-     navigate('/perfil');
-  }else{
-     if (userId) {
+    if (userId) {
+      if (user && user.id === userId) {
+        navigate('/perfil');
+        return;
+      }
+
       const fetchData = async () => {
         try {
           const companyRef = ref(db, `company/${userId}`);
@@ -151,6 +151,7 @@ const CompanyProfile = ({ user }) => {
           setModules(companyData.activeModules || {});
           setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
 
+          // Only record visit if user is logged in
           if (user) {
             const newVisitRef = push(visitasRef);
             await update(newVisitRef, {
@@ -189,11 +190,9 @@ const CompanyProfile = ({ user }) => {
       };
       fetchData();
     }
-  }
-   
   }, [userId, navigate, user]);
 
-  // Check connection status
+  // Check connection status (only if user is logged in)
   useEffect(() => {
     if (!user) return;
     const connectionRef = ref(db, `connections/${userId}/${user.id}`);
@@ -251,7 +250,11 @@ const CompanyProfile = ({ user }) => {
   };
 
   const handleConectar = async () => {
-    if (!userId || isBlocked) return;
+    if (!userId || isBlocked || !user) {
+      setError("Você precisa estar logado para conectar-se a empresas.");
+      setOpenSnackbar(true);
+      return;
+    }
 
     const currentUserId = user.id;
     const targetUserConnectionRef = ref(db, `connections/${userId}/${currentUserId}`);
@@ -288,6 +291,8 @@ const CompanyProfile = ({ user }) => {
   };
 
   const handleCancelarConexao = async () => {
+    if (!user) return;
+    
     const targetUserConnectionRef = ref(db, `connections/${userId}/${user.id}`);
     try {
       await remove(targetUserConnectionRef);
@@ -301,7 +306,7 @@ const CompanyProfile = ({ user }) => {
   };
 
   const handleDesconectar = async () => {
-    if (!userId) return;
+    if (!userId || !user) return;
 
     const currentUserId = user.id;
     const targetUserConnectionRef = ref(db, `connections/${userId}/${currentUserId}`);
@@ -335,6 +340,13 @@ const CompanyProfile = ({ user }) => {
   };
 
   const handleSubmitReport = async () => {
+    if (!user) {
+      setError("Você precisa estar logado para reportar uma empresa.");
+      setOpenSnackbar(true);
+      handleCloseReportDialog();
+      return;
+    }
+
     if (!reportReason) {
       setError("Por favor, selecione um motivo");
       setOpenSnackbar(true);
@@ -364,6 +376,13 @@ const CompanyProfile = ({ user }) => {
   };
 
   const handleBlockCompany = async () => {
+    if (!user) {
+      setError("Você precisa estar logado para bloquear uma empresa.");
+      setOpenSnackbar(true);
+      handleCloseBlockDialog();
+      return;
+    }
+
     if (!blockReason) {
       setError("Por favor, selecione um motivo");
       setOpenSnackbar(true);
@@ -414,6 +433,8 @@ const CompanyProfile = ({ user }) => {
   };
 
   const handleUnblockCompany = async () => {
+    if (!user) return;
+    
     try {
       const blockRef = ref(db, `blocked/${user.id}/${userId}`);
       await remove(blockRef);
@@ -563,7 +584,7 @@ const CompanyProfile = ({ user }) => {
           dangerouslySetInnerHTML={{ __html: userData?.bio || '' }}
         />
         
-        {isBlocked && (
+        {isBlocked && user && (
           <Chip 
             label="Empresa bloqueada" 
             color="error" 
@@ -572,47 +593,58 @@ const CompanyProfile = ({ user }) => {
           />
         )}
 
-        {user && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
-            {isBlocked ? (
-              <Button 
-                variant="outlined" 
-                color="error" 
-                startIcon={<Block />}
-                disabled
-              >
-                Empresa Bloqueada
-              </Button>
-            ) : (
-              <Button
-                variant={
-                  connectionStatus === "accepted"
-                    ? "contained"
-                    : connectionStatus === "pending"
-                    ? "outlined"
-                    : "outlined"
-                }
-                onClick={
-                  connectionStatus === "pending"
-                    ? handleCancelarConexao
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+          {user ? (
+            <>
+              {isBlocked ? (
+                <Button 
+                  variant="outlined" 
+                  color="error" 
+                  startIcon={<Block />}
+                  disabled={!user}
+                >
+                  Empresa Bloqueada
+                </Button>
+              ) : (
+                <Button
+                  variant={
+                    connectionStatus === "accepted"
+                      ? "contained"
+                      : connectionStatus === "pending"
+                      ? "outlined"
+                      : "outlined"
+                  }
+                  onClick={
+                    connectionStatus === "pending"
+                      ? handleCancelarConexao
+                      : connectionStatus === "accepted"
+                      ? handleOpenDisconnectDialog
+                      : handleConectar
+                  }
+                  disabled={!user}
+                >
+                  {connectionStatus === "pending"
+                    ? "Cancelar Solicitação"
                     : connectionStatus === "accepted"
-                    ? handleOpenDisconnectDialog
-                    : handleConectar
-                }
-              >
-                {connectionStatus === "pending"
-                  ? "Cancelar Solicitação"
-                  : connectionStatus === "accepted"
-                  ? "Desconectar"
-                  : "Conectar"}
-              </Button>
-            )}
+                    ? "Desconectar"
+                    : "Conectar"}
+                </Button>
+              )}
 
-            <IconButton onClick={handleMenuOpen}>
-              <MoreHoriz />
-            </IconButton>
-          </Box>
-        )}
+              <IconButton onClick={handleMenuOpen} disabled={!user}>
+                <MoreHoriz />
+              </IconButton>
+            </>
+          ) : (
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={() => navigate('/auth')}
+            >
+              Faça login para conectar
+            </Button>
+          )}
+        </Box>
         
         {/* Contact and Social Media Icons */}
         <Box display="flex" justifyContent="center" alignItems="center" mt={4} gap={2}>
@@ -727,29 +759,38 @@ const CompanyProfile = ({ user }) => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        {isBlocked ? (
-          <MenuItem onClick={handleUnblockCompany}>
-            <ListItemIcon>
-              <LockOpen color="success" />
-            </ListItemIcon>
-            <Typography color="success.main">Desbloquear Empresa</Typography>
-          </MenuItem>
-        ) : (
-          <>
-            <MenuItem onClick={handleOpenReportDialog}>
+        {user ? (
+          isBlocked ? (
+            <MenuItem onClick={handleUnblockCompany}>
               <ListItemIcon>
-                <Report color="warning" />
+                <LockOpen color="success" />
               </ListItemIcon>
-              Denunciar Empresa
+              <Typography color="success.main">Desbloquear Empresa</Typography>
             </MenuItem>
-            <Divider />
-            {/*<MenuItem onClick={handleOpenBlockDialog}>
-              <ListItemIcon>
-                <Block color="error" />
-              </ListItemIcon>
-              Bloquear Empresa
-            </MenuItem>*/}
-          </>
+          ) : (
+            <>
+              <MenuItem onClick={handleOpenReportDialog}>
+                <ListItemIcon>
+                  <Report color="warning" />
+                </ListItemIcon>
+                Denunciar Empresa
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={handleOpenBlockDialog}>
+                <ListItemIcon>
+                  <Block color="error" />
+                </ListItemIcon>
+                Bloquear Empresa
+              </MenuItem>
+            </>
+          )
+        ) : (
+          <MenuItem onClick={() => navigate('/auth')}>
+            <ListItemIcon>
+              <LockOpen color="primary" />
+            </ListItemIcon>
+            Faça login para acessar estas opções
+          </MenuItem>
         )}
       </Menu>
 
@@ -905,38 +946,38 @@ const CompanyProfile = ({ user }) => {
 
       {/* Tabs */}
       <Box mt={4} borderBottom={1} borderColor="divider">
-       <Tabs
-  value={activeTab}
-  onChange={(_, value) => setActiveTab(value)}
-  centered
-  variant={isMobile ? "scrollable" : "standard"}
-  scrollButtons="auto"
->
-  <Tab 
-    label="Início" 
-    value="inicio" 
-    icon={<Home fontSize="small" />} 
-    iconPosition="start"
-  />
-  <Tab 
-    label="Sobre" 
-    value="sobre" 
-    icon={<Info fontSize="small" />} 
-    iconPosition="start"
-  />
-  <Tab 
-    label="Publicações" 
-    value="Publicados" 
-    icon={<Article fontSize="small" />} 
-    iconPosition="start"
-  />
-  <Tab 
-    label="Repositório" 
-    value="Repositorio" 
-    icon={<Code fontSize="small" />} 
-    iconPosition="start"
-  />
-</Tabs>
+        <Tabs
+          value={activeTab}
+          onChange={(_, value) => setActiveTab(value)}
+          centered
+          variant={isMobile ? "scrollable" : "standard"}
+          scrollButtons="auto"
+        >
+          <Tab 
+            label="Início" 
+            value="inicio" 
+            icon={<Home fontSize="small" />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="Sobre" 
+            value="sobre" 
+            icon={<Info fontSize="small" />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="Publicações" 
+            value="Publicados" 
+            icon={<Article fontSize="small" />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="Repositório" 
+            value="Repositorio" 
+            icon={<Code fontSize="small" />} 
+            iconPosition="start"
+          />
+        </Tabs>
       </Box>
 
       {/* Tab Content */}

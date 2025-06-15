@@ -266,6 +266,11 @@ const renderDesktopView = () => (
                 Nome
               </Box>
             </TableCell>
+             <TableCell>
+              <Box display="flex" alignItems="center">
+                Categoria
+              </Box>
+            </TableCell>
             {!isMobile && (
               <TableCell>
                 <Box display="flex" alignItems="center">
@@ -344,9 +349,19 @@ const renderDesktopView = () => (
               <TableCell>
                 <TextField
                   fullWidth
-                  placeholder="Nome*"
+                  placeholder="Nome"
                   value={product.name}
                   onChange={(e) => handleProductChange(index, 'name', e.target.value)}
+                  size={isTablet ? 'small' : 'medium'}
+                  required
+                />
+              </TableCell>
+               <TableCell>
+                <TextField
+                  fullWidth
+                  placeholder="Categoria"
+                  value={product.category}
+                  onChange={(e) => handleProductChange(index, 'category', e.target.value)}
                   size={isTablet ? 'small' : 'medium'}
                   required
                 />
@@ -367,7 +382,7 @@ const renderDesktopView = () => (
               <TableCell>
                 <TextField
                   fullWidth
-                  placeholder="Preço*"
+                  placeholder="Preço"
                   type="number"
                   value={product.price}
                   onChange={(e) => handleProductChange(index, 'price', e.target.value)}
@@ -376,10 +391,11 @@ const renderDesktopView = () => (
                   required
                 />
               </TableCell>
+              
               <TableCell>
                 <TextField
                   fullWidth
-                  placeholder="Qtd*"
+                  placeholder="Qtd"
                   type="number"
                   value={product.qtd}
                   onChange={(e) => handleProductChange(index, 'qtd', e.target.value)}
@@ -629,10 +645,18 @@ const renderDesktopView = () => (
                 </Button>
               )}
               <TextField
-                label="Nome do Produto*"
+                label="Nome do Produto"
                 fullWidth
                 value={products[currentProductIndex].name}
                 onChange={(e) => handleProductChange(currentProductIndex, 'name', e.target.value)}
+                sx={{ mb: 2 }}
+                required
+              />
+                <TextField
+                label="Categoria do Produto"
+                fullWidth
+                value={products[currentProductIndex].category}
+                onChange={(e) => handleProductChange(currentProductIndex, 'category', e.target.value)}
                 sx={{ mb: 2 }}
                 required
               />
@@ -646,7 +670,7 @@ const renderDesktopView = () => (
                 inputProps={{ min: 0, step: 0.01 }}
                 required
               />
-                     <TextField
+              <TextField
                 label="Qtd"
                 fullWidth
                 type="number"
@@ -656,7 +680,6 @@ const renderDesktopView = () => (
                 inputProps={{ min: 0, }}
                 required
               />
-
               <TextField
                 label="Descrição"
                 fullWidth
@@ -678,8 +701,7 @@ const renderDesktopView = () => (
                   setSnackbarOpen(true);
                 }
               }}
-              color="primary"
-            >
+              color="primary">
               Salvar
             </Button>
           </DialogActions>
@@ -698,8 +720,7 @@ const renderDesktopView = () => (
           fontWeight: 'bold', 
           display: 'flex', 
           alignItems: 'center' 
-        }}
-      >
+        }}>
         <Inventory sx={{ mr: 1 }} /> Adicionar Produtos
       </Typography>
 
@@ -715,8 +736,7 @@ const renderDesktopView = () => (
           onClose={handleCloseSnackbar}
           severity={uploadSuccess ? 'success' : 'error'}
           sx={{ width: '100%' }}
-          variant="filled"
-        >
+          variant="filled">
           {uploadSuccess ? '✅ Produtos cadastrados com sucesso!' : `❌ ${errorMessage}`}
         </Alert>
       </Snackbar>
