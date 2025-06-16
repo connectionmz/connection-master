@@ -530,6 +530,7 @@ const PublicarConcursoDesk = ({ user }) => {
             label="Valor Estimado"
             name="valorEstimado"
             value={formData.valorEstimado}
+            type='number'
             onChange={handleChange}
             margin="normal"
           />
