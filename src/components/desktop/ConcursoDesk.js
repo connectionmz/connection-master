@@ -86,11 +86,8 @@ const concursosRef = ref(db, 'concursos');
 const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
     const concursosData = snapshot.val();
     
-    console.log('Concursos Data:', concursosData); // Debugging line
-    
     if (concursosData) {
         const now = new Date();
-        // Use latest clickedConcursos from state
         setClickedConcursos((prevClickedConcursos) => {
             const concursosArray = Object.entries(concursosData).map(([id, concurso]) => {
                 const dataLimite = new Date(concurso.prazo);
@@ -113,32 +110,34 @@ const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
                 };
             });
             
-            const filteredConcursos = concursosArray.filter(concurso => {
-               
-                const sectorMatch = !concurso.setor || 
-                                (user?.sector && concurso.setor.includes(user.sector));
+            // Aplicamos os filtros apenas se não for a aba "Meus"
+            const filteredConcursos = activeTab === 'minhas' 
+                ? concursosArray // Mostra todos os concursos do usuário sem filtros
+                : concursosArray.filter(concurso => {
+                    // Verifica se o concurso pertence ao usuário (mostra sem filtros)
+                    if (concurso.company?.id === user?.id) {
+                        return true;
+                    }
+                    
+                    // Filtros normais para concursos de outros usuários
+                    const sectorMatch = !concurso.setor || 
+                                     (user?.sector && concurso.setor.includes(user.sector));
                 
-                // Verifica se o concurso é para a província do usuário
-                let provinciaMatch = false;
-                
-                if (Array.isArray(concurso.provincia)) {
-                    // Se o concurso tem array de províncias
-                    provinciaMatch = concurso.provincia.includes('Todas') || 
-                                (user?.provincia && concurso.provincia.includes(user.provincia));
-                } else {
-                    // Se o concurso tem string única de província
-                    provinciaMatch = concurso.provincia === 'Todas' || 
-                                (user?.provincia && concurso.provincia === user.provincia);
-                }
-                
-                return sectorMatch && provinciaMatch;
-            });
+                    let provinciaMatch = false;
+                    if (Array.isArray(concurso.provincia)) {
+                        provinciaMatch = concurso.provincia.includes('Todas') || 
+                                      (user?.provincia && concurso.provincia.includes(user.provincia));
+                    } else {
+                        provinciaMatch = concurso.provincia === 'Todas' || 
+                                      (user?.provincia && concurso.provincia === user.provincia);
+                    }
+                    
+                    return sectorMatch && provinciaMatch;
+                });
             
             const sortedConcursos = filteredConcursos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             setConcursos(sortedConcursos);
             
-            console.log(sortedConcursos)
-
             return prevClickedConcursos;
         });
     } else {
@@ -234,23 +233,32 @@ const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
         }
     };
 
-    const filteredConcursos = () => {
-        const now = new Date();
-        switch (activeTab) {
-            case 'recentes':
-                return concursos.filter(
-                    (concurso) => new Date(concurso.prazo) >= new Date() && concurso.status !== 'Fechada' && concurso.company?.id !== user?.id  
-                );
-            case 'expiradas':
-                return concursos.filter((concurso) => new Date() > new Date(concurso.prazo));
-            case 'fechada':
-                return concursos.filter((concurso) => concurso.status === 'Fechada');
-            case 'minhas':
-                return concursos.filter((concurso) => concurso?.company?.id === user?.id);
-            default:
-                return concursos;
-        }
-    };
+        const filteredConcursos = () => {
+            const now = new Date();
+            switch (activeTab) {
+                case 'recentes':
+                    return concursos.filter(
+                        (concurso) => new Date(concurso.prazo) >= now && 
+                                    concurso.status !== 'Fechada' && 
+                                    concurso.company?.id !== user?.id
+                    );
+                case 'expiradas':
+                    return concursos.filter(
+                        (concurso) => new Date(concurso.prazo) < now && 
+                                    concurso.status !== 'Fechada'
+                    );
+                case 'fechada':
+                    return concursos.filter(
+                        (concurso) => concurso.status === 'Fechada'
+                    );
+                case 'minhas':
+                    return concursos.filter(
+                        (concurso) => concurso.company?.id === user?.id
+                    );
+                default:
+                    return concursos;
+            }
+        };
 
     const handleConcursoClick = async (id) => {
         try {

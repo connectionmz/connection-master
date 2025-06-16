@@ -28,7 +28,6 @@ import {
 import { formatPrice } from './adUtils';
 import PagamentoAnunciar from '../PagamentoAnunciar';
 
-// Constants
 const PRICES = {
   home: 30,
   concurso: 50,

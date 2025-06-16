@@ -534,7 +534,7 @@ const replyStyle = {
             alignItems: 'center', 
             mb: 2 
           }}>
-            <Link to="/perfil" underline="none" sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+            <Link to={`/perfil/${post.companyId}`}  underline="none" sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
               <Avatar 
                 src={post.logoUrl} 
                 sx={{ 

@@ -34,9 +34,9 @@ const initialFormData = (user) => ({
   valorEstimado: 'Não especificado',
   condicoesPagamento: '',
   observacoes: '',
-  provincia: ['Todas'],
+  provincia: [],
   setor: '',
-  tipoEntidade: ['Todas'],
+  tipoEntidade: [],
   modalidade: '',
   numeroReferencia: 'Não especificado',
   anexos: [],
@@ -62,11 +62,12 @@ const PublicarConcursoDesk = ({ user }) => {
   const [provincias, setProvincias] = useState([]);
   const [sectores, setSectores] = useState([]);
   const [tiposEntidades, setTiposEntidades] = useState([]);
-  const [selectedProvincias, setSelectedProvincias] = useState(['Todas']);
+  const [selectedProvincias, setSelectedProvincias] = useState([]);
+  const [selectedSectores, setSelectedSectores] = useState([]);
   const [openProvinciaSelect, setOpenProvinciaSelect] = useState(false);
   const [openTipoEntidadeSelect, setOpenTipoEntidadeSelect] = useState(false);
+  const [openSectorSelect, setOpenSectorSelect] = useState(false);
 
-  // Funções auxiliares para datas
   const formatDateForInput = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -119,17 +120,50 @@ const PublicarConcursoDesk = ({ user }) => {
 
   const handleProvinciaChange = (event) => {
     const value = event.target.value;
-    
-    if (value.includes("all")) {
-      setSelectedProvincias(
-        selectedProvincias.length === provincias.length 
-          ? [] 
-          : provincias.map(p => p.provincia)
-      );
-      return;
-    }
-    
     setSelectedProvincias(Array.isArray(value) ? value : [value]);
+  };
+
+  const handleSectorChange = (event) => {
+    const value = event.target.value;
+    setSelectedSectores(Array.isArray(value) ? value : [value]);
+    setFormData(prev => ({
+      ...prev,
+      setor: Array.isArray(value) ? value.join(', ') : value
+    }));
+  };
+
+  const handleSelectAll = (field) => () => {
+    if (field === 'provincia') {
+      setSelectedProvincias(provincias.map(p => p.provincia));
+    } else if (field === 'tipoEntidade') {
+      setFormData(prev => ({
+        ...prev,
+        tipoEntidade: tiposEntidades.map(t => t.tipo)
+      }));
+    } else if (field === 'setor') {
+      setSelectedSectores(sectores.map(s => s.setor));
+      setFormData(prev => ({
+        ...prev,
+        setor: sectores.map(s => s.setor).join(', ')
+      }));
+    }
+  };
+
+  const handleDeselectAll = (field) => () => {
+    if (field === 'provincia') {
+      setSelectedProvincias([]);
+    } else if (field === 'tipoEntidade') {
+      setFormData(prev => ({
+        ...prev,
+        tipoEntidade: []
+      }));
+    } else if (field === 'setor') {
+      setSelectedSectores([]);
+      setFormData(prev => ({
+        ...prev,
+        setor: ''
+      }));
+    }
   };
 
   useEffect(() => {
@@ -141,17 +175,6 @@ const PublicarConcursoDesk = ({ user }) => {
 
   const handleTipoEntidadeChange = (e) => {
     const value = e.target.value;
-    
-    if (value.includes("all")) {
-      setFormData(prev => ({
-        ...prev,
-        tipoEntidade: prev.tipoEntidade.length === tiposEntidades.length 
-          ? [] 
-          : tiposEntidades.map(t => t.tipo)
-      }));
-      return;
-    }
-    
     setFormData(prev => ({
       ...prev,
       tipoEntidade: Array.isArray(value) ? value : [value]
@@ -449,16 +472,36 @@ const PublicarConcursoDesk = ({ user }) => {
               <FormControl fullWidth margin="normal" required>
                 <InputLabel>Setor de Atividade *</InputLabel>
                 <Select
+                  multiple
                   name="setor"
-                  value={formData.setor}
-                  onChange={handleChange}
+                  value={selectedSectores}
+                  onChange={handleSectorChange}
+                  open={openSectorSelect}
+                  onOpen={() => setOpenSectorSelect(true)}
+                  onClose={() => setOpenSectorSelect(false)}
                   label="Setor de Atividade *"
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => (
+                        <Chip key={value} label={value} size="small" />
+                      ))}
+                    </Box>
+                  )}
                   disabled={!dataLoaded}
                 >
-                  <MenuItem value="">Selecione o Setor</MenuItem>
-                  {sectores.map((setor, index) => (
-                    <MenuItem key={index} value={setor.setor}>
-                      {setor.setor}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+                    <Button size="small" onClick={handleSelectAll('setor')}>
+                      Selecionar Todos
+                    </Button>
+                    <Button size="small" onClick={handleDeselectAll('setor')}>
+                      Desmarcar Todos
+                    </Button>
+                  </Box>
+                  <Divider />
+                  {sectores.map((sector, index) => (
+                    <MenuItem key={index} value={sector.setor}>
+                      <Checkbox checked={selectedSectores.includes(sector.setor)} />
+                      <ListItemText primary={sector.setor} />
                     </MenuItem>
                   ))}
                 </Select>
@@ -519,24 +562,14 @@ const PublicarConcursoDesk = ({ user }) => {
                   )}
                   disabled={!dataLoaded}
                 >
-                  <MenuItem onClick={() => setOpenProvinciaSelect(false)}>
-                    <ListItemIcon>
-                      <Close fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Fechar" />
-                  </MenuItem>
-                  <MenuItem value="all">
-                    <ListItemIcon>
-                      <Checkbox
-                        checked={selectedProvincias.length === provincias.length}
-                        indeterminate={
-                          selectedProvincias.length > 0 && 
-                          selectedProvincias.length < provincias.length
-                        }
-                      />
-                    </ListItemIcon>
-                    <ListItemText primary="Selecionar Todas" />
-                  </MenuItem>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+                    <Button size="small" onClick={handleSelectAll('provincia')}>
+                      Selecionar Todos
+                    </Button>
+                    <Button size="small" onClick={handleDeselectAll('provincia')}>
+                      Desmarcar Todos
+                    </Button>
+                  </Box>
                   <Divider />
                   {provincias.map((provincia, index) => (
                     <MenuItem key={index} value={provincia.provincia}>
@@ -568,24 +601,14 @@ const PublicarConcursoDesk = ({ user }) => {
                   )}
                   disabled={!dataLoaded}
                 >
-                  <MenuItem onClick={() => setOpenTipoEntidadeSelect(false)}>
-                    <ListItemIcon>
-                      <Close fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Fechar" />
-                  </MenuItem>
-                  <MenuItem value="all">
-                    <ListItemIcon>
-                      <Checkbox
-                        checked={formData.tipoEntidade.length === tiposEntidades.length}
-                        indeterminate={
-                          formData.tipoEntidade.length > 0 && 
-                          formData.tipoEntidade.length < tiposEntidades.length
-                        }
-                      />
-                    </ListItemIcon>
-                    <ListItemText primary="Selecionar Todos" />
-                  </MenuItem>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+                    <Button size="small" onClick={handleSelectAll('tipoEntidade')}>
+                      Selecionar Todos
+                    </Button>
+                    <Button size="small" onClick={handleDeselectAll('tipoEntidade')}>
+                      Desmarcar Todos
+                    </Button>
+                  </Box>
                   <Divider />
                   {tiposEntidades.map((tipo, index) => (
                     <MenuItem key={index} value={tipo.tipo}>
@@ -713,8 +736,7 @@ const PublicarConcursoDesk = ({ user }) => {
               minWidth: '200px',
               py: 1.5,
               fontSize: '1rem'
-            }}
-          >
+            }} >
             {loading ? (
               <CircularProgress size={24} />
             ) : !dataLoaded ? (
@@ -725,19 +747,16 @@ const PublicarConcursoDesk = ({ user }) => {
           </Button>
         </Box>
       </Box>
-
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
-          elevation={6}
-        >
+          elevation={6}>
           {snackbar.message}
         </Alert>
       </Snackbar>
