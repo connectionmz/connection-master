@@ -1,17 +1,24 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ref, push, set, get, query, orderByChild, equalTo } from 'firebase/database';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../fb';
 import {
   Container, TextField, Select, MenuItem, FormControl, InputLabel,
   Button, Snackbar, Alert, Typography, Box, CircularProgress,
-  ListItemIcon, Checkbox, Divider, ListItemText, Chip, Grid, IconButton
+  ListItemIcon, Checkbox, Divider, ListItemText, Chip, Grid, IconButton,
+  LinearProgress
 } from '@mui/material';
 import BackButton from '../BackButton';
-import { Close, AttachFile } from '@mui/icons-material';
+import { Close, AttachFile, CloudUpload, CheckCircle, Error } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { sendEmailConcurso } from '../sms/SendMail';
 
+// Initialize Firebase Storage
+const storage = getStorage();
+
+// Quill editor configuration
 const quillModules = {
   toolbar: [
     ['bold', 'italic', 'underline'],
@@ -21,6 +28,7 @@ const quillModules = {
   ]
 };
 
+// Initial form data structure
 const initialFormData = (user) => ({
   titulo: '',
   entidade: user?.nome || '',
@@ -36,13 +44,16 @@ const initialFormData = (user) => ({
   observacoes: '',
   provincia: [],
   setor: '',
+  linkDeSubmissao: '',
   tipoEntidade: [],
   modalidade: '',
   numeroReferencia: 'Não especificado',
   anexos: [],
-  requisitosTecnicos: ''
+  requisitosTecnicos: '',
+  status: 'Aberta'
 });
 
+// Initial rich text fields data
 const initialRichTextData = {
   objeto: '',
   condicoes: '',
@@ -54,9 +65,11 @@ const initialRichTextData = {
 };
 
 const PublicarConcursoDesk = ({ user }) => {
+  // State management
   const [formData, setFormData] = useState(initialFormData(user));
   const [richTextData, setRichTextData] = useState(initialRichTextData);
   const [loading, setLoading] = useState(false);
+  const [uploadStates, setUploadStates] = useState({});
   const [dataLoaded, setDataLoaded] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [provincias, setProvincias] = useState([]);
@@ -68,13 +81,11 @@ const PublicarConcursoDesk = ({ user }) => {
   const [openTipoEntidadeSelect, setOpenTipoEntidadeSelect] = useState(false);
   const [openSectorSelect, setOpenSectorSelect] = useState(false);
 
+  // Helper functions
   const formatDateForInput = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return date.toISOString().split('T')[0];
   };
 
   const parseDateFromInput = (dateString) => {
@@ -82,6 +93,7 @@ const PublicarConcursoDesk = ({ user }) => {
     return new Date(dateString).toISOString();
   };
 
+  // Data loading
   const loadInitialData = useCallback(async () => {
     try {
       const [provinciasSnapshot, sectoresSnapshot, tiposEntidadesSnapshot] = await Promise.all([
@@ -105,10 +117,12 @@ const PublicarConcursoDesk = ({ user }) => {
     loadInitialData();
   }, [loadInitialData]);
 
+  // UI helpers
   const showSnackbar = (message, severity = 'info') => {
     setSnackbar({ open: true, message, severity });
   };
 
+  // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -118,6 +132,7 @@ const PublicarConcursoDesk = ({ user }) => {
     setRichTextData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Selection handlers
   const handleProvinciaChange = (event) => {
     const value = event.target.value;
     setSelectedProvincias(Array.isArray(value) ? value : [value]);
@@ -132,6 +147,15 @@ const PublicarConcursoDesk = ({ user }) => {
     }));
   };
 
+  const handleTipoEntidadeChange = (e) => {
+    const value = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      tipoEntidade: Array.isArray(value) ? value : [value]
+    }));
+  };
+
+  // Bulk selection handlers
   const handleSelectAll = (field) => () => {
     if (field === 'provincia') {
       setSelectedProvincias(provincias.map(p => p.provincia));
@@ -173,22 +197,50 @@ const PublicarConcursoDesk = ({ user }) => {
     }));
   }, [selectedProvincias]);
 
-  const handleTipoEntidadeChange = (e) => {
-    const value = e.target.value;
-    setFormData(prev => ({
-      ...prev,
-      tipoEntidade: Array.isArray(value) ? value : [value]
-    }));
-  };
-
+  // File attachment handling
   const handleRemoveAnexo = (index) => {
     setFormData(prev => {
       const newAnexos = [...prev.anexos];
-      newAnexos.splice(index, 1);
+      const removedFile = newAnexos.splice(index, 1)[0];
+      
+      // Remove from upload states
+      setUploadStates(prevStates => {
+        const newStates = {...prevStates};
+        delete newStates[removedFile.name];
+        return newStates;
+      });
+
       return { ...prev, anexos: newAnexos };
     });
   };
 
+  const validateAnexos = (anexos) => {
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg',
+      'image/png'
+    ];
+
+    for (const anexo of anexos) {
+      if (anexo.size > MAX_SIZE) {
+        showSnackbar(`O arquivo ${anexo.name} excede o tamanho máximo de 10MB`, 'error');
+        return false;
+      }
+      
+      if (!allowedTypes.includes(anexo.type)) {
+        showSnackbar(`Tipo de arquivo não suportado: ${anexo.name}`, 'error');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Form validation
   const validateForm = () => {
     const requiredFields = ['titulo', 'prazo', 'localEntrega', 'setor', 'modalidade'];
     const missingFields = requiredFields.filter(field => !formData[field]);
@@ -211,9 +263,66 @@ const PublicarConcursoDesk = ({ user }) => {
       return false;
     }
 
+    if (formData.anexos.length > 0 && !validateAnexos(formData.anexos)) {
+      return false;
+    }
+
     return true;
   };
 
+  // File upload handling
+  const uploadAnexos = async (anexos) => {
+    const uploadedAnexos = [];
+    
+    for (const anexo of anexos) {
+      try {
+        // Update upload state
+        setUploadStates(prev => ({
+          ...prev,
+          [anexo.name]: { status: 'uploading', progress: 0, error: null }
+        }));
+
+        showSnackbar(`Enviando anexo: ${anexo.name}`, 'info');
+        
+        // Generate unique file ID
+        const fileId = uuidv4();
+        const fileRef = storageRef(storage, `concursos/anexos/${fileId}_${anexo.name}`);
+        
+        // Upload file
+        const snapshot = await uploadBytes(fileRef, anexo);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        uploadedAnexos.push({
+          nome: anexo.name,
+          url: downloadURL,
+          tipo: anexo.type,
+          tamanho: anexo.size,
+          id: fileId
+        });
+
+        // Update upload state
+        setUploadStates(prev => ({
+          ...prev,
+          [anexo.name]: { status: 'completed', progress: 100, error: null }
+        }));
+
+        showSnackbar(`Anexo ${anexo.name} enviado com sucesso!`, 'success');
+      } catch (error) {
+        console.error(`Erro ao enviar anexo ${anexo.name}:`, error);
+        showSnackbar(`Erro ao enviar anexo ${anexo.name}`, 'error');
+        
+        // Update upload state
+        setUploadStates(prev => ({
+          ...prev,
+          [anexo.name]: { status: 'error', progress: 0, error: error.message }
+        }));
+      }
+    }
+    
+    return uploadedAnexos;
+  };
+
+  // Notification helpers
   const formatDeadline = useCallback((isoString) => {
     const date = new Date(isoString);
     return date.toLocaleDateString('pt-PT', {
@@ -225,7 +334,7 @@ const PublicarConcursoDesk = ({ user }) => {
     });
   }, []);
 
-  const sendNotifications = useCallback(async (cotacaoId) => {
+  const sendNotifications = useCallback(async (concursoId) => {
     try {
       const empresasRef = ref(db, 'company');
       const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.setor.trim()));
@@ -235,9 +344,9 @@ const PublicarConcursoDesk = ({ user }) => {
 
       const empresas = empresasSnapshot.val();
       const formattedDeadline = formatDeadline(formData.prazo);
-      const linkDoPedido = `https://www.connectionmozambique.com/concurso/${cotacaoId}`;
+      const linkDoPedido = `https://www.connectionmozambique.com/concurso/${concursoId}`;
 
-      const message = `Título: ${formData.titulo}\nDescrição: ${formData.descricao}\nData Limite: ${formattedDeadline}\nSetor de Atividade: ${formData.setor}\nAcesse: ${linkDoPedido}`;
+      const message = `Novo Concurso: ${formData.titulo}\nData Limite: ${formattedDeadline}\nSetor: ${formData.setor}\nAcesse: ${linkDoPedido}`;
 
       const mailMessage = {
         title: formData.titulo,
@@ -297,7 +406,7 @@ const PublicarConcursoDesk = ({ user }) => {
       await Promise.all(emailPromises);
 
       if (smsData.contactos.length > 0) {
-        const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
+        const smsRef = ref(db, `smsEnvio/${concursoId}`);
         await set(smsRef, smsData);
       }
     } catch (error) {
@@ -305,6 +414,7 @@ const PublicarConcursoDesk = ({ user }) => {
     }
   }, [formData, user, formatDeadline]);
 
+  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -314,16 +424,25 @@ const PublicarConcursoDesk = ({ user }) => {
     }
 
     if (!validateForm()) return;
-
+    
     setLoading(true);
+    setUploadStates({});
 
     try {
+      // Upload attachments first
+      let anexosUploaded = [];
+      if (formData.anexos.length > 0) {
+        anexosUploaded = await uploadAnexos(formData.anexos);
+      }
+
+      // Prepare concurso data
       const concursoData = {
         ...formData,
         ...richTextData,
         id: '',
         status: 'Aberta',
         timestamp: new Date().toISOString(),
+        anexos: anexosUploaded,
         company: {
           id: user?.id,
           nome: user?.nome,
@@ -332,24 +451,29 @@ const PublicarConcursoDesk = ({ user }) => {
         }
       };
 
+      // Ensure arrays are not empty
       const sanitizedData = {
         ...concursoData,
         provincia: formData.provincia.length === 0 ? ['Todas'] : formData.provincia,
         tipoEntidade: formData.tipoEntidade.length === 0 ? ['Todas'] : formData.tipoEntidade
       };
 
+      // Save to database
       const newConcursoRef = push(ref(db, 'concursos'));
-      const cotacaoId = newConcursoRef.key;
+      const concursoId = newConcursoRef.key;
 
       await set(newConcursoRef, {
         ...sanitizedData,
-        id: cotacaoId
+        id: concursoId
       });
 
-      await sendNotifications(cotacaoId);
+      // Send notifications
+      await sendNotifications(concursoId);
 
+      // Reset form
       setFormData(initialFormData(user));
       setRichTextData(initialRichTextData);
+      setUploadStates({});
 
       showSnackbar('Concurso publicado com sucesso!', 'success');
 
@@ -363,6 +487,20 @@ const PublicarConcursoDesk = ({ user }) => {
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // Render helper for file upload status
+  const renderFileStatusIcon = (status) => {
+    switch (status) {
+      case 'uploading':
+        return <CircularProgress size={20} />;
+      case 'completed':
+        return <CheckCircle color="success" fontSize="small" />;
+      case 'error':
+        return <Error color="error" fontSize="small" />;
+      default:
+        return <CloudUpload color="action" fontSize="small" />;
+    }
   };
 
   return (
@@ -383,6 +521,7 @@ const PublicarConcursoDesk = ({ user }) => {
           Publicar Novo Concurso
         </Typography>
 
+        {/* Basic Information Section */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom sx={{ mt: 2, color: 'text.secondary' }}>
             Informações Básicas
@@ -392,7 +531,7 @@ const PublicarConcursoDesk = ({ user }) => {
             <Grid item xs={12} md={8}>
               <TextField
                 fullWidth
-                label="Título do Concurso"
+                label="Título do Concurso *"
                 name="titulo"
                 value={formData.titulo}
                 onChange={handleChange}
@@ -416,7 +555,7 @@ const PublicarConcursoDesk = ({ user }) => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Prazo de Submissão"
+                label="Prazo de Submissão *"
                 type="date"
                 name="prazo"
                 value={formatDateForInput(formData.prazo)}
@@ -452,7 +591,7 @@ const PublicarConcursoDesk = ({ user }) => {
 
           <TextField
             fullWidth
-            label="Local de Entrega"
+            label="Local de Entrega *"
             name="localEntrega"
             value={formData.localEntrega}
             onChange={handleChange}
@@ -460,8 +599,18 @@ const PublicarConcursoDesk = ({ user }) => {
             margin="normal"
             sx={{ mt: 2 }}
           />
+
+          <TextField
+            fullWidth
+            label="Link de Submissão"
+            name="linkDeSubmissao"
+            value={formData.linkDeSubmissao}
+            onChange={handleChange}
+            margin="normal"
+          />
         </Box>
 
+        {/* Classification Section */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
             Classificação
@@ -470,7 +619,7 @@ const PublicarConcursoDesk = ({ user }) => {
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel>Setor de Atividade</InputLabel>
+                <InputLabel>Setor de Atividade *</InputLabel>
                 <Select
                   multiple
                   name="setor"
@@ -479,7 +628,7 @@ const PublicarConcursoDesk = ({ user }) => {
                   open={openSectorSelect}
                   onOpen={() => setOpenSectorSelect(true)}
                   onClose={() => setOpenSectorSelect(false)}
-                  label="Setor de Atividade "
+                  label="Setor de Atividade *"
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => (
@@ -509,12 +658,12 @@ const PublicarConcursoDesk = ({ user }) => {
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel>Modalidade </InputLabel>
+                <InputLabel>Modalidade *</InputLabel>
                 <Select
                   name="modalidade"
                   value={formData.modalidade}
                   onChange={handleChange}
-                  label="Modalidade*"
+                  label="Modalidade *"
                 >
                   <MenuItem value="">Selecione a Modalidade</MenuItem>
                   <MenuItem value="Concurso Público">Concurso Público</MenuItem>
@@ -530,17 +679,20 @@ const PublicarConcursoDesk = ({ user }) => {
             label="Valor Estimado"
             name="valorEstimado"
             value={formData.valorEstimado}
-            type='number'
+            type="number"
             onChange={handleChange}
             margin="normal"
+            InputProps={{
+              startAdornment: <Typography sx={{ mr: 1 }}>MZN</Typography>
+            }}
           />
         </Box>
 
+        {/* Coverage Section */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
             Abrangência
           </Typography>
-
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
@@ -623,6 +775,7 @@ const PublicarConcursoDesk = ({ user }) => {
           </Grid>
         </Box>
 
+        {/* Rich Text Sections */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
             Objeto do Concurso *
@@ -685,6 +838,7 @@ const PublicarConcursoDesk = ({ user }) => {
           />
         </Box>
 
+        {/* Attachments Section */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
             Anexos
@@ -695,6 +849,7 @@ const PublicarConcursoDesk = ({ user }) => {
             component="label"
             startIcon={<AttachFile />}
             sx={{ mb: 2 }}
+            disabled={loading}
           >
             Adicionar Anexos
             <input
@@ -702,31 +857,80 @@ const PublicarConcursoDesk = ({ user }) => {
               multiple
               hidden
               onChange={(e) => {
-                setFormData(prev => ({
-                  ...prev,
-                  anexos: [...prev.anexos, ...Array.from(e.target.files)]
-                }));
+                if (e.target.files.length > 0) {
+                  setFormData(prev => ({
+                    ...prev,
+                    anexos: [...prev.anexos, ...Array.from(e.target.files)]
+                  }));
+                }
               }}
             />
           </Button>
           
           {formData.anexos.length > 0 && (
             <Box sx={{ mt: 2 }}>
-              {formData.anexos.map((anexo, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <AttachFile sx={{ mr: 1 }} />
-                  <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                    {anexo.name}
-                  </Typography>
-                  <IconButton size="small" onClick={() => handleRemoveAnexo(index)}>
-                    <Close fontSize="small" />
-                  </IconButton>
-                </Box>
-              ))}
+              {formData.anexos.map((anexo, index) => {
+                const uploadState = uploadStates[anexo.name] || { status: 'pending', progress: 0 };
+                return (
+                  <Box 
+                    key={index} 
+                    sx={{ 
+                      mb: 2,
+                      p: 2,
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ mr: 2 }}>
+                        {renderFileStatusIcon(uploadState.status)}
+                      </Box>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                          {anexo.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {(anexo.size / 1024).toFixed(2)} KB • {
+                            uploadState.status === 'pending' ? 'Pendente' :
+                            uploadState.status === 'uploading' ? 'Enviando...' :
+                            uploadState.status === 'completed' ? 'Enviado' :
+                            'Erro no envio'
+                          }
+                        </Typography>
+                        {uploadState.error && (
+                          <Typography variant="caption" color="error">
+                            {uploadState.error}
+                          </Typography>
+                        )}
+                        {uploadState.status === 'uploading' && (
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={uploadState.progress} 
+                            sx={{ mt: 1 }}
+                          />
+                        )}
+                      </Box>
+                      {!loading && (
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleRemoveAnexo(index)}
+                          disabled={uploadState.status === 'uploading'}
+                        >
+                          <Close fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              })}
             </Box>
           )}
         </Box>
 
+        {/* Submit Button */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
           <Button
             type="submit"
@@ -737,7 +941,8 @@ const PublicarConcursoDesk = ({ user }) => {
               minWidth: '200px',
               py: 1.5,
               fontSize: '1rem'
-            }} >
+            }}
+          >
             {loading ? (
               <CircularProgress size={24} />
             ) : !dataLoaded ? (
@@ -748,16 +953,20 @@ const PublicarConcursoDesk = ({ user }) => {
           </Button>
         </Box>
       </Box>
+      
+      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
-          elevation={6}>
+          elevation={6}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
