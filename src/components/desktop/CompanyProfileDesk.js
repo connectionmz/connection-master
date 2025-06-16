@@ -7,7 +7,8 @@ import {
   Code,
   Article,
   Info,
-  Home
+  Home,
+  X
 } from "@mui/icons-material";
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push, set, onValue, remove } from 'firebase/database';
@@ -711,6 +712,18 @@ const CompanyProfile = ({ user }) => {
               </IconButton>
             </Tooltip>
           )}
+           {social?.x && (
+                       <Tooltip title="Instagram" arrow>
+              <IconButton
+                href={social.x}
+                target="_blank"
+                rel="noopener noreferrer" aria-label="X"
+                sx={{ color: '#1DA1F2' }}
+              >
+                <X />
+              </IconButton>
+            </Tooltip>
+                    )}
 
           {social.linkedin && (
             <Tooltip title="LinkedIn" arrow>

@@ -325,19 +325,20 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         </RadioGroup>
       </FormControl>
       
-      {/* Form Fields */}
       {!isDestacarPerfil && (
         <>
-          <TextField
-            label="Descrição do anúncio *"
-            variant="outlined"
-            fullWidth
-            multiline
-            rows={3}
-            value={formData.description}
-            onChange={handleInputChange('description')}
-            sx={{ mb: 2 }}
-          />
+        <TextField
+          label="Descrição do anúncio *"
+          variant="outlined"
+          fullWidth
+          multiline
+          rows={3}
+          value={formData.description}
+          onChange={handleInputChange('description')}
+          inputProps={{ maxLength: 150 }}
+          helperText={`${formData.description.length}/150 caracteres`}
+          sx={{ mb: 2 }}
+        />
 
           <TextField
             label="Link externo (opcional)"

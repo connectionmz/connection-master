@@ -143,17 +143,20 @@ const AuthCreateDesk = () => {
     setErrorMessage('');
     setSuccessMessage('');
 
-    try {
-      const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      await sendEmailVerification(result.user);
-      await saveUserData(result.user);
+try {
+  const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+  await sendEmailVerification(result.user);
+  await saveUserData(result.user);
 
-      setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
-      setFormData({ email: '', password: '' });
-      setTermsAccepted(false);
-      
-      navigate('/auth');
-    } catch (error) {
+  setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
+  setFormData({ email: '', password: '' });
+  setTermsAccepted(false);
+
+  setTimeout(() => {
+    navigate('/auth');
+  }, 5000);
+
+} catch (error) {
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);
       setErrorMessage(userFriendlyMessage);
       

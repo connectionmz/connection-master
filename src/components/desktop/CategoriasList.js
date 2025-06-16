@@ -8,10 +8,10 @@ import { db } from '../../fb';
 // Função para obter o ícone da categoria
 const getCategoryIcon = (categoryName) => {
   const icons = {
-    "Emergência": <MedicalServices />,
-    "Registo": <AppRegistration />,
-    "Financiamentos PMEs": <BusinessCenterRounded />,
-    "Formações": <School />,
+    "Serviços de Emergência": <MedicalServices />,
+    "Registo de Entidade": <AppRegistration />,
+    "Financiamentos para MPME's": <BusinessCenterRounded />,
+    "Formação de MPME's": <School />,
     "Impostos e Licenças": <Receipt />,
     "Segurança Social": <PeopleAltTwoTone />,
     "Saúde Pública": <MedicalServices />,
