@@ -56,35 +56,39 @@ const Blogs = () => {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
 
-  const fetchPosts = useCallback(async () => {
-    try {
-      setLoading(true);
-      const snapshot = await get(ref(db, 'blogPost'));
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        console.log('Dados recebidos:', data);
-        const postsArray = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-          // Processa os comentários se existirem
-          comments: data[key].comments ? Object.entries(data[key].comments).map(([commentId, comment]) => ({
-            id: commentId,
-            ...comment
-          })) : []
-        }));
-        setPosts(postsArray);
-        setFilteredPosts(postsArray);
-      } else {
-        setPosts([]);
-        setFilteredPosts([]);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar posts:', err);
-      setError(true);
-    } finally {
-      setLoading(false);
+const fetchPosts = useCallback(async () => {
+  try {
+    setLoading(true);
+    const snapshot = await get(ref(db, 'blogPost'));
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      console.log('Dados recebidos:', data);
+      
+      // Convert to array and sort by timestamp in descending order
+      const postsArray = Object.keys(data).map((key) => ({
+        id: key,
+        ...data[key],
+        comments: data[key].comments 
+          ? Object.entries(data[key].comments).map(([commentId, comment]) => ({
+              id: commentId,
+              ...comment
+            })) 
+          : []
+      })).sort((a, b) => b.timestamp - a.timestamp); // Sort by timestamp descending
+      
+      setPosts(postsArray);
+      setFilteredPosts(postsArray);
+    } else {
+      setPosts([]);
+      setFilteredPosts([]);
     }
-  }, []);
+  } catch (err) {
+    console.error('Erro ao buscar posts:', err);
+    setError(true);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   // Filtra e ordena os posts
   useEffect(() => {

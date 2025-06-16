@@ -13,7 +13,6 @@ const LatestBlogPost = () => {
   const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
-
     const blogsRef = ref(db, "blogPost");
     const unsubscribe = onValue(
       blogsRef,
@@ -24,18 +23,35 @@ const LatestBlogPost = () => {
 
           if (!data) {
             setLatestBlog(null);
+            setLoading(false);
             return;
           }
 
-          const blogsArray = Object.entries(data).map(([id, blog]) => ({
-            id,
-            ...blog,
-            timestamp: new Date(`${blog.date} ${blog.time}`).getTime()
-          }));
+          // Converter objeto em array e calcular timestamp corretamente
+          const blogsArray = Object.keys(data).map(id => {
+            const blog = data[id];
+            // Criar data no formato "DD/MM/YYYY HH:mm"
+            const [day, month, year] = blog.date.split('/');
+            const [hours, minutes] = blog.time.split(':');
+            const dateObj = new Date(year, month - 1, day, hours, minutes);
+            
+            return {
+              id,
+              ...blog,
+              timestamp: dateObj.getTime()
+            };
+          });
 
+          // Ordenar por timestamp (mais recente primeiro)
           blogsArray.sort((a, b) => b.timestamp - a.timestamp);
 
-          setLatestBlog(blogsArray[0]);
+          // Pegar o mais recente
+          if (blogsArray.length > 0) {
+            setLatestBlog(blogsArray[0]);
+          } else {
+            setLatestBlog(null);
+          }
+          
           setError(null);
         } catch (err) {
           console.error("Erro ao processar blogs:", err);
@@ -60,14 +76,6 @@ const LatestBlogPost = () => {
 
   const handleNavigateToAllBlogs = () => {
     navigate('/blog');
-  };
-
-  const getTextPreviewAsHtml = (html) => {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    const textOnly = div.textContent || div.innerText || '';
-    const preview = textOnly.length > 100 ? textOnly.substring(0, 100) + '...' : textOnly;
-    return preview.replace(/\n/g, "<br>"); 
   };
 
   if (loading) {
@@ -117,7 +125,7 @@ const LatestBlogPost = () => {
                   alt={latestBlog.title}
                   style={{
                     width: "100%",
-                    height: isMobile ? "250px" : "250px",
+                    height: isMobile ? "150px" : "200px",
                     objectFit: "cover",
                     borderRadius: "8px",
                   }}
@@ -127,30 +135,30 @@ const LatestBlogPost = () => {
                 />
               )}
               
-       <Typography
-          variant="subtitle1"
-          sx={{ 
-            fontWeight: "bold", 
-            mt: 1, 
-            fontSize: isMobile ? "0.9rem" : "1rem",
-            '&:hover': {
-              color: 'primary.main'
-            },
-            display: '-webkit-box',
-            WebkitLineClamp: 2, // Mostra até 2 linhas
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '100%',
-            lineHeight: '1.4', // Melhor espaçamento entre linhas
-            maxHeight: '3em' // Calculado como 2 linhas * 1.4 lineHeight
-          }}
-          title={latestBlog.title} >
-          {latestBlog.title.length > 250 
-            ? `${latestBlog.title.substring(0, 250)}...` 
-            : latestBlog.title}
-        </Typography>
-            </Box>     
+              <Typography
+                variant="subtitle1"
+                sx={{ 
+                  fontWeight: "bold", 
+                  mt: 1,
+                  fontSize: isMobile ? "0.9rem" : "1rem",
+                  '&:hover': {
+                    color: 'primary.main'
+                  },
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {latestBlog.title}
+              </Typography>
+              
+              <Typography variant="caption" color="textSecondary">
+                {latestBlog.date} • {latestBlog.time}
+              </Typography>
+            </Box>
+            
             <Button
               onClick={handleNavigateToAllBlogs}
               variant="outlined"
@@ -162,7 +170,8 @@ const LatestBlogPost = () => {
                   backgroundColor: 'primary.main',
                   color: 'white'
                 }
-              }}>
+              }}
+            >
               Ver todos os blogs
             </Button>
           </Box>
@@ -175,10 +184,8 @@ const LatestBlogPost = () => {
               onClick={handleNavigateToAllBlogs}
               variant="outlined"
               fullWidth
-              sx={{ 
-                mt: 2, 
-                fontSize: isMobile ? "0.8rem" : "0.875rem" 
-              }}>
+              sx={{ mt: 2 }}
+            >
               Ver blogs
             </Button>
           </>

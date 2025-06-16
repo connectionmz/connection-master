@@ -30,6 +30,7 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import logo from "../../img/bg2.png";
 import { db } from "../../fb";
+import { Dashboard } from "@mui/icons-material";
 
 const HeaderDesk = ({ user }) => {
 
@@ -323,18 +324,17 @@ const HeaderDesk = ({ user }) => {
             <Box display="flex" alignItems="center" gap={2}>
               {renderNavItems()}
               {publicPanel && (
-                <Button
-                  onClick={() => navigate("/painel")}
-                  sx={{
-                    backgroundColor: "#1976d2",
-                    color: "#fff",
-                    "&:hover": { backgroundColor: "#1565c0" },
-                    padding: "6px 12px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Ir para Painel Público
-                </Button>
+              <Button
+              onClick={() => navigate("/painel")}
+              sx={{
+                "&:hover": { backgroundColor: "#1565c0" },
+                padding: "6px 12px",
+                fontWeight: "bold",
+                minWidth: "40px",
+              }}
+            >Painel
+              <Dashboard />
+            </Button>
               )}
             </Box>
           )}
