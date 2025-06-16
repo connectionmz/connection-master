@@ -392,7 +392,7 @@ const PublicarConcursoDesk = ({ user }) => {
             <Grid item xs={12} md={8}>
               <TextField
                 fullWidth
-                label="Título do Concurso *"
+                label="Título do Concurso"
                 name="titulo"
                 value={formData.titulo}
                 onChange={handleChange}
@@ -416,7 +416,7 @@ const PublicarConcursoDesk = ({ user }) => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Prazo de Submissão *"
+                label="Prazo de Submissão"
                 type="date"
                 name="prazo"
                 value={formatDateForInput(formData.prazo)}
@@ -452,7 +452,7 @@ const PublicarConcursoDesk = ({ user }) => {
 
           <TextField
             fullWidth
-            label="Local de Entrega *"
+            label="Local de Entrega"
             name="localEntrega"
             value={formData.localEntrega}
             onChange={handleChange}
@@ -470,7 +470,7 @@ const PublicarConcursoDesk = ({ user }) => {
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel>Setor de Atividade *</InputLabel>
+                <InputLabel>Setor de Atividade</InputLabel>
                 <Select
                   multiple
                   name="setor"
@@ -479,7 +479,7 @@ const PublicarConcursoDesk = ({ user }) => {
                   open={openSectorSelect}
                   onOpen={() => setOpenSectorSelect(true)}
                   onClose={() => setOpenSectorSelect(false)}
-                  label="Setor de Atividade *"
+                  label="Setor de Atividade "
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => (
@@ -509,12 +509,12 @@ const PublicarConcursoDesk = ({ user }) => {
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel>Modalidade *</InputLabel>
+                <InputLabel>Modalidade </InputLabel>
                 <Select
                   name="modalidade"
                   value={formData.modalidade}
                   onChange={handleChange}
-                  label="Modalidade *"
+                  label="Modalidade*"
                 >
                   <MenuItem value="">Selecione a Modalidade</MenuItem>
                   <MenuItem value="Concurso Público">Concurso Público</MenuItem>
