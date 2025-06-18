@@ -87,6 +87,7 @@ import HeaderDeskSingular from '../desktop/HeaderDeskSingular';
 import ProfileDeskSingular from '../desktop/ProfileDeskSingular';
 import ApxDeskSingular from '../desktop/ApxDeskSingular';
 import EditProfileDeskSingular from '../desktop/EditProfileDeskSingular';
+import Teste from '../Teste';
 
 const theme = createTheme({
   palette: {
@@ -445,7 +446,9 @@ const handleSubmitFeedback = async () => {
           <Routes>
   {/* Rotas públicas */}
   <Route path="/" element={<DashboardComponent user={user} />} />
+
   <Route path="/feed" element={<FeedDesk user={user} />} />
+  <Route path="/teste" element={<Teste user={user} />} />
   <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
   <Route path="/empresas" element={<ExploreDesk user={user} />} />
   <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />

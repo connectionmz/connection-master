@@ -1,43 +1,85 @@
 import React from 'react';
+import axios from 'axios';
 
-const SmsForm = () => {
-  const contacts = ['840237100', '876773180'];
-  const message = 'Pedido de cotação';
-
-  const sendSMS = async (phoneNumber) => {
-    const payload = { phoneNumber, message };
-
+const Teste = () => {
+  const fazerPagamento = async () => {
     try {
-      const response = await fetch('http://localhost:5000/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const paymentData = {
+        amount: '10', // Valor mínimo para testes
+        phoneNumber: '258840237100', // Número de teste
+        reference: 'TEST' + Math.floor(Math.random() * 10000)
+      };
+
+      console.log('Initiating payment:', paymentData);
+      
+      const resposta = await axios.post('http://localhost:5000/pagar', paymentData, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000 // 15 segundos de timeout
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        console.log(`Mensagem enviada com sucesso para ${phoneNumber}`);
+      console.log('Payment response:', resposta.data);
+      
+      if (resposta.data.success) {
+        alert(`✅ Pagamento enviado com sucesso!\nReferência: ${paymentData.reference}`);
       } else {
-        console.error(`Erro ao enviar mensagem para ${phoneNumber}:`, data.error);
+        alert(`⚠️ Pagamento falhou: ${resposta.data.message}`);
       }
-    } catch (error) {
-      console.error(`Erro ao conectar ao servidor para o número ${phoneNumber}:`, error);
-    }
-  };
 
-  const handleSendSMS = async () => {
-    for (const contact of contacts) {
-      await sendSMS(contact);
+    } catch (erro) {
+      console.error('Full error:', erro);
+      
+      let errorMessage = 'Erro ao processar pagamento';
+      
+      if (erro.response) {
+        console.error('Response data:', erro.response.data);
+        console.error('Status code:', erro.response.status);
+        errorMessage = erro.response.data?.message || errorMessage;
+      } else if (erro.request) {
+        console.error('No response received');
+        errorMessage = 'Servidor não respondeu. Tente novamente.';
+      } else {
+        console.error('Request setup error:', erro.message);
+        errorMessage = erro.message;
+      }
+      
+      alert(`❌ ${errorMessage}`);
     }
-    alert('Mensagens enviadas com sucesso!');
   };
 
   return (
-    <div>
-      <h1>Envio Automático de SMS</h1>
-      <button onClick={handleSendSMS}>Enviar SMS para todos os contactos</button>
+    <div style={{ 
+      padding: '20px', 
+      maxWidth: '500px', 
+      margin: '0 auto',
+      textAlign: 'center',
+      fontFamily: 'Arial, sans-serif'
+    }}>
+      <h2 style={{ color: '#2c3e50' }}>Teste de Pagamento M-Pesa</h2>
+      <p style={{ marginBottom: '20px', color: '#7f8c8d' }}>
+        Clique no botão abaixo para simular um pagamento de 10 MZN
+      </p>
+      <button 
+        onClick={fazerPagamento}
+        style={{
+          padding: '12px 24px',
+          backgroundColor: '#27ae60',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          transition: 'background-color 0.3s'
+        }}
+        onMouseOver={(e) => e.target.style.backgroundColor = '#2ecc71'}
+        onMouseOut={(e) => e.target.style.backgroundColor = '#27ae60'}
+      >
+        Enviar Pagamento de Teste
+      </button>
     </div>
   );
 };
 
-export default SmsForm;
+export default Teste;
