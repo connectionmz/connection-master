@@ -27,9 +27,9 @@ app.post('/pagar', async (req, res) => {
     }
 
     const payload = {
-      input_TransactionReference: "Modulo "+reference.toUpperCase(),
+      input_TransactionReference: reference.toUpperCase(),
       input_CustomerMSISDN: phoneNumber.startsWith('258') ? phoneNumber : `258${phoneNumber.replace(/^0/, '')}`,
-      input_Amount: amount.toString(),
+      input_Amount: '1',
       input_ThirdPartyReference: reference.toUpperCase(),
       input_ServiceProviderCode: SERVICE_PROVIDER_CODE
     };

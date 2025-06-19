@@ -65,7 +65,6 @@ const PagamentoModulo = ({ user }) => {
 
   useEffect(() => {
     if (user?.contacto) {
-      // Formatar o número de telefone para o padrão M-Pesa (258XXXXXXXXX)
       const formattedPhone = user.contacto.startsWith('258') 
         ? user.contacto 
         : `258${user.contacto.replace(/^0/, '')}`;
@@ -73,41 +72,15 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (user?.id && moduleKey) {
-      const checkExistingPayment = async () => {
-        try {
-          const paymentsRef = ref(db, 'payments');
-          const queryRef = query(
-            paymentsRef,
-            orderByChild('userId_moduleKey'),
-            equalTo(`${user.id}_${moduleKey}`)
-          );
-          
-          const snapshot = await get(queryRef);
-          if (snapshot.exists()) {
-            const payments = snapshot.val();
-            const paymentKey = Object.keys(payments)[0];
-            const paymentData = {
-              key: paymentKey,
-              ...payments[paymentKey]
-            };
-            
-            setExistingPayment(paymentData);
-            setPaymentSuccess(true);
-          }
-        } catch (err) {
-          console.error('Erro ao verificar pagamentos existentes:', err);
-        } finally {
-          setIsCheckingPayment(false);
-        }
-      };
-      
-      checkExistingPayment();
-    } else {
-      setIsCheckingPayment(false);
-    }
-  }, [user, moduleKey]);
+  const calculateSubscriptionEnd = (validade) => {
+    const now = Date.now();
+    const durationInMs = {
+      Mensal: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
+      Anual: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+    };
+    
+    return now + (durationInMs[validade] || durationInMs.Mensal); // Default to monthly if not specified
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -122,16 +95,11 @@ const PagamentoModulo = ({ user }) => {
       return;
     }
 
-    if (existingPayment && !showReplaceDialog) {
-      setShowReplaceDialog(true);
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
-      // Chamada para o servidor M-Pesa
+      // Call to M-Pesa server
       const response = await fetch('http://localhost:5000/pagar', {
         method: 'POST',
         headers: {
@@ -140,46 +108,78 @@ const PagamentoModulo = ({ user }) => {
         body: JSON.stringify({
           amount: currentModule.price,
           phoneNumber,
-          reference: currentModule.name // Usando o nome do módulo como referência
+          reference: currentModule.name
         }),
       });
 
       const data = await response.json();
+      console.log(data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao processar pagamento');
       }
 
-      // Salvar os dados do pagamento no Firebase
+      const now = Date.now();
+      const subscriptionEnd = calculateSubscriptionEnd(currentModule.validade);
+
       const paymentData = {
         userId: user.id,
-        moduleKey,
-        moduleName: currentModule?.name || '',
+        userName: user.displayName || '',
+        userEmail: user.email || '',
         nome: user.nome || '',
         telefone: user.contacto || '',
+        moduleKey,
+        moduleName: currentModule?.name || '',
+        moduleType: currentModule?.type || 'standard',
         amount: currentModule.price,
         reference: currentModule.name,
         status: 'pendente',
-        timestamp: existingPayment?.timestamp || Date.now(),
-        updatedAt: Date.now(),
-        userEmail: user.email || '',
-        userName: user.displayName || '',
-        userId_moduleKey: `${user.id}_${moduleKey}`,
-        mpesaResponse: data.data // Salvar a resposta do M-Pesa
+        timestamp: existingPayment?.timestamp || now,
+        updatedAt: now,
+        mpesaResponse: data.data,
+        
+        // Subscription data
+        subscription: {
+          isActive: true,
+          start: now,
+          end: subscriptionEnd,
+          durationDays: currentModule.validade === 'Anual' ? 365 : 30,
+          moduleKey,
+          moduleName: currentModule?.name || '',
+          subscriptionType: currentModule.validade.toLowerCase(),
+        }
       };
 
+      let paymentRef;
       if (existingPayment) {
-        await set(ref(db, `payments/${existingPayment.key}`), paymentData);
+        // Update existing payment
+        paymentRef = ref(db, `payments/${existingPayment.key}`);
+        await set(paymentRef, paymentData);
       } else {
+        // Create new payment
         const paymentsRef = ref(db, 'payments');
-        const newPaymentRef = push(paymentsRef);
-        await set(newPaymentRef, paymentData);
+        paymentRef = push(paymentsRef);
+        await set(paymentRef, paymentData);
       }
+
+      const subscriptionRef = ref(db, `subscriptions/${user.id}/${moduleKey}`);
+      await set(subscriptionRef, {
+        isActive: true,
+        start: now,
+        end: subscriptionEnd,
+        durationDays: currentModule.validade === 'Anual' ? 365 : 30,
+        moduleKey,
+        moduleName: currentModule?.name || '',
+        subscriptionType: currentModule.validade.toLowerCase(),
+        paymentId: existingPayment?.key || paymentRef.key,
+        validade: currentModule.validade,
+      });
 
       setPaymentSuccess(true);
       setExistingPayment({
         ...(existingPayment || {}),
-        ...paymentData
+        ...paymentData,
+        key: existingPayment?.key || paymentRef.key
       });
     } catch (err) {
       console.error('Erro ao processar pagamento:', err);
@@ -194,14 +194,27 @@ const PagamentoModulo = ({ user }) => {
     setShowReplaceDialog(false);
   };
 
-  if (isCheckingPayment) {
-    return (
-      <Box sx={{ p: 6, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress />
-        <Typography variant="body1" sx={{ ml: 2 }}>Verificando pagamentos anteriores...</Typography>
-      </Box>
-    );
-  }
+  useEffect(() => {
+    if (user?.id) {
+      const subscriptionsRef = ref(db, `subscriptions/${user.id}`);
+      onValue(subscriptionsRef, (snapshot) => {
+        const subscriptions = snapshot.val();
+        if (subscriptions) {
+          const now = Date.now();
+          Object.entries(subscriptions).forEach(([key, sub]) => {
+            if (sub.end < now && sub.isActive) {
+              // Update status to expired
+              const subRef = ref(db, `subscriptions/${user.id}/${key}`);
+              set(subRef, {
+                ...sub,
+                isActive: false
+              });
+            }
+          });
+        }
+      });
+    }
+  }, [user?.id]);
 
   if (!currentModule) {
     return (
@@ -219,21 +232,7 @@ const PagamentoModulo = ({ user }) => {
   return (
     <Box sx={{ p: { xs: 2, sm: 4, md: 6 }, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
       <BackButton sx={{ mb: 2, alignSelf: 'flex-start' }} />
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        {existingPayment ? 'Detalhes do Pagamento' : 'Pagamento do Módulo via M-Pesa'}
-      </Typography>
-      
-      {existingPayment && (
-        <Alert 
-          severity={existingPayment.status === 'aprovado' ? 'success' : 'info'} 
-          sx={{ mb: 3, width: '100%', maxWidth: 600 }}
-        >
-          {existingPayment.status === 'aprovado' 
-            ? 'Seu pagamento já foi aprovado!'
-            : 'Você já iniciou um pagamento para este módulo. Status: Pendente de aprovação.'}
-        </Alert>
-      )}
-      
+
       <Card sx={{ width: '100%', maxWidth: 600, boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -242,6 +241,16 @@ const PagamentoModulo = ({ user }) => {
           <Typography variant="body1" color="textSecondary" paragraph>
             {currentModule.description}
           </Typography>
+          
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Preço:</strong> {currentModule.price} MT
+            </Typography>
+          </Box>
+          
           <Box sx={{ mt: 2, p: 2, backgroundColor: '#f0f0f0', borderRadius: 1 }}>
             <PagamentoAccordion data={currentModule} />
           </Box>
@@ -251,7 +260,7 @@ const PagamentoModulo = ({ user }) => {
             <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
               <TextField
                 label="Valor do Módulo"
-                value={`${currentModule.price}`}
+                value={`${currentModule.price} MT`}
                 fullWidth
                 margin="normal"
                 InputProps={{
@@ -278,7 +287,6 @@ const PagamentoModulo = ({ user }) => {
                 required
                 helperText="Número de telefone registado no M-Pesa (formato 258XXXXXXXXX)"
               />
-              
               {error && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                   {error}
@@ -309,34 +317,13 @@ const PagamentoModulo = ({ user }) => {
                     <strong>Valor:</strong> {currentModule.price} MT
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Transação:</strong> {existingPayment.mpesaResponse.output_TransactionID || 'N/A'}
+                    <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Status:</strong> {existingPayment.mpesaResponse.output_ResponseDesc || 'Processando'}
+                    <strong>Transação:</strong> {existingPayment.mpesaResponse.output_TransactionID || 'N/A'}
                   </Typography>
                 </Box>
               )}
-              
-              <Box sx={{ mt: 2, display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-                <Button 
-                  variant="outlined" 
-                  onClick={() => navigate('/meus-modulos')}
-                  fullWidth
-                >
-                  Voltar para Meus Módulos
-                </Button>
-                {existingPayment?.status !== 'aprovado' && (
-                  <Button 
-                    variant="contained"
-                    onClick={() => {
-                      setPaymentSuccess(false);
-                    }}
-                    fullWidth
-                  >
-                    Tentar Novamente
-                  </Button>
-                )}
-              </Box>
             </Alert>
           )}
         </CardActions>

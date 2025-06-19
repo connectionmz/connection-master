@@ -22,6 +22,7 @@ import {
   Stack
 } from "@mui/material";
 import { CameraAlt, ExitToApp, Receipt, Save, ArrowForward, LocationOn } from "@mui/icons-material";
+import { useActiveModules } from "../../context/ActiveModulesContext";
 
 const ApxDesk = ({ user }) => {
   const [userData, setUserData] = useState({});
@@ -30,6 +31,9 @@ const ApxDesk = ({ user }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+
+
+const { activeModules, isLoading } = useActiveModules();
 
   useEffect(() => {
     setUserData(user);
@@ -171,22 +175,25 @@ const ApxDesk = ({ user }) => {
           </Button>
         </Grid>
       </Grid>
-
-      {/* Modules Section */}
-      <Card sx={{ 
-        mb: 3,
-        borderRadius: 2,
-        boxShadow: 3,
-        overflow: 'hidden'
-      }}>
-        <Box sx={{ 
-          p: 3,
-          backgroundColor: theme.palette.background.paper
+        <Card sx={{ 
+          mb: 3,
+          borderRadius: 2,
+          boxShadow: 3,
+          overflow: 'hidden'
         }}>
-          <ModuleGrid activeModules={userData.activeModules || []} />
-        </Box>
-      </Card>
-      {/* Receipts Section */}
+          <Box sx={{ 
+            p: 3,
+            backgroundColor: theme.palette.background.paper
+          }}>
+            {isLoading ? (
+              <Box display="flex" justifyContent="center" alignItems="center" height="100px">
+                <CircularProgress />
+              </Box>
+            ) : (
+              <ModuleGrid activeModules={activeModules || {}} />
+            )}
+          </Box>
+        </Card>
       <Card sx={{ 
         mb: 3,
         borderRadius: 2,
@@ -215,8 +222,6 @@ const ApxDesk = ({ user }) => {
           </Stack>
         </Box>
       </Card>
-
-      {/* Profile Card */}
       <Card 
         component={Link} 
         to="/perfil"

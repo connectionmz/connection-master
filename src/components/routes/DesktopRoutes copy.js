@@ -88,7 +88,6 @@ import ProfileDeskSingular from '../desktop/ProfileDeskSingular';
 import ApxDeskSingular from '../desktop/ApxDeskSingular';
 import EditProfileDeskSingular from '../desktop/EditProfileDeskSingular';
 import Teste from '../Teste';
-import { ActiveModulesProvider, useActiveModules } from '../../context/ActiveModulesContext';
 
 const theme = createTheme({
   palette: {
@@ -183,102 +182,88 @@ const dynamicProtectedPatterns = [
   /^\/inquerito\/.+/
 ];
 
-// Create a custom hook for module checking
-  const useModuleCheck = () => {
-    const { activeModules } = useActiveModules();
-    
-    const isActiveModule = (moduleKey) => {
-      return !!activeModules[moduleKey];
-    };
+const ProtectedRoute = ({ children, requiredModule }) => {
 
-    return { isActiveModule };
-  };
+  const currentLocation = useLocation();
+  const isProtected = protectedRoutes.some(route => 
+    currentLocation.pathname.startsWith(route) ||
+    dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
+  );
 
-  const ProtectedRoute = ({ children, requiredModule }) => {
-    const { isActiveModule } = useModuleCheck();
-    const currentLocation = useLocation();
-    const navigate = useNavigate();
-    const isVerify = user?.subscriptions?.isverify;
-
-    const isProtected = protectedRoutes.some(route => 
-      currentLocation.pathname.startsWith(route) ||
-      dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
-    );
-
-    // Case 1: User not logged in and route is protected
-    if (!user && isProtected) {
+  if (!user) {
+    if (isProtected) {
       return <Navigate to="/auth" replace />;
     }
-
-    // Case 2: Route requires a specific module that user doesn't have
-    if (requiredModule && !isActiveModule(requiredModule)) {
-      const module = allModules.find(m => m.key === requiredModule);
-      return (
-        <Box
-          sx={{
-            p: 4,
-            maxWidth: 500,
-            margin: 'auto',
-            mt: 8,
-            textAlign: 'center',
-            backgroundColor: 'background.paper',
-            boxShadow: 3,
-          }}
-        >
-          <Typography variant="h4" gutterBottom color="error.main" fontWeight={600}>
-            Módulo não disponível
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-            Você não tem acesso ao módulo <strong>{module?.name || requiredModule}</strong>.<br />
-            {module?.description && (
-              <span>{module.description}</span>
-            )}
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ borderRadius: 3, textTransform: 'none', px: 4 }}
-            onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}
-          >
-            Ativar Módulo
-          </Button>
-        </Box>
-      );
-    }
-
-    // Case 3: User not verified and route is protected
-    if (!isVerify && isProtected) {
-      return (
-        <>
-          {children}
-          <Snackbar
-            open={true}
-            autoHideDuration={6000}
-            onClose={() => {}}
-            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-          >
-            <Alert 
-              severity="warning"
-              sx={{ width: '100%' }}
-            >
-              Sua conta precisa ser verificada para acessar esta funcionalidade.
-              <Button 
-                color="inherit" 
-                size="small" 
-                onClick={() => navigate('/app/verification')}
-                sx={{ ml: 1 }}
-              >
-                Verificar agora
-              </Button>
-            </Alert>
-          </Snackbar>
-        </>
-      );
-    }
-
     return children;
-  };
+  } 
+
+  if (requiredModule && !isActiveModule(user, requiredModule)) {
+    return (
+      <Box
+      sx={{
+        p: 4,
+        maxWidth: 500,
+        margin: 'auto',
+        mt: 8,
+        textAlign: 'center',
+        backgroundColor: 'background.paper',
+        boxShadow: 3,
+      }}>
+        <Typography variant="h4" gutterBottom color="error.main" fontWeight={600}>
+          Módulo não disponível
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+          Você não tem acesso ao módulo <strong>{requiredModule}</strong>. <br />
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          sx={{ borderRadius: 3, textTransform: 'none', px: 4 }}
+          onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}>
+          Ativar Módulo
+        </Button>
+    </Box>
+    );
+  }
+
+  if (!isVerify && isProtected) {
+    return (
+      <>
+        {children}
+        <Snackbar
+          open={true}
+          autoHideDuration={6000}
+          onClose={() => {}}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+          <Alert 
+            severity="warning"
+            sx={{ width: '100%' }}>
+            Sua conta precisa ser verificada para acessar esta funcionalidade.
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => navigate('/app/verification')}
+              sx={{ ml: 1 }}>
+              Verificar agora
+            </Button>
+          </Alert>
+        </Snackbar>
+      </>
+    );
+  }
+
+  return children;
+
+};
+
+const isActiveModule = (user, moduleKey) => {
+ 
+  const module = allModules.find(m => m.key === moduleKey);
+  const hasModule = user?.activeModules?.[moduleKey];  
+  return hasModule;
+
+};
 
 const renderProtectedRoute = (path, element) => (
   <Route 
@@ -426,7 +411,6 @@ const handleSubmitFeedback = async () => {
   
   return (
     <ThemeProvider theme={theme}>
-      <ActiveModulesProvider userId={user?.id}>
       <Box
         sx={{
           minHeight: '100vh',
@@ -915,7 +899,6 @@ const handleSubmitFeedback = async () => {
           </Modal>
         )}
       </Box>
-   </ActiveModulesProvider>
     </ThemeProvider>
   );
 };

@@ -42,13 +42,6 @@ const App = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [visitorData, setVisitorData] = useState({
-    nome: '',
-    email: '',
-    contacto: '',
-    provincia: ''
-  });
-
 
 const fetchUserDataRealtime = async (user) => {
   try {
@@ -65,19 +58,18 @@ const fetchUserDataRealtime = async (user) => {
         photoURL: data.logoUrl || 'https://via.placeholder.com/150',
         displayName: data.nome || 'Nome da Empresa',
         endereco: data.endereco || 'Endereço não informado',
-        isAnonymous: user.isAnonymous,
       });
     } else {
       setUserData(null);
     }
-
   } catch (error) {
     SaveLogError('app', error);
     setError('Erro ao carregar dados do usuário. Tente novamente mais tarde.');
   } finally {
     setLoading(false);
   }
-};
+}
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
