@@ -75,11 +75,10 @@ const PagamentoModulo = ({ user }) => {
   const calculateSubscriptionEnd = (validade) => {
     const now = Date.now();
     const durationInMs = {
-      Mensal: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
-      Anual: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+      Mensal: 30 * 24 * 60 * 60 * 1000, 
+      Anual: 365 * 24 * 60 * 60 * 1000,
     };
-    
-    return now + (durationInMs[validade] || durationInMs.Mensal); // Default to monthly if not specified
+    return now + (durationInMs[validade] || durationInMs.Mensal); 
   };
 
   const handleSubmit = async (e) => {
@@ -99,8 +98,13 @@ const PagamentoModulo = ({ user }) => {
     setError('');
 
     try {
-      // Call to M-Pesa server
-      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
+
+    const sanitizedReference = currentModule.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "");
+
+      const response = await fetch('http://localhost:5000/pagar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +112,7 @@ const PagamentoModulo = ({ user }) => {
         body: JSON.stringify({
           amount: currentModule.price,
           phoneNumber,
-          reference: currentModule.name
+          reference: sanitizedReference
         }),
       });
 
