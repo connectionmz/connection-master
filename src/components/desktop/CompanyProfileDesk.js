@@ -788,13 +788,6 @@ const CompanyProfile = ({ user }) => {
                 </ListItemIcon>
                 Denunciar Empresa
               </MenuItem>
-              <Divider />
-              <MenuItem onClick={handleOpenBlockDialog}>
-                <ListItemIcon>
-                  <Block color="error" />
-                </ListItemIcon>
-                Bloquear Empresa
-              </MenuItem>
             </>
           )
         ) : (

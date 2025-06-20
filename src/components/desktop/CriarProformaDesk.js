@@ -37,7 +37,7 @@ const CriarProformaDesk = ({ user }) => {
   const [cliente, setCliente] = useState(null);
   const [dataEmissao, setDataEmissao] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');
-  const [itens, setItens] = useState([{ descricao: '', quantidade: 1, preco: 0 }]);
+  const [itens, setItens] = useState([]);
   const [errors, setErrors] = useState({});
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');

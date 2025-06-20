@@ -38,6 +38,7 @@ const initialFormData = (user) => ({
   prazo: '',
   localEntrega: '',
   dataAbertura: '',
+  dataLimite: '',
   criterios: '',
   valorEstimado: 'Não especificado',
   condicoesPagamento: '',
@@ -50,7 +51,9 @@ const initialFormData = (user) => ({
   numeroReferencia: 'Não especificado',
   anexos: [],
   requisitosTecnicos: '',
-  status: 'Aberta'
+  status: 'Aberta',
+  contacto: user?.contacto || '', // Novo campo
+  email: user?.email || '' // Novo campo
 });
 
 // Initial rich text fields data
@@ -223,7 +226,9 @@ const PublicarConcursoDesk = ({ user }) => {
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'image/jpeg',
-      'image/png'
+      'image/png',
+      'image/webp'
+      
     ];
 
     for (const anexo of anexos) {
@@ -551,6 +556,42 @@ const PublicarConcursoDesk = ({ user }) => {
             </Grid>
           </Grid>
 
+          {/* Adicione isso após o campo "Link de Submissão" */}
+<Grid container spacing={2} sx={{ mt: 1 }}>
+  <Grid item xs={12} md={6}>
+    <TextField
+      fullWidth
+      label="Contacto para informações *"
+      name="contacto"
+      value={formData.contacto}
+      onChange={handleChange}
+      required
+      margin="normal"
+      inputProps={{
+        pattern: "[0-9]{9}",
+        title: "Insira um número de 9 dígitos"
+      }}
+      helperText="Número de telefone (9 dígitos)"
+    />
+  </Grid>
+  <Grid item xs={12} md={6}>
+    <TextField
+      fullWidth
+      label="Email para informações *"
+      name="email"
+      type="email"
+      value={formData.email}
+      onChange={handleChange}
+      required
+      margin="normal"
+      inputProps={{
+        pattern: "[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$",
+        title: "Insira um email válido"
+      }}
+    />
+  </Grid>
+</Grid>
+
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -580,6 +621,23 @@ const PublicarConcursoDesk = ({ user }) => {
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
                   dataAbertura: parseDateFromInput(e.target.value)
+                }))}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{
+                  min: formatDateForInput(new Date()) 
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Data de Limite"
+                type="date"
+                name="dataLimite"
+                value={formatDateForInput(formData.dataLimite)}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  dataLimite: parseDateFromInput(e.target.value)
                 }))}
                 InputLabelProps={{ shrink: true }}
                 inputProps={{
@@ -683,7 +741,7 @@ const PublicarConcursoDesk = ({ user }) => {
             onChange={handleChange}
             margin="normal"
             InputProps={{
-              startAdornment: <Typography sx={{ mr: 1 }}>MZN</Typography>
+              endAdornment: <Typography sx={{ mr: 1 }}>MT</Typography>
             }}
           />
         </Box>
@@ -866,68 +924,79 @@ const PublicarConcursoDesk = ({ user }) => {
               }}
             />
           </Button>
-          
-          {formData.anexos.length > 0 && (
-            <Box sx={{ mt: 2 }}>
-              {formData.anexos.map((anexo, index) => {
-                const uploadState = uploadStates[anexo.name] || { status: 'pending', progress: 0 };
-                return (
-                  <Box 
-                    key={index} 
-                    sx={{ 
-                      mb: 2,
-                      p: 2,
-                      border: 1,
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box sx={{ mr: 2 }}>
-                        {renderFileStatusIcon(uploadState.status)}
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                          {anexo.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {(anexo.size / 1024).toFixed(2)} KB • {
-                            uploadState.status === 'pending' ? 'Pendente' :
-                            uploadState.status === 'uploading' ? 'Enviando...' :
-                            uploadState.status === 'completed' ? 'Enviado' :
-                            'Erro no envio'
-                          }
-                        </Typography>
-                        {uploadState.error && (
-                          <Typography variant="caption" color="error">
-                            {uploadState.error}
-                          </Typography>
-                        )}
-                        {uploadState.status === 'uploading' && (
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={uploadState.progress} 
-                            sx={{ mt: 1 }}
-                          />
-                        )}
-                      </Box>
-                      {!loading && (
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleRemoveAnexo(index)}
-                          disabled={uploadState.status === 'uploading'}
-                        >
-                          <Close fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                );
-              })}
+    {formData.anexos.length > 0 && (
+  <Box sx={{ mt: 2 }}>
+    {formData.anexos.map((anexo, index) => {
+      const uploadState = uploadStates[anexo.name] || { status: 'pending', progress: 0 };
+      const isImage = anexo.type?.startsWith('image/');
+      return (
+        <Box 
+          key={index} 
+          sx={{ 
+            mb: 2,
+            p: 2,
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ mr: 2 }}>
+              {renderFileStatusIcon(uploadState.status)}
             </Box>
-          )}
+            {isImage && (
+              <Box sx={{ mr: 2 }}>
+                <img 
+                  src={URL.createObjectURL(anexo)} 
+                  alt={anexo.name} 
+                  style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
+                />
+              </Box>
+            )}
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {anexo.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {(anexo.size / 1024).toFixed(2)} KB • {
+                  uploadState.status === 'pending' ? 'Pendente' :
+                  uploadState.status === 'uploading' ? 'Enviando...' :
+                  uploadState.status === 'completed' ? 'Enviado' :
+                  'Erro no envio'
+                }
+              </Typography>
+              {uploadState.error && (
+                <Typography variant="caption" color="error">
+                  {uploadState.error}
+                </Typography>
+              )}
+              {uploadState.status === 'uploading' && (
+                <LinearProgress 
+                  variant="determinate" 
+                  value={uploadState.progress} 
+                  sx={{ mt: 1 }}
+                />
+              )}
+            </Box>
+
+            {!loading && (
+              <IconButton 
+                size="small" 
+                onClick={() => handleRemoveAnexo(index)}
+                disabled={uploadState.status === 'uploading'}
+              >
+                <Close fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+      );
+    })}
+  </Box>
+)}
+
         </Box>
 
         {/* Submit Button */}

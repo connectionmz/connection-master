@@ -125,6 +125,11 @@ const EditalConcurso = ({ user }) => {
           <Text style={{ color: "#d32f2f" }}>Prazo: {formatDate(concurso?.prazo)}</Text>
         </View>
 
+         <View style={styles.info}>
+          <Text>Data de Limite: {formatDate(concurso?.dataLimite)}</Text>
+          <Text style={{ color: "#d32f2f" }}>Limite: {formatDate(concurso?.prazo)}</Text>
+        </View>
+
         {[
           { title: "Objeto", content: concurso?.objeto },
           { title: "Requisitos Técnicos", content: concurso?.requisitosTecnicos },
@@ -386,9 +391,15 @@ const EditalConcurso = ({ user }) => {
           <Typography variant="body2">
             <strong>Entidade:</strong> {concurso.entidade || "Não especificada"}
           </Typography>
-          <Typography variant="body2">
-            <strong>Status:</strong> {concurso.status || "Não especificado"}
-          </Typography>
+         <Typography variant="body2" sx={{
+          color: 
+            concurso.status === 'Aberta' ? 'green' :
+            concurso.status === 'Fechado' ? 'red' :
+            concurso.status === 'Expirado' ? 'orange' :
+            'text.secondary'
+        }}>
+          <strong>Estado:</strong> {concurso.status || "Não especificado"}
+        </Typography>
           <Typography variant="body2">
             <strong>Publicado em:</strong> {formatDate(concurso.timestamp)}
           </Typography>

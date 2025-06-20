@@ -44,9 +44,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width:600px)');
 
-    const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
-    const hasBalance = user?.activeModules?.moduloSMS?.smsCount > 0;
-
     useEffect(() => {
         if (!user?.id) return;
 
@@ -82,10 +79,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
       };
 
     useEffect(() => {
-        if (!hasModuleSMS) {
-            setLoading(false);
-            return;
-        }
+       
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
             const cotacoesData = snapshot.val();
@@ -127,7 +121,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             setLoading(false);
         });
         return () => unsubscribeCotacoes();
-    }, [hasModuleSMS, clickedCotacoes]);
+    }, [clickedCotacoes]);
 
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
@@ -188,14 +182,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     
 
     const handlePublishQuotation = () => {
-        if (!hasModuleSMS) {
-            setSnackbar({ open: true, message: 'Ative o módulo SMS para emitir concursos.', severity: 'warning' });
-            return;
-        }
-        if (!hasBalance) {
-            setSnackbar({ open: true, message: 'Recarregue seu saldo de SMS para emitir concursos.', severity: 'warning' });
-            return;
-        }
+    
         navigate('/cotacao');
     };
 
@@ -308,37 +295,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     };
 
     const renderCotacoes = () => {
-        if (!hasModuleSMS) {
-            return (
-                <Alert
-                    severity="warning"
-                    action={
-                        <Button color="inherit" size="small" onClick={() => setIsPaying(true)}>
-                            Ativar Módulo SMS
-                        </Button>
-                    }
-                    sx={{ mb: 2 }}
-                >
-                    O módulo SMS está inativo. Para usar este serviço, ative o módulo SMS.
-                </Alert>
-            );
-        }
+       
     
-        if (!hasBalance) {
-            return (
-                <Alert
-                    severity="warning"
-                    action={
-                        <Button color="inherit" size="small" onClick={handleRecarregarSaldo}>
-                            Recarregar Saldo de SMS
-                        </Button>
-                    }
-                    sx={{ mb: 2 }}
-                >
-                    Você não possui saldo de SMS. Clique para recarregar.
-                </Alert>
-            );
-        }
     
         if (loading) {
             return (
@@ -443,35 +401,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     return (
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-            {!hasModuleSMS && !isPaying && (
-                <Alert
-                    severity="warning"
-                    action={
-                        <Button color="inherit" size="small" onClick={() => setIsPaying(true)}>
-                            Ativar Módulo SMS
-                        </Button>
-                    }
-                    sx={{ mb: 2 }}
-                >
-                    O módulo SMS está inativo. Para usar este serviço, ative o módulo SMS.
-                </Alert>
-            )}
-            {isPaying && (
-                <PaySMSCheckout
-                    user={user}
-                    onPaymentSuccess={(details) => {
-                        const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS`);
-                        update(userRef, {
-                            status: 'active',
-                            activatedAt: new Date().toISOString(),
-                            paymentDetails: details,
-                        }).then(() => {
-                            setSnackbar({ open: true, message: 'Módulo SMS ativado com sucesso!', severity: 'success' });
-                        });
-                        setIsPaying(false);
-                    }}
-                />
-            )}
+           
             {!isPaying && (
               <Box sx={{ 
                 display: 'flex', 
@@ -486,8 +416,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     <Button
                       variant="contained"
                       color="primary"
-                      onClick={handlePublishQuotation}
-                      disabled={!hasModuleSMS || !hasBalance}>
+                      onClick={handlePublishQuotation}>
                       Fazer pedido
                     </Button>
                   </Box>

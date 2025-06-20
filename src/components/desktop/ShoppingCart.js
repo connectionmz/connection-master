@@ -389,14 +389,7 @@ const MyCart = ({
                 <Typography variant="body1">{formatPrice(total)}</Typography>
               </Box>
               
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                mb: 1 
-              }}>
-                <Typography variant="body1">Entrega:</Typography>
-                <Typography variant="body1">A calcular</Typography>
-              </Box>
+      
               
               <Divider sx={{ my: 1 }} />
               

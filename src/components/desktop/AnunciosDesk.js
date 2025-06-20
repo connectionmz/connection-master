@@ -171,7 +171,6 @@ const AnunciosDesk = ({ campanhas, user, local }) => {
     return (
       <Box sx={{ 
         width: '100%',
-        height: isMobile ? '250px' : '400px',
         backgroundColor: 'background.paper',
         borderRadius: 2,
         display: 'flex',

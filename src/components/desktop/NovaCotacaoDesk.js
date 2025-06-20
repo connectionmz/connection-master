@@ -755,7 +755,8 @@ const handleSubmit = async (e) => {
                           maxHeight: 150,
                           borderRadius: 4,
                           display: 'block',
-                          margin: '0 auto'
+                          margin: '0 auto',
+                          objectFit:'contain'
                         }}
                       />
                     </Box>

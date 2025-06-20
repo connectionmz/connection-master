@@ -318,8 +318,8 @@ const PublicarVaga = ({
         Publicar Nova Vaga
       </Button>
       
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>
+<Dialog open={open} onClose={handleClose} fullScreen>
+          <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>
           <Box display="flex" alignItems="center">
             <Work sx={{ mr: 1 }} />
             <Typography variant="h6">Publicar Nova Vaga</Typography>

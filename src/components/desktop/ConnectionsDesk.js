@@ -361,7 +361,7 @@ const ConnectionsDesk = ({ user }) => {
               <AccordionDetails>
                 <Alert severity="info" sx={{ mb: 2 }}>
                   <AlertTitle>Conectou? Então estamos ligados!</AlertTitle>
-                  Na plataforma <strong>Connections</strong>, estabelecer uma conexão com outra empresa vai além do networking: é um compromisso digital com benefícios automáticos:
+                  Na plataforma <strong>Connection Mozambique</strong>, estabelecer uma conexão com outra empresa vai além do networking: é um compromisso digital com benefícios automáticos:
                   <ul>
                     <li><strong>Relacionamento Comercial Instantâneo:</strong> a empresa conectada passa a ser listada como cliente no módulo de proformas, permitindo trocas comerciais sem burocracia.</li>
                     <li><strong>Notificações em tempo real:</strong> qualquer nova publicação, campanha ou actualização feita por essa empresa será notificada diretamente a si.</li>
@@ -828,7 +828,7 @@ const ConnectionsTab = ({ connections, isMobile, getTimeAgo, onMenuOpen }) => {
                   }
                   secondary={
                     <Typography variant="body2" color="text.secondary">
-                      Connectada há {getTimeAgo(connection.connectedAt)}
+                      Connectada {getTimeAgo(connection.connectedAt)}
                     </Typography>
                   }
                 />

@@ -316,64 +316,85 @@ return (
       
       <Divider />
       
-      <CardActions sx={{ p: isMobile ? 1 : 2 }}>
-        <Stack 
-          direction={isMobile ? 'column' : 'row'} 
-          spacing={isMobile ? 1 : 2} 
-          width="100%"
-        >
-          {concurso.anexos && concurso.anexos.length > 0 && (
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleBaixarEdital} 
-              startIcon={<FileDownload />}
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              {isMobile ? 'Baixar Anexos' : 'Baixar Documentos Anexos'}
-            </Button>
-          )}
-          
-          <Button 
-            variant="outlined" 
-            onClick={handlePartilhar} 
-            startIcon={<Share />}
-            size={isMobile ? 'small' : 'medium'}
-            fullWidth={isMobile}
-          >
-            Partilhar
-          </Button>
+<CardActions sx={{ p: isMobile ? 1 : 2 }}>
+  <Stack 
+    direction={isMobile ? 'column' : 'row'} 
+    spacing={isMobile ? 1 : 2} 
+    width="100%"
+  >
+      <Button 
+        variant="contained" 
+        color="primary" 
+        onClick={handleBaixarEdital} 
+        startIcon={<FileDownload />}
+        size={isMobile ? 'small' : 'medium'}
+        fullWidth={isMobile}
+      >
+        {isMobile ? 'Baixar Anexos' : 'Baixar Documentos Anexos'}
+      </Button>
 
-         {
-          concurso.company.id!=user.id && (
-             <Button 
-            variant="outlined" 
-            color="error" 
-            onClick={handleAbrirDenunciaModal} 
-            startIcon={<Report />}
-            size={isMobile ? 'small' : 'medium'}
-            fullWidth={isMobile}>
-            Denunciar
-          </Button>
-          )
-         }
+    <Button 
+      variant="outlined" 
+      onClick={handlePartilhar} 
+      startIcon={<Share />}
+      size={isMobile ? 'small' : 'medium'}
+      fullWidth={isMobile}
+    >
+      Partilhar
+    </Button>
 
-          {concurso.linkDeSubmissao && (
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<Link2 />}
-              href={concurso.linkDeSubmissao}
-              target="_blank"
-              size={isMobile ? 'small' : 'medium'}
-              fullWidth={isMobile}
-            >
-              Submeter Proposta
-            </Button>
-          )}
-        </Stack>
-      </CardActions>
+    {concurso.company.id != user.id && (
+      <Button 
+        variant="outlined" 
+        color="error" 
+        onClick={handleAbrirDenunciaModal} 
+        startIcon={<Report />}
+        size={isMobile ? 'small' : 'medium'}
+        fullWidth={isMobile}
+      >
+        Denunciar
+      </Button>
+    )}
+
+    {concurso.linkDeSubmissao && (
+      <Button
+        variant="contained"
+        color="success"
+        startIcon={<Link2 />}
+        href={concurso.linkDeSubmissao}
+        target="_blank"
+        size={isMobile ? 'small' : 'medium'}
+        fullWidth={isMobile}
+      >
+        Submeter Proposta
+      </Button>
+    )}
+
+    {concurso.email && (
+      <Button
+        variant="outlined"
+        color="secondary"
+        startIcon={<Email />}
+        href={`mailto:${concurso.email}`}
+        size={isMobile ? 'small' : 'medium'}
+        fullWidth={isMobile}>
+        {isMobile ? 'Email' : 'Enviar Email'}
+      </Button>
+    )}
+    {concurso.contacto && (
+      <Button
+        variant="outlined"
+        color="secondary"
+        startIcon={<Phone />}
+        href={`tel:${concurso.contacto}`}
+        size={isMobile ? 'small' : 'medium'}
+        fullWidth={isMobile}
+      >
+        {isMobile ? 'Ligar' : 'Contactar'}
+      </Button>
+    )}
+  </Stack>
+</CardActions>
     </Card>
 
     {/* Object Card */}
@@ -509,6 +530,17 @@ return (
                 : 'Não especificado'}
             </Typography>
           </Grid>
+
+                 <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Data de Limite:
+            </Typography>
+            <Typography>
+              {concurso.dataLimite 
+                ? new Date(concurso.dataLimite).toLocaleDateString('pt-PT') 
+                : 'Não especificado'}
+            </Typography>
+          </Grid>
           
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle1" fontWeight="bold">
@@ -521,19 +553,9 @@ return (
             </Typography>
           </Grid>
           
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Condições de Pagamento:
-            </Typography>
-            <Typography>
-              {concurso.condicoesPagamento || 'Não especificado'}
-            </Typography>
-          </Grid>
         </Grid>
       </CardContent>
     </Card>
-
-    {/* Attachments Section */}
     {concurso.anexos && concurso.anexos.length > 0 && (
       <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
@@ -541,35 +563,55 @@ return (
             Documentos Anexos
           </Typography>
           <Divider sx={{ mb: 2 }} />
-          <Grid container spacing={2}>
-            {concurso.anexos.map((anexo) => (
-              <Grid item xs={12} sm={6} key={anexo.id}>
-                <Card variant="outlined">
-                  <CardContent sx={{ display: 'flex', alignItems: 'center' }}>
-                    {anexo.tipo.startsWith('image/') ? (
-                      <Image sx={{ mr: 2 }} />
-                    ) : (
-                      <PictureAsPdf sx={{ mr: 2, color: 'error.main' }} />
-                    )}
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle2" noWrap>
-                        {anexo.nome}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {(anexo.tamanho / 1024).toFixed(2)} KB
-                      </Typography>
-                    </Box>
-                    <IconButton 
-                      onClick={() => window.open(anexo.url, '_blank')}
-                      color="primary"
-                    >
-                      <Download />
-                    </IconButton>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+      <Grid container spacing={2}>
+  {concurso.anexos.map((anexo) => (
+    <Grid item xs={12} sm={6} key={anexo.id}>
+      <Card variant="outlined">
+        <CardContent sx={{ display: 'flex', alignItems: 'center' }}>
+          {anexo.tipo.startsWith('image/') ? (
+            <Box
+              sx={{ 
+                width: 48, 
+                height: 48, 
+                mr: 2, 
+                borderRadius: 1, 
+                overflow: 'hidden', 
+                flexShrink: 0,
+                cursor: 'pointer' 
+              }}
+              onClick={() => window.open(anexo.url, '_blank')}
+            >
+              <img
+                src={anexo.url}
+                alt={anexo.nome}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </Box>
+          ) : (
+            <PictureAsPdf sx={{ mr: 2, color: 'error.main' }} />
+          )}
+
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle2" noWrap>
+              {anexo.nome}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {(anexo.tamanho / 1024).toFixed(2)} KB
+            </Typography>
+          </Box>
+
+          <IconButton 
+            onClick={() => window.open(anexo.url, '_blank')}
+            color="primary"
+          >
+            <Download />
+          </IconButton>
+        </CardContent>
+      </Card>
+    </Grid>
+  ))}
+</Grid>
+
         </CardContent>
       </Card>
     )}

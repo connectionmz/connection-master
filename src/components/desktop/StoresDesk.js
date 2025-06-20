@@ -180,6 +180,8 @@ const StoresDesk = ({ user }) => {
               : storesData);
   
           setStores(filtered);
+
+          console.log(filtered)
           
           filtered.forEach(store => {
             trackInteraction('store', 'impression', store.id);
@@ -792,30 +794,32 @@ const TrackedStoreLink = ({ store, children }) => (
   backgroundColor: '#fafafa'
 }}>
   {/* Botão de Adicionar ao Carrinho */}
-  <Tooltip title="Adicionar ao carrinho">
+{/* Botão de Adicionar ao Carrinho */}
+<Tooltip title="Adicionar ao carrinho">
+  {user && stores.find(store => store.id === product.storeId)?.company?.id !== user.id && (
     <Button
-  variant="contained"
-  size="small"
-  color="primary"
-  startIcon={<AddShoppingCart fontSize={isMobile ? "small" : "medium"} />}
-  onClick={(e) => {
-    e.stopPropagation();
-    if (!user) {
-      window.location.href = '/auth';
-    } else {
-      addToCart(product);
-    }
-  }}
-  sx={{
-    ml: 1,
-    textTransform: 'none',
-    fontSize: isMobile ? '0.75rem' : '0.875rem'
-  }}
->
-  {isMobile ? 'Adicionar' : 'Adicionar ao carrinho'}
-</Button>
-
-  </Tooltip>
+      variant="contained"
+      size="small"
+      color="primary"
+      startIcon={<AddShoppingCart fontSize={isMobile ? "small" : "medium"} />}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!user) {
+          window.location.href = '/auth';
+        } else {
+          addToCart(product);
+        }
+      }}
+      sx={{
+        ml: 1,
+        textTransform: 'none',
+        fontSize: isMobile ? '0.75rem' : '0.875rem'
+      }}
+    >
+      {isMobile ? 'Adicionar' : 'Adicionar ao carrinho'}
+    </Button>
+  )}
+</Tooltip>
 
   {/* Botão de Compartilhar */}
   <Tooltip title="Compartilhar">

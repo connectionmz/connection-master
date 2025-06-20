@@ -89,6 +89,7 @@ import ApxDeskSingular from '../desktop/ApxDeskSingular';
 import EditProfileDeskSingular from '../desktop/EditProfileDeskSingular';
 import Teste from '../Teste';
 import { ActiveModulesProvider, useActiveModules } from '../../context/ActiveModulesContext';
+import GuestRoute from './GuestRoute';
 
 const theme = createTheme({
   palette: {
@@ -484,9 +485,24 @@ const handleSubmitFeedback = async () => {
   <Route path="/termos" element={<Terms />} />
   <Route path="/politicas" element={<Politicas />} />
 
-  {/* Rotas de autenticação */}
-  <Route path="/auth" element={<AuthDesk user={user} />} />
-  <Route path="/create" element={<AuthCreateDesk user={user} />} />
+
+    <Route 
+  path="/auth" 
+  element={
+    <GuestRoute user={user}>
+      <AuthDesk user={user} />
+    </GuestRoute>
+  } 
+/>
+<Route 
+  path="/create" 
+  element={
+    <GuestRoute user={user}>
+      <AuthCreateDesk user={user} />
+    </GuestRoute>
+  } 
+/>
+
   <Route path="/setup" element={<CompanyDataFormDesk />} />
   <Route path="/setupUser" element={<UserDataFormDesk />} />
   

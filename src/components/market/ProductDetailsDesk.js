@@ -438,32 +438,34 @@ const ProductDetailsDesk = ({user}) => {
             )}
             
             {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              {showPrices ? (
-                <>
-            <Button
-            variant="contained"
-            color="primary"
-            startIcon={<ShoppingCartIcon />}
-            onClick={addToCart} // Chamada permanece a mesma
-            sx={{ flex: 1 }}
-          >
-            Adicionar ao Carrinho
-          </Button>
-                
-                </>
-              ) : (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<StoreIcon />}
-                  onClick={() => navigate(`/loja/${store}`)}
-                  sx={{ flex: 1 }}
-                >
-                  Contactar Loja
-                </Button>
-              )}
-            </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+  {showPrices ? (
+    <>
+      {user?.id !== storeInfo?.company?.id && (
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<ShoppingCartIcon />}
+          onClick={addToCart}
+          sx={{ flex: 1 }}
+          disabled={!product.qtd || Number(product.qtd) === 0}
+        >
+          Adicionar ao Carrinho
+        </Button>
+      )}
+    </>
+  ) : (
+    <Button
+      variant="contained"
+      color="primary"
+      startIcon={<StoreIcon />}
+      onClick={() => navigate(`/loja/${store}`)}
+      sx={{ flex: 1 }}
+    >
+      Contactar Loja
+    </Button>
+  )}
+</Box>
           </CardContent>
         </Box>
       </Box>

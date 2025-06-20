@@ -251,6 +251,7 @@ const AuthDesk = ({ data }) => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await saveUserData(result.user);
+      navigate("/")
     } catch (error) {
       const userFriendlyMessage = getFirebaseErrorMessage(error.code) || error.message;
       setErrorMessage(userFriendlyMessage);
