@@ -104,7 +104,7 @@ const PagamentoModulo = ({ user }) => {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-zA-Z0-9]/g, "");
 
-      const response = await fetch('http://localhost:5000/pagar', {
+      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
