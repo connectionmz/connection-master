@@ -77,7 +77,43 @@ function formatarValor(valor) {
     maximumFractionDigits: 2
   });
 }
+function getErrorMessage(errorCode) {
+  const errorMessages = {
+    "INS-0": "Pedido processado com sucesso.",
+    "INS-1": "Erro interno.",
+    "INS-2": "Chave de API inválida.",
+    "INS-4": "Utilizador não está ativo.",
+    "INS-5": "Transação cancelada pelo cliente.",
+    "INS-6": "Transação falhou.",
+    "INS-9": "Tempo limite do pedido excedido.",
+    "INS-10": "Transação duplicada.",
+    "INS-13": "Shortcode inválido utilizado.",
+    "INS-14": "Referência inválida utilizada.",
+    "INS-15": "Valor inválido utilizado.",
+    "INS-16": "Não foi possível processar o pedido devido a sobrecarga temporária.",
+    "INS-17": "Referência de transação inválida. O comprimento deve estar entre 1 e 20.",
+    "INS-18": "TransactionID inválido utilizado.",
+    "INS-19": "ThirdPartyReference inválido utilizado.",
+    "INS-20": "Parâmetros incompletos. Por favor, tente novamente.",
+    "INS-21": "Falha na validação dos parâmetros. Por favor, tente novamente.",
+    "INS-22": "Tipo de operação inválido.",
+    "INS-23": "Estado desconhecido. Contacte o suporte M-Pesa.",
+    "INS-24": "InitiatorIdentifier inválido utilizado.",
+    "INS-25": "SecurityCredential inválido utilizado.",
+    "INS-26": "Não autorizado.",
+    "INS-993": "Débito direto em falta.",
+    "INS-994": "Débito direto já existe.",
+    "INS-995": "O perfil do cliente tem problemas.",
+    "INS-996": "A conta do cliente não está ativa.",
+    "INS-997": "Transação de vinculação não encontrada.",
+    "INS-998": "Mercado inválido.",
+    "INS-2001": "Erro de autenticação do iniciador.",
+    "INS-2002": "Recetor inválido.",
+    "INS-2006": "Saldo insuficiente.",
+    "INS-2051": "MSISDN inválido.",
+    "INS-2057": "Código de idioma inválido.",
+  };
+  return errorMessages[errorCode] || "Código de erro desconhecido.";
+}
 
-
-
-export { formatPrice, formatDateTime,formatarMoeda, shuffleArray, formatCurrency, formatarValor };
+export { formatPrice, formatDateTime,formatarMoeda, shuffleArray, formatCurrency, formatarValor, getErrorMessage };
