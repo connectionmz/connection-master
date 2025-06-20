@@ -100,7 +100,7 @@ const PagamentoModulo = ({ user }) => {
 
     try {
       // Call to M-Pesa server
-      const response = await fetch('http://localhost:5000/pagar', {
+      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
