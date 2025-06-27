@@ -310,7 +310,7 @@ const [formData, setFormData] = useState({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount:1,
+          amount: totalCost,
           phoneNumber: formData.phoneNumber,
           reference: `Anuncio`
         }),
