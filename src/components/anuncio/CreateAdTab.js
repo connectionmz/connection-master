@@ -83,7 +83,6 @@ const [formData, setFormData] = useState({
 
   const isDestacarPerfil = formData.tipoAnuncio === 'destacar_perfil';
 
-  // Effects
   useEffect(() => {
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
@@ -255,7 +254,6 @@ const [formData, setFormData] = useState({
       anuncioData.description = `Perfil destacado de ${user.nome}`;
       anuncioData.link = `/perfil/${user.id}`;
     }
-
     await set(anuncioRef, anuncioData);
     return idAnuncio;
   };
@@ -312,7 +310,7 @@ const [formData, setFormData] = useState({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: totalCost,
+          amount: '1',
           phoneNumber: formData.phoneNumber,
           reference: `Anuncio`
         }),
@@ -371,7 +369,6 @@ const [formData, setFormData] = useState({
 
   return (
     <>
-      {/* Tipo de Anúncio */}
       <FormControl component="fieldset" sx={{ mb: 2 }}>
         <Typography variant="body1" sx={{ mb: 1 }}>
           Escolha o tipo de anúncio:
@@ -436,7 +433,6 @@ const [formData, setFormData] = useState({
         </>
       )}
 
-      {/* Províncias Select */}
       <FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel id="provincias-label">Províncias *</InputLabel>
         <Select
@@ -468,7 +464,6 @@ const [formData, setFormData] = useState({
         </Select>
       </FormControl>
 
-      {/* Setores Select */}
       <FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel id="sectores-label">Setores de Atividade *</InputLabel>
         <Select
@@ -500,7 +495,6 @@ const [formData, setFormData] = useState({
         </Select>
       </FormControl>
 
-      {/* Days Input */}
       <Box mb={2}>
         <Typography>Tempo do anúncio (1 a 30 dias): *</Typography>
         <TextField
@@ -523,7 +517,6 @@ const [formData, setFormData] = useState({
         />
       </Box>
 
-      {/* Summary */}
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
         Valor estimado: <strong>{formatPrice(totalCost)} MT</strong>
       </Typography>
@@ -532,7 +525,6 @@ const [formData, setFormData] = useState({
         Este anúncio atingirá aproximadamente <strong>{empresasAtingidas}</strong> empresas.
       </Typography>
   
-      {/* Submit Button */}
       <Button
         variant="contained"
         color="primary"
@@ -545,7 +537,6 @@ const [formData, setFormData] = useState({
         {uploading ? <CircularProgress size={24} /> : 'Publicar Anúncio'}
       </Button>
 
-      {/* Confirmation Dialog */}
       <Dialog
         open={showConfirmationDialog}
         onClose={() => setShowConfirmationDialog(false)}
@@ -572,7 +563,6 @@ const [formData, setFormData] = useState({
         </DialogActions>
       </Dialog>
 
-      {/* Payment Modal */}
       <Dialog
         open={showPaymentModal}
         onClose={handlePaymentClose}
