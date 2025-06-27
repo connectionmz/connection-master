@@ -178,7 +178,6 @@ const fetchPosts = useCallback(async () => {
       if (navigator.share) {
         await navigator.share({
           title: post.title,
-          text: post.content ? post.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : '',
           url: `${window.location.origin}/blog/${post.id}`
         });
       } else {

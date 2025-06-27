@@ -63,14 +63,7 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [modules, moduleKey]);
 
-  useEffect(() => {
-    if (user?.contacto) {
-      const formattedPhone = user.contacto.startsWith('258') 
-        ? user.contacto 
-        : `258${user.contacto.replace(/^0/, '')}`;
-      setPhoneNumber(formattedPhone);
-    }
-  }, [user]);
+
 
   const calculateSubscriptionEnd = (validade) => {
     const now = Date.now();

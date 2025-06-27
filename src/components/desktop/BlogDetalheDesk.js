@@ -71,6 +71,7 @@ const BlogDetalheDesk = ({ user }) => {
 
         if (postSnapshot.exists()) {
           const postData = postSnapshot.val();
+          console.log(postData)
           setPost({
             id,
             ...postData,
@@ -237,7 +238,6 @@ const BlogDetalheDesk = ({ user }) => {
     try {
       const shareData = {
         title: post.title,
-        text: post.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...',
         url: window.location.href
       };
 
