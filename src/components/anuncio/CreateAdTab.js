@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ref as createStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../fb';
 import { ref, push, set, onValue } from 'firebase/database';
@@ -24,9 +25,12 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Card,
+  CardContent,
+  CardActions,
+  InputAdornment,
 } from '@mui/material';
 import { formatPrice } from './adUtils';
-import PagamentoAnunciar from '../PagamentoAnunciar';
 
 const PRICES = {
   home: 30,
@@ -45,15 +49,19 @@ const MIN_DAYS = 1;
 
 const CreateAdTab = ({ user, onAdCreated }) => {
   // State
-  const [formData, setFormData] = useState({
-    file: null,
-    imageUrl: '',
-    description: '',
-    link: '',
-    days: 1,
-    phoneNumber: '',
-    tipoAnuncio: 'home',
-  });
+const [formData, setFormData] = useState({
+  file: null,
+  imageUrl: '',
+  description: '',
+  link: '',
+  days: 1,
+  phoneNumber: user?.contacto 
+    ? (user.contacto.startsWith('258') 
+        ? user.contacto 
+        : `258${user.contacto.replace(/^0/, '')}`)
+    : '',
+  tipoAnuncio: 'home',
+});
   
   const [selectedProvincias, setSelectedProvincias] = useState(user?.provincia ? [user.provincia] : []);
   const [selectedSectores, setSelectedSectores] = useState(user?.sector ? [user.sector] : []);
@@ -69,6 +77,9 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [currentAdId, setCurrentAdId] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const isDestacarPerfil = formData.tipoAnuncio === 'destacar_perfil';
 
@@ -196,6 +207,10 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       showSnackbar('Por favor, insira uma descrição para o anúncio.', 'error');
       return false;
     }
+      if (!formData.phoneNumber || !formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
+    showSnackbar('Por favor, insira um número de telefone válido no formato 258XXXXXXXXX', 'error');
+    return false;
+  }
     if (selectedProvincias.length === 0) {
       showSnackbar('Por favor, selecione pelo menos uma província.', 'error');
       return false;
@@ -274,11 +289,55 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     }
   };
 
-  const handlePaymentSuccess = () => {
-    resetForm();
-    onAdCreated();
-    setShowPaymentModal(false);
-    showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!user?.id) {
+      setPaymentError('Usuário não autenticado. Por favor, faça login novamente.');
+      return;
+    }
+
+ if (!formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
+    setPaymentError('Por favor, verifique o número de telefone (formato 258XXXXXXXXX).');
+    return;
+  }
+
+    setPaymentLoading(true);
+    setPaymentError('');
+
+    try {
+      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: totalCost,
+          phoneNumber: formData.phoneNumber,
+          reference: `Anuncio`
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao processar pagamento');
+      }
+
+      const adRef = ref(db, `banners/${currentAdId}`);
+      await set(adRef, { status: 'paid' }, { merge: true });
+
+      setPaymentSuccess(true);
+      showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
+      resetForm();
+      onAdCreated();
+      
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
+      setPaymentError(error.message || 'Ocorreu um erro ao processar o pagamento. Tente novamente mais tarde.');
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -294,6 +353,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     setSelectedProvincias(user?.provincia ? [user.provincia] : []);
     setSelectedSectores(user?.sector ? [user.sector] : []);
     setCurrentAdId(null);
+    setPaymentSuccess(false);
+    setPaymentError('');
   };
 
   const showSnackbar = (message, severity) => {
@@ -327,18 +388,18 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       
       {!isDestacarPerfil && (
         <>
-        <TextField
-          label="Descrição do anúncio *"
-          variant="outlined"
-          fullWidth
-          multiline
-          rows={3}
-          value={formData.description}
-          onChange={handleInputChange('description')}
-          inputProps={{ maxLength: 150 }}
-          helperText={`${formData.description.length}/150 caracteres`}
-          sx={{ mb: 2 }}
-        />
+          <TextField
+            label="Descrição do anúncio *"
+            variant="outlined"
+            fullWidth
+            multiline
+            rows={3}
+            value={formData.description}
+            onChange={handleInputChange('description')}
+            inputProps={{ maxLength: 150 }}
+            helperText={`${formData.description.length}/150 caracteres`}
+            sx={{ mb: 2 }}
+          />
 
           <TextField
             label="Link externo (opcional)"
@@ -512,57 +573,157 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       </Dialog>
 
       {/* Payment Modal */}
-<Dialog
-  open={showPaymentModal}
-  onClose={handlePaymentClose}
-  maxWidth="md"
-  fullWidth
-  sx={{
-    '& .MuiDialog-container': {
-      alignItems: 'flex-start' // Align to top instead of center
-    },
-    '& .MuiDialog-paper': {
-      height: '100%', // Take full height
-      maxHeight: '100vh', // But not more than viewport
-      margin: 0 // Remove default margin
-    }
+      <Dialog
+        open={showPaymentModal}
+        onClose={handlePaymentClose}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'flex-start'
+          },
+          '& .MuiDialog-paper': {
+            height: '100%',
+            maxHeight: '100vh',
+            margin: 0
+          }
+        }}
+      >
+        <DialogTitle sx={{ position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+          Pagamento do Anúncio
+          <Button 
+            onClick={handlePaymentClose} 
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            ×
+          </Button>
+        </DialogTitle>
+        <DialogContent dividers sx={{ 
+          padding: 0,
+          '&::-webkit-scrollbar': {
+            width: '8px'
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1'
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '4px'
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: '#555'
+          }
+        }}>
+          <Box sx={{ minHeight: 'calc(100% - 64px)' }}>
+            <Card sx={{ width: '100%', boxShadow: 3 }}>
+              <CardContent>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  Pagamento do Anúncio
+                </Typography>
+                
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>ID do Anúncio:</strong> {currentAdId || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Valor a pagar:</strong> {formatPrice(totalCost)} MT
+                  </Typography>
+                </Box>
+              </CardContent>
+              <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
+                {!paymentSuccess ? (
+                  <Box component="form" onSubmit={handlePaymentSubmit} sx={{ width: '100%' }}>
+                    <TextField
+                      label="Valor do Anúncio"
+                      value={`${formatPrice(totalCost)} MT`}
+                      fullWidth
+                      margin="normal"
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                    />
+                    
+                    <TextField
+                      label="Referência"
+                      value={`Anúncio ${currentAdId}`}
+                      fullWidth
+                      margin="normal"
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                    />
+                    <TextField
+  label="Telefone M-Pesa *"
+  value={formData.phoneNumber}
+  onChange={(e) => {
+    // Remove tudo que não é dígito
+    const rawValue = e.target.value.replace(/\D/g, '');
+    
+    // Garante que comece com 258 e tenha no máximo 12 caracteres
+    let formattedValue = rawValue.startsWith('258') 
+      ? rawValue 
+      : `258${rawValue}`;
+    formattedValue = formattedValue.substring(0, 12);
+    
+    setFormData(prev => ({ ...prev, phoneNumber: formattedValue }));
   }}
->
-  <DialogTitle sx={{ position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-    Pagamento do Anúncio
-    <Button 
-      onClick={handlePaymentClose} 
-      sx={{ position: 'absolute', right: 8, top: 8 }}
-    >
-      ×
-    </Button>
-  </DialogTitle>
-  <DialogContent dividers sx={{ 
-    padding: 0,
-    '&::-webkit-scrollbar': {
-      width: '8px'
-    },
-    '&::-webkit-scrollbar-track': {
-      background: '#f1f1f1'
-    },
-    '&::-webkit-scrollbar-thumb': {
-      background: '#888',
-      borderRadius: '4px'
-    },
-    '&::-webkit-scrollbar-thumb:hover': {
-      background: '#555'
-    }
-  }}>
-    <Box sx={{ minHeight: 'calc(100% - 64px)' }}>
-      <PagamentoAnunciar 
-        user={user}
-        onPaymentSuccess={handlePaymentSuccess}
-        customAmount={totalCost}
-        adId={currentAdId}
-      />
-    </Box>
-  </DialogContent>
-</Dialog>
+  fullWidth
+  margin="normal"
+  required
+  helperText={
+    formData.phoneNumber && !/^258\d{9}$/.test(formData.phoneNumber)
+      ? 'Número inválido. Formato correto: 258XXXXXXXXX (12 dígitos no total)'
+      : 'Número de telefone registado no M-Pesa'
+  }
+  error={formData.phoneNumber.length > 0 && !/^258\d{9}$/.test(formData.phoneNumber)}
+  InputProps={{
+    startAdornment: <InputAdornment position="start">258</InputAdornment>,
+  }}
+/>
+                    {paymentError && (
+                      <Alert severity="error" sx={{ mt: 2 }}>
+                        {paymentError}
+                      </Alert>
+                    )}
+                    
+                    <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={handlePaymentClose}
+                        fullWidth
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        disabled={paymentLoading}
+                        fullWidth
+                      >
+                        {paymentLoading ? <CircularProgress size={24} /> : 'Pagar via M-Pesa'}
+                      </Button>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Alert severity="success" sx={{ mt: 2 }}>
+                    Pagamento processado com sucesso!
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handlePaymentClose}
+                      sx={{ mt: 2 }}
+                      fullWidth
+                    >
+                      Fechar
+                    </Button>
+                  </Alert>
+                )}
+              </CardActions>
+            </Card>
+          </Box>
+        </DialogContent>
+      </Dialog>
 
       {/* Snackbar */}
       <Snackbar 
