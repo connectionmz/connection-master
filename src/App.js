@@ -72,6 +72,10 @@ const fetchUserDataRealtime = async (user) => {
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+
+
+      console.log('Auth state changed:', user);
+
       if (user) {
         await fetchUserDataRealtime(user); 
       } else {

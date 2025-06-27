@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   useMediaQuery, 
@@ -66,6 +66,18 @@ const AuthCreateDesk = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+
+    useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        // Se o usuário já estiver autenticado, redireciona para a página inicial
+        navigate('/auth');
+      }
+    });
+
+    return () => unsubscribe(); // Limpeza do listener
+  }, [navigate]);
 
   const saveUserData = useCallback(async (user) => {
     const userRef = ref(db, 'users/' + user.uid);
@@ -145,16 +157,19 @@ const AuthCreateDesk = () => {
 
 try {
   const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+  
   await sendEmailVerification(result.user);
+  
   await saveUserData(result.user);
 
   setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
+  
   setFormData({ email: '', password: '' });
+  
   setTermsAccepted(false);
+  
+  window.location.reload();
 
-  setTimeout(() => {
-    navigate('/auth');
-  }, 5000);
 
 } catch (error) {
       const userFriendlyMessage = getFirebaseErrorMessage(error.code);

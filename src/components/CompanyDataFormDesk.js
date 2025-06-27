@@ -40,6 +40,7 @@ const CompanyDataFormDesk = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [hasOptionalFiscalFields, setHasOptionalFiscalFields] = useState(false);
   const [openSubsectorSelect, setOpenSubsectorSelect] = useState(false);
+   const [isCheckingCompany, setIsCheckingCompany] = useState(true);
 // Add similar states for other select fields if needed
   const [companyData, setCompanyData] = useState({
     nome: '',
@@ -68,6 +69,33 @@ const CompanyDataFormDesk = () => {
       "Empresas Públicas e Entidades Parapúblicas",
       "Organizações Religiosas"
     ];
+
+    useEffect(() => {
+    const checkExistingCompany = async () => {
+      setIsCheckingCompany(true);
+      const user = auth.currentUser;
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+
+      try {
+        const companyRef = ref(db, `company/${user.uid}`);
+        const snapshot = await get(companyRef);
+        
+        if (snapshot.exists()) {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error("Erro ao verificar empresa existente:", error);
+      } finally {
+        setIsCheckingCompany(false);
+      }
+    };
+
+    checkExistingCompany();
+  }, [navigate]);
+
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -284,7 +312,7 @@ const CompanyDataFormDesk = () => {
         await set(ref(db, `company/${user.uid}`), dataToSave);
         await push(ref(db, `subscriptions/${user.uid}`), { status: "active" });
 
-        window.location.reload();
+        window.location= '/auth';
       }
     } catch (error) {
       setErrorMessage("Ocorreu um erro ao salvar os dados. Tente novamente.");
