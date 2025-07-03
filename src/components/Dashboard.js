@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -32,10 +32,7 @@ const Dashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const isMobile = useMediaQuery("(max-width:600px)");
 
-
-const navigate = useNavigate();
-
-
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCampanhasAtivas = async () => {
@@ -50,9 +47,12 @@ const navigate = useNavigate();
               Object.keys(campanhasInternas).forEach((subKey) => {
                 const campanha = campanhasInternas[subKey];
                 if (campanha.component === "home") {
-                  if (!user || (user.provinciaTemp || user.provincia) === campanha.company?.provincia) {
-                    campanhasArray.push({ id: subKey, ...campanha });
-                  } else if (!user) {
+                  // Get the current province or default to "Cabo Delgado"
+                  const currentProvince = user 
+                    ? user.provinciaTemp || user.provincia 
+                    : "Cabo Delgado";
+                  
+                  if (currentProvince === campanha.company?.provincia) {
                     campanhasArray.push({ id: subKey, ...campanha });
                   }
                 }
@@ -88,49 +88,54 @@ const navigate = useNavigate();
     setOpenSnackbar(false);
   };
 
+  // Get the current province or default to "Cabo Delgado"
+  const currentProvince = user 
+    ? user.provinciaTemp || user.provincia 
+    : "Cabo Delgado";
+
   return (
     <Box>
       <Container>
-<Box 
-  sx={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1,
-    mb: 2,
-    p: 2,
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    borderLeft: '4px solid #1976d2',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-  }}
->
-  <LocationCity sx={{ color: '#1976d2' }} />
-  <Typography 
-    variant="subtitle1"
-    sx={{ 
-      fontWeight: 700, 
-      color: '#1976d2',
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      '& span': {
-        color: '#333',
-        fontWeight: 600,
-        textTransform: 'none',
-        ml: 1
-      }
-    }}
-  >
-    Exibindo conteúdo de: 
-    <span>
-      {user?.provinciaTemp || user?.provincia}
-    </span>
-  </Typography>
-</Box>    
-<MarqueeParceiros />
+        <Box 
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            mb: 2,
+            p: 2,
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            borderLeft: '4px solid #1976d2',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+          }}
+        >
+          <LocationCity sx={{ color: '#1976d2' }} />
+          <Typography 
+            variant="subtitle1"
+            sx={{ 
+              fontWeight: 700, 
+              color: '#1976d2',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              '& span': {
+                color: '#333',
+                fontWeight: 600,
+                textTransform: 'none',
+                ml: 1
+              }
+            }}
+          >
+            Exibindo conteúdo de: 
+            <span>
+              {currentProvince}
+            </span>
+          </Typography>
+        </Box>    
+        <MarqueeParceiros />
         <CategoriaList />
         <StorieListDesk user={user} />
         <Grid container spacing={2}>
-        <LatestBlogPost/>
+          <LatestBlogPost/>
           <Grid item xs={12} sm={6}>
             <MarqueeAnuncios user={user} />
             <Box>
@@ -138,9 +143,8 @@ const navigate = useNavigate();
             </Box>
           </Grid>
           <Grid item xs={12} sm={3}>
-  <InqueritosList 
-  user={user} />
-        </Grid>
+            <InqueritosList user={user} />
+          </Grid>
         </Grid>
       </Container>
       <Snackbar
@@ -155,4 +159,5 @@ const navigate = useNavigate();
     </Box>
   );
 };
+
 export default Dashboard;

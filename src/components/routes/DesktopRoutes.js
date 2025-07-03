@@ -459,9 +459,7 @@ const handleSubmitFeedback = async () => {
       boxSizing: 'border-box',
       pb: 4, 
     }}>
-          {showTerms && <TermsAndPrivacy onAccept={handleAcceptTerms} />}
           <Routes>
-  {/* Rotas públicas */}
   <Route path="/" element={<DashboardComponent user={user} />} />
 
   <Route path="/feed" element={<FeedDesk user={user} />} />
@@ -494,24 +492,21 @@ const handleSubmitFeedback = async () => {
     </GuestRoute>
   } 
 />
-<Route 
-  path="/create" 
-  element={
-    <GuestRoute user={user}>
-      <AuthCreateDesk user={user} />
-    </GuestRoute>
-  } 
-/>
-
+  <Route 
+    path="/create" 
+    element={
+      <GuestRoute user={user}>
+        <AuthCreateDesk user={user} />
+      </GuestRoute>
+    } 
+  />
   <Route path="/setup" element={<CompanyDataFormDesk />} />
   <Route path="/setupUser" element={<UserDataFormDesk />} />
-  
   <Route path="/forget-password" element={<ForgetPassword />} />
   <Route path="/change-password" element={<ChangePassword user={user} />} />
   <Route path="/email-verification" element={<EmailVerification />} />
   <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
 
-  {/* Rotas protegidas */}
   <Route path="/addProduct" element={
     <ProtectedRoute requiredModule={"moduloProforma"}>
       <ProductFormDesk user={user} />

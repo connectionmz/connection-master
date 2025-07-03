@@ -25,55 +25,48 @@ const StorieListDesk = ({ user }) => {
 
   const defaultLogoUrl = "https://via.placeholder.com/150";
 
-useEffect(() => {
-  const fetchCompanies = async () => {
-    try {
-      const companiesRef = ref(db, "company");
-      const snapshot = await get(companiesRef);
-      if (snapshot.exists()) {
-        const data = snapshot.val();
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const companiesRef = ref(db, "company");
+        const snapshot = await get(companiesRef);
+        if (snapshot.exists()) {
+          const data = snapshot.val();
 
-        if (!user) {
-          setError("Usuário não disponível.");
-          setLoading(false);
-          return;
+          // Use "Cabo Delgado" as default province if user is not logged in
+          const provinciaFiltro = user 
+            ? user.provinciaTemp || user.provincia 
+            : "Cabo Delgado";
+
+          let companyList = Object.keys(data)
+            .map((key) => ({
+              id: key,
+              ...data[key],
+            }))
+            .filter((empresa) => empresa.provincia === provinciaFiltro);
+
+          companyList = companyList.filter((company) => {
+            if (!company) return false;
+
+            const type = (company.type || '').trim().toLowerCase();
+            return type !== 'singular';
+          });
+
+          const randomCompanies = companyList
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 7);
+
+          setStories(randomCompanies);
         }
-
-        const provinciaFiltro = user.provinciaTemp || user.provincia;
-
-        let companyList = Object.keys(data)
-          .map((key) => ({
-            id: key,
-            ...data[key],
-          }))
-          .filter((empresa) => empresa.provincia === provinciaFiltro);
-
-        companyList = companyList.filter((company) => {
-          if (!company) return false;
-
-          const type = (company.type || '').trim().toLowerCase();
-          return type !== 'singular';
-        });
-
-        const randomCompanies = companyList
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 7);
-
-        setStories(randomCompanies);
+      } catch (error) {
+        setError("Erro ao carregar empresas: " + error.message);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setError("Erro ao carregar empresas: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  if (user) {
     fetchCompanies();
-  }
-}, [user]);
-
-
+  }, [user]);
 
   const handleCompanyClick = (companyId) => {
     navigate(`/perfil/${companyId}`);
@@ -129,7 +122,7 @@ useEffect(() => {
             justifyContent: "center",
             borderRadius: 2,
             boxShadow: 1,
-            p: isMobile ? 0.5 : 1, // Padding menor em mobile
+            p: isMobile ? 0.5 : 1,
             textAlign: "center",
           }}
         >
@@ -138,7 +131,7 @@ useEffect(() => {
               src={store.logoUrl || defaultLogoUrl}
               alt={`Logotipo de ${store.nome}`}
               sx={{
-                width: isMobile ? 40 : 56, // Tamanho menor em mobile
+                width: isMobile ? 40 : 56,
                 height: isMobile ? 40 : 56,
                 mb: 1,
                 margin: "0 auto",
@@ -153,7 +146,7 @@ useEffect(() => {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   textTransform: "capitalize",
-                  fontSize: isMobile ? 11 : 13, // Fonte menor em mobile
+                  fontSize: isMobile ? 11 : 13,
                 }}
               >
                 {store.sigla || store.nome}
@@ -165,7 +158,7 @@ useEffect(() => {
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  fontSize: isMobile ? 9 : 11, // Fonte menor em mobile
+                  fontSize: isMobile ? 9 : 11,
                 }}
               >
                 {store.sector || "Setor não especificado"}
@@ -176,15 +169,15 @@ useEffect(() => {
       ))}
       <Card
         sx={{
-          minWidth: isMobile ? 100 : 140, // Largura mínima menor em mobile
-          width: isMobile ? 100 : 140, // Largura fixa menor em mobile
+          minWidth: isMobile ? 100 : 140,
+          width: isMobile ? 100 : 140,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 2,
           boxShadow: 1,
-          p: isMobile ? 0.5 : 1, // Padding menor em mobile
+          p: isMobile ? 0.5 : 1,
           textAlign: "center",
           cursor: "pointer",
         }}
@@ -202,7 +195,7 @@ useEffect(() => {
         >
           <Avatar
             sx={{
-              width: isMobile ? 40 : 56, // Tamanho menor em mobile
+              width: isMobile ? 40 : 56,
               height: isMobile ? 40 : 56,
               bgcolor: "grey.200",
               mb: 1,
@@ -219,7 +212,7 @@ useEffect(() => {
             sx={{
               textTransform: "uppercase",
               fontWeight: 500,
-              fontSize: isMobile ? 11 : 13, // Fonte menor em mobile
+              fontSize: isMobile ? 11 : 13,
             }}
           >
             Ver mais

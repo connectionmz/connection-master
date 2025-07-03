@@ -1,37 +1,46 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Link,
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
-const TermsAndPrivacy = ({ onAccept }) => {
+const TermsAndPrivacy = ({ onContinue }) => {
   const [open, setOpen] = useState(true);
+  const navigate = useNavigate();
 
-  const handleAccept = () => {
-    localStorage.setItem('acceptedTerms', 'true'); // Armazena a aceitação no localStorage
+  const handleContinue = () => {
     setOpen(false);
-    onAccept(); // Chama a função de aceitação
+    onContinue(); // Chama função de continuação (se necessário)
+  };
+
+  const handleViewTerms = () => {
+    navigate('/termos');
   };
 
   return (
-    <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
-      <DialogTitle>Termos de Uso e Política de Privacidade</DialogTitle>
+    <Dialog open={open} maxWidth="sm" fullWidth>
+      <DialogTitle>Bem-vindo à Plataforma!</DialogTitle>
       <DialogContent>
-        <Box sx={{ maxHeight: '400px', overflowY: 'auto', padding: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            1. Termos de Uso
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-          </Typography>
-          <Typography variant="h6" gutterBottom>
-            2. Política de Privacidade
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+        <Box sx={{ py: 2 }}>
+          <Typography variant="body1" gutterBottom>
+            Obrigado por se juntar a nós. Para entender melhor os seus direitos e deveres enquanto utiliza esta aplicação,
+            recomendamos que leia os nossos{' '}
+            <Link onClick={handleViewTerms} sx={{ cursor: 'pointer' }}>
+              Termos de Uso e Política de Privacidade
+            </Link>.
           </Typography>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleAccept} variant="contained" color="primary">
-          Aceitar
+        <Button onClick={handleContinue} variant="contained" color="primary">
+          Continuar
         </Button>
       </DialogActions>
     </Dialog>

@@ -41,8 +41,8 @@ const CompanyDataFormDesk = () => {
   const [hasOptionalFiscalFields, setHasOptionalFiscalFields] = useState(false);
   const [openSubsectorSelect, setOpenSubsectorSelect] = useState(false);
    const [isCheckingCompany, setIsCheckingCompany] = useState(true);
-// Add similar states for other select fields if needed
-  const [companyData, setCompanyData] = useState({
+
+   const [companyData, setCompanyData] = useState({
     nome: '',
     sigla: '',
     nuit: '',
@@ -63,12 +63,12 @@ const CompanyDataFormDesk = () => {
     createdAt: new Date().toISOString(),
   });
 
-    const optionalFiscalEntities = [
-      "Organizações Não Governamentais (ONGs)",
-      "Organizações da Sociedade Civil (OSC)",
-      "Empresas Públicas e Entidades Parapúblicas",
-      "Organizações Religiosas"
-    ];
+  const optionalFiscalEntities = [
+    "Organizações Não Governamentais (ONGs)",
+    "Organizações da Sociedade Civil (OSC)",
+    "Empresas Públicas e Entidades Parapúblicas",
+    "Organizações Religiosas"
+  ];
 
     useEffect(() => {
     const checkExistingCompany = async () => {
