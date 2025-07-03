@@ -349,15 +349,17 @@ const CotacaoDetalhesDesk = ({ user }) => {
               Partilhar
             </Button>
             
-            <Button 
-              variant="outlined" 
-              color="error" 
-              onClick={toggleDenunciaModal}
-              startIcon={<Report />}
-              fullWidth={isMobile}
-            >
-              Denunciar
-            </Button>
+            {cotacao.company.id != user.id && (
+              <Button 
+                variant="outlined" 
+                color="error" 
+                onClick={toggleDenunciaModal}
+                startIcon={<Report />}
+                fullWidth={isMobile}
+              >
+                Denunciar
+              </Button>
+            )}
             
             {/* Owner-specific actions */}
             {user.id === cotacao.company.id ? (
@@ -388,6 +390,7 @@ const CotacaoDetalhesDesk = ({ user }) => {
               </>
             ) : (
               /* Non-owner actions */
+              
               hasProposal ? (
                 <Button 
                   variant="contained" 

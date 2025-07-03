@@ -536,7 +536,7 @@ const PublicarConcursoDesk = ({ user }) => {
             <Grid item xs={12} md={8}>
               <TextField
                 fullWidth
-                label="Título do Concurso *"
+                label="Título do Concurso"
                 name="titulo"
                 value={formData.titulo}
                 onChange={handleChange}
@@ -561,7 +561,7 @@ const PublicarConcursoDesk = ({ user }) => {
   <Grid item xs={12} md={6}>
     <TextField
       fullWidth
-      label="Contacto para informações *"
+      label="Contacto para informações"
       name="contacto"
       value={formData.contacto}
       onChange={handleChange}
@@ -577,7 +577,7 @@ const PublicarConcursoDesk = ({ user }) => {
   <Grid item xs={12} md={6}>
     <TextField
       fullWidth
-      label="Email para informações *"
+      label="Email para informações"
       name="email"
       type="email"
       value={formData.email}
@@ -596,7 +596,7 @@ const PublicarConcursoDesk = ({ user }) => {
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Prazo de Submissão *"
+                label="Prazo de Submissão"
                 type="date"
                 name="prazo"
                 value={formatDateForInput(formData.prazo)}
@@ -634,6 +634,7 @@ const PublicarConcursoDesk = ({ user }) => {
                 label="Data de Limite"
                 type="date"
                 name="dataLimite"
+                required
                 value={formatDateForInput(formData.dataLimite)}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -649,7 +650,7 @@ const PublicarConcursoDesk = ({ user }) => {
 
           <TextField
             fullWidth
-            label="Local de Entrega *"
+            label="Local de Entrega"
             name="localEntrega"
             value={formData.localEntrega}
             onChange={handleChange}
@@ -677,7 +678,7 @@ const PublicarConcursoDesk = ({ user }) => {
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel>Setor de Atividade *</InputLabel>
+                <InputLabel>Setor de Atividade</InputLabel>
                 <Select
                   multiple
                   name="setor"
@@ -716,7 +717,7 @@ const PublicarConcursoDesk = ({ user }) => {
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel>Modalidade *</InputLabel>
+                <InputLabel>Modalidade</InputLabel>
                 <Select
                   name="modalidade"
                   value={formData.modalidade}

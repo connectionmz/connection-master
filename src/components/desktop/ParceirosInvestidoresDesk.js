@@ -193,7 +193,7 @@ const ParceirosInvestidoresDesk = () => {
           setCompanies({
             parceiros: allCompanies.filter(c => c.tipo === 'Parceiro'),
             financiadores: allCompanies.filter(c => c.tipo === 'Financiador'),
-            patrocinadores: allCompanies.filter(c => c.tipo === 'Patrocinador' || c.tipo === 'Investidor')
+            patrocinadores: allCompanies.filter(c => c.tipo === 'Patrocinador')
           });
         }
       } catch (error) {
