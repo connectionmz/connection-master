@@ -72,15 +72,13 @@ const accountTypes = [
 ];
 
   return (
-    <Box sx={{ margin: '0 auto',overflow:'auto'}} >
+    <Box sx={{ margin: '0 auto', p: isMobile ? 2 : 4, overflow:'auto' }} >
       <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'center', fontWeight: 700, mb: 4 }}>
-        Qual tipo de conta você precisa?
+       Selecione o tipo de conta
       </Typography>
-      
       <Typography variant="subtitle1" sx={{ textAlign: 'center', mb: 4, color: 'text.secondary' }}>
         Escolha o tipo de conta que melhor atende suas necessidades. Você poderá adicionar detalhes depois.
       </Typography>
-      
       <Grid container spacing={3} justifyContent="center">
         {accountTypes.map((type) => (
           <Grid item xs={12} sm={6} key={type.id}>
