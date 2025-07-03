@@ -72,7 +72,7 @@ const accountTypes = [
 ];
 
   return (
-    <Box sx={{ maxWidth: 800, margin: '0 auto', p: isMobile ? 2 : 4 }}>
+    <Box sx={{ margin: '0 auto',overflow:'auto'}} >
       <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'center', fontWeight: 700, mb: 4 }}>
         Qual tipo de conta você precisa?
       </Typography>
