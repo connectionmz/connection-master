@@ -441,14 +441,13 @@ const ReceiptPDF = ({ receipt }) => (
 
   return (
     <Box sx={{ p: isMobile ? 1 : 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Comprovativos de Pagamento
-        </Typography>
-      </Box>
+    
 
       {/* Filtros e Busca */}
       <Card sx={{ mb: 3, p: 2 }}>
+        <Typography variant="h4" component="h1">
+          Comprovativos de Pagamento
+        </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
           <TextField
             size="small"
@@ -464,25 +463,11 @@ const ReceiptPDF = ({ receipt }) => (
             }}
             sx={{ flexGrow: 1, minWidth: 200 }}
           />
-          
-          <Select
-            size="small"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value="all">Todos Estados</MenuItem>
-            <MenuItem value="aprovado">Aprovados</MenuItem>
-            <MenuItem value="pendente">Pendentes</MenuItem>
-            <MenuItem value="recusado">Recusados</MenuItem>
-          </Select>
-
           <Select
             size="small"
             value={filterSubscription}
             onChange={(e) => setFilterSubscription(e.target.value)}
-            sx={{ minWidth: 180 }}
-          >
+            sx={{ minWidth: 180 }}>
             <MenuItem value="all">Todos Tipos</MenuItem>
             <MenuItem value="mensal">Mensal</MenuItem>
             <MenuItem value="anual">Anual</MenuItem>

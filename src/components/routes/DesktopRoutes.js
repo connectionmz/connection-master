@@ -481,8 +481,7 @@ const handleSubmitFeedback = async () => {
   <Route path="/termos" element={<Terms />} />
   <Route path="/politicas" element={<Politicas />} />
 
-
-    <Route 
+  <Route 
   path="/auth" 
   element={
     <GuestRoute user={user}>
