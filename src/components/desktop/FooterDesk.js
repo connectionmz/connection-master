@@ -9,11 +9,7 @@ const FooterDesk = () => {
       <Container maxWidth="lg">
         <Box sx={{ marginTop: 4, textAlign: "center" }}>
           <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
-            <Link href="/sobre" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
-              Sobre
-            </Link>
-            |
-            <Link href="/termos" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
+            <Link href="/termos" sx={{  textDecoration: "none", mx: 1 }}>
               Políticas & Termos
             </Link>
           </Typography>

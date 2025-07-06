@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ref, onValue, update, push, set, get } from 'firebase/database';
+import { ref, onValue, get } from 'firebase/database';
 import { db } from '../../fb';
 import {
   Box,
@@ -27,16 +27,21 @@ import {
   TableRow,
   Chip,
   Tooltip,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import BackButton from '../BackButton';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PaymentIcon from '@mui/icons-material/Payment';
 import HistoryIcon from '@mui/icons-material/History';
 import InfoIcon from '@mui/icons-material/Info';
-import axios from 'axios';
 import { formatPrice } from '../../utils/utils';
 
 const SmsDesk = ({ user }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  
   const [smsBalance, setSmsBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -101,7 +106,6 @@ const SmsDesk = ({ user }) => {
       }
 
       setHistory(historyData.sort((a, b) => new Date(b.date) - new Date(a.date)));
-      console.log('Histórico carregado:', historyData);
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
       setError('Falha ao carregar histórico. Tente novamente.');
@@ -128,20 +132,62 @@ const SmsDesk = ({ user }) => {
     return matchesType && matchesSearch;
   });
 
+  // Responsive table columns
+  const tableColumns = [
+    { id: 'date', label: 'Data/Hora', visible: true },
+    { id: 'sender', label: 'Remetente', visible: !isMobile },
+    { id: 'message', label: 'Mensagem', visible: true },
+    { id: 'type', label: 'Tipo', visible: !isMobile },
+    { id: 'status', label: 'Status', visible: !isMobile },
+  ];
+
   return (
-    <Box sx={{ maxWidth: 'lg', margin: 'auto', padding: 4, backgroundColor: '#f5f5f5', borderRadius: 2, boxShadow: 3, marginTop: 5 }}>
+    <Box sx={{ 
+      maxWidth: 'lg', 
+      margin: 'auto', 
+      padding: isMobile ? 2 : 4, 
+      backgroundColor: '#f5f5f5', 
+      borderRadius: 2, 
+      boxShadow: 3, 
+      marginTop: isMobile ? 3 : 5 
+    }}>
       <BackButton sx={{ mb: 2 }} />
 
-      <Tabs value={activeTab} onChange={handleTabChange} centered sx={{ mb: 3 }}>
-        <Tab label="Histórico" icon={<HistoryIcon />} iconPosition="start" />
-        <Tab label="Informações" icon={<InfoIcon />} iconPosition="start" />
+      <Tabs 
+        value={activeTab} 
+        onChange={handleTabChange} 
+        centered 
+        sx={{ mb: 3 }}
+        variant={isMobile ? "fullWidth" : "standard"}
+      >
+        <Tab label={isMobile ? "" : "Histórico"} icon={<HistoryIcon />} iconPosition="start" />
+        <Tab label={isMobile ? "" : "Informações"} icon={<InfoIcon />} iconPosition="start" />
       </Tabs>
 
       {activeTab === 0 && (
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <FormControl sx={{ minWidth: 150 }} size="small">
+        <Paper sx={{ 
+          p: isMobile ? 1 : 3, 
+          mb: 4, 
+          borderRadius: 3, 
+          boxShadow: 3,
+          overflowX: 'auto'
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: 'space-between', 
+            alignItems: isMobile ? 'flex-start' : 'center', 
+            mb: 3,
+            gap: isMobile ? 2 : 0
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              alignItems: 'center',
+              flexDirection: isMobile ? 'column' : 'row',
+              width: isMobile ? '100%' : 'auto'
+            }}>
+              <FormControl sx={{ minWidth: isMobile ? '100%' : 150 }} size="small">
                 <InputLabel>Filtrar por tipo</InputLabel>
                 <Select
                   value={filterType}
@@ -161,7 +207,8 @@ const SmsDesk = ({ user }) => {
                 size="small"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                sx={{ minWidth: 200 }}
+                sx={{ minWidth: isMobile ? '100%' : 200 }}
+                fullWidth={isMobile}
               />
             </Box>
             
@@ -171,8 +218,10 @@ const SmsDesk = ({ user }) => {
               variant="outlined"
               color="primary"
               disabled={historyLoading}
+              sx={{ mt: isMobile ? 1 : 0 }}
+              fullWidth={isMobile}
             >
-              Atualizar
+              {isMobile ? 'Atualizar' : 'Atualizar Histórico'}
             </Button>
           </Box>
 
@@ -192,37 +241,47 @@ const SmsDesk = ({ user }) => {
               </Typography>
             </Box>
           ) : (
-            <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-              <Table>
+            <TableContainer component={Paper} sx={{ borderRadius: 2, maxWidth: '100%', overflowX: 'auto' }}>
+              <Table size={isMobile ? 'small' : 'medium'}>
                 <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Data/Hora</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Remetente</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Mensagem</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                    {tableColumns.map((column) => (
+                      column.visible && (
+                        <TableCell key={column.id} sx={{ fontWeight: 'bold' }}>
+                          {column.label}
+                        </TableCell>
+                      )
+                    ))}
+                    {isMobile && (
+                      <TableCell sx={{ fontWeight: 'bold' }}>Detalhes</TableCell>
+                    )}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredHistory.map((item) => (
                     <TableRow key={item.id} hover>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {new Date(item.date).toLocaleDateString('pt-MZ', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography fontWeight="medium">
-                          {item.empresaOrigemNome}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
+                      {tableColumns[0].visible && (
+                        <TableCell>
+                          <Typography variant="body2">
+                            {new Date(item.date).toLocaleDateString('pt-MZ', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: isMobile ? '2-digit' : 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </Typography>
+                        </TableCell>
+                      )}
+                      {tableColumns[1].visible && (
+                        <TableCell>
+                          <Typography fontWeight="medium">
+                            {item.empresaOrigemNome}
+                          </Typography>
+                        </TableCell>
+                      )}
+                      {tableColumns[2].visible && (
+                        <TableCell>
                           <Typography variant="body2" sx={{ 
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -230,23 +289,37 @@ const SmsDesk = ({ user }) => {
                             overflow: 'hidden',
                             cursor: 'pointer'
                           }}>
-                            {item.message}
+                            {isMobile ? `${item.message.substring(0, 30)}...` : item.message}
                           </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={item.sector === 'cotacao' ? 'Cotação' : item.sector === 'concurso' ? 'Concurso' : 'Geral'} 
-                          size="small"
-                          color={item.sector === 'cotacao' ? 'primary' : item.sector === 'concurso' ? 'secondary' : 'default'}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label="Enviado" 
-                          size="small"
-                          color="success"
-                        />
-                      </TableCell>
+                        </TableCell>
+                      )}
+                      {tableColumns[3].visible && (
+                        <TableCell>
+                          <Chip 
+                            label={item.sector === 'cotacao' ? 'Cotação' : item.sector === 'concurso' ? 'Concurso' : 'Geral'} 
+                            size="small"
+                            color={item.sector === 'cotacao' ? 'primary' : item.sector === 'concurso' ? 'secondary' : 'default'}
+                          />
+                        </TableCell>
+                      )}
+                      {tableColumns[4].visible && (
+                        <TableCell>
+                          <Chip 
+                            label="Enviado" 
+                            size="small"
+                            color="success"
+                          />
+                        </TableCell>
+                      )}
+                      {isMobile && (
+                        <TableCell>
+                          <Tooltip title="Mais detalhes">
+                            <IconButton size="small">
+                              <InfoIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -257,12 +330,14 @@ const SmsDesk = ({ user }) => {
           {!historyLoading && filteredHistory.length > 0 && (
             <Box sx={{ 
               display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
               justifyContent: 'space-between', 
               alignItems: 'center', 
               mt: 2,
               p: 1,
               backgroundColor: '#f5f5f5',
-              borderRadius: 1
+              borderRadius: 1,
+              gap: isMobile ? 1 : 0
             }}>
               <Typography variant="caption">
                 Última atualização: {new Date().toLocaleTimeString()}
@@ -276,51 +351,73 @@ const SmsDesk = ({ user }) => {
       )}
 
       {activeTab === 1 && (
-        <Paper sx={{ backgroundColor: '#fff', padding: 3, borderRadius: 2, marginBottom: 4, boxShadow: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#333', mb: 2 }}>
+        <Paper sx={{ 
+          backgroundColor: '#fff', 
+          padding: isMobile ? 2 : 3, 
+          borderRadius: 2, 
+          marginBottom: 4, 
+          boxShadow: 2 
+        }}>
+          <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ fontWeight: 'bold', color: '#333', mb: 2 }}>
             Como funciona o plano?
           </Typography>
           
-          <Typography paragraph>
+          <Typography paragraph sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
             Receba alertas instantâneos sobre novos pedidos de cotação e concursos públicos do seu setor, diretamente no seu celular e e-mail — seja na sua província ou em todo o país. Não perca nenhuma oportunidade!
           </Typography>
           
-          <Typography paragraph>
-            <strong>Benefícios do plano:</strong>
+          <Typography paragraph sx={{ fontWeight: 'bold', fontSize: isMobile ? '0.875rem' : '1rem' }}>
+            Benefícios do plano:
           </Typography>
           
-          <ul>
+          <Box component="ul" sx={{ 
+            pl: isMobile ? 2 : 3,
+            '& li': { 
+              fontSize: isMobile ? '0.875rem' : '1rem',
+              mb: 1
+            }
+          }}>
             <li><Typography>Notificações por SMS e Email</Typography></li>
             <li><Typography>Cobertura para todos os pedidos do seu setor</Typography></li>
             <li><Typography>Sem custos adicionais</Typography></li>
             <li><Typography>Renovação mensal automática</Typography></li>
-          </ul>
-          <Typography paragraph>
-            Valor mensal: <strong>{formatPrice(MONTHLY_SUBSCRIPTION_PRICE)} MT</strong>
+          </Box>
+          
+          <Typography paragraph sx={{ fontWeight: 'bold' }}>
+            Valor mensal: {formatPrice(MONTHLY_SUBSCRIPTION_PRICE)} MT
           </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 3, mb: 1 }}>
+          
+          <Typography variant={isMobile ? 'subtitle1' : 'h6'} sx={{ fontWeight: 'bold', mt: 3, mb: 1 }}>
             Perguntas Frequentes
           </Typography>
-          <Typography paragraph>
-            <strong>Como ativo o plano?</strong><br />
-            Basta clicar em "Ativar Assinatura" e seguir os passos para pagamento.
-          </Typography>
-          <Typography paragraph>
-            <strong>Quais métodos de pagamento aceitamos?</strong><br />
-            M-Pesa e e-Mola. O pagamento é rápido e seguro.
-          </Typography>
-          <Typography paragraph>
-            <strong>Posso cancelar a qualquer momento?</strong><br />
-            Sim, você pode cancelar a renovação automática quando quiser.
-          </Typography>
-          <Typography paragraph>
-            <strong>Quando recebo as notificações?</strong><br />
-            Imediatamente quando um cliente faz um pedido no seu setor.
-          </Typography>
+          
+          <Box sx={{ 
+            '& > *': { 
+              mb: 2,
+              fontSize: isMobile ? '0.875rem' : '1rem'
+            } 
+          }}>
+            <Typography>
+              <strong>Como ativo o plano?</strong><br />
+              Basta clicar em "Ativar Assinatura" e seguir os passos para pagamento.
+            </Typography>
+            <Typography>
+              <strong>Quais métodos de pagamento aceitamos?</strong><br />
+              M-Pesa e e-Mola. O pagamento é rápido e seguro.
+            </Typography>
+            <Typography>
+              <strong>Posso cancelar a qualquer momento?</strong><br />
+              Sim, você pode cancelar a renovação automática quando quiser.
+            </Typography>
+            <Typography>
+              <strong>Quando recebo as notificações?</strong><br />
+              Imediatamente quando um cliente faz um pedido no seu setor.
+            </Typography>
+          </Box>
         </Paper>
       )}
-
     </Box>
   );
 };
+
 export default SmsDesk;

@@ -570,7 +570,7 @@ const handleSubmitFeedback = async () => {
 
   {/* Cotações e propostas */}
   <Route path="/cotacoes" element={
-    <ProtectedRoute requiredModule={"moduloSMS"}>
+    <ProtectedRoute>
       <CotacoesDesk user={user} />
     </ProtectedRoute>
   } />
@@ -718,7 +718,7 @@ const handleSubmitFeedback = async () => {
 
   {/* Concursos */}
   <Route path="/concursos" element={
-    <ProtectedRoute requiredModule="moduloSMS">
+    <ProtectedRoute>
       <ConcursoDesk user={user} />
     </ProtectedRoute>
   } />
