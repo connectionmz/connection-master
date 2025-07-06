@@ -16,16 +16,7 @@ const FooterDesk = () => {
             <Link href="/termos" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
               Políticas & Termos
             </Link>
-            |
-            <Link href="/ajuda" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
-              Ajuda
-            </Link>
-            |
-            <Link href="/verificacao" sx={{ color: "text.secondary", textDecoration: "none", mx: 1 }}>
-              Verificação
-            </Link>
           </Typography>
-
           <Box sx={{ mt: 2 }}>
             <IconButton href="https://x.com/Connection0201" target="_blank" sx={{ color: "#0e76a8", marginRight: 2 }}>
               <X />

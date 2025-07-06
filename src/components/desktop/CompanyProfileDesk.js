@@ -389,9 +389,7 @@ const CompanyProfile = ({ user }) => {
       setOpenSnackbar(true);
       return;
     }
-
     try {
-      // 1. Add to blocked list
       const blockRef = ref(db, `blocked/${user.id}/${userId}`);
       await set(blockRef, {
         blockedAt: new Date().toISOString(),
@@ -400,7 +398,6 @@ const CompanyProfile = ({ user }) => {
         companyName: userData?.displayName
       });
 
-      // 2. Remove existing connections if any
       if (connectionStatus) {
         const userConnectionRef = ref(db, `connections/${user.id}/${userId}`);
         await remove(userConnectionRef);
@@ -408,7 +405,6 @@ const CompanyProfile = ({ user }) => {
         const companyConnectionRef = ref(db, `connections/${userId}/${user.id}`);
         await remove(companyConnectionRef);
 
-        // Notify company about disconnection
         await saveContentToInbox(userId, {
           type: "connection_disconnect",
           message: `${user.nome} bloqueou sua empresa`,
@@ -419,7 +415,6 @@ const CompanyProfile = ({ user }) => {
           link: `/perfil/${user.id}`
         });
       }
-      // 3. Update local state
       setIsBlocked(true);
       setConnectionStatus(null);
       
@@ -432,6 +427,11 @@ const CompanyProfile = ({ user }) => {
       setOpenSnackbar(true);
     }
   };
+  const getWebsiteUrl = (url) => {
+  if (!url) return '';
+  return url.startsWith('http') ? url : `https://${url}`;
+};
+
 
   const handleUnblockCompany = async () => {
     if (!user) return;
@@ -750,11 +750,10 @@ const CompanyProfile = ({ user }) => {
               </IconButton>
             </Tooltip>
           )}
-
           {social.website && (
             <Tooltip title="Website" arrow>
               <IconButton
-                href={social.website}
+                href={getWebsiteUrl(social.website)}
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{ color: '#4285F4' }}
@@ -765,13 +764,10 @@ const CompanyProfile = ({ user }) => {
           )}
         </Box>
       </Box>
-
-      {/* Options Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
+        onClose={handleMenuClose}>
         {user ? (
           isBlocked ? (
             <MenuItem onClick={handleUnblockCompany}>
@@ -800,7 +796,6 @@ const CompanyProfile = ({ user }) => {
         )}
       </Menu>
 
-      {/* Report Dialog */}
       <Dialog open={openReportDialog} onClose={handleCloseReportDialog} fullWidth maxWidth="sm">
         <DialogTitle>Denunciar Empresa</DialogTitle>
         <DialogContent>

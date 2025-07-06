@@ -461,7 +461,6 @@ const handleSubmitFeedback = async () => {
     }}>
           <Routes>
   <Route path="/" element={<DashboardComponent user={user} />} />
-
   <Route path="/feed" element={<FeedDesk user={user} />} />
   <Route path="/teste" element={<Teste user={user} />} />
   <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
@@ -472,7 +471,6 @@ const handleSubmitFeedback = async () => {
   <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user} />} />
   <Route path="/blog" element={<Blogs />} />
   <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
-  <Route path="/market" element={<MarketDesk user={user} />} />
   <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
   <Route path="/recibos" element={<ReceiptsPage user={user} />} />
   <Route path="/lojas" element={<StoresDesk user={user} />} />
@@ -732,7 +730,7 @@ const handleSubmitFeedback = async () => {
 } />
 
 <Route path="/market" element={
-  <ProtectedRoute>
+  <ProtectedRoute requiredModule="moduloMarket">
     <MarketDesk user={user} />
   </ProtectedRoute>
 } />

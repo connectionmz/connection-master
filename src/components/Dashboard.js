@@ -47,7 +47,6 @@ const Dashboard = ({ user }) => {
               Object.keys(campanhasInternas).forEach((subKey) => {
                 const campanha = campanhasInternas[subKey];
                 if (campanha.component === "home") {
-                  // Get the current province or default to "Cabo Delgado"
                   const currentProvince = user 
                     ? user.provinciaTemp || user.provincia 
                     : "Cabo Delgado";
@@ -123,11 +122,10 @@ const Dashboard = ({ user }) => {
                 textTransform: 'none',
                 ml: 1
               }
-            }}
-          >
-            Exibindo conteúdo de: 
+            }}>
+             Exibindo conteúdo de: 
             <span>
-              {currentProvince}
+              {currentProvince.toUpperCase()}
             </span>
           </Typography>
         </Box>    
@@ -150,8 +148,7 @@ const Dashboard = ({ user }) => {
       <Snackbar
         open={openSnackbar}
         autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-      >
+        onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity={snackbarMessage.includes("Erro") ? "error" : "success"}>
           {snackbarMessage}
         </Alert>

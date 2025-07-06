@@ -230,7 +230,7 @@ const UserDataFormDesk = () => {
           return (
             <Box>
               <TextField
-                label="Seu Nome*"
+                label="Seu Nome"
                 name="nome"
                 value={companyData.nome}
                 onChange={handleChange}
@@ -240,7 +240,7 @@ const UserDataFormDesk = () => {
               />
               {/* Campo de Género */}
               <FormControl fullWidth margin="normal">
-                <InputLabel id="genero-label">Género*</InputLabel>
+                <InputLabel id="genero-label">Género</InputLabel>
                 <Select
                   labelId="genero-label"
                   name="genero"
@@ -258,15 +258,14 @@ const UserDataFormDesk = () => {
         return (
           <Box>
             <TextField
-              label="Endereço *"
+              label="Endereço"
               name="endereco"
               value={companyData.endereco}
               onChange={handleChange}
               fullWidth
-              margin="normal"
-            />
+              margin="normal"/>
             <TextField
-              label="Contacto *"
+              label="Contacto"
               name="contacto"
               required
               value={companyData.contacto || ""}
@@ -275,11 +274,10 @@ const UserDataFormDesk = () => {
               margin="normal"
               inputProps={{
                 inputMode: 'tel',
-              }}
-            />
+              }}/>
             <TextField
               select
-              label="Província *"
+              label="Província"
               name="provincia"
               required
               value={companyData.provincia}
@@ -296,7 +294,7 @@ const UserDataFormDesk = () => {
             </TextField>
             <TextField
               select
-              label="Distrito *"
+              label="Distrito"
               name="distrito"
               value={companyData.distrito}
               onChange={handleChange}
