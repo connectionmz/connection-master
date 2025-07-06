@@ -8,144 +8,732 @@ import {
   ListItemText,
   Link,
   Container,
+  Grid,
+  Divider,
+  Button,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Stack
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-const Terms = () => {
+// =============================================
+// PDF Document Component
+// =============================================
+
+const styles = StyleSheet.create({
+  page: {
+    padding: 40,
+    fontFamily: 'Helvetica'
+  },
+  header: {
+    fontSize: 24,
+    marginBottom: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#2c3e50'
+  },
+  subheader: {
+    fontSize: 18,
+    marginTop: 15,
+    marginBottom: 10,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    backgroundColor: '#ecf0f1',
+    padding: 5,
+    borderRadius: 4
+  },
+  sectionTitle: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: 'bold'
+  },
+  paragraph: {
+    fontSize: 12,
+    marginBottom: 10,
+    lineHeight: 1.5,
+    textAlign: 'justify'
+  },
+  listItem: {
+    fontSize: 12,
+    marginBottom: 5,
+    marginLeft: 15,
+    lineHeight: 1.5
+  },
+  divider: {
+    marginVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#bdc3c7',
+    borderBottomStyle: 'solid'
+  },
+  contactInfo: {
+    marginTop: 5
+  }
+});
+
+const TermsPDFDocument = () => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      <Text style={styles.header}>Termos de Uso e Política de Privacidade</Text>
+      <Text style={styles.paragraph}>Última atualização: 7 de julho de 2025</Text>
+      
+      <View style={styles.divider} />
+      
+      {/* TERMOS DE USO */}
+      <Text style={styles.subheader}>TERMOS DE USO</Text>
+      
+      <Text style={styles.sectionTitle}>1. Introdução</Text>
+      <Text style={styles.paragraph}>
+        A Connection Mozambique Lda. é uma plataforma digital que facilita a conexão entre empresas através de pedidos de cotações, concursos públicos e divulgação de produtos e serviços.
+      </Text>
+      <Text style={styles.paragraph}>
+        Ao aceder ou utilizar a plataforma, o utilizador concorda com os presentes Termos de Uso e Política de Privacidade. Caso não concorde, não utilize a plataforma.
+      </Text>
+      
+      <Text style={styles.sectionTitle}>2. Elegibilidade</Text>
+      <Text style={styles.paragraph}>Para utilizar a plataforma, os utilizadores devem:</Text>
+      <Text style={styles.listItem}>• Ter pelo menos 18 anos de idade</Text>
+      <Text style={styles.listItem}>• Possuir NUIT e NUEL válidos da empresa</Text>
+      <Text style={styles.listItem}>• Fornecer informações verdadeiras e precisas</Text>
+      
+      <Text style={styles.sectionTitle}>3. Gestão de Contas</Text>
+      <Text style={styles.paragraph}>Para criar uma conta, é necessário fornecer:</Text>
+      <Text style={styles.listItem}>• Nome da empresa, NUIT, NUEL</Text>
+      <Text style={styles.listItem}>• Contacto e e-mail válidos</Text>
+      <Text style={styles.listItem}>• Logotipo da empresa</Text>
+      <Text style={styles.paragraph}>
+        O utilizador é responsável pela segurança da sua conta e deve notificar imediatamente qualquer uso não autorizado.
+      </Text>
+      
+      <Text style={styles.sectionTitle}>4. Obrigações do Utilizador</Text>
+      <Text style={styles.paragraph}>Os utilizadores concordam em:</Text>
+      <Text style={styles.listItem}>• Não utilizar a plataforma para fins ilegais</Text>
+      <Text style={styles.listItem}>• Não publicar conteúdos ofensivos ou falsos</Text>
+      <Text style={styles.listItem}>• Manter informações precisas e atualizadas</Text>
+      
+      <Text style={styles.sectionTitle}>5. Propriedade Intelectual</Text>
+      <Text style={styles.paragraph}>
+        Todos os direitos da plataforma pertencem à Connection Mozambique. O conteúdo publicado pelos utilizadores continua sendo de sua responsabilidade.
+      </Text>
+      
+      <Text style={styles.sectionTitle}>6. Pagamentos</Text>
+      <Text style={styles.paragraph}>Algumas funcionalidades requerem pagamento via:</Text>
+      <Text style={styles.listItem}>• E-mola, M-pesa ou Mkesh</Text>
+      
+      <Text style={styles.sectionTitle}>7. Suspensão e Cancelamento</Text>
+      <Text style={styles.paragraph}>Reservamo-nos o direito de suspender contas em caso de:</Text>
+      <Text style={styles.listItem}>• Violação dos Termos</Text>
+      <Text style={styles.listItem}>• Atividades fraudulentas</Text>
+      
+      <Text style={styles.sectionTitle}>8. Módulos</Text>
+      <Text style={styles.paragraph}>Oferecemos diversos módulos incluindo:</Text>
+      <Text style={styles.listItem}>• Proforma, Marketplace, Anúncios</Text>
+      <Text style={styles.listItem}>• SMS, Call Center, Recrutamento</Text>
+      
+      <View style={styles.divider} />
+      
+      {/* POLÍTICA DE PRIVACIDADE */}
+      <Text style={styles.subheader}>POLÍTICA DE PRIVACIDADE</Text>
+      
+      <Text style={styles.sectionTitle}>1. Dados Coletados</Text>
+      <Text style={styles.paragraph}>Coletamos os seguintes dados para fornecer nossos serviços:</Text>
+      <Text style={styles.listItem}>• Informações da empresa (nome, NUIT, NUEL)</Text>
+      <Text style={styles.listItem}>• Dados de contacto (e-mail, telefone)</Text>
+      <Text style={styles.listItem}>• Logotipo e informações de localização</Text>
+      <Text style={styles.listItem}>• Dados de navegação e interação</Text>
+      
+      <Text style={styles.sectionTitle}>2. Uso dos Dados</Text>
+      <Text style={styles.paragraph}>Utilizamos seus dados para:</Text>
+      <Text style={styles.listItem}>• Fornecer e melhorar nossos serviços</Text>
+      <Text style={styles.listItem}>• Processar cotações e transações</Text>
+      <Text style={styles.listItem}>• Realizar análises de mercado</Text>
+      <Text style={styles.listItem}>• Comunicar com os utilizadores</Text>
+      
+      <Text style={styles.sectionTitle}>3. Cookies</Text>
+      <Text style={styles.paragraph}>Utilizamos cookies para:</Text>
+      <Text style={styles.listItem}>• Lembrar preferências e login</Text>
+      <Text style={styles.listItem}>• Personalizar conteúdo</Text>
+      <Text style={styles.listItem}>• Melhorar desempenho da plataforma</Text>
+      <Text style={styles.paragraph}>
+        Pode gerir as preferências de cookies nas configurações do seu navegador.
+      </Text>
+      
+      <Text style={styles.sectionTitle}>4. Compartilhamento de Dados</Text>
+      <Text style={styles.paragraph}>Não compartilhamos dados com terceiros, exceto:</Text>
+      <Text style={styles.listItem}>• Parceiros essenciais para operação dos serviços</Text>
+      <Text style={styles.listItem}>• Autoridades legais mediante requisição formal</Text>
+      
+      <Text style={styles.sectionTitle}>5. Segurança de Dados</Text>
+      <Text style={styles.paragraph}>Implementamos medidas robustas de segurança incluindo:</Text>
+      <Text style={styles.listItem}>• Criptografia de dados</Text>
+      <Text style={styles.listItem}>• Autenticação de dois fatores</Text>
+      <Text style={styles.listItem}>• Armazenamento seguro com backups</Text>
+      
+      <Text style={styles.sectionTitle}>6. Direitos do Utilizador</Text>
+      <Text style={styles.paragraph}>De acordo com a LGPD, os utilizadores têm direito a:</Text>
+      <Text style={styles.listItem}>• Acessar e corrigir seus dados</Text>
+      <Text style={styles.listItem}>• Solicitar exclusão de dados</Text>
+      <Text style={styles.listItem}>• Revogar consentimento</Text>
+      <Text style={styles.listItem}>• Solicitar portabilidade de dados</Text>
+      
+      <Text style={styles.sectionTitle}>7. Retenção de Dados</Text>
+      <Text style={styles.paragraph}>Mantemos os dados apenas enquanto necessário para:</Text>
+      <Text style={styles.listItem}>• Cumprir obrigações legais</Text>
+      <Text style={styles.listItem}>• Manter contratos comerciais</Text>
+      <Text style={styles.listItem}>• Prevenir fraudes e melhorar serviços</Text>
+      
+      <View style={styles.divider} />
+      
+      {/* DISPOSIÇÕES GERAIS */}
+      <Text style={styles.subheader}>DISPOSIÇÕES GERAIS</Text>
+      <Text style={styles.paragraph}>
+        <Text style={{fontWeight: 'bold'}}>Alterações:</Text> Podemos atualizar estes Termos e Política periodicamente. Notificaremos sobre mudanças significativas.
+      </Text>
+      <Text style={styles.paragraph}>
+        <Text style={{fontWeight: 'bold'}}>Jurisdição:</Text> Qualquer disputa será resolvida sob as leis de Moçambique.
+      </Text>
+      
+      {/* CONTATO */}
+      <Text style={styles.subheader}>CONTATO</Text>
+      <Text style={styles.paragraph}>Para questões sobre privacidade ou termos de uso:</Text>
+      <Text style={styles.contactInfo}>
+        <Text style={{fontWeight: 'bold'}}>Endereço:</Text> Av. 25 de setembro, Pemba, Cabo-Delgado, Moçambique
+      </Text>
+      <Text style={styles.contactInfo}>
+        <Text style={{fontWeight: 'bold'}}>E-mail:</Text> comercial@connectionmozambique.com
+      </Text>
+      <Text style={styles.contactInfo}>
+        <Text style={{fontWeight: 'bold'}}>Telefone:</Text> +258 86 665 6104
+      </Text>
+    </Page>
+  </Document>
+);
+
+// =============================================
+// Main Component
+// =============================================
+
+const TermsAndPrivacy = () => {
+  const theme = useTheme();
+
   return (
     <Box
       sx={{
-        backgroundColor: "#f5f7fa", // Fundo claro e suave
-        padding: { xs: "20px 0", md: "40px 0" }, // Padding responsivo
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
+        padding: { xs: "16px 0", md: "32px 0" },
       }}
     >
-      <Container>
-        <Paper
-          sx={{
-            padding: { xs: "20px", md: "40px" },
-            backgroundColor: "#ffffff", // Fundo branco
-            borderRadius: "8px",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)", // Sombra suave
-          }}
-        >
-          {/* Título Principal */}
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: "bold",
-              color: "#003366", // Azul escuro
-              marginBottom: "24px",
-              textAlign: "center",
-            }}>
-            Termos de Uso da Plataforma Connections
-          </Typography>
+      <Container maxWidth="lg">
+        <Grid container spacing={4}>
+          {/* Sidebar Navigation */}
+          <Grid item xs={12} md={3}>
+            <Paper sx={{ padding: "16px", position: "sticky", top: "32px" }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
+                Navegação
+              </Typography>
+              
+              <Accordion elevation={0} sx={{ mb: 1 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle2">Termos de Uso</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 0 }}>
+                  <List dense>
+                    <ListItem button component="a" href="#introduction">
+                      <ListItemText primary="1. Introdução" />
+                    </ListItem>
+                    <ListItem button component="a" href="#eligibility">
+                      <ListItemText primary="2. Elegibilidade" />
+                    </ListItem>
+                    <ListItem button component="a" href="#account-management">
+                      <ListItemText primary="3. Gestão de Contas" />
+                    </ListItem>
+                    <ListItem button component="a" href="#user-obligations">
+                      <ListItemText primary="4. Obrigações" />
+                    </ListItem>
+                    <ListItem button component="a" href="#intellectual-property">
+                      <ListItemText primary="5. Propriedade Intelectual" />
+                    </ListItem>
+                    <ListItem button component="a" href="#payments">
+                      <ListItemText primary="6. Pagamentos" />
+                    </ListItem>
+                    <ListItem button component="a" href="#termination">
+                      <ListItemText primary="7. Suspensão" />
+                    </ListItem>
+                    <ListItem button component="a" href="#modules">
+                      <ListItemText primary="8. Módulos" />
+                    </ListItem>
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+              
+              <Accordion elevation={0}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle2">Política de Privacidade</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 0 }}>
+                  <List dense>
+                    <ListItem button component="a" href="#data-collection">
+                      <ListItemText primary="1. Dados Coletados" />
+                    </ListItem>
+                    <ListItem button component="a" href="#data-use">
+                      <ListItemText primary="2. Uso dos Dados" />
+                    </ListItem>
+                    <ListItem button component="a" href="#cookies">
+                      <ListItemText primary="3. Cookies" />
+                    </ListItem>
+                    <ListItem button component="a" href="#data-sharing">
+                      <ListItemText primary="4. Compartilhamento" />
+                    </ListItem>
+                    <ListItem button component="a" href="#data-security">
+                      <ListItemText primary="5. Segurança" />
+                    </ListItem>
+                    <ListItem button component="a" href="#user-rights">
+                      <ListItemText primary="6. Direitos do Usuário" />
+                    </ListItem>
+                    <ListItem button component="a" href="#data-retention">
+                      <ListItemText primary="7. Retenção de Dados" />
+                    </ListItem>
+                  </List>
+                </AccordionDetails>
+              </Accordion>
+              
+              <List dense>
+                <ListItem button component="a" href="#general">
+                  <ListItemText primary="Disposições Gerais" />
+                </ListItem>
+                <ListItem button component="a" href="#contact">
+                  <ListItemText primary="Contato" />
+                </ListItem>
+              </List>
+            </Paper>
+          </Grid>
 
-          {/* Seção 1: Aceitação dos Termos */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              1. Aceitação dos Termos
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              Ao utilizar a plataforma Connections, os utilizadores concordam com os presentes Termos de Uso, que regem o uso
-              dos serviços oferecidos, como pedidos de cotação e participação em concursos públicos.
-            </Typography>
-          </Box>
+          {/* Main Content */}
+          <Grid item xs={12} md={9}>
+            <Paper sx={{ padding: { xs: "16px", md: "32px" } }}>
+              {/* Header */}
+              <Box sx={{ textAlign: "center", mb: 4 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: "bold",
+                    color: theme.palette.primary.main,
+                    mb: 2,
+                    fontSize: { xs: "2rem", md: "3rem" }
+                  }}
+                >
+                  Termos de Uso e Política de Privacidade
+                </Typography>
+                <Typography variant="subtitle1" color="text.secondary">
+                  Última atualização: 7 de julho de 2025
+                </Typography>
+                
+                <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => window.print()}
+                  >
+                    Imprimir Documento
+                  </Button>
+                  
+                  <PDFDownloadLink 
+                    document={<TermsPDFDocument />} 
+                    fileName="Termos_e_Privacidade_Connection_Mozambique.pdf"
+                  >
+                    {({ loading }) => (
+                      <Button
+                        variant="contained"
+                        disabled={loading}
+                      >
+                        {loading ? 'Preparando PDF...' : 'Baixar como PDF'}
+                      </Button>
+                    )}
+                  </PDFDownloadLink>
+                </Stack>
+              </Box>
 
-          {/* Seção 2: Descrição dos Serviços */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              2. Descrição dos Serviços
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              Connections facilita a conexão entre empresas do setor público e privado em Moçambique, permitindo interações
-              comerciais como pedidos de cotação e concursos públicos.
-            </Typography>
-          </Box>
+              <Divider sx={{ my: 3 }} />
 
-          {/* Seção 3: Regras de Utilização */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              3. Regras de Utilização
-            </Typography>
-            <List sx={{ listStyleType: "disc", pl: 4 }}>
-              <ListItem sx={{ display: "list-item", padding: 0 }}>
-                <ListItemText primary="Os utilizadores devem fornecer informações precisas ao criar contas e utilizar os serviços." />
-              </ListItem>
-              <ListItem sx={{ display: "list-item", padding: 0 }}>
-                <ListItemText primary="É proibido uso indevido da plataforma, envio de spam, práticas de hacking ou qualquer ação que comprometa a integridade da plataforma." />
-              </ListItem>
-            </List>
-          </Box>
+              {/* Terms of Use Section */}
+              <Typography variant="h4" sx={{ 
+                fontWeight: "bold", 
+                color: theme.palette.primary.dark,
+                mb: 3,
+                padding: "8px 16px",
+                backgroundColor: theme.palette.primary.light,
+                borderRadius: "4px"
+              }}>
+                TERMOS DE USO
+              </Typography>
 
-          {/* Seção 4: Coleta de Dados */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              4. Coleta de Dados
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              Recolhemos dados como nome, email, NUIT, contacto, endereço e logotipo das empresas, conforme detalhado na{" "}
-              <Link href="/politicas" color="primary" underline="hover">
-                Política de Privacidade
-              </Link>.
-            </Typography>
-          </Box>
+              {/* Introduction */}
+              <Box id="introduction" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  1. Introdução
+                </Typography>
+                <Typography paragraph>
+                  A Connection Mozambique Lda. é uma plataforma digital que
+                  facilita a conexão entre empresas através de pedidos de
+                  cotações, concursos públicos e divulgação de produtos e
+                  serviços.
+                </Typography>
+                <Typography paragraph>
+                  Ao aceder ou utilizar a plataforma, o utilizador concorda com
+                  os presentes Termos de Uso e Política de Privacidade. Caso não
+                  concorde, não utilize a plataforma.
+                </Typography>
+              </Box>
 
-          {/* Seção 5: Limitação de Responsabilidade */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              5. Limitação de Responsabilidade
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              A Connections não se responsabiliza por danos causados por falhas no serviço ou pelo uso indevido da plataforma.
-              A responsabilidade será limitada conforme permitido pela lei aplicável.
-            </Typography>
-          </Box>
+              {/* Eligibility */}
+              <Box id="eligibility" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  2. Elegibilidade
+                </Typography>
+                <Typography paragraph>
+                  Para utilizar a plataforma, os utilizadores devem:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Ter pelo menos 18 anos de idade" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Possuir NUIT e NUEL válidos da empresa" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Fornecer informações verdadeiras e precisas" />
+                  </ListItem>
+                </List>
+              </Box>
 
-          {/* Seção 6: Cancelamento ou Suspensão de Contas */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              6. Cancelamento ou Suspensão de Contas
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              O cancelamento de contas requer uma justificativa plausível e será analisado caso a caso.
-            </Typography>
-          </Box>
+              {/* Account Management */}
+              <Box id="account-management" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  3. Gestão de Contas
+                </Typography>
+                <Typography paragraph>
+                  Para criar uma conta, é necessário fornecer:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Nome da empresa, NUIT, NUEL" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Contacto e e-mail válidos" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Logotipo da empresa" />
+                  </ListItem>
+                </List>
+                <Typography paragraph sx={{ mt: 2 }}>
+                  O utilizador é responsável pela segurança da sua conta e deve
+                  notificar imediatamente qualquer uso não autorizado.
+                </Typography>
+              </Box>
 
-          {/* Seção 7: Pagamentos e Política de Reembolso */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              7. Pagamentos e Política de Reembolso
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              Os pagamentos são feitos mediante acordo entre as empresas. Em situações de dificuldade no acesso à plataforma,
-              os reembolsos podem ser realizados na forma de outros serviços dentro da plataforma. Para reembolsos monetários,
-              até 60% do valor poderá ser devolvido.
-            </Typography>
-          </Box>
+              {/* User Obligations */}
+              <Box id="user-obligations" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  4. Obrigações do Utilizador
+                </Typography>
+                <Typography paragraph>
+                  Os utilizadores concordam em:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Não utilizar a plataforma para fins ilegais" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Não publicar conteúdos ofensivos ou falsos" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Manter informações precisas e atualizadas" />
+                  </ListItem>
+                </List>
+              </Box>
 
-          {/* Seção 8: Alterações aos Termos */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              8. Alterações aos Termos
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              Os Termos de Uso podem ser alterados, com notificação prévia aos utilizadores através da plataforma.
-            </Typography>
-          </Box>
+              {/* Intellectual Property */}
+              <Box id="intellectual-property" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  5. Propriedade Intelectual
+                </Typography>
+                <Typography paragraph>
+                  Todos os direitos da plataforma pertencem à Connection
+                  Mozambique. O conteúdo publicado pelos utilizadores continua
+                  sendo de sua responsabilidade.
+                </Typography>
+              </Box>
 
-          {/* Seção 9: Informações Legais */}
-          <Box sx={{ marginBottom: "24px" }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", color: "#00509e", marginBottom: "16px" }}>
-              9. Informações Legais
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#333333", lineHeight: "1.8" }}>
-              A sede da Connections está localizada em Pemba, Av. 25 de setembro, Moçambique. As disputas relacionadas ao uso
-              da plataforma serão resolvidas sob a jurisdição das leis de Moçambique.
-            </Typography>
-          </Box>
-        </Paper>
+              {/* Payments */}
+              <Box id="payments" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  6. Pagamentos
+                </Typography>
+                <Typography paragraph>
+                  Algumas funcionalidades requerem pagamento via:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="E-mola, M-pesa ou Mkesh" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* Termination */}
+              <Box id="termination" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  7. Suspensão e Cancelamento
+                </Typography>
+                <Typography paragraph>
+                  Reservamo-nos o direito de suspender contas em caso de:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Violação dos Termos" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Atividades fraudulentas" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* Modules */}
+              <Box id="modules" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  8. Módulos
+                </Typography>
+                <Typography paragraph>
+                  Oferecemos diversos módulos incluindo:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Proforma, Marketplace, Anúncios" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="SMS, Call Center, Recrutamento" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* Privacy Policy Section */}
+              <Typography variant="h4" sx={{ 
+                fontWeight: "bold", 
+                color: theme.palette.primary.dark,
+                mb: 3,
+                mt: 6,
+                padding: "8px 16px",
+                backgroundColor: theme.palette.primary.light,
+                borderRadius: "4px"
+              }}>
+                POLÍTICA DE PRIVACIDADE
+              </Typography>
+
+              {/* Data Collection */}
+              <Box id="data-collection" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  1. Dados Coletados
+                </Typography>
+                <Typography paragraph>
+                  Coletamos os seguintes dados para fornecer nossos serviços:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Informações da empresa (nome, NUIT, NUEL)" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Dados de contacto (e-mail, telefone)" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Logotipo e informações de localização" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Dados de navegação e interação" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* Data Use */}
+              <Box id="data-use" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  2. Uso dos Dados
+                </Typography>
+                <Typography paragraph>
+                  Utilizamos seus dados para:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Fornecer e melhorar nossos serviços" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Processar cotações e transações" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Realizar análises de mercado" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Comunicar com os utilizadores" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* Cookies */}
+              <Box id="cookies" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  3. Cookies
+                </Typography>
+                <Typography paragraph>
+                  Utilizamos cookies para:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Lembrar preferências e login" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Personalizar conteúdo" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Melhorar desempenho da plataforma" />
+                  </ListItem>
+                </List>
+                <Typography paragraph sx={{ mt: 2 }}>
+                  Pode gerir as preferências de cookies nas configurações do seu navegador.
+                </Typography>
+              </Box>
+
+              {/* Data Sharing */}
+              <Box id="data-sharing" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  4. Compartilhamento de Dados
+                </Typography>
+                <Typography paragraph>
+                  Não compartilhamos dados com terceiros, exceto:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Parceiros essenciais para operação dos serviços" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Autoridades legais mediante requisição formal" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* Data Security */}
+              <Box id="data-security" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  5. Segurança de Dados
+                </Typography>
+                <Typography paragraph>
+                  Implementamos medidas robustas de segurança incluindo:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Criptografia de dados" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Autenticação de dois fatores" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Armazenamento seguro com backups" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* User Rights */}
+              <Box id="user-rights" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  6. Direitos do Utilizador
+                </Typography>
+                <Typography paragraph>
+                  De acordo com a LGPD, os utilizadores têm direito a:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Acessar e corrigir seus dados" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Solicitar exclusão de dados" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Revogar consentimento" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Solicitar portabilidade de dados" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* Data Retention */}
+              <Box id="data-retention" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
+                  7. Retenção de Dados
+                </Typography>
+                <Typography paragraph>
+                  Mantemos os dados apenas enquanto necessário para:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Cumprir obrigações legais" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Manter contratos comerciais" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Prevenir fraudes e melhorar serviços" />
+                  </ListItem>
+                </List>
+              </Box>
+
+              {/* General Provisions */}
+              <Box id="general" sx={{ mb: 4 }}>
+                <Typography variant="h4" sx={{ fontWeight: "bold", mb: 2 }}>
+                  Disposições Gerais
+                </Typography>
+                <Typography paragraph>
+                  <strong>Alterações:</strong> Podemos atualizar estes Termos e
+                  Política periodicamente. Notificaremos sobre mudanças
+                  significativas.
+                </Typography>
+                <Typography paragraph>
+                  <strong>Jurisdição:</strong> Qualquer disputa será resolvida
+                  sob as leis de Moçambique.
+                </Typography>
+              </Box>
+
+              {/* Contact */}
+              <Box id="contact">
+                <Typography variant="h4" sx={{ fontWeight: "bold", mb: 2 }}>
+                  Contato
+                </Typography>
+                <Typography paragraph>
+                  Para questões sobre privacidade ou termos de uso:
+                </Typography>
+                <Typography paragraph>
+                  <strong>Endereço:</strong> Av. 25 de setembro, Pemba,
+                  Cabo-Delgado, Moçambique
+                </Typography>
+                <Typography paragraph>
+                  <strong>E-mail:</strong>{' '}
+                  <Link href="mailto:comercial@connectionmozambique.com">
+                    comercial@connectionmozambique.com
+                  </Link>
+                </Typography>
+                <Typography paragraph>
+                  <strong>Telefone:</strong>{' '}
+                  <Link href="tel:+258866656104">
+                    +258 86 665 6104
+                  </Link>
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
       </Container>
     </Box>
   );
 };
 
-export default Terms;
+export default TermsAndPrivacy;
