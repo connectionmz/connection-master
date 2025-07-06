@@ -13,7 +13,8 @@ import {
   FormControlLabel,
   Checkbox,
   FormGroup,
-  Tooltip
+  Tooltip,
+  LinearProgress
 } from '@mui/material';
 import { PhotoCamera, Info } from '@mui/icons-material';
 
@@ -27,11 +28,13 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
       distrito: user?.distrito || '',
       logo: user?.logoUrl || '', 
       id: user?.id || '',
-      paysIVA: false, // Novo campo para indicar se paga IVA
+      paysIVA: false, 
     },
   });
   const [logoFile, setLogoFile] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -76,73 +79,100 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
 
   const handlePayment = async () => {
     setIsLoading(true);
+    setProgress(10);
     try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setProgress(50);
       return true;
     } catch (error) {
-      alert('A transação falhou. Por favor, tente novamente.');
+      setError('A transação falhou. Por favor, tente novamente.');
       console.error('Erro no pagamento:', error.message);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const createStore = async () => {
     setIsLoading(true);
+    setProgress(0);
+    setError(null);
   
     if (!user) {
-      alert('Usuário não definido. Não é possível criar a loja.');
+      setError('Usuário não definido. Não é possível criar a loja.');
       setIsLoading(false);
       return;
     }
   
     if (!storeId) {
-      alert('ID da loja não definido. Não é possível criar a loja.');
+      setError('ID da loja não definido. Não é possível criar a loja.');
       setIsLoading(false);
       return;
     }
   
-    const paymentSuccessful = await handlePayment();
-  
-    if (paymentSuccessful) {
-      try {
-        let logoUrl = store.company.logo;
-  
-        if (logoFile) {
-          const logoStorageRef = storageRef(storage, `store-logos/${storeId}/${logoFile.name}`);
-          await uploadBytes(logoStorageRef, logoFile);
-          logoUrl = await getDownloadURL(logoStorageRef);
-  
-          setStore((prevStore) => ({
-            ...prevStore,
+    try {
+      // Step 1: Process payment
+      setProgress(10);
+      const paymentSuccessful = await handlePayment();
+      
+      if (!paymentSuccessful) {
+        setProgress(0);
+        return;
+      }
+
+      // Step 2: Upload logo if exists
+      let logoUrl = store.company.logo;
+      if (logoFile) {
+        setProgress(30);
+        const logoStorageRef = storageRef(storage, `store-logos/${storeId}/${logoFile.name}`);
+        const uploadTask = uploadBytes(logoStorageRef, logoFile);
+        
+        // Listen for upload progress
+        uploadTask.then(async (snapshot) => {
+          setProgress(60);
+          logoUrl = await getDownloadURL(snapshot.ref);
+          
+          // Step 3: Save store data
+          setProgress(80);
+          const storeRef = dbRef(db, `stores/${storeId}`);
+          await set(storeRef, {
+            ...store,
             company: {
-              ...prevStore.company,
+              ...store.company,
               logo: logoUrl, 
             },
-          }));
-        }
-  
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+          
+          setProgress(100);
+          alert('Loja criada com sucesso!');
+          window.location.reload();
+        }).catch(error => {
+          setError('Erro ao fazer upload do logo.');
+          console.error('Erro no upload:', error);
+        });
+      } else {
+        // No logo to upload, just save store data
+        setProgress(60);
         const storeRef = dbRef(db, `stores/${storeId}`);
         await set(storeRef, {
           ...store,
-          company: {
-            ...store.company,
-            logo: logoUrl, 
-          },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
-  
+        
+        setProgress(100);
         alert('Loja criada com sucesso!');
         window.location.reload();
-      } catch (error) {
-        alert('Erro ao criar a loja.');
-        console.error('Erro:', error);
-      } finally {
-        setIsLoading(false);
       }
-    } else {
-      setIsLoading(false);
+    } catch (error) {
+      setError('Erro ao criar a loja. Por favor, tente novamente.');
+      console.error('Erro:', error);
+    } finally {
+      if (error) {
+        setIsLoading(false);
+        setProgress(0);
+      }
     }
   };
 
@@ -163,9 +193,23 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         </Typography>
       </Alert>
 
+      {error && (
+        <Alert severity="error" sx={{ marginBottom: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Typography variant="h6" gutterBottom>
         Criar Loja
       </Typography>
+
+      {isLoading && (
+        <LinearProgress 
+          variant="determinate" 
+          value={progress} 
+          sx={{ marginBottom: 2 }}
+        />
+      )}
 
       {/* Nome da Loja */}
       <TextField
@@ -177,6 +221,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         onChange={handleInputChange}
         sx={{ marginBottom: 2 }}
         required
+        disabled={isLoading}
       />
 
       {/* Descrição da Loja (Opcional) */}
@@ -190,6 +235,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         multiline
         rows={3}
         sx={{ marginBottom: 2 }}
+        disabled={isLoading}
       />
 
       {/* Paga IVA */}
@@ -200,6 +246,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
               checked={store.company.paysIVA}
               onChange={handleCheckboxChange}
               name="paysIVA"
+              disabled={isLoading}
             />
           }
           label={
@@ -218,13 +265,15 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         <IconButton
           color="primary"
           component="label"
-          sx={{ marginRight: 1 }}>
+          sx={{ marginRight: 1 }}
+          disabled={isLoading}>
           <PhotoCamera />
           <input
             type="file"
             accept="image/*"
             hidden
             onChange={handleLogoChange}
+            disabled={isLoading}
           />
         </IconButton>
         <Typography variant="body2">Upload de Logo (opcional)</Typography>
@@ -245,9 +294,9 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
         fullWidth
         onClick={createStore}
         disabled={isLoading || !store.name}
-        startIcon={isLoading && <CircularProgress size={20} color="inherit" />}
+        startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
       >
-        {isLoading ? 'Criando Loja...' : 'Criar Loja'}
+        {isLoading ? `Criando Loja (${progress}%)` : 'Criar Loja'}
       </Button>
     </Box>
   );

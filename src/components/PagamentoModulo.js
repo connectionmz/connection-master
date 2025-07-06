@@ -24,7 +24,9 @@ import BackButton from './BackButton';
 import PagamentoAccordion from '../according/PagamentoAccordion';
 
 const PagamentoModulo = ({ user }) => {
+  
   const { moduleKey } = useParams();
+  
   const [modules, setModules] = useState([]);
   const [currentModule, setCurrentModule] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -62,8 +64,6 @@ const PagamentoModulo = ({ user }) => {
       }
     }
   }, [modules, moduleKey]);
-
-
 
   const calculateSubscriptionEnd = (validade) => {
     const now = Date.now();

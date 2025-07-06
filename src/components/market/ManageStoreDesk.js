@@ -54,12 +54,10 @@ import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from 'fi
 import { formatPrice } from '../../utils/utils';
 
 const ManageStoreDesk = ({ storeId }) => {
-  console.log(storeId)
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
-  // Estados
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState({
@@ -107,18 +105,15 @@ const ManageStoreDesk = ({ storeId }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
 
-  // Buscar dados iniciais
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoading(prev => ({ ...prev, products: true }));
         
-        // Buscar produtos
         const productsRef = ref(db, `stores/${storeId}/products`);
         const productsSnapshot = await get(productsRef);
         setProducts(productsSnapshot.exists() ? Object.entries(productsSnapshot.val()) : []);
 
-        // Buscar dados da loja
         const storeRef = ref(db, `stores/${storeId}`);
         const storeSnapshot = await get(storeRef);
         if (storeSnapshot.exists()) {

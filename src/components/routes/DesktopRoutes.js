@@ -506,7 +506,7 @@ const handleSubmitFeedback = async () => {
   <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
 
   <Route path="/addProduct" element={
-    <ProtectedRoute requiredModule={"moduloProforma"}>
+    <ProtectedRoute requiredModule="moduloMarket">
       <ProductFormDesk user={user} />
     </ProtectedRoute>
   } />
@@ -516,7 +516,6 @@ const handleSubmitFeedback = async () => {
       <ConnectionsDesk user={user} />
     </ProtectedRoute>
   } />
-
   <Route path="/search" element={
     <ProtectedRoute>
       <ConnectionsSearchDesk />
