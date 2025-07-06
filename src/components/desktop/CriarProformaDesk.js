@@ -22,6 +22,12 @@ import {
   Box,
   IconButton,
   Tooltip,
+  useMediaQuery,
+  useTheme,
+  InputAdornment,
+  Divider,
+  Collapse,
+  CircularProgress
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import { db } from '../../fb';
@@ -31,9 +37,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import {SendMailProforma} from '../sms/SendMail';
 import { formatPrice } from '../../utils/utils';
 import { saveContentToInbox } from '../SaveToInbox';
-import { NumberFormatBase, NumericFormat } from 'react-number-format';
+import { NumericFormat } from 'react-number-format';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 const CriarProformaDesk = ({ user }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [cliente, setCliente] = useState(null);
   const [dataEmissao, setDataEmissao] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');
@@ -47,6 +57,7 @@ const CriarProformaDesk = ({ user }) => {
   const [clientes, setClientes] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [selectedProduto, setSelectedProduto] = useState(null);
+  const [expandedClient, setExpandedClient] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -205,7 +216,6 @@ const CriarProformaDesk = ({ user }) => {
 
       const newProformaRef = ref(db, `invoices/${user.id}/${numeroProforma}`);
       
-      
       await set(newProformaRef, {
         numeroProforma,
         cliente: clienteLimpo,
@@ -235,53 +245,53 @@ const CriarProformaDesk = ({ user }) => {
         saveContentToInbox(cliente.id, notification);
       }
 
-if (clienteLimpo?.email) {
-  const title = `Proforma ${numeroProforma}`;
-  const finalMessage = `
-    Olá ${clienteLimpo.nome},
-    
-    Uma nova proforma foi criada para você. Aqui estão os detalhes:
-    
-    - Número da Proforma: ${numeroProforma}
-    - Data de Emissão: ${dataEmissao}
-    - Data de Vencimento: ${dataVencimento} dias
+      if (clienteLimpo?.email) {
+        const title = `Proforma ${numeroProforma}`;
+        const finalMessage = `
+          Olá ${clienteLimpo.nome},
+          
+          Uma nova proforma foi criada para você. Aqui estão os detalhes:
+          
+          - Número da Proforma: ${numeroProforma}
+          - Data de Emissão: ${dataEmissao}
+          - Data de Vencimento: ${dataVencimento} dias
 
-    Clique em: https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id} para visualizar a proforma.
-    
-    Por favor, entre em contato conosco se tiver alguma dúvida.
-    
-    Atenciosamente,
-    Equipe ${user.displayName || 'da '}
-    Email: ${user.email || '-'}
-    Contacto: ${user.contacto || '-'}
-  `;
+          Clique em: https://connectionmozambique.com/verproforma/${numeroProforma}/sender/${user.id} para visualizar a proforma.
+          
+          Por favor, entre em contato conosco se tiver alguma dúvida.
+          
+          Atenciosamente,
+          Equipe ${user.displayName || 'da '}
+          Email: ${user.email || '-'}
+          Contacto: ${user.contacto || '-'}
+        `;
 
-  const emailMessage = {
-    message: finalMessage,
-    link: `verproforma/${numeroProforma}/sender/${user.id}`,
-  };
+        const emailMessage = {
+          message: finalMessage,
+          link: `verproforma/${numeroProforma}/sender/${user.id}`,
+        };
 
-  const emailSent = await SendMailProforma(clienteLimpo.email, emailMessage);
+        const emailSent = await SendMailProforma(clienteLimpo.email, emailMessage);
 
-  if (!emailSent) {
-
-    setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');
-    setSnackbarSeverity('warning');
-  } else {
-    setSnackbarMessage('Proforma criada e cliente notificado com sucesso!');
-    setSnackbarSeverity('success');
-  }
-}
-    setCliente(null);
-    setDataEmissao('');
-    setDataVencimento('');
-    setItens([{ descricao: '', quantidade: 1, preco: 0 }]);
-    setErrors({});
-    setOpenSnackbar(false);
-    setSnackbarMessage('');
-    setSnackbarSeverity('error');
-    setLoading(false);
-    setSelectedProduto(null);
+        if (!emailSent) {
+          setSnackbarMessage('Proforma criada, mas o e-mail não pôde ser enviado.');
+          setSnackbarSeverity('warning');
+        } else {
+          setSnackbarMessage('Proforma criada e cliente notificado com sucesso!');
+          setSnackbarSeverity('success');
+        }
+      }
+      
+      setCliente(null);
+      setDataEmissao('');
+      setDataVencimento('');
+      setItens([{ descricao: '', quantidade: 1, preco: 0 }]);
+      setErrors({});
+      setOpenSnackbar(false);
+      setSnackbarMessage('');
+      setSnackbarSeverity('error');
+      setLoading(false);
+      setSelectedProduto(null);
 
     } catch (err) {
       console.error(err);
@@ -297,19 +307,24 @@ if (clienteLimpo?.email) {
     setOpenSnackbar(false);
   };
 
+  const toggleClientDetails = () => {
+    setExpandedClient(!expandedClient);
+  };
+
   return (
-    <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ p: isMobile ? 1 : 3, maxWidth: 1200, mx: 'auto' }}>
+      <Typography variant="h4" gutterBottom sx={{ fontSize: isMobile ? '1.5rem' : '2rem' }}>
         Criar Nova Proforma
       </Typography>
       <BackButton sx={{ mb: 2 }} />
 
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      <Paper elevation={3} sx={{ p: isMobile ? 1 : 3, mb: 3 }}>
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ fontSize: isMobile ? '1.1rem' : '1.25rem' }}>
             Dados da Proforma
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          
+          <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 2, mb: 2 }}>
             <TextField
               label="Cliente (Opcional)"
               fullWidth
@@ -318,7 +333,9 @@ if (clienteLimpo?.email) {
               onChange={(e) => {
                 const selectedCliente = clientes.find((c) => c.nome === e.target.value);
                 setCliente(selectedCliente);
+                setExpandedClient(false);
               }}
+              size={isMobile ? 'small' : 'medium'}
             >
               <MenuItem value="">Selecione um cliente</MenuItem>
               {clientes.map((c, index) => (
@@ -328,17 +345,49 @@ if (clienteLimpo?.email) {
               ))}
             </TextField>
           </Box>
+          
           {cliente && (
-            <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 1 }}>
-              <Typography variant="subtitle1">Detalhes do Cliente:</Typography>
-              <Typography><strong>Nome:</strong> {cliente.nome}</Typography>
-              {cliente.nuit && <Typography><strong>NUIT:</strong> {cliente.nuit}</Typography>}
-              {cliente.contacto && <Typography><strong>Contacto:</strong> {cliente.contacto}</Typography>}
-              {cliente.morada && <Typography><strong>Morada:</strong> {cliente.morada}</Typography>}
-              {cliente.email && <Typography><strong>Email:</strong> {cliente.email}</Typography>}
+            <Box sx={{ 
+              mt: 1, 
+              p: isMobile ? 1 : 2, 
+              border: '1px solid #eee', 
+              borderRadius: 1,
+              backgroundColor: '#f9f9f9'
+            }}>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  cursor: 'pointer'
+                }}
+                onClick={toggleClientDetails}
+              >
+                <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                  Detalhes do Cliente
+                </Typography>
+                {expandedClient ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </Box>
+              
+              <Collapse in={expandedClient}>
+                <Box sx={{ mt: 1 }}>
+                  <Typography><strong>Nome:</strong> {cliente.nome}</Typography>
+                  {cliente.nuit && <Typography><strong>NUIT:</strong> {cliente.nuit}</Typography>}
+                  {cliente.contacto && <Typography><strong>Contacto:</strong> {cliente.contacto}</Typography>}
+                  {cliente.morada && <Typography><strong>Morada:</strong> {cliente.morada}</Typography>}
+                  {cliente.email && <Typography><strong>Email:</strong> {cliente.email}</Typography>}
+                </Box>
+              </Collapse>
             </Box>
           )}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row', 
+            gap: 2, 
+            mb: 2,
+            mt: 2
+          }}>
             <TextField
               label="Data de Emissão"
               type="date"
@@ -348,6 +397,7 @@ if (clienteLimpo?.email) {
               error={!!errors.dataEmissao}
               helperText={errors.dataEmissao}
               InputLabelProps={{ shrink: true }}
+              size={isMobile ? 'small' : 'medium'}
             />
             <TextField
               label="Válido Por (Dias)"
@@ -357,20 +407,33 @@ if (clienteLimpo?.email) {
               onChange={(e) => setDataVencimento(e.target.value)}
               error={!!errors.dataVencimento}
               helperText={errors.dataVencimento}
+              size={isMobile ? 'small' : 'medium'}
+              InputProps={{
+                endAdornment: <InputAdornment position="end">dias</InputAdornment>,
+              }}
             />
           </Box>
         </Box>
 
+        <Divider sx={{ my: 2 }} />
+
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ fontSize: isMobile ? '1.1rem' : '1.25rem' }}>
             Adicionar Item da Loja
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row', 
+            gap: 2, 
+            mb: 2,
+            alignItems: isMobile ? 'stretch' : 'center'
+          }}>
             <Select
               value={selectedProduto || ''}
               onChange={(e) => setSelectedProduto(e.target.value)}
               fullWidth
               displayEmpty
+              size={isMobile ? 'small' : 'medium'}
             >
               <MenuItem value="">Selecione um produto</MenuItem>
               {produtos.map((produto) => (
@@ -379,25 +442,31 @@ if (clienteLimpo?.email) {
                 </MenuItem>
               ))}
             </Select>
-            <Button variant="contained" onClick={handleAddItemFromStore}>
+            <Button 
+              variant="contained" 
+              onClick={handleAddItemFromStore}
+              sx={{ minWidth: isMobile ? '100%' : 'auto' }}
+            >
               Adicionar Produto
             </Button>
           </Box>
         </Box>
 
+        <Divider sx={{ my: 2 }} />
+
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ fontSize: isMobile ? '1.1rem' : '1.25rem' }}>
             Itens
           </Typography>
-          <TableContainer component={Paper}>
-            <Table>
+          <TableContainer component={Paper} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+            <Table size={isMobile ? 'small' : 'medium'}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Descrição</TableCell>
-                  <TableCell>Quantidade</TableCell>
-                  <TableCell>Preço Unitário</TableCell>
-                  <TableCell>Subtotal</TableCell>
-                  <TableCell>Ações</TableCell>
+                  <TableCell sx={{ minWidth: isMobile ? 150 : 200 }}>Descrição</TableCell>
+                  <TableCell align="center" sx={{ width: isMobile ? 80 : 120 }}>Quantidade</TableCell>
+                  <TableCell align="right" sx={{ width: isMobile ? 100 : 150 }}>Preço Unitário</TableCell>
+                  <TableCell align="right" sx={{ width: isMobile ? 100 : 150 }}>Subtotal</TableCell>
+                  <TableCell align="center" sx={{ width: 60 }}>Ações</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -410,6 +479,9 @@ if (clienteLimpo?.email) {
                         onChange={(e) => handleItemChange(index, 'descricao', e.target.value)}
                         error={!!errors[`item-descricao-${index}`]}
                         helperText={errors[`item-descricao-${index}`]}
+                        size="small"
+                        multiline
+                        maxRows={3}
                       />
                     </TableCell>
                     <TableCell>
@@ -421,9 +493,10 @@ if (clienteLimpo?.email) {
                         error={!!errors[`item-quantidade-${index}`]}
                         helperText={errors[`item-quantidade-${index}`]}
                         inputProps={{ min: 1 }}
+                        size="small"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="right">
                       <NumericFormat
                         value={item.preco}
                         displayType="input"
@@ -439,15 +512,22 @@ if (clienteLimpo?.email) {
                         fullWidth
                         error={!!errors[`item-preco-${index}`]}
                         helperText={errors[`item-preco-${index}`]}
+                        size="small"
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
+                        }}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="right">
                       {formatPrice(item.quantidade * item.preco)} 
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="center">
                       <Tooltip title="Remover item">
-                        <IconButton onClick={() => handleRemoveItem(index)}>
-                          <DeleteIcon />
+                        <IconButton 
+                          onClick={() => handleRemoveItem(index)}
+                          size="small"
+                        >
+                          <DeleteIcon fontSize={isMobile ? 'small' : 'medium'} />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -456,17 +536,22 @@ if (clienteLimpo?.email) {
               </TableBody>
             </Table>
           </TableContainer>
+          
           <Button 
             variant="contained" 
             onClick={handleAddItem} 
             sx={{ mt: 2 }}
             startIcon={<AddIcon />}
+            fullWidth={isMobile}
           >
             Adicionar Item Manualmente
           </Button>
         </Box>
+
+        <Divider sx={{ my: 2 }} />
+
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" align="right" gutterBottom>
             Total: {formatPrice(total)} MZN
           </Typography>
           <Button
@@ -476,15 +561,25 @@ if (clienteLimpo?.email) {
             fullWidth
             onClick={handleSalvar}
             disabled={loading}
-            size="large"
+            size={isMobile ? 'medium' : 'large'}
+            sx={{ py: isMobile ? 1 : 1.5 }}
           >
-            {loading ? 'Criando...' : 'Criar Proforma'}
+            {loading ? (
+              <>
+                <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
+                Criando...
+              </>
+            ) : 'Criar Proforma'}
           </Button>
         </Box>
       </Paper>
 
-
-      <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+      <Snackbar 
+        open={openSnackbar} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
         <MuiAlert 
           onClose={handleCloseSnackbar} 
           severity={snackbarSeverity} 
