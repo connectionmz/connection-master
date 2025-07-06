@@ -114,7 +114,6 @@ const PagamentoModulo = ({ user }) => {
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao processar pagamento');
       }
-
       const now = Date.now();
       const subscriptionEnd = calculateSubscriptionEnd(currentModule.validade);
 
@@ -129,12 +128,11 @@ const PagamentoModulo = ({ user }) => {
         moduleType: currentModule?.type || 'standard',
         amount: currentModule.price,
         reference: currentModule.name,
-        status: 'pendente',
+        status: 'pago',
         timestamp: existingPayment?.timestamp || now,
         updatedAt: now,
         mpesaResponse: data.data,
         
-        // Subscription data
         subscription: {
           isActive: true,
           start: now,
