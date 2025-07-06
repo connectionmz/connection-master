@@ -46,10 +46,8 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width:600px)');
 
-    // Check if concursos module is active or if user is unauthenticated
-    const isModuleActive = activeModules?.concursos || !user;
+    const isModuleActive = activeModules?.moduloSMS || !user;
 
-    // Load banners for all users
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
         const unsubscribe = onValue(bannersRef, (snapshot) => {

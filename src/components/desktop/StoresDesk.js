@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ref, get, set, push, increment, onValue, update, remove } from "firebase/database";
 import { db } from "../../fb";
+import { ActiveModulesProvider, useActiveModules } from '../../context/ActiveModulesContext';
+
 import {
   Grid,
   Card,
@@ -43,6 +45,9 @@ import MyCart from "./ShoppingCart";
 
 const StoresDesk = ({ user }) => {
   const theme = useTheme();
+
+  const { activeModules } = useActiveModules();
+
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Estados
@@ -63,9 +68,8 @@ const StoresDesk = ({ user }) => {
   const userProvince = user?.provinciaTemp || user?.provincia || null;
 
 
-  const hasMarket = user?.activeModules?.moduloMarket?.status=== "active"
-  
-  // Registrar impressão ou clique
+ const hasMarket = activeModules?.moduloMarket || false;  
+ 
   const trackInteraction = async (type, action, itemId, storeId = null) => {
     try {
       const timestamp = Date.now();
@@ -73,12 +77,10 @@ const StoresDesk = ({ user }) => {
       if (action === 'click') {
         const updates = {};
         
-        // Atualizações para métricas de anúncios/lojas
         updates[`anuncios_metrics/${storeId}/total_cliques`] = increment(1);
         updates[`loja_metrics/${storeId}/ultimo_clique`] = timestamp;
         updates[`loja_metrics/${storeId}/from`] = 'Pagina Inicial';
         
-        // Adiciona informações da empresa se o usuário estiver logado
         if (user) {
           updates[`loja_metrics/${storeId}/company`] = {
             id: user.id,
@@ -91,10 +93,8 @@ const StoresDesk = ({ user }) => {
           };
         }
         
-        // Aplica todas as atualizações de uma vez
         await update(ref(db), updates);
         
-        // Registro adicional para analytics (opcional)
         const clickData = {
           type,
           itemId,
@@ -106,7 +106,7 @@ const StoresDesk = ({ user }) => {
         };
         
         const clickRef = push(ref(db, 'clicks'));
-        await set(clickRef, clickData);
+        //await set(clickRef, clickData);
       }
       
     } catch (error) {
@@ -494,7 +494,7 @@ const TrackedStoreLink = ({ store, children }) => (
           <Alert
             severity="warning"
             action={
-              <Button color="inherit" size="small" onClick={() => window.location = '/market'}>
+              <Button color="inherit" size="small" onClick={() => window.location = '/pagamento-modulo/moduloMarket'}>
                 Ativar Módulo Mercado
               </Button>
             }

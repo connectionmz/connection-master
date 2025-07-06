@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogContent,
   IconButton,
-  useTheme
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CloseIcon from '@mui/icons-material/Close';
@@ -25,6 +26,7 @@ const PagamentoAccordion = ({ data }) => {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState('');
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleOpenModal = () => setOpen(true);
   const handleCloseModal = () => setOpen(false);
@@ -36,7 +38,6 @@ const PagamentoAccordion = ({ data }) => {
       setTimeout(() => setCopied(''), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
-      // Fallback for browsers that don't support Clipboard API
       const textarea = document.createElement('textarea');
       textarea.value = text;
       document.body.appendChild(textarea);
@@ -74,17 +75,15 @@ const PagamentoAccordion = ({ data }) => {
           }
         }}
       >
-      <AccordionDetails sx={{ pt: 3, pb: 3 }}>
-          {/* Transferência Bancária Section */}
+        <AccordionDetails>
           <Accordion sx={{ 
-            mb: 3,
             borderRadius: '8px',
             borderLeft: '4px solid #1976d2'
           }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box display="flex" alignItems="center" gap={2}>
                 <AccountBalanceIcon sx={{color: '#1976d2'}} />
-                <Typography variant="subtitle1" fontWeight="bold">
+                <Typography variant={isMobile ? "body1" : "subtitle1"} fontWeight="bold">
                   Transferência Bancária
                 </Typography>
               </Box>
@@ -102,50 +101,95 @@ const PagamentoAccordion = ({ data }) => {
                   borderRadius: '8px',
                   borderLeft: '4px solid #1976d2'
                 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                  <Typography variant={isMobile ? "body1" : "subtitle1"} fontWeight="bold" gutterBottom>
                     {account.bank}
                   </Typography>
                   
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="body2" fontWeight="bold" sx={{ minWidth: '100px' }}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" fontWeight="bold">
                       NIB:
                     </Typography>
-                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                      {account.nib}
-                    </Typography>
-                    <IconButton 
-                      size="small"
-                      onClick={() => handleCopy(account.nib)}
-                      title="Copiar NIB"
-                    >
-                      <ContentCopyIcon fontSize="small" />
-                    </IconButton>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: '#ffffff',
+                      p: 1,
+                      borderRadius: '4px',
+                      mt: 1
+                    }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          wordBreak: 'break-all',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        {account.nib}
+                      </Typography>
+                      <IconButton 
+                        size="small"
+                        onClick={() => handleCopy(account.nib)}
+                        title="Copiar NIB"
+                        sx={{ ml: 1 }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </Box>
                   
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography variant="body2" fontWeight="bold" sx={{ minWidth: '100px' }}>
-                      Conta:
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">
+                      Número da Conta:
                     </Typography>
-                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                      {account.account}
-                    </Typography>
-                    <IconButton 
-                      size="small"
-                      onClick={() => handleCopy(account.account)}
-                      title="Copiar Conta"
-                    >
-                      <ContentCopyIcon fontSize="small" />
-                    </IconButton>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: '#ffffff',
+                      p: 1,
+                      borderRadius: '4px',
+                      mt: 1
+                    }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          wordBreak: 'break-all',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        {account.account}
+                      </Typography>
+                      <IconButton 
+                        size="small"
+                        onClick={() => handleCopy(account.account)}
+                        title="Copiar Conta"
+                        sx={{ ml: 1 }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </Box>
                 </Box>
               ))}
 
-              <Typography variant="body1" paragraph>
-                <strong>Referência:</strong> {data.key}
-              </Typography>
-              <Typography variant="body1" paragraph>
-                <strong>Valor:</strong> {data.price} MT
-              </Typography>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  Referência:
+                </Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                  {data.key}
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  Valor:
+                </Typography>
+                <Typography variant="body2">
+                  {data.price} MT
+                </Typography>
+              </Box>
 
               <Box sx={{ 
                 mt: 3,
@@ -154,7 +198,7 @@ const PagamentoAccordion = ({ data }) => {
                 borderRadius: '8px',
                 borderLeft: '4px solid #ffa000'
               }}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant={isMobile ? "body1" : "subtitle1"} fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <EmailIcon color="primary" /> Envio do Comprovativo
                 </Typography>
                 <Typography variant="body2" paragraph>
@@ -166,29 +210,39 @@ const PagamentoAccordion = ({ data }) => {
                   backgroundColor: '#e3f2fd',
                   p: 1,
                   borderRadius: '4px',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  mb: 2
                 }}>
-                  <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      wordBreak: 'break-all',
+                      fontFamily: 'monospace'
+                    }}
+                  >
                     comercial@connectionmozambique.com
                   </Typography>
                   <IconButton 
                     size="small"
                     onClick={() => handleCopy('comercial@connectionmozambique.com')}
-                    title="Copiar email"
-                  >
+                    title="Copiar email">
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Box>
-                <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic' }}>
+                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                   No assunto do email, inclua a referência: <strong>{data.key}</strong>
                 </Typography>
               </Box>
-
               <Box sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                <Typography variant={isMobile ? "body1" : "subtitle2"} fontWeight="bold" gutterBottom>
                   Informações importantes:
                 </Typography>
-                <ul style={{ paddingLeft: '20px', marginTop: '0' }}>
+                <Box component="ul" sx={{ 
+                  pl: 2,
+                  '& li': {
+                    mb: 1
+                  }
+                }}>
                   <li>
                     <Typography variant="body2">
                       O comprovativo deve estar legível com todos os dados visíveis
@@ -204,17 +258,12 @@ const PagamentoAccordion = ({ data }) => {
                       O processamento pode levar até 24 horas úteis após envio do comprovativo
                     </Typography>
                   </li>
-                </ul>
+                </Box>
               </Box>
             </AccordionDetails>
           </Accordion>
-
         </AccordionDetails>
-        
-        
       </Accordion>
-
-      {/* Modal de demonstração */}
       <Dialog 
         open={open} 
         onClose={handleCloseModal} 
@@ -225,30 +274,8 @@ const PagamentoAccordion = ({ data }) => {
             borderRadius: '16px',
             overflow: 'hidden'
           }
-        }}
-      >
-        {/* ... (keep your existing modal content) ... */}
+        }}>
       </Dialog>
-
-      {/* Snackbar for copied notification */}
-      {copied && (
-        <Box
-          sx={{
-            position: 'fixed',
-            bottom: 20,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: '#4caf50',
-            color: 'white',
-            px: 3,
-            py: 1,
-            borderRadius: '4px',
-            zIndex: 9999
-          }}
-        >
-          {copied.includes('@') ? 'Email copiado!' : 'Texto copiado!'}
-        </Box>
-      )}
     </>
   );
 };

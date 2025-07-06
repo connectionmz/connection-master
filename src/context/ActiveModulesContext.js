@@ -1,4 +1,3 @@
-// contexts/ActiveModulesContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onValue, ref } from 'firebase/database';
 import { db } from '../fb';
@@ -24,16 +23,15 @@ export const ActiveModulesProvider = ({ children, userId }) => {
       if (data) {
         Object.keys(data).forEach(moduleKey => {
           const moduleData = data[moduleKey];
+
           if (moduleData.isActive && new Date(moduleData.end) > new Date()) {
             modules[moduleKey] = true;
           }
         });
       }
-
       setActiveModules(modules);
       setIsLoading(false);
     });
-
     return () => unsubscribe();
   }, [userId]);
 

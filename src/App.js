@@ -19,7 +19,7 @@ import {
   DialogActions
 } from '@mui/material';
 import { auth, db } from './fb';
-import { ref, onValue, remove, set, get } from 'firebase/database';
+import { ref, get } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
@@ -48,7 +48,6 @@ const fetchUserDataRealtime = async (user) => {
     setLoading(true);
     
     const userRef = ref(db, `company/${user.uid}`);
-    
     const snapshot = await get(userRef);
     
     if (snapshot.exists()) {
@@ -72,9 +71,6 @@ const fetchUserDataRealtime = async (user) => {
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-
-
-      console.log('Auth state changed:', user);
 
       if (user) {
         await fetchUserDataRealtime(user); 

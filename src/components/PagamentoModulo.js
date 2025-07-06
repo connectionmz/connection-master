@@ -110,8 +110,7 @@ const PagamentoModulo = ({ user }) => {
       });
 
       const data = await response.json();
-      console.log(data);
-
+      
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao processar pagamento');
       }
@@ -230,7 +229,7 @@ const PagamentoModulo = ({ user }) => {
     <Box sx={{ p: { xs: 2, sm: 4, md: 6 }, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
       <BackButton sx={{ mb: 2, alignSelf: 'flex-start' }} />
 
-      <Card sx={{ width: '100%', maxWidth: 600, boxShadow: 3 }}>
+      <Card sx={{ width: '100%',  boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             {currentModule.name}
@@ -238,8 +237,7 @@ const PagamentoModulo = ({ user }) => {
           <Typography variant="body1" color="textSecondary" paragraph>
             {currentModule.description}
           </Typography>
-          
-          <Box sx={{ mt: 2, mb: 2 }}>
+          <Box sx={{ mt: 2}}>
             <Typography variant="body2">
               <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
             </Typography>
@@ -247,8 +245,7 @@ const PagamentoModulo = ({ user }) => {
               <strong>Preço:</strong> {currentModule.price} MT
             </Typography>
           </Box>
-          
-          <Box sx={{ mt: 2, p: 2, backgroundColor: '#f0f0f0', borderRadius: 1 }}>
+          <Box>
             <PagamentoAccordion data={currentModule} />
           </Box>
         </CardContent>

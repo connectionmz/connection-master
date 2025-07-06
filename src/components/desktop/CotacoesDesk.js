@@ -46,7 +46,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const isMobile = useMediaQuery('(max-width:600px)');
 
     // Check if cotacoes module is active or if user is unauthenticated
-    const isModuleActive = activeModules?.cotacoes || !user;
+    const isModuleActive = activeModules?.moduloSMS || !user;
 
     // Load banners for all users
     useEffect(() => {
