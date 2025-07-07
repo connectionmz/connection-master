@@ -199,6 +199,8 @@ const PagamentoModulo = ({ user }) => {
       });
 
       const data = await response.json();
+
+      console.log('Resposta da M-Pesa:', data);
       
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao processar pagamento');
