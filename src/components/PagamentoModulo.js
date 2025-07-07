@@ -19,104 +19,28 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Snackbar,
-  InputAdornment,
 } from '@mui/material';
 import BackButton from './BackButton';
 import PagamentoAccordion from '../according/PagamentoAccordion';
 
-// Mapeamento completo de códigos de resposta M-Pesa com mensagens amigáveis
-const MPESA_RESPONSE_CODES = {
-  'INS-0': { status: 'success', message: 'Pagamento processado com sucesso!' },
-  'INS-1': { status: 'error', message: 'Ocorreu um problema interno no sistema de pagamentos. Por favor, tente novamente mais tarde.' },
-  'INS-2': { status: 'error', message: 'Problema de configuração no sistema de pagamentos. Nossa equipe já foi notificada.' },
-  'INS-4': { status: 'error', message: 'Sua conta M-Pesa não está ativa. Por favor, verifique com o seu provedor de serviços móveis.' },
-  'INS-5': { status: 'error', message: 'Você cancelou a transação. Nenhum valor foi debitado da sua conta.' },
-  'INS-6': { status: 'error', message: 'A transação falhou. Por favor, verifique seu saldo e tente novamente.' },
-  'INS-9': { status: 'error', message: 'O tempo para concluir o pagamento expirou. Por favor, tente novamente.' },
-  'INS-10': { status: 'error', message: 'Esta transação já foi processada anteriormente. Verifique seu histórico de pagamentos.' },
-  'INS-13': { status: 'error', message: 'Configuração inválida no sistema. Nossa equipe já foi notificada.' },
-  'INS-14': { status: 'error', message: 'Referência de pagamento inválida. Por favor, recarregue a página e tente novamente.' },
-  'INS-15': { status: 'error', message: 'O valor do pagamento é inválido. Entre em contato com o suporte.' },
-  'INS-16': { status: 'error', message: 'O serviço M-Pesa está temporariamente indisponível. Por favor, tente mais tarde.' },
-  'INS-17': { status: 'error', message: 'Referência de transação inválida. Recarregue a página e tente novamente.' },
-  'INS-18': { status: 'error', message: 'Identificador de transação inválido. Nossa equipe foi notificada.' },
-  'INS-19': { status: 'error', message: 'Referência externa inválida. Por favor, tente novamente.' },
-  'INS-20': { status: 'error', message: 'Informações incompletas. Preencha todos os campos corretamente.' },
-  'INS-21': { status: 'error', message: 'Validação falhou. Verifique os dados informados e tente novamente.' },
-  'INS-22': { status: 'error', message: 'Tipo de operação inválido. Nossa equipe foi notificada.' },
-  'INS-23': { status: 'error', message: 'Status desconhecido. Entre em contato com o suporte para assistência.' },
-  'INS-2001': { status: 'error', message: 'Problema de autenticação no sistema. Por favor, tente novamente mais tarde.' },
-  'INS-2002': { status: 'error', message: 'Destinatário inválido. Nossa equipe foi notificada.' },
-  'INS-2006': { status: 'error', message: 'Saldo insuficiente na sua conta M-Pesa. Por favor, recarregue e tente novamente.' },
-  'INS-2051': { status: 'error', message: 'Número de telefone inválido. Verifique o número e tente novamente.' },
-  'INS-2057': { status: 'error', message: 'Configuração de idioma inválida. Nossa equipe foi notificada.' },
-  'default': { status: 'error', message: 'Ocorreu um erro inesperado durante o pagamento. Por favor, tente novamente.' }
-};
-
-// Função para processar respostas da API
-const processApiResponse = (apiResponse) => {
-  // Se a resposta contiver details (erro estruturado)
-  if (apiResponse.details) {
-    const responseCode = apiResponse.details.output_ResponseCode || 'default';
-    const statusInfo = MPESA_RESPONSE_CODES[responseCode] || MPESA_RESPONSE_CODES['default'];
-    
-    return {
-      ...apiResponse.details,
-      status: statusInfo.status,
-      statusMessage: statusInfo.message,
-      isSuccess: false,
-      errorCode: responseCode
-    };
-  }
-  
-  // Se for uma resposta de sucesso direta
-  if (apiResponse.output_ResponseCode === 'INS-0') {
-    return {
-      ...apiResponse,
-      status: 'success',
-      statusMessage: MPESA_RESPONSE_CODES['INS-0'].message,
-      isSuccess: true
-    };
-  }
-
-  // Caso de erro não estruturado
-  return {
-    status: 'error',
-    statusMessage: apiResponse.error || MPESA_RESPONSE_CODES['default'].message,
-    isSuccess: false,
-    errorCode: 'unknown'
-  };
-};
-
 const PagamentoModulo = ({ user }) => {
+  
   const { moduleKey } = useParams();
-  const navigate = useNavigate();
   
   const [modules, setModules] = useState([]);
   const [currentModule, setCurrentModule] = useState(null);
-  const [phoneNumber, setPhoneNumber] = useState(
-    user?.contacto?.startsWith('258') 
-      ? user.contacto 
-      : user?.contacto ? `258${user.contacto.replace(/^0/, '')}` : ''
-  );
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [existingPayment, setExistingPayment] = useState(null);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
-  const [responseDialogOpen, setResponseDialogOpen] = useState(false);
-  const [mpesaResponse, setMpesaResponse] = useState(null);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(true);
+  const navigate = useNavigate();
 
   const app = getApp();
   const storage = getStorage(app);
 
-  // Carregar módulos disponíveis
   useEffect(() => {
     const modulesRef = ref(db, 'modules/modulos');
     const unsubscribe = onValue(modulesRef, (snapshot) => {
@@ -132,50 +56,14 @@ const PagamentoModulo = ({ user }) => {
     return () => unsubscribe();
   }, []);
 
-  // Definir módulo atual e verificar pagamentos existentes
   useEffect(() => {
     if (modules.length > 0 && moduleKey) {
       const foundModule = modules.find((mod) => mod.key === moduleKey);
       if (foundModule) {
         setCurrentModule(foundModule);
-        checkExistingPayment(user?.id, foundModule.key);
       }
     }
-  }, [modules, moduleKey, user?.id]);
-
-  const checkExistingPayment = async (userId, modKey) => {
-    if (!userId || !modKey) return;
-    
-    try {
-      const paymentsRef = query(
-        ref(db, 'payments'),
-        orderByChild('userId'),
-        equalTo(userId)
-      );
-      
-      const snapshot = await get(paymentsRef);
-      if (snapshot.exists()) {
-        const payments = [];
-        snapshot.forEach((childSnapshot) => {
-          const payment = childSnapshot.val();
-          if (payment.moduleKey === modKey) {
-            payments.push({
-              key: childSnapshot.key,
-              ...payment
-            });
-          }
-        });
-        
-        if (payments.length > 0) {
-          payments.sort((a, b) => b.timestamp - a.timestamp);
-          setExistingPayment(payments[0]);
-          setPaymentSuccess(payments[0].status === 'pago');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao verificar pagamentos existentes:', error);
-    }
-  };
+  }, [modules, moduleKey]);
 
   const calculateSubscriptionEnd = (validade) => {
     const now = Date.now();
@@ -194,21 +82,20 @@ const PagamentoModulo = ({ user }) => {
       return;
     }
 
-    if (!phoneNumber || !phoneNumber.startsWith('258') || phoneNumber.length !== 12) {
-      setError('Por favor, insira um número de telefone válido no formato 258XXXXXXXXX');
+    if (!phoneNumber) {
+      setError('Por favor, verifique o número de telefone.');
       return;
     }
 
     setLoading(true);
     setError('');
-    setMpesaResponse(null);
 
     try {
-      const sanitizedReference = `Modulo${currentModule.name}`
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .substring(0, 20);
+
+    const sanitizedReference = "Modulo"+currentModule.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "");
 
       const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
         method: 'POST',
@@ -223,17 +110,10 @@ const PagamentoModulo = ({ user }) => {
       });
 
       const data = await response.json();
-
-      // Processar resposta da API
-      const processedResponse = processApiResponse(data);
-      setMpesaResponse(processedResponse);
-      setResponseDialogOpen(true);
       
-      if (!processedResponse.isSuccess) {
-        throw new Error(processedResponse.statusMessage);
+      if (!response.ok) {
+        throw new Error('Falha ao processar pagamento');
       }
-
-      // Se o pagamento foi bem-sucedido
       const now = Date.now();
       const subscriptionEnd = calculateSubscriptionEnd(currentModule.validade);
 
@@ -251,7 +131,8 @@ const PagamentoModulo = ({ user }) => {
         status: 'pago',
         timestamp: existingPayment?.timestamp || now,
         updatedAt: now,
-        mpesaResponse: processedResponse,
+        mpesaResponse: data.data,
+        
         subscription: {
           isActive: true,
           start: now,
@@ -272,7 +153,6 @@ const PagamentoModulo = ({ user }) => {
         paymentRef = push(paymentsRef);
         await set(paymentRef, paymentData);
       }
-
       const subscriptionRef = ref(db, `subscriptions/${user.id}/${moduleKey}`);
       await set(subscriptionRef, {
         isActive: true,
@@ -282,60 +162,49 @@ const PagamentoModulo = ({ user }) => {
         moduleKey,
         moduleName: currentModule?.name || '',
         subscriptionType: currentModule.validade.toLowerCase(),
-        paymentId: paymentRef.key,
+        paymentId: existingPayment?.key || paymentRef.key,
         validade: currentModule.validade,
-        status: 'ativo',
       });
-
       setPaymentSuccess(true);
       setExistingPayment({
+        ...(existingPayment || {}),
         ...paymentData,
-        key: paymentRef.key
+        key: existingPayment?.key || paymentRef.key
       });
-
-      setSnackbar({
-        open: true,
-        message: processedResponse.statusMessage,
-        severity: 'success',
-      });
-
     } catch (err) {
       console.error('Erro ao processar pagamento:', err);
-      
-      // Usar a mensagem da resposta processada se disponível
-      const errorMessage = mpesaResponse?.statusMessage || err.message;
-      
-      setError(errorMessage);
-      setSnackbar({
-        open: true,
-        message: errorMessage,
-        severity: 'error',
-      });
+      setError(err.message || 'Ocorreu um erro ao processar o pagamento. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
       setShowReplaceDialog(false);
     }
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
+  const handleCancelReplace = () => {
+    setShowReplaceDialog(false);
   };
 
-  const handleCloseResponseDialog = () => {
-    setResponseDialogOpen(false);
-    if (mpesaResponse?.isSuccess) {
-      navigate('/meus-modulos');
+  useEffect(() => {
+    if (user?.id) {
+      const subscriptionsRef = ref(db, `subscriptions/${user.id}`);
+      onValue(subscriptionsRef, (snapshot) => {
+        const subscriptions = snapshot.val();
+        if (subscriptions) {
+          const now = Date.now();
+          Object.entries(subscriptions).forEach(([key, sub]) => {
+            if (sub.end < now && sub.isActive) {
+              // Update status to expired
+              const subRef = ref(db, `subscriptions/${user.id}/${key}`);
+              set(subRef, {
+                ...sub,
+                isActive: false
+              });
+            }
+          });
+        }
+      });
     }
-  };
-
-  const handlePhoneNumberChange = (e) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
-    let formattedValue = rawValue.startsWith('258') 
-      ? rawValue 
-      : `258${rawValue}`;
-    formattedValue = formattedValue.substring(0, 12);
-    setPhoneNumber(formattedValue);
-  };
+  }, [user?.id]);
 
   if (!currentModule) {
     return (
@@ -351,19 +220,10 @@ const PagamentoModulo = ({ user }) => {
   }
 
   return (
-    <Box sx={{ 
-      p: { xs: 2, sm: 4, md: 6 }, 
-      minHeight: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      width: '100%',
-      maxWidth: '800px',
-      mx: 'auto'
-    }}>
+    <Box sx={{ p: { xs: 2, sm: 4, md: 6 }, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
       <BackButton sx={{ mb: 2, alignSelf: 'flex-start' }} />
 
-      <Card sx={{ width: '100%', boxShadow: 3 }}>
+      <Card sx={{ width: '100%',  boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             {currentModule.name}
@@ -371,21 +231,18 @@ const PagamentoModulo = ({ user }) => {
           <Typography variant="body1" color="textSecondary" paragraph>
             {currentModule.description}
           </Typography>
-          
-          <Box sx={{ mt: 2, display: 'flex', gap: 3 }}>
+          <Box sx={{ mt: 2}}>
             <Typography variant="body2">
               <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
             </Typography>
-            <Typography variant="body2" fontWeight="bold">
+            <Typography variant="body2">
               <strong>Preço:</strong> {currentModule.price} MT
             </Typography>
           </Box>
-          
-          <Box sx={{ mt: 3 }}>
+          <Box>
             <PagamentoAccordion data={currentModule} />
           </Box>
         </CardContent>
-        
         <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
           {!paymentSuccess ? (
             <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
@@ -412,17 +269,12 @@ const PagamentoModulo = ({ user }) => {
               <TextField
                 label="Telefone M-Pesa"
                 value={phoneNumber}
-                onChange={handlePhoneNumberChange}
+                onChange={(e) => setPhoneNumber(e.target.value)}
                 fullWidth
                 margin="normal"
                 required
                 helperText="Número de telefone registado no M-Pesa (formato 258XXXXXXXXX)"
-                error={!!error}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">258</InputAdornment>,
-                }}
               />
-              
               {error && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                   {error}
@@ -436,118 +288,52 @@ const PagamentoModulo = ({ user }) => {
                 disabled={loading}
                 sx={{ mt: 3 }}
                 fullWidth
-                size="large"
               >
                 {loading ? <CircularProgress size={24} /> : 'Pagar via M-Pesa'}
               </Button>
             </Box>
           ) : (
             <Alert severity="success" sx={{ mt: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Pagamento processado com sucesso!
-              </Typography>
+              Pagamento processado com sucesso!
               
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="body2">
-                  <strong>Módulo:</strong> {currentModule.name}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Valor:</strong> {currentModule.price} MT
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
-                </Typography>
-                {existingPayment?.mpesaResponse?.output_TransactionID && (
+              {existingPayment?.mpesaResponse && (
+                <Box sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>ID da Transação:</strong> {existingPayment.mpesaResponse.output_TransactionID}
+                    <strong>Módulo:</strong> {currentModule.name}
                   </Typography>
-                )}
-              </Box>
-              
-              <Button 
-                variant="outlined" 
-                sx={{ mt: 2 }}
-                onClick={() => navigate('/meus-modulos')}
-                fullWidth
-              >
-                Ver meus módulos
-              </Button>
+                  <Typography variant="body2">
+                    <strong>Valor:</strong> {currentModule.price} MT
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Transação:</strong> {existingPayment.mpesaResponse.output_TransactionID || 'N/A'}
+                  </Typography>
+                </Box>
+              )}
             </Alert>
           )}
         </CardActions>
       </Card>
       
-      {/* Diálogo de resposta da M-Pesa */}
       <Dialog
-        open={responseDialogOpen}
-        onClose={handleCloseResponseDialog}
+        open={showReplaceDialog}
+        onClose={handleCancelReplace}
       >
-        <DialogTitle>
-          {mpesaResponse?.isSuccess ? 'Pagamento Bem-sucedido' : 'Erro no Pagamento'}
-        </DialogTitle>
+        <DialogTitle>Novo pagamento?</DialogTitle>
         <DialogContent>
-          <Typography gutterBottom>
-            {mpesaResponse?.statusMessage}
-          </Typography>
-          
-          {mpesaResponse && (
-            <Box sx={{ mt: 2 }}>
-              {mpesaResponse.output_TransactionID && (
-                <Typography variant="body2">
-                  <strong>ID da Transação:</strong> {mpesaResponse.output_TransactionID}
-                </Typography>
-              )}
-              {mpesaResponse.errorCode && !mpesaResponse.isSuccess && (
-                <Typography variant="body2">
-                  <strong>Código do Erro:</strong> {mpesaResponse.errorCode}
-                </Typography>
-              )}
-              {mpesaResponse.output_ThirdPartyReference && (
-                <Typography variant="body2">
-                  <strong>Referência:</strong> {mpesaResponse.output_ThirdPartyReference}
-                </Typography>
-              )}
-              {mpesaResponse.output_ConversationID && (
-                <Typography variant="body2">
-                  <strong>ID da Conversa:</strong> {mpesaResponse.output_ConversationID}
-                </Typography>
-              )}
-            </Box>
-          )}
+          <DialogContentText>
+            Você já iniciou um pagamento para este módulo. Tem certeza que deseja realizar um novo pagamento?
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseResponseDialog}>
-            {mpesaResponse?.isSuccess ? 'Continuar' : 'Fechar'}
+          <Button onClick={handleCancelReplace}>Cancelar</Button>
+          <Button onClick={handleSubmit} color="primary" disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : 'Confirmar Pagamento'}
           </Button>
-        {!mpesaResponse?.isSuccess && (
-            <Button 
-              onClick={() => {
-                handleCloseResponseDialog();
-                handleSubmit({ preventDefault: () => {} });
-              }} 
-              color="primary"
-            >
-              Tentar Novamente
-            </Button>
-          )}
         </DialogActions>
       </Dialog>
-      
-      {/* Snackbar para feedback */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
