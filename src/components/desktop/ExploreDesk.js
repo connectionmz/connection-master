@@ -55,12 +55,14 @@ const Explore = React.memo(({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
+          console.log('Dados das empresas:', data);
           const empresasList = Object.keys(data)
             .map((key) => ({
               id: key,
               ...data[key],
             }))
-            .filter((empresa) => empresa.id !== user.id); 
+            // Filter out the current user's company only if user exists and has an id
+            .filter((empresa) => !user?.id || empresa.id !== user.id);
           setCompanies(empresasList);
         }
       } catch (error) {
@@ -70,7 +72,6 @@ const Explore = React.memo(({ user }) => {
       }
     };
     
-
     onValue(ref(db2, 'provincias'), (snapshot) => {
       setProvincias(snapshot.val() || []);
     });
@@ -84,7 +85,7 @@ const Explore = React.memo(({ user }) => {
     });
 
     fetchCompanies();
-  }, []);
+  }, [user?.id]); // Only re-run if user.id changes
 
   // Atualizar subsectores quando o setor é alterado
   useEffect(() => {
