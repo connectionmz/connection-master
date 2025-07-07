@@ -86,7 +86,7 @@ const MyAdsTab = ({ myAds, loading, onAdCreated, onAdDeleted }) => {
               <TableCell>Tipo</TableCell>
               <TableCell>Duração</TableCell>
               <TableCell>Custo</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell>Estado</TableCell>
               <TableCell>Expira em</TableCell>
               <TableCell>Ações</TableCell>
             </TableRow>

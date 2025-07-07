@@ -24,3 +24,10 @@ export const formatPrice = (value) => {
   export const calculateCTR = (clicks, impressions) => {
     return impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : 0;
   };
+
+  export const isAdExpired = (ad) => {
+  if (!ad.expireDate) return false;
+  const expireDate = new Date(ad.expireDate);
+  const now = new Date();
+  return now > expireDate;
+};

@@ -364,7 +364,7 @@ const HeaderDesk = ({ user }) => {
               </Typography>
               <Typography variant="body2">
                 Para suporte use{' '}
-                <a href="tel:+258xxxxxxxxx">+258 xxxxxxxx</a> ou pelo e-mail{' '}
+                <a href="tel:+258866656104">+258 86 665 6104</a> ou pelo e-mail{' '}
                 <a href="mailto:suporte@connectionmozambique.com">
                   suporte@connectionmozambique.com
                 </a>.

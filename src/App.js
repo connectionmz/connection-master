@@ -19,7 +19,7 @@ import {
   DialogActions
 } from '@mui/material';
 import { auth, db } from './fb';
-import { ref, get } from 'firebase/database';
+import { ref, onValue } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
@@ -43,43 +43,60 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-const fetchUserDataRealtime = async (user) => {
-  try {
-    setLoading(true);
-    
-    const userRef = ref(db, `company/${user.uid}`);
-    const snapshot = await get(userRef);
-    
-    if (snapshot.exists()) {
-      const data = snapshot.val();
-      setUserData({
-        ...data,
-        photoURL: data.logoUrl || 'https://via.placeholder.com/150',
-        displayName: data.nome || 'Nome da Empresa',
-        endereco: data.endereco || 'Endereço não informado',
+  const setupRealtimeListener = (userId) => {
+    try {
+      setLoading(true);
+      
+      const userRef = ref(db, `company/${userId}`);
+      
+      // Set up real-time listener
+      const unsubscribe = onValue(userRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          setUserData({
+            ...data,
+            photoURL: data.logoUrl || 'https://via.placeholder.com/150',
+            displayName: data.nome || 'Nome da Empresa',
+            endereco: data.endereco || 'Endereço não informado',
+          });
+        } else {
+          setUserData(null);
+        }
+        setLoading(false);
+      }, (error) => {
+        SaveLogError('app', error);
+        setError('Erro ao carregar dados do usuário. Tente novamente mais tarde.');
+        setLoading(false);
       });
-    } else {
-      setUserData(null);
+
+      // Return cleanup function
+      return () => unsubscribe();
+    } catch (error) {
+      SaveLogError('app', error);
+      setError('Erro ao configurar listener. Tente novamente mais tarde.');
+      setLoading(false);
     }
-  } catch (error) {
-    SaveLogError('app', error);
-    setError('Erro ao carregar dados do usuário. Tente novamente mais tarde.');
-  } finally {
-    setLoading(false);
   }
-}
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        await fetchUserDataRealtime(user); 
+        // Clean up any previous listener before setting up a new one
+        const cleanup = setupRealtimeListener(user.uid);
+        
+        // Return cleanup function for auth state change
+        return () => {
+          if (cleanup) cleanup();
+        };
       } else {
         setUserData(null);
         setLoading(false);
       }
     });
-    return () => unsubscribeAuth();
+
+    return () => {
+      unsubscribeAuth();
+    };
   }, []);
 
   if (loading) {
