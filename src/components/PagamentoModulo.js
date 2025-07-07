@@ -25,43 +25,67 @@ import {
 import BackButton from './BackButton';
 import PagamentoAccordion from '../according/PagamentoAccordion';
 
-// Mapeamento de códigos de resposta M-Pesa
+// Mapeamento completo de códigos de resposta M-Pesa com mensagens amigáveis
 const MPESA_RESPONSE_CODES = {
-  'INS-0': { status: 'success', message: 'Pagamento processado com sucesso' },
-  'INS-1': { status: 'error', message: 'Erro interno no servidor M-Pesa' },
-  'INS-2': { status: 'error', message: 'Chave de API inválida' },
-  'INS-4': { status: 'error', message: 'Usuário não está ativo' },
-  'INS-5': { status: 'error', message: 'Transação cancelada pelo cliente' },
-  'INS-6': { status: 'error', message: 'Transação falhou' },
-  'INS-9': { status: 'error', message: 'Tempo limite da requisição excedido' },
-  'INS-10': { status: 'error', message: 'Transação duplicada' },
-  'INS-13': { status: 'error', message: 'Shortcode inválido' },
-  'INS-14': { status: 'error', message: 'Referência inválida' },
-  'INS-15': { status: 'error', message: 'Valor inválido' },
-  'INS-16': { status: 'error', message: 'Serviço temporariamente indisponível' },
-  'INS-17': { status: 'error', message: 'Referência de transação inválida' },
-  'INS-18': { status: 'error', message: 'TransactionID inválido' },
-  'INS-19': { status: 'error', message: 'ThirdPartyReference inválido' },
-  'INS-20': { status: 'error', message: 'Parâmetros incompletos' },
-  'INS-21': { status: 'error', message: 'Validação de parâmetros falhou' },
-  'INS-22': { status: 'error', message: 'Tipo de operação inválido' },
-  'INS-23': { status: 'error', message: 'Status desconhecido - Contate o suporte M-Pesa' },
-  'INS-2006': { status: 'error', message: 'Saldo insuficiente' },
-  'INS-2051': { status: 'error', message: 'Número de telefone inválido' },
+  'INS-0': { status: 'success', message: 'Pagamento processado com sucesso!' },
+  'INS-1': { status: 'error', message: 'Ocorreu um problema interno no sistema de pagamentos. Por favor, tente novamente mais tarde.' },
+  'INS-2': { status: 'error', message: 'Problema de configuração no sistema de pagamentos. Nossa equipe já foi notificada.' },
+  'INS-4': { status: 'error', message: 'Sua conta M-Pesa não está ativa. Por favor, verifique com o seu provedor de serviços móveis.' },
+  'INS-5': { status: 'error', message: 'Você cancelou a transação. Nenhum valor foi debitado da sua conta.' },
+  'INS-6': { status: 'error', message: 'A transação falhou. Por favor, verifique seu saldo e tente novamente.' },
+  'INS-9': { status: 'error', message: 'O tempo para concluir o pagamento expirou. Por favor, tente novamente.' },
+  'INS-10': { status: 'error', message: 'Esta transação já foi processada anteriormente. Verifique seu histórico de pagamentos.' },
+  'INS-13': { status: 'error', message: 'Configuração inválida no sistema. Nossa equipe já foi notificada.' },
+  'INS-14': { status: 'error', message: 'Referência de pagamento inválida. Por favor, recarregue a página e tente novamente.' },
+  'INS-15': { status: 'error', message: 'O valor do pagamento é inválido. Entre em contato com o suporte.' },
+  'INS-16': { status: 'error', message: 'O serviço M-Pesa está temporariamente indisponível. Por favor, tente mais tarde.' },
+  'INS-17': { status: 'error', message: 'Referência de transação inválida. Recarregue a página e tente novamente.' },
+  'INS-18': { status: 'error', message: 'Identificador de transação inválido. Nossa equipe foi notificada.' },
+  'INS-19': { status: 'error', message: 'Referência externa inválida. Por favor, tente novamente.' },
+  'INS-20': { status: 'error', message: 'Informações incompletas. Preencha todos os campos corretamente.' },
+  'INS-21': { status: 'error', message: 'Validação falhou. Verifique os dados informados e tente novamente.' },
+  'INS-22': { status: 'error', message: 'Tipo de operação inválido. Nossa equipe foi notificada.' },
+  'INS-23': { status: 'error', message: 'Status desconhecido. Entre em contato com o suporte para assistência.' },
+  'INS-2001': { status: 'error', message: 'Problema de autenticação no sistema. Por favor, tente novamente mais tarde.' },
+  'INS-2002': { status: 'error', message: 'Destinatário inválido. Nossa equipe foi notificada.' },
+  'INS-2006': { status: 'error', message: 'Saldo insuficiente na sua conta M-Pesa. Por favor, recarregue e tente novamente.' },
+  'INS-2051': { status: 'error', message: 'Número de telefone inválido. Verifique o número e tente novamente.' },
+  'INS-2057': { status: 'error', message: 'Configuração de idioma inválida. Nossa equipe foi notificada.' },
+  'default': { status: 'error', message: 'Ocorreu um erro inesperado durante o pagamento. Por favor, tente novamente.' }
 };
 
-const handleMpesaResponse = (responseData) => {
-  const responseCode = responseData.output_ResponseCode;
-  const statusInfo = MPESA_RESPONSE_CODES[responseCode] || {
-    status: 'error',
-    message: 'Erro desconhecido no processamento do pagamento'
-  };
+// Função para processar respostas da API
+const processApiResponse = (apiResponse) => {
+  // Se a resposta contiver details (erro estruturado)
+  if (apiResponse.details) {
+    const responseCode = apiResponse.details.output_ResponseCode || 'default';
+    const statusInfo = MPESA_RESPONSE_CODES[responseCode] || MPESA_RESPONSE_CODES['default'];
+    
+    return {
+      ...apiResponse.details,
+      status: statusInfo.status,
+      statusMessage: statusInfo.message,
+      isSuccess: false,
+      errorCode: responseCode
+    };
+  }
+  
+  // Se for uma resposta de sucesso direta
+  if (apiResponse.output_ResponseCode === 'INS-0') {
+    return {
+      ...apiResponse,
+      status: 'success',
+      statusMessage: MPESA_RESPONSE_CODES['INS-0'].message,
+      isSuccess: true
+    };
+  }
 
+  // Caso de erro não estruturado
   return {
-    ...responseData,
-    status: statusInfo.status,
-    statusMessage: statusInfo.message,
-    isSuccess: statusInfo.status === 'success',
+    status: 'error',
+    statusMessage: apiResponse.error || MPESA_RESPONSE_CODES['default'].message,
+    isSuccess: false,
+    errorCode: 'unknown'
   };
 };
 
@@ -108,7 +132,7 @@ const PagamentoModulo = ({ user }) => {
     return () => unsubscribe();
   }, []);
 
-  // Definir módulo atual
+  // Definir módulo atual e verificar pagamentos existentes
   useEffect(() => {
     if (modules.length > 0 && moduleKey) {
       const foundModule = modules.find((mod) => mod.key === moduleKey);
@@ -143,7 +167,6 @@ const PagamentoModulo = ({ user }) => {
         });
         
         if (payments.length > 0) {
-          // Ordenar por data mais recente
           payments.sort((a, b) => b.timestamp - a.timestamp);
           setExistingPayment(payments[0]);
           setPaymentSuccess(payments[0].status === 'pago');
@@ -178,13 +201,14 @@ const PagamentoModulo = ({ user }) => {
 
     setLoading(true);
     setError('');
+    setMpesaResponse(null);
 
     try {
       const sanitizedReference = `Modulo${currentModule.name}`
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9]/g, "")
-        .substring(0, 20); // Limitar a 20 caracteres
+        .substring(0, 20);
 
       const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
         method: 'POST',
@@ -200,14 +224,8 @@ const PagamentoModulo = ({ user }) => {
 
       const data = await response.json();
 
-      console.log('Resposta da M-Pesa:', data);
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar pagamento');
-      }
-
-      // Processar resposta da M-Pesa
-      const processedResponse = handleMpesaResponse(data.data || data);
+      // Processar resposta da API
+      const processedResponse = processApiResponse(data);
       setMpesaResponse(processedResponse);
       setResponseDialogOpen(true);
       
@@ -215,6 +233,7 @@ const PagamentoModulo = ({ user }) => {
         throw new Error(processedResponse.statusMessage);
       }
 
+      // Se o pagamento foi bem-sucedido
       const now = Date.now();
       const subscriptionEnd = calculateSubscriptionEnd(currentModule.validade);
 
@@ -229,15 +248,12 @@ const PagamentoModulo = ({ user }) => {
         moduleType: currentModule?.type || 'standard',
         amount: currentModule.price,
         reference: currentModule.name,
-        status: processedResponse.isSuccess ? 'pago' : 'pendente',
+        status: 'pago',
         timestamp: existingPayment?.timestamp || now,
         updatedAt: now,
-        mpesaResponse: {
-          ...processedResponse,
-          rawResponse: data.data || data
-        },
+        mpesaResponse: processedResponse,
         subscription: {
-          isActive: processedResponse.isSuccess,
+          isActive: true,
           start: now,
           end: subscriptionEnd,
           durationDays: currentModule.validade === 'Anual' ? 365 : 30,
@@ -249,11 +265,9 @@ const PagamentoModulo = ({ user }) => {
 
       let paymentRef;
       if (existingPayment) {
-        // Atualizar pagamento existente
         paymentRef = ref(db, `payments/${existingPayment.key}`);
         await set(paymentRef, paymentData);
       } else {
-        // Criar novo pagamento
         const paymentsRef = ref(db, 'payments');
         paymentRef = push(paymentsRef);
         await set(paymentRef, paymentData);
@@ -261,23 +275,22 @@ const PagamentoModulo = ({ user }) => {
 
       const subscriptionRef = ref(db, `subscriptions/${user.id}/${moduleKey}`);
       await set(subscriptionRef, {
-        isActive: processedResponse.isSuccess,
+        isActive: true,
         start: now,
         end: subscriptionEnd,
         durationDays: currentModule.validade === 'Anual' ? 365 : 30,
         moduleKey,
         moduleName: currentModule?.name || '',
         subscriptionType: currentModule.validade.toLowerCase(),
-        paymentId: existingPayment?.key || paymentRef.key,
+        paymentId: paymentRef.key,
         validade: currentModule.validade,
-        status: processedResponse.isSuccess ? 'ativo' : 'pendente',
+        status: 'ativo',
       });
 
-      setPaymentSuccess(processedResponse.isSuccess);
+      setPaymentSuccess(true);
       setExistingPayment({
-        ...(existingPayment || {}),
         ...paymentData,
-        key: existingPayment?.key || paymentRef.key
+        key: paymentRef.key
       });
 
       setSnackbar({
@@ -289,11 +302,9 @@ const PagamentoModulo = ({ user }) => {
     } catch (err) {
       console.error('Erro ao processar pagamento:', err);
       
-      const mpesaErrorMatch = err.message.match(/INS-\d+/);
-      const errorMessage = mpesaErrorMatch 
-        ? MPESA_RESPONSE_CODES[mpesaErrorMatch[0]]?.message || err.message
-        : err.message;
-
+      // Usar a mensagem da resposta processada se disponível
+      const errorMessage = mpesaResponse?.statusMessage || err.message;
+      
       setError(errorMessage);
       setSnackbar({
         open: true,
@@ -466,25 +477,6 @@ const PagamentoModulo = ({ user }) => {
         </CardActions>
       </Card>
       
-      {/* Diálogo de confirmação para substituir pagamento */}
-      <Dialog
-        open={showReplaceDialog}
-        onClose={() => setShowReplaceDialog(false)}
-      >
-        <DialogTitle>Novo pagamento?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Você já tem um pagamento registrado para este módulo. Deseja realizar um novo pagamento?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowReplaceDialog(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} color="primary" disabled={loading}>
-            {loading ? <CircularProgress size={24} /> : 'Confirmar'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
       {/* Diálogo de resposta da M-Pesa */}
       <Dialog
         open={responseDialogOpen}
@@ -498,21 +490,46 @@ const PagamentoModulo = ({ user }) => {
             {mpesaResponse?.statusMessage}
           </Typography>
           
-          {mpesaResponse?.output_TransactionID && (
+          {mpesaResponse && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>ID da Transação:</strong> {mpesaResponse.output_TransactionID}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Referência:</strong> {mpesaResponse.output_ThirdPartyReference}
-              </Typography>
+              {mpesaResponse.output_TransactionID && (
+                <Typography variant="body2">
+                  <strong>ID da Transação:</strong> {mpesaResponse.output_TransactionID}
+                </Typography>
+              )}
+              {mpesaResponse.errorCode && !mpesaResponse.isSuccess && (
+                <Typography variant="body2">
+                  <strong>Código do Erro:</strong> {mpesaResponse.errorCode}
+                </Typography>
+              )}
+              {mpesaResponse.output_ThirdPartyReference && (
+                <Typography variant="body2">
+                  <strong>Referência:</strong> {mpesaResponse.output_ThirdPartyReference}
+                </Typography>
+              )}
+              {mpesaResponse.output_ConversationID && (
+                <Typography variant="body2">
+                  <strong>ID da Conversa:</strong> {mpesaResponse.output_ConversationID}
+                </Typography>
+              )}
             </Box>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseResponseDialog}>
-            {mpesaResponse?.isSuccess ? 'Continuar' : 'Entendido'}
+            {mpesaResponse?.isSuccess ? 'Continuar' : 'Fechar'}
           </Button>
+        {!mpesaResponse?.isSuccess && (
+            <Button 
+              onClick={() => {
+                handleCloseResponseDialog();
+                handleSubmit({ preventDefault: () => {} });
+              }} 
+              color="primary"
+            >
+              Tentar Novamente
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
       
