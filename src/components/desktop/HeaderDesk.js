@@ -138,9 +138,6 @@ const HeaderDesk = ({ user }) => {
       to: "/empresas", 
       icon: <DomainIcon />, 
       label: "Empresas",
-      onClick: (e) => {
-        if (!handleNavigation("/empresas")) e.preventDefault();
-      }
     },
     { 
       to: "/lojas", 
@@ -178,9 +175,6 @@ const HeaderDesk = ({ user }) => {
       to: "/feed", 
       icon: <FeedIcon />, 
       label: "Feed",
-      onClick: (e) => {
-        if (!handleNavigation("/feed")) e.preventDefault();
-      }
     },
     {
       to: user ? "/inbox" : "/auth",

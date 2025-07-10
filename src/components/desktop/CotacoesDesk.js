@@ -45,10 +45,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width:600px)');
 
-    // Check if cotacoes module is active or if user is unauthenticated
     const isModuleActive = activeModules?.moduloSMS || !user;
 
-    // Load banners for all users
     useEffect(() => {
         const bannersRef = ref(db, 'banners');
         const unsubscribe = onValue(bannersRef, (snapshot) => {
@@ -74,19 +72,15 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
                 const filteredBanners = updatedBanners.filter(banner => {
                     if (banner.status !== 'active' || banner.tipoAnuncio !== 'cotacoes') return false;
-
                     const expireDate = new Date(banner.expireDate);
                     if (expireDate < currentDate) return false;
 
-                    // For unauthenticated users, show all active banners
                     if (!user) return true;
 
-                    // For authenticated users, filter by province if available
                     const matchesProvincia = !banner.provincias || 
                         banner.provincias.includes('Todas') ||
                         (user.provincia && banner.provincias.includes(user.provincia));
 
-                    // Filter by sector if available
                     const matchesSector = !banner.sectores || 
                         banner.sectores.includes('Todos') ||
                         (user.sector && banner.sectores.includes(user.sector));
@@ -104,7 +98,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         return () => unsubscribe();
     }, [user?.provincia, user?.sector, user?.id]);
 
-    // Load cotacoes only for users with active module
     useEffect(() => {
         if (!isModuleActive || !user?.id) return;
 
@@ -117,9 +110,9 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 setClickedCotacoes((prevClickedCotacoes) => {
                     const cotacoesArray = Object.entries(cotacoesData).map(([id, cotacao]) => {
                         const dataLimite = new Date(cotacao.datalimite);
-                        const isExpired = dataLimite < now && cotacao.status !== 'Fechada';
+                        const isExpired = dataLimite < now && cotacao.status !== 'Fechada' && cotacao.status !== 'Expirada';
                         
-                        if (isExpired && cotacao.status !== 'Expirada') {
+                        if (isExpired) {
                             update(ref(db, `cotacoes/${id}`), { status: 'Expirada' });
                             return {
                                 id,
@@ -136,7 +129,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         };
                     });
                     
-                    // Filter cotacoes based on user sector and province
                     const filteredCotacoes = activeTab === 'minhas' 
                         ? cotacoesArray.filter(cotacao => 
                             cotacao.company?.id === user.id || 
@@ -144,26 +136,20 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                             cotacao.createdBy === user.id
                           )
                         : cotacoesArray.filter(cotacao => {
-                            // Show user's own cotacoes without filtering
                             if (cotacao.company?.id === user.id || 
                                 cotacao.userId === user.id || 
                                 cotacao.createdBy === user.id) {
                                 return true;
                             }
                             
-                            // Filter by sector
-                            const sectorMatch = !cotacao.sector || 
-                                             (user?.sector && cotacao.sector === user.sector);
+                            const cotacaoSector = cotacao.sector || cotacao.company?.sector;
+                            const sectorMatch = !cotacaoSector || 
+                                             (user?.sector && cotacaoSector === user.sector);
                         
-                            // Filter by province
-                            let provinciaMatch = false;
-                            if (Array.isArray(cotacao.provincia)) {
-                                provinciaMatch = cotacao.provincia.includes('Todas') || 
-                                              (user?.provincia && cotacao.provincia.includes(user.provincia));
-                            } else {
-                                provinciaMatch = cotacao.provincia === 'Todas' || 
-                                              (user?.provincia && cotacao.provincia === user.provincia);
-                            }
+                            const cotacaoProvincia = cotacao.company?.provincia;
+                            const provinciaMatch = !cotacaoProvincia || 
+                                                cotacaoProvincia === 'Todas' || 
+                                                (user?.provincia && cotacaoProvincia === user.provincia);
                             
                             return sectorMatch && provinciaMatch;
                         });
@@ -181,7 +167,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         return () => unsubscribeCotacoes();
     }, [user?.id, user?.provincia, user?.sector, activeTab, isModuleActive]);
 
-    // Load clicked status only for users with active module
     useEffect(() => {
         if (!isModuleActive || !user?.id) return;
 
@@ -263,11 +248,13 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             case 'recentes':
                 return cotacoes.filter(
                     (cotacao) => new Date(cotacao.datalimite) >= now && 
-                                cotacao.status !== 'Fechada'
+                                cotacao.status !== 'Fechada' &&
+                                cotacao.status !== 'Expirada'
                 );
             case 'expiradas':
                 return cotacoes.filter(
-                    (cotacao) => new Date(cotacao.datalimite) < now && 
+                    (cotacao) => (new Date(cotacao.datalimite) < now || 
+                                 cotacao.status === 'Expirada') && 
                                 cotacao.status !== 'Fechada'
                 );
             case 'fechada':
@@ -352,13 +339,16 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                     <Typography 
                                         component="span" 
                                         variant="body1" 
-                                        fontWeight={!cotacao.isClicked && user ? 'bold' : 'normal'}
+                                        fontWeight={!clickedCotacoes[cotacao.id] && user ? 'bold' : 'normal'}
                                     >
                                         {cotacao.title}
                                     </Typography>
                                 }
                                 secondary={
                                     <>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Publicado por: {cotacao.company?.nome || 'Anônimo'}
+                                        </Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             Publicado em: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
                                         </Typography>
@@ -380,7 +370,10 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                             Data limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
                                         </Typography>
                                         <Typography variant="body2">
-                                            Sector: {cotacao.sector}
+                                            Sector: {cotacao.sector || cotacao.company?.sector}
+                                        </Typography>
+                                        <Typography variant="body2">
+                                            Província: {cotacao.company?.provincia}
                                         </Typography>
                                     </>
                                 }
@@ -447,43 +440,40 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
                     <AnunciosDesk campanhas={campanhasAtivas} user={user} local="Cotacoes"/>
 
-                    {/* Module activation message for authenticated users without active module */}
                     {user && !isModuleActive && (
-                 <Alert
-                   severity="warning"
-                   icon={false}
-                   sx={{
-                     mb: 2,
-                     border: '1px solidrgb(0, 135, 245)',
-                     backgroundColor: '#fff3e0',
-                     color: '#e65100',
-                     display: 'flex',
-                     justifyContent: 'space-between',
-                     alignItems: 'center',
-                     p: 2,
-                     borderRadius: '1px',
-                   }}
-                   action={
-                     <Button
-                       variant="contained"
-                       size="medium"
-                       onClick={() => window.location = '/pagamento-modulo/moduloSMS'}
-                       sx={{
-                         backgroundColor: '#f57c00',
-                         color: 'white',
-                         fontWeight: 'bold',
-                         '&:hover': {
-                           backgroundColor: '#ef6c00',
-                         },
-                       }}>
-                       Ativar Módulo Mercado
-                     </Button>
-                   }>
-                  O módulo <strong>SMS</strong> está inativo. Ative-o agora para acessar todos os recursos!
-                 </Alert>
+                        <Alert
+                            severity="warning"
+                            icon={false}
+                            sx={{
+                                mb: 2,
+                                border: '1px solid rgb(0, 135, 245)',
+                                backgroundColor: '#fff3e0',
+                                color: '#e65100',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                p: 2,
+                                borderRadius: '1px',
+                            }}
+                            action={
+                                <Button
+                                    variant="contained"
+                                    size="medium"
+                                    onClick={() => window.location = '/pagamento-modulo/moduloSMS'}
+                                    sx={{
+                                        backgroundColor: '#f57c00',
+                                        color: 'white',
+                                        fontWeight: 'bold',
+                                        '&:hover': {
+                                            backgroundColor: '#ef6c00',
+                                        },
+                                    }}>
+                                    Ativar Módulo SMS
+                                </Button>
+                            }>
+                            O módulo <strong>SMS</strong> está inativo. Ative-o agora para acessar todos os recursos!
+                        </Alert>
                     )}
-
-                    {/* Cotacoes tabs and list for users with active module */}
                     {isModuleActive && user && (
                         <>
                             <Paper elevation={1} sx={{ mb: 2, backgroundColor: 'white' }}>
@@ -519,7 +509,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 </>
             )}
 
-            {/* Edit Dialog */}
             {user && isModuleActive && (
                 <Dialog
                     open={editDialogOpen}

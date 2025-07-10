@@ -38,7 +38,6 @@ const initialFormData = (user) => ({
   prazo: '',
   localEntrega: '',
   dataAbertura: '',
-  dataLimite: '',
   criterios: '',
   valorEstimado: 'Não especificado',
   condicoesPagamento: '',
@@ -646,24 +645,6 @@ const sendNotifications = useCallback(async (concursoId) => {
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
                   dataAbertura: parseDateFromInput(e.target.value)
-                }))}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  min: formatDateForInput(new Date()) 
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Data de Limite"
-                type="date"
-                name="dataLimite"
-                required
-                value={formatDateForInput(formData.dataLimite)}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  dataLimite: parseDateFromInput(e.target.value)
                 }))}
                 InputLabelProps={{ shrink: true }}
                 inputProps={{
