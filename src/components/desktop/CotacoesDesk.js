@@ -249,7 +249,8 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 return cotacoes.filter(
                     (cotacao) => new Date(cotacao.datalimite) >= now && 
                                 cotacao.status !== 'Fechada' &&
-                                cotacao.status !== 'Expirada'
+                                cotacao.status !== 'Expirada'&&
+                                cotacao.company?.id !== user?.id 
                 );
             case 'expiradas':
                 return cotacoes.filter(

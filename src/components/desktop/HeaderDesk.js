@@ -101,10 +101,11 @@ const HeaderDesk = ({ user }) => {
         }
       });
 
+
       const unsubscribeContests = onValue(targetUserContestsRef, (snapshot) => {
         if (snapshot.exists()) {
           const pendingCount = Object.values(snapshot.val()).filter(
-            (contest) => contest.status === "pending"
+            (contest) => contest.status === "Aberta"
           ).length;
           setPendingContests(pendingCount);
         } else {

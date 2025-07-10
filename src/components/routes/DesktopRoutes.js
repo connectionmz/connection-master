@@ -590,12 +590,12 @@ const handleSubmitFeedback = async () => {
       <CotacoesPDF user={user}/>
     </ProtectedRoute>
   } />
+  
   <Route path="/proposta/:id/:cotId" element={
   <ProtectedRoute requiredModule="moduloSMS">
     <ProposalDesk user={user} />
   </ProtectedRoute>
 } />
-
 
 <Route path="/edit-proforma/:numeroProforma" element={
   <ProtectedRoute requiredModule="moduloProforma">
