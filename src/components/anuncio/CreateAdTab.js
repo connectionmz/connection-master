@@ -353,7 +353,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: totalCost.toString(),
+          amount: '1',
           phoneNumber: formData.phoneNumber,
           reference: `Anuncio_${currentAdId}`
         }),
