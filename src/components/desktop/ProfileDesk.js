@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Twitter, Instagram, LinkedIn, Language, Edit, CameraAlt, ExitToApp, X, WhatsApp, Facebook, Email } from "@mui/icons-material";
 import { useNavigate } from 'react-router-dom';
 import { get, ref, update } from 'firebase/database';
@@ -8,7 +8,7 @@ import PostGallery from '../PostGallery';
 import { EditorText } from '../../utils/formUtils';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { AiFillSetting } from 'react-icons/ai';
-import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
+import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import {
   Button,
   CardMedia,
@@ -22,10 +22,10 @@ import {
   Alert,
 } from "@mui/material";
 import VetrineDesk from './VetrineDesk';
-import { PinturaEditor } from '@pqina/react-pintura';
-import { getEditorDefaults } from '@pqina/pintura';
-import '@pqina/pintura/pintura.css';
+import { readAndCompressImage } from 'browser-image-resizer';
 import { LinkIcon, Share } from 'lucide-react';
+import ReactCrop from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 const ProfileDesk = ({ userI }) => {
   const navigate = useNavigate();
@@ -46,84 +46,167 @@ const ProfileDesk = ({ userI }) => {
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const [showImageEditor, setShowImageEditor] = useState(false);
-  const [imageToEdit, setImageToEdit] = useState(null);
-  const [editedImage, setEditedImage] = useState(null);
   const [isEditingCover, setIsEditingCover] = useState(false);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const isMobile = useMediaQuery("(max-width:600px)");
 
-  const openImageEditor = (file, isCover) => {
-    setImageToEdit(file);
-    setIsEditingCover(isCover); // Define se estamos editando a capa ou o perfil
-    setShowImageEditor(true);
+  // Estados para o crop de imagem
+  const [imgSrc, setImgSrc] = useState(null);
+  const [crop, setCrop] = useState();
+  const [completedCrop, setCompletedCrop] = useState();
+  const [isCropping, setIsCropping] = useState(false);
+  const [currentImageType, setCurrentImageType] = useState(null);
+  const imgRef = useRef(null);
+
+  // Configurações
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+  const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+  // Configuração para redimensionamento e compressão
+  const imageConfig = {
+    quality: 0.7,
+    maxWidth: 1024,
+    maxHeight: 1024,
+    autoRotate: true,
+    mimeType: 'image/webp',
+    debug: true
   };
 
-    const handleShareClick = (event) => {
-      setShareAnchorEl(event.currentTarget);
-    };
-  
-    const handleShareClose = () => {
-      setShareAnchorEl(null);
-    };
-  
-    const copyProfileLink = () => {
-      const profileUrl = `${window.location.origin}/perfil/${userData?.id}`;
-      navigator.clipboard.writeText(profileUrl)
-        .then(() => {
-          setSnackbar({ open: true, message: 'Link copiado para a área de transferência!', severity: 'success' });
-          handleShareClose();
-        })
-        .catch(() => {
-          setSnackbar({ open: true, message: 'Falha ao copiar o link', severity: 'error' });
-        });
-    };
-  
-    const shareOnFacebook = () => {
-      const profileUrl = encodeURIComponent(`${window.location.origin}/perfil/${userData?.id}`);
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${profileUrl}`, '_blank');
-      handleShareClose();
-    };
-  
-    const shareOnTwitter = () => {
-      const text = encodeURIComponent(`Visite o perfil da ${userData?.displayName}!`);
-      const profileUrl = encodeURIComponent(`${window.location.origin}/perfil/${userData?.id}`);
-      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${profileUrl}`, '_blank');
-      handleShareClose();
-    };
-  
-    const shareOnWhatsApp = () => {
-      const text = encodeURIComponent(`Visite o perfil da ${userData?.displayName}: ${window.location.origin}/perfil/${userData?.id}`);
-      window.open(`https://wa.me/?text=${text}`, '_blank');
-      handleShareClose();
-    };
-  
-    const shareViaEmail = () => {
-      const subject = encodeURIComponent(`Perfil da ${userData?.displayName}`);
-      const body = encodeURIComponent(`Visite o perfil da ${userData?.displayName}:\n\n${window.location.origin}/perfil/${userData?.id}`);
-      window.open(`mailto:?subject=${subject}&body=${body}`);
-      handleShareClose();
-    };
-
-
-  // Função para lidar com a conclusão da edição da imagem
-  const handleImageEditComplete = (res) => {
-    setEditedImage(URL.createObjectURL(res.dest));
-    setShowImageEditor(false);
-    uploadEditedImage(res.dest, isEditingCover);
+  // Funções auxiliares
+  const readFile = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => resolve(reader.result), false);
+      reader.readAsDataURL(file);
+    });
   };
 
-  // Função para fazer upload da imagem editada
+  const handleFileSizeCheck = (file) => {
+    if (file.size > MAX_FILE_SIZE) {
+      setSnackbar({ 
+        open: true, 
+        message: 'A imagem é muito grande (máximo 25MB)', 
+        severity: 'warning' 
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleFileTypeCheck = (file) => {
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      setSnackbar({
+        open: true,
+        message: 'Tipo de arquivo não suportado. Use JPEG, PNG ou WEBP',
+        severity: 'warning'
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // Funções para manipulação de imagens
+  const openImageEditor = async (file, isCover) => {
+    try {
+      if (!handleFileSizeCheck(file)) return;
+      if (!handleFileTypeCheck(file)) return;
+
+      // Reduzir qualidade para arquivos grandes
+      const quality = file.size > 10 * 1024 * 1024 ? 0.6 : 0.8;
+      
+      const resizedImage = await readAndCompressImage(file, {
+        ...imageConfig,
+        quality
+      });
+      
+      const imageDataUrl = await readFile(resizedImage);
+      setImgSrc(imageDataUrl);
+      setIsCropping(true);
+      setCurrentImageType(isCover ? 'cover' : 'profile');
+    } catch (error) {
+      console.error("Erro ao processar imagem:", error);
+      let errorMessage = 'Erro ao processar a imagem';
+      
+      if (error.message.includes('size')) {
+        errorMessage = 'A imagem é muito grande (máximo 25MB)';
+      } else if (error.message.includes('type')) {
+        errorMessage = 'Tipo de arquivo não suportado';
+      }
+      
+      setSnackbar({ 
+        open: true, 
+        message: errorMessage, 
+        severity: 'error' 
+      });
+    }
+  };
+
+  const applyCrop = async () => {
+    if (!completedCrop || !imgRef.current) {
+      setIsCropping(false);
+      return;
+    }
+
+    try {
+      const image = imgRef.current;
+      const canvas = document.createElement('canvas');
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+      canvas.width = completedCrop.width;
+      canvas.height = completedCrop.height;
+      const ctx = canvas.getContext('2d');
+
+      ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        completedCrop.width,
+        completedCrop.height
+      );
+
+      await new Promise((resolve) => {
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], `cropped-image.webp`, { type: 'image/webp' });
+          await uploadEditedImage(file, currentImageType === 'cover');
+          setIsCropping(false);
+          setImgSrc(null);
+          resolve();
+        }, 'image/webp', 0.7);
+      });
+    } catch (error) {
+      console.error("Erro ao aplicar crop:", error);
+      setSnackbar({ open: true, message: 'Erro ao recortar a imagem', severity: 'error' });
+      setIsCropping(false);
+    }
+  };
+
   const uploadEditedImage = async (imageFile, isCover) => {
     const uploadState = isCover ? setIsUploadingCover : setIsUploadingProfile;
     uploadState(true);
 
     try {
+      const timestamp = new Date().getTime();
+      const fileExtension = 'webp';
+      const fileName = `photo_${timestamp}.${fileExtension}`;
+      
       const storagePath = isCover
-        ? `company/${user}/coverPhoto/${imageFile.name}`
-        : `company/${user}/profilePhoto/${imageFile.name}`;
+        ? `company/${user}/coverPhoto/${fileName}`
+        : `company/${user}/profilePhoto/${fileName}`;
+      
       const imageRef = storageRef(storage, storagePath);
-      await uploadBytes(imageRef, imageFile);
+      
+      let fileToUpload;
+      if (imageFile instanceof Blob) {
+        fileToUpload = new File([imageFile], fileName, { type: 'image/webp' });
+      } else {
+        fileToUpload = imageFile;
+      }
+      
+      await uploadBytes(imageRef, fileToUpload);
       const imageURL = await getDownloadURL(imageRef);
 
       if (isCover) {
@@ -143,22 +226,84 @@ const ProfileDesk = ({ userI }) => {
     }
   };
 
-  // Função para lidar com a mudança da foto de capa
   const handleCoverPhotoChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      openImageEditor(file, true); // Abre o editor para a capa
+    if (!file) return;
+
+    try {
+      await openImageEditor(file, true);
+    } finally {
+      e.target.value = ''; // Limpa o input
     }
   };
 
-  // Função para lidar com a mudança da foto de perfil
   const handleProfilePhotoChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      openImageEditor(file, false); // Abre o editor para o perfil
+    if (!file) return;
+
+    try {
+      await openImageEditor(file, false);
+    } finally {
+      e.target.value = ''; // Limpa o input
     }
   };
 
+  // Funções para compartilhamento
+  const handleShareClick = (event) => {
+    setShareAnchorEl(event.currentTarget);
+  };
+
+  const handleShareClose = () => {
+    setShareAnchorEl(null);
+  };
+
+  const copyProfileLink = () => {
+    const profileUrl = `${window.location.origin}/perfil/${userData?.id}`;
+    navigator.clipboard.writeText(profileUrl)
+      .then(() => {
+        setSnackbar({ open: true, message: 'Link copiado para a área de transferência!', severity: 'success' });
+        handleShareClose();
+      })
+      .catch(() => {
+        setSnackbar({ open: true, message: 'Falha ao copiar o link', severity: 'error' });
+      });
+  };
+
+  const shareOnFacebook = () => {
+    const profileUrl = encodeURIComponent(`${window.location.origin}/perfil/${userData?.id}`);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${profileUrl}`, '_blank');
+    handleShareClose();
+  };
+
+  const shareOnTwitter = () => {
+    const text = encodeURIComponent(`Visite o perfil da ${userData?.displayName}!`);
+    const profileUrl = encodeURIComponent(`${window.location.origin}/perfil/${userData?.id}`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${profileUrl}`, '_blank');
+    handleShareClose();
+  };
+
+  const shareOnWhatsApp = () => {
+    const text = encodeURIComponent(`Visite o perfil da ${userData?.displayName}: ${window.location.origin}/perfil/${userData?.id}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+    handleShareClose();
+  };
+
+  const shareViaEmail = () => {
+    const subject = encodeURIComponent(`Perfil da ${userData?.displayName}`);
+    const body = encodeURIComponent(`Visite o perfil da ${userData?.displayName}:\n\n${window.location.origin}/perfil/${userData?.id}`);
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+    handleShareClose();
+  };
+
+  const formatWebsiteUrl = (url) => {
+    if (!url) return '';
+    if (!/^https?:\/\//i.test(url)) {
+      return `https://${url}`;
+    }
+    return url;
+  };
+
+  // Carregar dados do usuário
   const user = auth.currentUser?.uid;
 
   useEffect(() => {
@@ -189,6 +334,8 @@ const ProfileDesk = ({ userI }) => {
               username: companyData.id || 'A carregar',
               endereco: companyData.endereco || 'A carregar'
             });
+            setCoverPhoto(companyData.coverUrl || '');
+            setProfilePhoto(companyData.logoUrl || '');
           }
           if (socialSnapshot.exists()) {
             setSocial(socialSnapshot.val());
@@ -219,6 +366,7 @@ const ProfileDesk = ({ userI }) => {
     }
   }, [user, navigate]);
 
+  // Funções auxiliares
   const toggleShowFullText = () => setShowFullText(prevState => !prevState);
 
   const handleSaveProfile = async () => {
@@ -262,18 +410,7 @@ const ProfileDesk = ({ userI }) => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  if (loading) {
-    return (
-      <Box width="100%" minHeight="100vh" sx={{ backgroundColor: 'white' }}>
-        <Skeleton variant="rectangular" width="100%" height={400} />
-        <Box textAlign="center" mt={8}>
-          <Skeleton variant="text" width="60%" height={40} />
-          <Skeleton variant="text" width="40%" height={30} />
-        </Box>
-      </Box>
-    );
-  }
-
+  // Renderização condicional
   const renderContent = () => {
     switch (activeTab) {
       case "inicio":
@@ -334,6 +471,18 @@ const ProfileDesk = ({ userI }) => {
     }
   };
 
+  if (loading) {
+    return (
+      <Box width="100%" minHeight="100vh" sx={{ backgroundColor: 'white' }}>
+        <Skeleton variant="rectangular" width="100%" height={400} />
+        <Box textAlign="center" mt={8}>
+          <Skeleton variant="text" width="60%" height={40} />
+          <Skeleton variant="text" width="40%" height={30} />
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box width="100%" minHeight="100vh">
       {/* Capa do Perfil */}
@@ -371,15 +520,37 @@ const ProfileDesk = ({ userI }) => {
               <Typography variant="body1">Nenhuma foto de capa</Typography>
             </Box>
           )}
+          
+          {/* Overlay durante upload */}
+          {isUploadingCover && (
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              bgcolor="rgba(0,0,0,0.5)"
+              zIndex={1}
+            >
+              <CircularProgress color="primary" />
+              <Typography color="white" ml={2}>
+                Processando imagem...
+              </Typography>
+            </Box>
+          )}
+          
           <Box position="absolute" top={8} right={8}>
-          <IconButton
-       color="primary"
-      aria-label="share profile"
-      onClick={handleShareClick}
-      sx={{ bgcolor: 'background.paper' }}
-    >
-      <Share />
-    </IconButton>
+            <IconButton
+              color="primary"
+              aria-label="share profile"
+              onClick={handleShareClick}
+              sx={{ bgcolor: 'background.paper' }}
+            >
+              <Share />
+            </IconButton>
             <input
               accept="image/*"
               type="file"
@@ -388,18 +559,21 @@ const ProfileDesk = ({ userI }) => {
               onChange={handleCoverPhotoChange}
               disabled={isUploadingCover}
             />
-            <IconButton
-              color="primary"
-              aria-label="edit cover photo"
-              onClick={() => document.getElementById("coverPhotoInput").click()}
-              disabled={isUploadingCover}
-            >
-              {isUploadingCover ? <CircularProgress size={24} /> : <CameraAlt />}
-            </IconButton>
+            <label htmlFor="coverPhotoInput">
+              <IconButton
+                color="primary"
+                aria-label="edit cover photo"
+                component="span"
+                disabled={isUploadingCover}
+              >
+                {isUploadingCover ? <CircularProgress size={24} /> : <CameraAlt />}
+              </IconButton>
+            </label>
           </Box>
         </Box>
-               {/* Share Menu */}
-               <Menu
+
+        {/* Menu de Compartilhamento */}
+        <Menu
           anchorEl={shareAnchorEl}
           open={Boolean(shareAnchorEl)}
           onClose={handleShareClose}
@@ -470,42 +644,62 @@ const ProfileDesk = ({ userI }) => {
               onChange={handleProfilePhotoChange}
               disabled={isUploadingProfile}
             />
-            <IconButton
-              color="primary"
-              aria-label="edit profile photo"
-              onClick={() => document.getElementById("profilePhotoInput").click()}
-              disabled={isUploadingProfile}
-            >
-              {isUploadingProfile ? <CircularProgress size={24} /> : <CameraAlt />}
-            </IconButton>
+            <label htmlFor="profilePhotoInput">
+              <IconButton
+                color="primary"
+                aria-label="edit profile photo"
+                component="span"
+                disabled={isUploadingProfile}
+              >
+                {isUploadingProfile ? <CircularProgress size={24} /> : <CameraAlt />}
+              </IconButton>
+            </label>
           </Box>
         </Box>
       </Box>
 
-      {/* Editor de Imagem */}
-      {showImageEditor && (
-        <Box
-          position="fixed"
-          top={0}
-          left={0}
-          right={0}
-          bottom={0}
-          bgcolor="rgba(0, 0, 0, 0.8)"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          zIndex={9999}
-        >
-          <Box width="90%" maxWidth={800} height="90%" maxHeight={600}>
-            <PinturaEditor
-              {...getEditorDefaults()}
-              src={URL.createObjectURL(imageToEdit)}
-              onProcess={handleImageEditComplete}
-              onClose={() => setShowImageEditor(false)}
-            />
+      {/* Modal de Crop de Imagem */}
+      <Dialog open={isCropping} onClose={() => setIsCropping(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Recortar Imagem</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {imgSrc && (
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={currentImageType === 'cover' ? 3/1 : 1/1}
+                minWidth={100}
+                minHeight={100}
+              >
+                <img
+                  ref={imgRef}
+                  src={imgSrc}
+                  style={{ maxWidth: '100%', maxHeight: '70vh' }}
+                  alt="Imagem para recortar"
+                  onLoad={() => {
+                    if (imgRef.current) {
+                      const width = imgRef.current.width;
+                      const height = imgRef.current.height;
+                      const initialCrop = currentImageType === 'cover' 
+                        ? { unit: 'px', width: width, height: width / 3, x: 0, y: (height - (width / 3)) / 2 }
+                        : { unit: 'px', width: Math.min(width, height), height: Math.min(width, height), x: (width - Math.min(width, height)) / 2, y: (height - Math.min(width, height)) / 2 };
+                      setCrop(initialCrop);
+                      setCompletedCrop(initialCrop);
+                    }
+                  }}
+                />
+              </ReactCrop>
+            )}
           </Box>
-        </Box>
-      )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsCropping(false)}>Cancelar</Button>
+          <Button onClick={applyCrop} variant="contained" color="primary">
+            Aplicar Recorte
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Informações do Perfil */}
       <Box mt={{ xs: 8, sm: 10 }} textAlign="center">
@@ -513,10 +707,10 @@ const ProfileDesk = ({ userI }) => {
           {userData?.displayName}
         </Typography>
         <Box maxWidth={600} mx="auto" mt={2}>
-        <Typography
-                        color="text.secondary" mt={1}
-                                dangerouslySetInnerHTML={{ __html: userData?.bio || '' }}
-                            />
+          <Typography
+            color="text.secondary" mt={1}
+            dangerouslySetInnerHTML={{ __html: userData?.bio || '' }}
+          />
         </Box>
 
         {/* Botão de Editar Perfil */}
@@ -556,7 +750,7 @@ const ProfileDesk = ({ userI }) => {
             </MuiLink>
           )}
           {social?.instagram && (
-            <MuiLink href={social.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <MuiLink href={formatWebsiteUrl(social.instagram)} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <Instagram sx={{ color: "#C13584", fontSize: 32 }} />
             </MuiLink>
           )}
@@ -570,14 +764,23 @@ const ProfileDesk = ({ userI }) => {
               <WhatsApp sx={{ color: "#25D366", fontSize: 32 }} />
             </MuiLink>
           )}
-          {social?.website && (
-            <MuiLink href={social.website} target="_blank" rel="noopener noreferrer" aria-label="Website">
-              <Language sx={{ color: "#4285F4", fontSize: 32 }} />
+         {social?.website && (
+          <MuiLink
+            href={formatWebsiteUrl(social.website)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Website">
+            <Language sx={{ color: "#4285F4", fontSize: 32 }} />
+          </MuiLink>
+        )}
+          {social?.facebook && (
+            <MuiLink href={formatWebsiteUrl(social.facebook)} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              <Facebook sx={{ color: "#3b5998", fontSize: 32 }} />
             </MuiLink>
           )}
         </Box>
       </Box>
-
+      
       {/* Abas */}
       <Box mt={6} borderBottom={1} borderColor="divider">
         <Tabs
@@ -592,12 +795,12 @@ const ProfileDesk = ({ userI }) => {
           <Tab label="Repositorio" value="Repositorio" />
         </Tabs>
       </Box>
-
+      
       {/* Conteúdo das Abas */}
       <Box mt={4} px={2}>
         {renderContent()}
       </Box>
-
+      
       {/* Snackbar para feedback */}
       <Snackbar
         open={snackbar.open}

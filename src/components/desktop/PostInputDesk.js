@@ -41,6 +41,10 @@ import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import InfoIcon from '@mui/icons-material/Info';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
+// Constants
+const MAX_POSTS = 5;
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const PostInputDesk = ({ user }) => {
   const [newPhotos, setNewPhotos] = useState([]);
@@ -54,9 +58,19 @@ const PostInputDesk = ({ user }) => {
   const [userPostCount, setUserPostCount] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
-  const isSmallScreen = useMediaQuery('(max-width:400px)');
 
-  // Monitorar posts existentes e contar os do usuário atual
+  // Quill editor configuration
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, false] }],
+      ['bold', 'italic', 'underline'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link'],
+      ['clean']
+    ]
+  };
+
+  // Monitor user's post count
   useEffect(() => {
     const postsRef = ref(db, 'posts');
     const unsubscribe = onValue(postsRef, (snapshot) => {
@@ -72,51 +86,68 @@ const PostInputDesk = ({ user }) => {
       }
 
       setUserPostCount(count);
-      setLimitReached(count >= 5);
+      setLimitReached(count >= MAX_POSTS);
     });
 
     return () => unsubscribe();
   }, [user?.id]);
 
-  const validateData = () => {
+  // Validate form data
+  const validateData = useCallback(() => {
     const errors = [];
-    if (!user || !user.id) {
-      errors.push("Usuário não definido ou ID do usuário ausente");
+    
+    if (!user?.id) {
+      errors.push("Usuário não autenticado");
     }
+    
     if (newPhotos.length === 0) {
-      errors.push("Nenhuma foto selecionada para upload.");
+      errors.push("Selecione pelo menos uma foto para publicar");
     }
+    
     if (limitReached) {
-      errors.push("Você atingiu o limite de 5 postagens permitidas. Remova algumas publicações existentes para adicionar novas.");
+      errors.push(`Limite de ${MAX_POSTS} publicações atingido. Remova publicações existentes para adicionar novas.`);
     }
-    if (userPostCount + newPhotos.length > 5) {
-      errors.push(`Você já tem ${userPostCount} publicações. Selecionando ${newPhotos.length} foto(s), você ultrapassará o limite de 5.`);
+    
+    if (userPostCount + newPhotos.length > MAX_POSTS) {
+      errors.push(`Você pode adicionar no máximo ${MAX_POSTS - userPostCount} foto(s)`);
     }
+    
+    // Validate each file
+    newPhotos.forEach(photo => {
+      if (photo.size > MAX_FILE_SIZE) {
+        errors.push(`A foto "${photo.name}" excede o tamanho máximo de 25MB`);
+      }
+      
+      if (!ALLOWED_FILE_TYPES.includes(photo.type)) {
+        errors.push(`Formato não suportado para "${photo.name}". Use JPEG, PNG ou WEBP.`);
+      }
+    });
+
     setErrorMessages(errors);
     return errors.length === 0;
-  };
+  }, [user, newPhotos, userPostCount, limitReached]);
 
-  const sendNotificationToConnections = async (postId) => {
+  // Send notifications to connections
+  const sendNotificationToConnections = useCallback(async (postId) => {
     try {
       const connectionsRef = ref(db, `connections/${user.id}`);
       const connectionsSnapshot = await get(connectionsRef);
   
       if (connectionsSnapshot.exists()) {
         const connections = connectionsSnapshot.val();
-        const notificationsPromises = Object.keys(connections).map((connectionId) => {
+        const notificationsPromises = Object.keys(connections).map(connectionId => {
           const notification = {
             type: "new_post",
             message: `${user.nome} publicou uma nova foto.`,
             fromUserId: user.id,
             fromUserName: user.nome,
-            postId: postId,
+            postId,
             link: `/post/${postId}`,
             timestamp: new Date().toISOString(),
             status: "unread",
           };
   
-          const notificationRef = push(ref(db, `notifications/${connectionId}`));
-          return set(notificationRef, notification);
+          return set(push(ref(db, `notifications/${connectionId}`), notification));
         });
   
         await Promise.all(notificationsPromises);
@@ -124,147 +155,166 @@ const PostInputDesk = ({ user }) => {
     } catch (error) {
       console.error("Erro ao enviar notificações:", error);
     }
-  };
+  }, [user]);
 
+  // Handle photo upload and post creation
   const handleSavePublishedPhotos = useCallback(async () => {
     if (!validateData()) return;
 
     setIsUploading(true);
+    setErrorMessages([]);
     const storage = getStorage();
-    let completedUploads = 0;
+    let uploadErrors = [];
 
     try {
-      for (const photo of newPhotos) {
-        const fileRef = storageRef(storage, `published/${user.id}/${photo.name}`);
-        const uploadTask = uploadBytesResumable(fileRef, photo);
+      await Promise.all(newPhotos.map(async (photo) => {
+        try {
+          const fileRef = storageRef(storage, `published/${user.id}/${Date.now()}_${photo.name}`);
+          const uploadTask = uploadBytesResumable(fileRef, photo);
 
-        await new Promise((resolve, reject) => {
-          uploadTask.on(
-            "state_changed",
-            (snapshot) => {
-              const progress = Math.round(
-                (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-              );
-              setUploadProgress((prevProgress) => ({
-                ...prevProgress,
-                [photo.name]: progress,
-              }));
+          const url = await new Promise((resolve, reject) => {
+            uploadTask.on(
+              "state_changed",
+              (snapshot) => {
+                const progress = Math.round(
+                  (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+                );
+                setUploadProgress(prev => ({ ...prev, [photo.name]: progress }));
+              },
+              reject,
+              async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
+            );
+          });
+
+          const newPostRef = push(ref(db, "posts"));
+          await set(newPostRef, {
+            id: newPostRef.key,
+            company: {
+              id: user.id,
+              name: user.nome,
+              logo: user.logoUrl,
+              sector: user.sector,
+              provincia: user.provincia,
             },
-            (error) => {
-              reject(error);
-            },
-            async () => {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              const description = photoDescriptions[photo.name];
-              const newPostRef = push(ref(db, "posts"));
-              const postId = newPostRef.key;
+            description: photoDescriptions[photo.name] || "",
+            url,
+            timestamp: Date.now(),
+          });
 
-              await set(newPostRef, {
-                id: postId,
-                company: {
-                  id: user.id,
-                  name: user.nome,
-                  logo: user.logoUrl,
-                  sector: user.sector,
-                  provincia: user.provincia,
-                },
-                description: description || "", 
-                url,
-                timestamp: Date.now(),
-              });
+          await sendNotificationToConnections(newPostRef.key);
+        } catch (error) {
+          console.error(`Erro ao carregar ${photo.name}:`, error);
+          uploadErrors.push(`Falha ao publicar "${photo.name}": ${error.message}`);
+        }
+      }));
 
-              await sendNotificationToConnections(postId);
-
-              completedUploads++;
-              if (completedUploads === newPhotos.length) {
-                setUploadSuccess(true);
-                setIsUploading(false);
-              }
-              resolve();
-            }
-          );
-        });
+      if (uploadErrors.length > 0) {
+        setErrorMessages(uploadErrors);
+      } else {
+        setUploadSuccess(true);
       }
     } catch (error) {
-      setErrorMessages([...errorMessages, `Erro ao carregar as fotos: ${error.message}`]);
+      console.error("Erro geral no upload:", error);
+      setErrorMessages([...uploadErrors, `Erro no processo de upload: ${error.message}`]);
+    } finally {
       setIsUploading(false);
     }
-  }, [newPhotos, photoDescriptions, user, errorMessages]);
+  }, [newPhotos, photoDescriptions, user, validateData, sendNotificationToConnections]);
 
+  // Reset form after successful upload
   useEffect(() => {
     if (uploadSuccess) {
       setSnackbarOpen(true);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setNewPhotos([]);
         setPhotoPreviews({});
         setPhotoDescriptions({});
         setUploadProgress({});
         setUploadSuccess(false);
       }, 3000);
+
+      return () => clearTimeout(timer);
     }
   }, [uploadSuccess]);
 
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
-
+  // Handle file selection
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
-    if (files.length === 0) return;
+    if (!files.length) return;
 
-    // Verificação criativa do limite
-    const remainingSlots = 5 - userPostCount;
+    // Check remaining slots
+    const remainingSlots = MAX_POSTS - userPostCount;
     if (remainingSlots <= 0) {
-      setErrorMessages(["Você já atingiu o limite máximo de 5 publicações."]);
+      setErrorMessages([`Você já atingiu o limite máximo de ${MAX_POSTS} publicações.`]);
       setLimitReached(true);
       return;
     }
 
+    // Validate number of files
     if (files.length > remainingSlots) {
-      setErrorMessages([`Você só pode adicionar mais ${remainingSlots} foto(s). Selecione menos arquivos ou remova publicações existentes.`]);
+      setErrorMessages([`Você só pode adicionar mais ${remainingSlots} foto(s).`]);
       return;
     }
 
+    // Create previews and update state
     const newPreviews = {};
+    const validFiles = [];
+    const newErrors = [];
+
     files.forEach(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        newErrors.push(`"${file.name}" excede 25MB`);
+        return;
+      }
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        newErrors.push(`"${file.name}" não é um formato suportado`);
+        return;
+      }
+      
       newPreviews[file.name] = URL.createObjectURL(file);
+      validFiles.push(file);
     });
 
-    setNewPhotos(prev => [...prev, ...files]);
-    setPhotoPreviews(prev => ({ ...prev, ...newPreviews }));
-    setErrorMessages([]);
+    if (newErrors.length > 0) {
+      setErrorMessages(newErrors);
+    }
+
+    if (validFiles.length > 0) {
+      setNewPhotos(prev => [...prev, ...validFiles]);
+      setPhotoPreviews(prev => ({ ...prev, ...newPreviews }));
+      setErrorMessages([]);
+    }
   };
 
+  // Handle description changes
   const handleDescriptionChange = (value, photoName) => {
-    setPhotoDescriptions((prevDescriptions) => ({
-      ...prevDescriptions,
-      [photoName]: value,
-    }));
+    setPhotoDescriptions(prev => ({ ...prev, [photoName]: value }));
   };
 
+  // Remove a photo
   const handleRemovePhoto = (photoName) => {
-    setNewPhotos((prevPhotos) => prevPhotos.filter((photo) => photo.name !== photoName));
-    setPhotoPreviews((prevPreviews) => {
-      const newPreviews = { ...prevPreviews };
-      URL.revokeObjectURL(newPreviews[photoName]);
+    setNewPhotos(prev => prev.filter(photo => photo.name !== photoName));
+    setPhotoPreviews(prev => {
+      URL.revokeObjectURL(prev[photoName]);
+      const newPreviews = { ...prev };
       delete newPreviews[photoName];
       return newPreviews;
     });
-    setPhotoDescriptions((prevDescriptions) => {
-      const newDescriptions = { ...prevDescriptions };
+    setPhotoDescriptions(prev => {
+      const newDescriptions = { ...prev };
       delete newDescriptions[photoName];
       return newDescriptions;
     });
+    setUploadProgress(prev => {
+      const newProgress = { ...prev };
+      delete newProgress[photoName];
+      return newProgress;
+    });
   };
 
-  const quillModules = {
-    toolbar: [
-      [{ header: [1, 2, false] }],
-      ['bold', 'italic', 'underline'],
-      [{ list: 'ordered' }, { list: 'bullet' }],
-      ['link'],
-      ['clean']
-    ]
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -293,7 +343,7 @@ const PostInputDesk = ({ user }) => {
           <PhotoLibraryIcon color="primary" />
           Publicar Trabalhos Realizados
           <Chip 
-            label={`${userPostCount}/5`} 
+            label={`${userPostCount}/${MAX_POSTS}`} 
             color={limitReached ? "error" : "primary"} 
             size="small"
             variant="outlined"
@@ -306,7 +356,7 @@ const PostInputDesk = ({ user }) => {
             <Box>
               <AlertTitle>Limite de Publicações Atingido</AlertTitle>
               <Typography variant="body2">
-                Você já possui 5 publicações ativas. Para adicionar mais:
+                Você já possui {MAX_POSTS} publicações ativas. Para adicionar mais:
               </Typography>
               <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
                 <li>Remova publicações antigas</li>
@@ -321,30 +371,28 @@ const PostInputDesk = ({ user }) => {
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <InfoIcon color="primary" sx={{ mr: 1 }} />
               <Typography variant="subtitle1" fontWeight="bold">
-                Política de Publicação de Trabalhos
+                Política de Publicação
               </Typography>
             </Box>
           </AccordionSummary>
           <AccordionDetails>
             <Alert severity="info" sx={{ mb: 2 }}>
               <AlertTitle>Trabalhos Permitidos</AlertTitle>
-              Esta seção é exclusivamente dedicada à partilha de trabalhos realizados pela sua empresa:
-              <ul>
-                <li>Projetos concluídos e obras finalizadas</li>
-                <li>Serviços prestados com exemplos reais</li>
-                <li>Portfólio profissional da empresa</li>
-                <li>Demonstrações de habilidades e competências</li>
-              </ul>
+              <Box component="ul" sx={{ pl: 2, mb: 0 }}>
+                <Box component="li" sx={{ mb: 1 }}>Projetos concluídos e obras finalizadas</Box>
+                <Box component="li" sx={{ mb: 1 }}>Serviços prestados com exemplos reais</Box>
+                <Box component="li">Portfólio profissional da empresa</Box>
+              </Box>
             </Alert>
             
             <Alert severity="warning">
-              <AlertTitle>Limites e Diretrizes</AlertTitle>
+              <AlertTitle>Diretrizes Importantes</AlertTitle>
               <Box component="ul" sx={{ pl: 2, mb: 0 }}>
                 <Box component="li" sx={{ mb: 1 }}>
-                  <strong>Qualidade sobre quantidade</strong> - Selecione apenas seus melhores trabalhos
+                  <strong>Limite de {MAX_POSTS} publicações</strong> - Mantenha apenas seus melhores trabalhos
                 </Box>
                 <Box component="li">
-                  <strong>Atualizações frequentes</strong> - Substitua trabalhos antigos por novos regularmente
+                  <strong>Tamanho máximo</strong> - 25MB por imagem (JPEG, PNG ou WEBP)
                 </Box>
               </Box>
             </Alert>
@@ -352,15 +400,15 @@ const PostInputDesk = ({ user }) => {
         </Accordion>
 
         <input
-          accept="image/*"
+          accept={ALLOWED_FILE_TYPES.join(',')}
           style={{ display: "none" }}
-          id="raised-button-file"
+          id="photo-upload-input"
           multiple
           type="file"
           onChange={handleFileChange}
           disabled={isUploading || limitReached}
         />
-        <label htmlFor="raised-button-file">
+        <label htmlFor="photo-upload-input">
           <Button 
             variant="contained" 
             component="span" 
@@ -384,7 +432,7 @@ const PostInputDesk = ({ user }) => {
 
         {!limitReached && userPostCount > 0 && (
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-            Você ainda pode adicionar {5 - userPostCount} foto(s).
+            Você pode adicionar até {MAX_POSTS - userPostCount} foto(s).
           </Typography>
         )}
 
@@ -414,7 +462,7 @@ const PostInputDesk = ({ user }) => {
               <DescriptionIcon color="action" />
               Fotos selecionadas ({newPhotos.length})
               <Typography variant="caption" color="text.secondary">
-                ({userPostCount + newPhotos.length}/5 no total)
+                ({userPostCount + newPhotos.length}/{MAX_POSTS} no total)
               </Typography>
             </Typography>
             
@@ -544,7 +592,7 @@ const PostInputDesk = ({ user }) => {
               onClick={handleSavePublishedPhotos}
               variant="contained"
               color="primary"
-              disabled={isUploading || newPhotos.length === 0 || limitReached || (userPostCount + newPhotos.length) > 5}
+              disabled={isUploading || newPhotos.length === 0 || limitReached || (userPostCount + newPhotos.length) > MAX_POSTS}
               fullWidth
               size="large"
               startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : null}
