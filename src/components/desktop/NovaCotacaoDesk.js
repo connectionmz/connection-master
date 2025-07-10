@@ -269,8 +269,8 @@ const handleSubmit = async (e) => {
         nuit: user.nuit || 'N/A',
         contacto: user.contacto || 'N/A',
         email: user.email || 'N/A',
-        nome:user.nome || 'N/A',
-        logoUrl:user.logoUrl || ''
+        nome: user.nome || 'N/A',
+        logoUrl: user.logoUrl || ''
       },
       timestamp: new Date().toISOString(),
       datalimite: new Date(formData.deadline).toISOString(),
@@ -317,60 +317,95 @@ const handleSubmit = async (e) => {
         link: linkDoPedido
       };
 
-      // Criar estrutura base para SMS
+      // Criar estruturas para envio
       const smsData = {
         mensagem: message,
         empresaOrigemId: user.id || 'N/A',
         empresaOrigemNome: user.nome || 'N/A',
         timestamp: new Date().toISOString(),
-        tipo:'cotacao',
+        tipo: 'cotacao',
         contactos: []
       };
 
-      // Notificar todas as empresas do mesmo setor
+      const emailsToSend = [];
+
+      // Notificar empresas com módulo SMS ativo
       for (const key in empresas) {
         const empresa = empresas[key];
 
-         if (key === user.id) continue;
+        // Ignorar a própria empresa
+        if (key === user.id) continue;
 
-        // Ignorar se não tiver contacto nem email
-        if (!empresa.contacto && !empresa.email) continue;
-
-        // SMS
-        if (empresa.contacto) {
-          const contactos = Array.isArray(empresa.contacto)
-            ? empresa.contacto
-            : [empresa.contacto];
-
-          contactos.forEach(contacto => {
-            if (!contacto) return;
-
-            smsData.contactos.push({
-              empresaId: key,
-              empresaNome: empresa.nome || 'N/A',
-              numero: contacto,
-              status: 'por enviar',
-              attempts: 0
-            });
-          });
+        // Verificar assinatura SMS
+        let hasActiveSMS = false;
+        const subscriptionRef = ref(db, `subscriptions/${key}`);
+        const subscriptionSnapshot = await get(subscriptionRef);
+        
+        if (subscriptionSnapshot.exists()) {
+          const subscriptionData = subscriptionSnapshot.val();
+          
+          // Verificar módulo SMS
+          if (subscriptionData.moduloSMS) {
+            const smsModule = subscriptionData.moduloSMS;
+            const now = new Date().getTime();
+            
+            if (smsModule.isActive && smsModule.end > now) {
+              hasActiveSMS = true;
+            }
+          }
         }
 
-        // EMAIL
-        if (empresa.email) {
-          const emails = Array.isArray(empresa.email)
-            ? empresa.email
-            : [empresa.email];
+        // Processar apenas empresas com SMS ativo
+        if (hasActiveSMS) {
+          // Adicionar contatos SMS
+          if (empresa.contacto) {
+            const contactos = Array.isArray(empresa.contacto)
+              ? empresa.contacto
+              : [empresa.contacto];
 
-          await Promise.all(emails.map(email => sendEmail(email, mailMessage)));
+            contactos.forEach(contacto => {
+              if (!contacto) return;
+
+              smsData.contactos.push({
+                empresaId: key,
+                empresaNome: empresa.nome || 'N/A',
+                numero: contacto,
+                status: 'por enviar',
+                attempts: 0
+              });
+            });
+          }
+
+          // Adicionar emails para envio
+          if (empresa.email) {
+            const emails = Array.isArray(empresa.email)
+              ? empresa.email
+              : [empresa.email];
+
+            emails.forEach(email => {
+              if (email) {
+                emailsToSend.push({
+                  email,
+                  message: mailMessage
+                });
+              }
+            });
+          }
         }
       }
 
-      // Guardar estrutura de envio SMS
-      const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
-      await set(smsRef, smsData);
+      // Guardar estrutura de envio SMS se houver contatos
+      if (smsData.contactos.length > 0) {
+        const smsRef = ref(db, `smsEnvio/${cotacaoId}`);
+        await set(smsRef, smsData);
+      }
 
+      // Enviar emails (em produção, descomente esta parte)
+    if (emailsToSend.length > 0) {
+      await Promise.all(emailsToSend.map(item => sendEmail(item.email, item.message)));
+    }
 
-       setFormData({
+     setFormData({
         title: '',
         description: '',
         items: [],
@@ -382,7 +417,6 @@ const handleSubmit = async (e) => {
         selectedSubsector: [],
       });
 
-      
     }
   } catch (error) {
     console.error('Erro ao publicar a cotação:', error);
@@ -393,7 +427,6 @@ const handleSubmit = async (e) => {
     setLoading(false);
   }
 };
-
 
   const handleSnackbarClose = () => {
     setOpenSnackbar(false);

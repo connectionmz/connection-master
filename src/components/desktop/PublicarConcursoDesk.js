@@ -327,7 +327,6 @@ const PublicarConcursoDesk = ({ user }) => {
     return uploadedAnexos;
   };
 
-  // Notification helpers
   const formatDeadline = useCallback((isoString) => {
     const date = new Date(isoString);
     return date.toLocaleDateString('pt-PT', {
@@ -339,7 +338,7 @@ const PublicarConcursoDesk = ({ user }) => {
     });
   }, []);
 
-  const sendNotifications = useCallback(async (concursoId) => {
+const sendNotifications = useCallback(async (concursoId) => {
     try {
       const empresasRef = ref(db, 'company');
       const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.setor.trim()));
@@ -377,6 +376,32 @@ const PublicarConcursoDesk = ({ user }) => {
         if (key === user.id) continue;
         if (!empresa.contacto && !empresa.email) continue;
 
+        // Verificar assinatura SMS
+        let hasActiveSMS = false;
+        try {
+          const subscriptionRef = ref(db, `subscriptions/${key}`);
+          const subscriptionSnapshot = await get(subscriptionRef);
+          
+          if (subscriptionSnapshot.exists()) {
+            const subscriptionData = subscriptionSnapshot.val();
+            
+            if (subscriptionData.moduloSMS) {
+              const smsModule = subscriptionData.moduloSMS;
+              const now = new Date().getTime();
+              
+              if (smsModule.isActive && smsModule.end > now) {
+                hasActiveSMS = true;
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Erro ao verificar assinatura para empresa ${key}:`, error);
+        }
+
+        // Só processar se tiver módulo SMS ativo
+        if (!hasActiveSMS) continue;
+
+        // Processar contatos SMS
         if (empresa.contacto) {
           const contactos = Array.isArray(empresa.contacto)
             ? empresa.contacto
@@ -395,6 +420,7 @@ const PublicarConcursoDesk = ({ user }) => {
           });
         }
 
+        // Processar emails
         if (empresa.email) {
           const emails = Array.isArray(empresa.email)
             ? empresa.email
@@ -413,13 +439,14 @@ const PublicarConcursoDesk = ({ user }) => {
       if (smsData.contactos.length > 0) {
         const smsRef = ref(db, `smsEnvio/${concursoId}`);
         await set(smsRef, smsData);
+      } else {
+        console.log('Nenhum contato SMS válido encontrado');
       }
     } catch (error) {
       console.error('Erro ao enviar notificações:', error);
     }
   }, [formData, user, formatDeadline]);
 
-  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -434,13 +461,11 @@ const PublicarConcursoDesk = ({ user }) => {
     setUploadStates({});
 
     try {
-      // Upload attachments first
       let anexosUploaded = [];
       if (formData.anexos.length > 0) {
         anexosUploaded = await uploadAnexos(formData.anexos);
       }
 
-      // Prepare concurso data
       const concursoData = {
         ...formData,
         ...richTextData,
