@@ -172,7 +172,7 @@ const Evento = () => {
                 }
               }}
             >
-              Ver todos os blogs
+             MAIS EVENTOS
             </Button>
           </Box>
         ) : (

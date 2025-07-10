@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ref as createStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../fb';
-import { ref, push, set, onValue } from 'firebase/database';
+import { ref, push, set, onValue, get, query, orderByChild, equalTo, update } from 'firebase/database';
 import {
   Button,
   TextField,
@@ -31,6 +30,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { formatPrice } from './adUtils';
+import { db, storage } from '../../fb';
 
 const PRICES = {
   home: 30,
@@ -46,22 +46,23 @@ const ADDITIONAL_COSTS = {
 
 const MAX_DAYS = 30;
 const MIN_DAYS = 1;
+const PAYMENT_DEADLINE_HOURS = 24; // Prazo para pagamento em horas
 
 const CreateAdTab = ({ user, onAdCreated }) => {
   // State
-const [formData, setFormData] = useState({
-  file: null,
-  imageUrl: '',
-  description: '',
-  link: '',
-  days: 1,
-  phoneNumber: user?.contacto 
-    ? (user.contacto.startsWith('258') 
-        ? user.contacto 
-        : `258${user.contacto.replace(/^0/, '')}`)
-    : '',
-  tipoAnuncio: 'home',
-});
+  const [formData, setFormData] = useState({
+    file: null,
+    imageUrl: '',
+    description: '',
+    link: '',
+    days: 1,
+    phoneNumber: user?.contacto 
+      ? (user.contacto.startsWith('258') 
+          ? user.contacto 
+          : `258${user.contacto.replace(/^0/, '')}`)
+      : '',
+    tipoAnuncio: 'home',
+  });
   
   const [selectedProvincias, setSelectedProvincias] = useState(user?.provincia ? [user.provincia] : []);
   const [selectedSectores, setSelectedSectores] = useState(user?.sector ? [user.sector] : []);
@@ -111,10 +112,16 @@ const [formData, setFormData] = useState({
       }
     });
 
+    // Verificar pagamentos pendentes periodicamente
+    const paymentCheckInterval = setInterval(() => {
+      checkPendingPayments();
+    }, 60 * 60 * 1000); // A cada hora
+
     return () => {
       unsubscribeProvincias();
       unsubscribeSectores();
       unsubscribeEmpresas();
+      clearInterval(paymentCheckInterval);
     };
   }, []);
 
@@ -151,6 +158,35 @@ const [formData, setFormData] = useState({
       setEmpresasAtingidas(empresasFiltradas.length);
     } else {
       setEmpresasAtingidas(0);
+    }
+  };
+
+  const checkPendingPayments = async () => {
+    const now = new Date().toISOString();
+    const pendingAdsRef = ref(db, 'banners');
+    const q = query(pendingAdsRef, 
+      orderByChild('status'), 
+      equalTo('pending_payment'));
+    
+    try {
+      const snapshot = await get(q);
+      
+      if (snapshot.exists()) {
+        const updates = {};
+        snapshot.forEach((childSnapshot) => {
+          const ad = childSnapshot.val();
+          if (ad.paymentDeadline && ad.paymentDeadline < now) {
+            updates[`banners/${childSnapshot.key}`] = null;
+          }
+        });
+        
+        if (Object.keys(updates).length > 0) {
+          await update(ref(db), updates);
+          console.log(`Removidos ${Object.keys(updates).length} anúncios não pagos`);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar pagamentos pendentes:', error);
     }
   };
 
@@ -199,17 +235,17 @@ const [formData, setFormData] = useState({
       return false;
     }
     if (!formData.days || formData.days < MIN_DAYS || formData.days > MAX_DAYS) {
-      showSnackbar('Por favor, selecione uma duração válida (1-30 dias).', 'error');
+      showSnackbar(`Por favor, selecione uma duração válida (${MIN_DAYS}-${MAX_DAYS} dias).`, 'error');
       return false;
     }
     if (!isDestacarPerfil && !formData.description) {
       showSnackbar('Por favor, insira uma descrição para o anúncio.', 'error');
       return false;
     }
-      if (!formData.phoneNumber || !formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
-    showSnackbar('Por favor, insira um número de telefone válido no formato 258XXXXXXXXX', 'error');
-    return false;
-  }
+    if (!formData.phoneNumber || !formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
+      showSnackbar('Por favor, insira um número de telefone válido no formato 258XXXXXXXXX', 'error');
+      return false;
+    }
     if (selectedProvincias.length === 0) {
       showSnackbar('Por favor, selecione pelo menos uma província.', 'error');
       return false;
@@ -229,18 +265,24 @@ const [formData, setFormData] = useState({
     const expireDate = new Date();
     expireDate.setDate(expireDate.getDate() + formData.days);
 
+    const paymentDeadline = new Date();
+    paymentDeadline.setHours(paymentDeadline.getHours() + PAYMENT_DEADLINE_HOURS);
+
     const anuncioData = {
       id: idAnuncio,
       uploadedAt: new Date().toISOString(),
       expireDate: expireDate.toISOString(),
       companyId: user.id,
+      companyName: user.nome,
       days: formData.days,
       totalCost,
       provincias: selectedProvincias,
       sectores: selectedSectores,
       tipoAnuncio: formData.tipoAnuncio,
       phoneNumber: formData.phoneNumber,
-      status: 'unpaid'
+      status: 'pending_payment',
+      paymentDeadline: paymentDeadline.toISOString(),
+      visible: false // Não visível até o pagamento ser confirmado
     };
 
     if (imageUrl) {
@@ -254,6 +296,7 @@ const [formData, setFormData] = useState({
       anuncioData.description = `Perfil destacado de ${user.nome}`;
       anuncioData.link = `/perfil/${user.id}`;
     }
+
     await set(anuncioRef, anuncioData);
     return idAnuncio;
   };
@@ -295,10 +338,10 @@ const [formData, setFormData] = useState({
       return;
     }
 
- if (!formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
-    setPaymentError('Por favor, verifique o número de telefone (formato 258XXXXXXXXX).');
-    return;
-  }
+    if (!formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
+      setPaymentError('Por favor, verifique o número de telefone (formato 258XXXXXXXXX).');
+      return;
+    }
 
     setPaymentLoading(true);
     setPaymentError('');
@@ -310,9 +353,9 @@ const [formData, setFormData] = useState({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: '1',
+          amount: totalCost.toString(),
           phoneNumber: formData.phoneNumber,
-          reference: `Anuncio`
+          reference: `Anuncio_${currentAdId}`
         }),
       });
 
@@ -322,8 +365,21 @@ const [formData, setFormData] = useState({
         throw new Error(data.error || 'Erro ao processar pagamento');
       }
 
+      // Verificar se o anúncio ainda existe antes de atualizar
       const adRef = ref(db, `banners/${currentAdId}`);
-      await set(adRef, { status: 'paid' }, { merge: true });
+      const snapshot = await get(adRef);
+      
+      if (!snapshot.exists()) {
+        throw new Error('Anúncio não encontrado. Por favor, crie um novo anúncio.');
+      }
+
+      // Atualizar status e adicionar dados de pagamento
+      await set(adRef, { 
+        status: 'paid',
+        paymentDate: new Date().toISOString(),
+        paymentReference: data.transactionId || `MPESA_${Date.now()}`,
+        visible: true // Agora o anúncio fica visível
+      }, { merge: true });
 
       setPaymentSuccess(true);
       showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
@@ -333,6 +389,11 @@ const [formData, setFormData] = useState({
     } catch (error) {
       console.error('Erro ao processar pagamento:', error);
       setPaymentError(error.message || 'Ocorreu um erro ao processar o pagamento. Tente novamente mais tarde.');
+      
+      // Se o erro for específico de anúncio não encontrado, resetar o formulário
+      if (error.message.includes('Anúncio não encontrado')) {
+        resetForm();
+      }
     } finally {
       setPaymentLoading(false);
     }
@@ -345,7 +406,11 @@ const [formData, setFormData] = useState({
       description: '',
       link: '',
       days: 1,
-      phoneNumber: '',
+      phoneNumber: user?.contacto 
+        ? (user.contacto.startsWith('258') 
+            ? user.contacto 
+            : `258${user.contacto.replace(/^0/, '')}`)
+        : '',
       tipoAnuncio: 'home',
     });
     setSelectedProvincias(user?.provincia ? [user.provincia] : []);
@@ -353,6 +418,7 @@ const [formData, setFormData] = useState({
     setCurrentAdId(null);
     setPaymentSuccess(false);
     setPaymentError('');
+    setShowPaymentModal(false);
   };
 
   const showSnackbar = (message, severity) => {
@@ -380,6 +446,7 @@ const [formData, setFormData] = useState({
           <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
           <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
           <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
+          <FormControlLabel value="destacar_perfil" control={<Radio />} label="Destacar Perfil" />
         </RadioGroup>
       </FormControl>
       
@@ -544,7 +611,8 @@ const [formData, setFormData] = useState({
         <DialogTitle>Confirmar Publicação</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Seu anúncio será criado, mas só será publicado após o envio e confirmação do comprovativo de pagamento.
+            Seu anúncio será criado, mas só será publicado após o pagamento ser confirmado.
+            Você terá {PAYMENT_DEADLINE_HOURS} horas para efetuar o pagamento.
             Deseja continuar?
           </DialogContentText>
         </DialogContent>
@@ -618,6 +686,9 @@ const [formData, setFormData] = useState({
                   <Typography variant="body2">
                     <strong>Valor a pagar:</strong> {formatPrice(totalCost)} MT
                   </Typography>
+                  <Typography variant="body2" color="error">
+                    <strong>Prazo para pagamento:</strong> {PAYMENT_DEADLINE_HOURS} horas
+                  </Typography>
                 </Box>
               </CardContent>
               <CardActions sx={{ flexDirection: 'column', alignItems: 'stretch', px: 2, pb: 2 }}>
@@ -643,33 +714,33 @@ const [formData, setFormData] = useState({
                       }}
                     />
                     <TextField
-  label="Telefone M-Pesa *"
-  value={formData.phoneNumber}
-  onChange={(e) => {
-    // Remove tudo que não é dígito
-    const rawValue = e.target.value.replace(/\D/g, '');
-    
-    // Garante que comece com 258 e tenha no máximo 12 caracteres
-    let formattedValue = rawValue.startsWith('258') 
-      ? rawValue 
-      : `258${rawValue}`;
-    formattedValue = formattedValue.substring(0, 12);
-    
-    setFormData(prev => ({ ...prev, phoneNumber: formattedValue }));
-  }}
-  fullWidth
-  margin="normal"
-  required
-  helperText={
-    formData.phoneNumber && !/^258\d{9}$/.test(formData.phoneNumber)
-      ? 'Número inválido. Formato correto: 258XXXXXXXXX (12 dígitos no total)'
-      : 'Número de telefone registado no M-Pesa'
-  }
-  error={formData.phoneNumber.length > 0 && !/^258\d{9}$/.test(formData.phoneNumber)}
-  InputProps={{
-    startAdornment: <InputAdornment position="start">258</InputAdornment>,
-  }}
-/>
+                      label="Telefone M-Pesa *"
+                      value={formData.phoneNumber}
+                      onChange={(e) => {
+                        // Remove tudo que não é dígito
+                        const rawValue = e.target.value.replace(/\D/g, '');
+                        
+                        // Garante que comece com 258 e tenha no máximo 12 caracteres
+                        let formattedValue = rawValue.startsWith('258') 
+                          ? rawValue 
+                          : `258${rawValue}`;
+                        formattedValue = formattedValue.substring(0, 12);
+                        
+                        setFormData(prev => ({ ...prev, phoneNumber: formattedValue }));
+                      }}
+                      fullWidth
+                      margin="normal"
+                      required
+                      helperText={
+                        formData.phoneNumber && !/^258\d{9}$/.test(formData.phoneNumber)
+                          ? 'Número inválido. Formato correto: 258XXXXXXXXX (12 dígitos no total)'
+                          : 'Número de telefone registado no M-Pesa'
+                      }
+                      error={formData.phoneNumber.length > 0 && !/^258\d{9}$/.test(formData.phoneNumber)}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">258</InputAdornment>,
+                      }}
+                    />
                     {paymentError && (
                       <Alert severity="error" sx={{ mt: 2 }}>
                         {paymentError}
@@ -697,7 +768,7 @@ const [formData, setFormData] = useState({
                   </Box>
                 ) : (
                   <Alert severity="success" sx={{ mt: 2 }}>
-                    Pagamento processado com sucesso!
+                    Pagamento processado com sucesso! Seu anúncio está agora ativo e visível.
                     <Button
                       variant="contained"
                       color="primary"

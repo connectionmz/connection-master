@@ -29,7 +29,6 @@ export const allModules = [
   { name: 'SMS', link: '/sms', icon: <SmsIcon fontSize="large" />, key: 'moduloSMS' },
   { name: 'Call Center', link: '/callcenter', icon: <PhoneIcon fontSize="large" />, key: 'moduloCallCenter', alwaysEnabled: true },
   { name: 'Procurement', link: '/procurement', icon: <TruckIcon fontSize="large" />, key: 'moduloProcurement', alwaysEnabled: true },
-  { name: 'Inquéritos', link: '/inquerito', icon: <PollIcon fontSize="large" />, key: 'moduloInquerito' },
   { name: 'Recrutamento', link: '/recrutamento', icon: <PersonIcon fontSize="large" />, key: 'moduloRecrutamento', alwaysEnabled: true }
 ];
 

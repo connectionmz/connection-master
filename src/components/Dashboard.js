@@ -19,6 +19,7 @@ import CategoriaList from "./desktop/CategoriasList";
 import InqueritosList from "./desktop/InqueritosList";
 import LatestBlogPost from "./desktop/LatestBlogPost";
 import { LocationCity } from "@mui/icons-material";
+import Evento from "./desktop/Evento";
 
 const Dashboard = ({ user }) => {
   const [hasRespondedIds, setHasRespondedIds] = useState(new Set());
@@ -140,9 +141,7 @@ const Dashboard = ({ user }) => {
               <BannerDesk user={user} />
             </Box>
           </Grid>
-          <Grid item xs={12} sm={3}>
-            <InqueritosList user={user} />
-          </Grid>
+      <Evento/>
         </Grid>
       </Container>
       <Snackbar
