@@ -56,7 +56,7 @@ const ModuleGrid = ({ activeModules }) => {
         {allModules.map((module) => (
           <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={module.name}>
             <Tooltip 
-              title={module.alwaysEnabled || activeModules[module.key] ? '' : 'Clique para adquirir este módulo'}
+              title={module?.alwaysEnabled || activeModules[module.key] ? '' : 'Clique para adquirir este módulo'}
               arrow
             >
               <Card

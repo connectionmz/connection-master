@@ -25,6 +25,9 @@ import { CameraAlt, ExitToApp, Receipt, Save, ArrowForward, LocationOn } from "@
 import { useActiveModules } from "../../context/ActiveModulesContext";
 
 const ApxDesk = ({ user }) => {
+
+  console.log("User Data: ", user); 
+
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user.provincia);
@@ -185,9 +188,9 @@ const { activeModules, isLoading } = useActiveModules();
             p: 3,
             backgroundColor: theme.palette.background.paper
           }}>
-            {isLoading ? (
+            {!user.subscriptions.isverify ? (
               <Box display="flex" justifyContent="center" alignItems="center" height="100px">
-                <CircularProgress />
+                Modulos indisponíveis
               </Box>
             ) : (
               <ModuleGrid activeModules={activeModules || {}} />

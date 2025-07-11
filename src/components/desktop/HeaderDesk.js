@@ -383,14 +383,6 @@ const HeaderDesk = ({ user }) => {
           <Typography variant="body2" sx={{ textAlign: 'center' }}>
             Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
           </Typography>
-          <Button 
-            color="primary" 
-            size="small" 
-            sx={{ ml: { xs: 0, sm: 2 }, mt: { xs: 1, sm: 0 } }}
-            onClick={() => navigate("/app/verification")}
-          >
-            Completar verificação
-          </Button>
         </Box>
       )}
     </>
