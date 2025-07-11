@@ -252,7 +252,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         body: JSON.stringify({
           amount: "1",
           phoneNumber: formData.phoneNumber,
-          reference: `Anuncio_${new Date().getTime()}` 
+          reference: `Ad_${expireDate.toISOString()}`, 
         }),
       });
 
