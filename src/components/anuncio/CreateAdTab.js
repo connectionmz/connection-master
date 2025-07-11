@@ -243,6 +243,12 @@ const CreateAdTab = ({ user, onAdCreated }) => {
 
       await set(anuncioRef, anuncioData);
 
+      
+   const sanitizedReference = "ad" + idAnuncio
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "");
+
       // 3. Processar pagamento
       const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
         method: 'POST',
@@ -252,7 +258,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         body: JSON.stringify({
           amount: "1",
           phoneNumber: formData.phoneNumber,
-          reference: `Ad_${expireDate.toISOString()}`, 
+          reference:sanitizedReference, 
         }),
       });
 
