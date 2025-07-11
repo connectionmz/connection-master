@@ -287,56 +287,66 @@ const [formData, setFormData] = useState({
     }
   };
 
-  const handlePaymentSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!user?.id) {
-      setPaymentError('Usuário não autenticado. Por favor, faça login novamente.');
-      return;
-    }
+const handlePaymentSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!user?.id) {
+    setPaymentError('Usuário não autenticado. Por favor, faça login novamente.');
+    return;
+  }
 
- if (!formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
+  if (!formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
     setPaymentError('Por favor, verifique o número de telefone (formato 258XXXXXXXXX).');
     return;
   }
 
-    setPaymentLoading(true);
-    setPaymentError('');
+  setPaymentLoading(true);
+  setPaymentError('');
 
-    try {
-      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: '1',
-          phoneNumber: formData.phoneNumber,
-          reference: `Anuncio`
-        }),
-      });
+  try {
+    const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: totalCost.toString(), // Enviar o valor real
+        phoneNumber: formData.phoneNumber,
+        reference: `Anuncio_${currentAdId}`
+      }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar pagamento');
-      }
-
-      const adRef = ref(db, `banners/${currentAdId}`);
-      await set(adRef, { status: 'paid' }, { merge: true });
-
-      setPaymentSuccess(true);
-      showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
-      resetForm();
-      onAdCreated();
-      
-    } catch (error) {
-      console.error('Erro ao processar pagamento:', error);
-      setPaymentError(error.message || 'Ocorreu um erro ao processar o pagamento. Tente novamente mais tarde.');
-    } finally {
-      setPaymentLoading(false);
+    if (!response.ok) {
+      throw new Error(data.error || 'Erro ao processar pagamento');
     }
-  };
+
+    // Atualizar o status do anúncio no Firebase
+    const adRef = ref(db, `banners/${currentAdId}`);
+    await set(adRef, { 
+      status: 'paid',
+      paymentDate: new Date().toISOString(),
+      paymentReference: data.reference // Adicionar referência do pagamento
+    }, { merge: true });
+
+    setPaymentSuccess(true);
+    showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
+    onAdCreated();
+    
+  } catch (error) {
+    console.error('Erro ao processar pagamento:', error);
+    setPaymentError(error.message || 'Ocorreu um erro ao processar o pagamento. Tente novamente mais tarde.');
+    
+    // Marcar o anúncio como falha no pagamento
+    if (currentAdId) {
+      const adRef = ref(db, `banners/${currentAdId}`);
+      await set(adRef, { status: 'payment_failed' }, { merge: true });
+    }
+  } finally {
+    setPaymentLoading(false);
+  }
+};
 
   const resetForm = () => {
     setFormData({

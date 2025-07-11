@@ -26,8 +26,6 @@ import { useActiveModules } from "../../context/ActiveModulesContext";
 
 const ApxDesk = ({ user }) => {
 
-  console.log("User Data: ", user); 
-
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user.provincia);

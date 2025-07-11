@@ -105,8 +105,6 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
         const concursosRef = ref(db, 'concursos');
         const unsubscribeConcursos = onValue(concursosRef, (snapshot) => {
             const concursosData = snapshot.val();
-
-            console.log("Concursos Data: ", concursosData); // Debugging line
             
             if (concursosData) {
                 const now = new Date();
