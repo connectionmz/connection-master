@@ -56,11 +56,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     description: '',
     link: '',
     days: 1,
-    phoneNumber: user?.contacto 
-      ? (user.contacto.startsWith('258') 
-          ? user.contacto 
-          : `258${user.contacto.replace(/^0/, '')}`)
-      : '',
+    phoneNumber: '',
     tipoAnuncio: 'home',
   });
   
@@ -174,14 +170,6 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     return true;
   };
 
-  const validatePaymentStep = () => {
-    if (!formData.phoneNumber || !formData.phoneNumber.startsWith('258') || formData.phoneNumber.length !== 12) {
-      showSnackbar('Por favor, insira um número de telefone válido no formato 258XXXXXXXXX', 'error');
-      return false;
-    }
-    return true;
-  };
-
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({ ...prev, [field]: event.target.value }));
   };
@@ -206,7 +194,6 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   };
 
   const handlePayment = async () => {
-    if (!validatePaymentStep()) return;
     
     setLoading(true);
     setPaymentError('');
@@ -265,7 +252,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         body: JSON.stringify({
           amount: "1",
           phoneNumber: formData.phoneNumber,
-          reference: `Anuncio_${idAnuncio}`
+          reference: `Anuncio`
         }),
       });
 
@@ -299,11 +286,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       description: '',
       link: '',
       days: 1,
-      phoneNumber: user?.contacto 
-        ? (user.contacto.startsWith('258') 
-            ? user.contacto 
-            : `258${user.contacto.replace(/^0/, '')}`)
-        : '',
+      phoneNumber:'',
       tipoAnuncio: 'home',
     });
     setSelectedProvincias(user?.provincia ? [user.provincia] : []);
