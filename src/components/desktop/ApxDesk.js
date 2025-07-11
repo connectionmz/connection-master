@@ -172,8 +172,7 @@ const { activeModules, isLoading } = useActiveModules();
               borderRadius: 2,
               textTransform: 'none',
               fontSize: isMobile ? '0.875rem' : '1rem'
-            }}
-          >
+            }}>
             Sair
           </Button>
         </Grid>
