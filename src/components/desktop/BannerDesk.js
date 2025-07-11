@@ -63,7 +63,7 @@ const BannerDesk = ({ user }) => {
 
   const filterBanners = useCallback((bannerList, currentUser) => {
     return bannerList.filter(banner => (
-        banner.status === 'active' &&
+        banner.status === 'paid' &&
         banner.tipoAnuncio === 'home' &&
         !isBannerExpired(banner) &&
         bannerMatchesUser(banner, currentUser)

@@ -244,12 +244,9 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       await set(anuncioRef, anuncioData);
 
       
-   const sanitizedReference = "ad" + idAnuncio
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]/g, "");
+      const uniqueReference = `ad_${idAnuncio}_${Date.now()}`;
 
-      // 3. Processar pagamento
+      // 4. Processar pagamento
       const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
         method: 'POST',
         headers: {
@@ -258,33 +255,32 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         body: JSON.stringify({
           amount: "1",
           phoneNumber: formData.phoneNumber,
-          reference:sanitizedReference, 
+          reference: uniqueReference, 
         }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar pagamento');
+         if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao processar pagamento');
       }
 
-      console.log('Pagamento processado com sucesso:', data);
-
-      // 4. Atualizar status para pago
       await set(ref(db, `banners/${idAnuncio}/status`), 'paid');
-      
-      setPaymentSuccess(true);
-      handleNext();
-      showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
-      onAdCreated();
-      
-    } catch (error) {
-      console.error('Erro no processo de pagamento:', error);
-      setPaymentError(error.message || 'Erro ao processar o pagamento. Tente novamente.');
-      showSnackbar('Erro ao processar o pagamento. Tente novamente.', 'error');
-    } finally {
-      setLoading(false);
-    }
+          
+          setPaymentSuccess(true);
+          setCurrentAdId(null); // Limpar o ID atual
+          handleNext();
+          showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
+          onAdCreated();
+          
+        } catch (error) {
+          console.error('Erro no processo de pagamento:', error);
+          setPaymentError(error.message || 'Erro ao processar o pagamento. Tente novamente.');
+          showSnackbar(error.message || 'Erro ao processar o pagamento. Tente novamente.', 'error');
+        } finally {
+          setLoading(false);
+        }
   };
 
   const resetForm = () => {
