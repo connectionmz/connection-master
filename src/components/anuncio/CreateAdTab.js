@@ -262,8 +262,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       const data = await response.json();
 
          if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao processar pagamento');
+          console.error('Erro ao processar pagamento:', data);
+        throw new Error(data.error || 'Erro ao processar pagamento');
       }
 
       await set(ref(db, `banners/${idAnuncio}/status`), 'paid');
