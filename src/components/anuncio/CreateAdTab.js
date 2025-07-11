@@ -252,7 +252,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         body: JSON.stringify({
           amount: "1",
           phoneNumber: formData.phoneNumber,
-         reference: `Anuncio_${new Date().getTime()}` 
+          reference: `Anuncio_${new Date().getTime()}` 
         }),
       });
 
@@ -261,6 +261,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao processar pagamento');
       }
+
+      console.log('Pagamento processado com sucesso:', data);
 
       // 4. Atualizar status para pago
       await set(ref(db, `banners/${idAnuncio}/status`), 'paid');
