@@ -247,7 +247,7 @@ const handlePayment = async () => {
 
     // 4. Preparar dados para o pagamento no formato EXATO requerido
     const paymentData = {
-      amount: "1", // Convertendo para string
+      amount: totalCost.toString(), // Convertendo para string
       phoneNumber: formData.phoneNumber, // Já no formato 258XXXXXXXXX
       reference: `AD${Date.now()}`.substring(0, 12) // Referência simples (máx 12 chars)
     };
