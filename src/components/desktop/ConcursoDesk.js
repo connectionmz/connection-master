@@ -67,12 +67,11 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                         update(ref(db, `banners/${banner.id}`), { status: 'expired' });
                         return { ...banner, status: 'expired' };
                     }
-
                     return banner;
                 });
 
                 const filteredBanners = updatedBanners.filter(banner => {
-                    if (banner.status !== 'active' || banner.tipoAnuncio !== 'concurso') return false;
+                    if (banner.status !== 'paid' || banner.tipoAnuncio !== 'concurso') return false;
 
                     const expireDate = new Date(banner.expireDate);
                     if (expireDate < currentDate) return false;

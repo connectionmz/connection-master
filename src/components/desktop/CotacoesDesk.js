@@ -71,7 +71,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 });
 
                 const filteredBanners = updatedBanners.filter(banner => {
-                    if (banner.status !== 'active' || banner.tipoAnuncio !== 'cotacoes') return false;
+                    if (banner.status !== 'paid' || banner.tipoAnuncio !== 'cotacoes') return false;
                     const expireDate = new Date(banner.expireDate);
                     if (expireDate < currentDate) return false;
 
