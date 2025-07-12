@@ -193,95 +193,104 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     setSelectedSectores(event.target.value);
   };
 
-  const handlePayment = async () => {
+const handlePayment = async () => {
+  setLoading(true);
+  setPaymentError('');
+  
+  try {
+    // 1. Validações iniciais
+    if (!/^258\d{9}$/.test(formData.phoneNumber)) {
+      throw new Error('Número de telefone inválido. Formato: 258XXXXXXXXX (12 dígitos)');
+    }
+
+    // 2. Upload da imagem (se houver)
+    let imageUrl = '';
+    if (formData.file) {
+      const fileRef = createStorageRef(storage, `images/${formData.file.name}`);
+      await uploadBytes(fileRef, formData.file);
+      imageUrl = await getDownloadURL(fileRef);
+    }
+
+    // 3. Criar registro no banco de dados (status: unpaid)
+    const anuncioRef = push(ref(db, 'banners'));
+    const idAnuncio = anuncioRef.key;
+    setCurrentAdId(idAnuncio);
+
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + formData.days);
+
+    const anuncioData = {
+      id: idAnuncio,
+      uploadedAt: new Date().toISOString(),
+      expireDate: expireDate.toISOString(),
+      companyId: user.id,
+      days: formData.days,
+      totalCost,
+      provincias: selectedProvincias,
+      sectores: selectedSectores,
+      tipoAnuncio: formData.tipoAnuncio,
+      phoneNumber: formData.phoneNumber,
+      status: 'unpaid'
+    };
+
+    if (imageUrl) anuncioData.imageUrl = imageUrl;
     
-    setLoading(true);
-    setPaymentError('');
+    if (!isDestacarPerfil) {
+      anuncioData.description = formData.description;
+      anuncioData.link = formData.link || '#';
+    } else {
+      anuncioData.description = `Perfil destacado de ${user.nome}`;
+      anuncioData.link = `/perfil/${user.id}`;
+    }
+
+    await set(anuncioRef, anuncioData);
+
+    // 4. Preparar dados para o pagamento no formato EXATO requerido
+    const paymentData = {
+      amount: "1", // Convertendo para string
+      phoneNumber: formData.phoneNumber, // Já no formato 258XXXXXXXXX
+      reference: `AD${Date.now()}`.substring(0, 12) // Referência simples (máx 12 chars)
+    };
+
+    console.log('Enviando para M-Pesa:', paymentData); // Para debug
+
+    // 5. Processar pagamento
+    const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(paymentData) // Enviando no formato exato
+    });
+
+    // 6. Processar resposta
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('Detalhes do erro:', responseData);
+      throw new Error(responseData.details?.output_ResponseDesc || 
+                    responseData.error || 
+                    'Erro ao processar pagamento');
+    }
+
+    // 7. Atualizar status para pago
+    await set(ref(db, `banners/${idAnuncio}/status`), 'paid');
     
-    try {
-      // 1. Upload da imagem (se houver)
-      let imageUrl = '';
-      if (formData.file) {
-        const fileRef = createStorageRef(storage, `images/${formData.file.name}`);
-        await uploadBytes(fileRef, formData.file);
-        imageUrl = await getDownloadURL(fileRef);
-      }
-
-      // 2. Criar registro no banco de dados (status: unpaid)
-      const anuncioRef = push(ref(db, 'banners'));
-      const idAnuncio = anuncioRef.key;
-      setCurrentAdId(idAnuncio);
-
-      const expireDate = new Date();
-      expireDate.setDate(expireDate.getDate() + formData.days);
-
-      const anuncioData = {
-        id: idAnuncio,
-        uploadedAt: new Date().toISOString(),
-        expireDate: expireDate.toISOString(),
-        companyId: user.id,
-        days: formData.days,
-        totalCost,
-        provincias: selectedProvincias,
-        sectores: selectedSectores,
-        tipoAnuncio: formData.tipoAnuncio,
-        phoneNumber: formData.phoneNumber,
-        status: 'unpaid'
-      };
-
-      if (imageUrl) {
-        anuncioData.imageUrl = imageUrl;
-      }
-
-      if (!isDestacarPerfil) {
-        anuncioData.description = formData.description;
-        anuncioData.link = formData.link || '#';
-      } else {
-        anuncioData.description = `Perfil destacado de ${user.nome}`;
-        anuncioData.link = `/perfil/${user.id}`;
-      }
-
-      await set(anuncioRef, anuncioData);
-
-      
-      const uniqueReference = `ad_${idAnuncio}_${Date.now()}`;
-
-      // 4. Processar pagamento
-      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-         amount: "1", 
-        phoneNumber: "258840237100", 
-        reference: "TESTREF123" 
-        }),
-      });
-
-      const data = await response.json();
-
-         if (!response.ok) {
-          console.error('Erro ao processar pagamento:', data);
-        throw new Error(data.error || 'Erro ao processar pagamento');
-      }
-
-      await set(ref(db, `banners/${idAnuncio}/status`), 'paid');
-          
-          setPaymentSuccess(true);
-          setCurrentAdId(null); // Limpar o ID atual
-          handleNext();
-          showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
-          onAdCreated();
-          
-        } catch (error) {
-          console.error('Erro no processo de pagamento:', error);
-          setPaymentError(error.message || 'Erro ao processar o pagamento. Tente novamente.');
-          showSnackbar(error.message || 'Erro ao processar o pagamento. Tente novamente.', 'error');
-        } finally {
-          setLoading(false);
-        }
-  };
+    // 8. Sucesso
+    setPaymentSuccess(true);
+    setCurrentAdId(null);
+    handleNext();
+    showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
+    onAdCreated();
+    
+  } catch (error) {
+    console.error('Erro no pagamento:', error);
+    setPaymentError(error.message);
+    showSnackbar(error.message, 'error');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const resetForm = () => {
     setFormData({
