@@ -37,7 +37,7 @@ const Evento = () => {
     {
       id: 2,
       titulo: "✈ Prepara-te para descobrir a alma da Ilha do Ibo!",
-      imagem: facim,
+      imagem: salama,
       data: "06/09/2025",
       descricao: "Uma experiência única espera por ti: voo panorâmico, história viva, sabores autênticos e paisagens de tirar o fôlego. 🌴"
     },
