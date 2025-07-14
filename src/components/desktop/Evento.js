@@ -1,162 +1,307 @@
-import React, { useState, useEffect } from 'react';
-import { ref, onValue } from 'firebase/database';
-import { db } from '../../fb';
-import { Link, useNavigate } from 'react-router-dom';
-import { Grid, Paper, Box, Typography, Button, useMediaQuery } from '@mui/material';
-import Skeleton from '@mui/material/Skeleton';
+import React, { useState } from 'react';
+import { 
+  Grid, 
+  Paper, 
+  Box, 
+  Typography, 
+  Button, 
+  IconButton, 
+  useMediaQuery,
+  Modal,
+  Fade,
+  Backdrop
+} from '@mui/material';
+import { 
+  KeyboardArrowLeft, 
+  KeyboardArrowRight,
+  OpenInNew,
+  ZoomIn
+} from '@mui/icons-material';
+import salama from '../../img/salama.jpg';
+import facim from '../../img/facim.jpg';
 
 const Evento = () => {
-  const [latestBlog, setLatestBlog] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [openModal, setOpenModal] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  useEffect(() => {
-    const blogsRef = ref(db, "blogPost");
-    const unsubscribe = onValue(
-      blogsRef,
-      (snapshot) => {
-        try {
-          setLoading(true);
-          const data = snapshot.val();
+  const eventos = [
+    {
+      id: 1,
+      titulo: "🌍 PAVILHÃO DO EXPORTADOR | FACIM 2025 📍",
+      imagem: facim,
+      link: "https://www.exportamoz.co.mz/pavilhao-exportador",
+      data: " 📅 25 a 31 de Agosto, 2025",
+      descricao: "Exportadores Moçambicanos e o Mundo! 🌐🚛✈  Durante uma semana, as empresas vão poder: • Expor produtos e soluções com foco em exportação"
+    },
+    {
+      id: 2,
+      titulo: "✈ Prepara-te para descobrir a alma da Ilha do Ibo!",
+      imagem: facim,
+      data: "06/09/2025",
+      descricao: "Uma experiência única espera por ti: voo panorâmico, história viva, sabores autênticos e paisagens de tirar o fôlego. 🌴"
+    },
+  ];
 
-          if (!data) {
-            setLatestBlog(null);
-            setLoading(false);
-            return;
-          }
-
-          // Converter objeto em array e calcular timestamp corretamente
-          const blogsArray = Object.keys(data).map(id => {
-            const blog = data[id];
-            // Criar data no formato "DD/MM/YYYY HH:mm"
-            const [day, month, year] = blog.date.split('/');
-            const [hours, minutes] = blog.time.split(':');
-            const dateObj = new Date(year, month - 1, day, hours, minutes);
-            
-            return {
-              id,
-              ...blog,
-              timestamp: dateObj.getTime()
-            };
-          });
-
-          // Ordenar por timestamp (mais recente primeiro)
-          blogsArray.sort((a, b) => b.timestamp - a.timestamp);
-
-          // Pegar o mais recente
-          if (blogsArray.length > 0) {
-            setLatestBlog(blogsArray[0]);
-          } else {
-            setLatestBlog(null);
-          }
-          
-          setError(null);
-        } catch (err) {
-          console.error("Erro ao processar blogs:", err);
-          setError("Erro ao carregar os blogs.");
-        } finally {
-          setLoading(false);
-        }
-      },
-      (error) => {
-        console.error("Erro ao carregar blogs:", error);
-        setError("Erro ao carregar os blogs.");
-        setLoading(false);
-      }
+  const handleNext = () => {
+    setActiveIndex((prevIndex) => 
+      prevIndex === eventos.length - 1 ? 0 : prevIndex + 1
     );
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleNavigateToBlog = (id) => {
-      window.location.href = 'https://coopmov.org';  
   };
 
-  const handleNavigateToAllBlogs = () => {
-      window.location.href = 'https://coopmov.org';
+  const handlePrev = () => {
+    setActiveIndex((prevIndex) => 
+      prevIndex === 0 ? eventos.length - 1 : prevIndex - 1
+    );
   };
 
-  if (loading) {
-    return (
-      <Grid item xs={12} sm={3}>
-        <Paper sx={{ padding: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
-            Último Blog
-          </Typography>
-          <Skeleton variant="rectangular" width="100%" height={isMobile ? 100 : 150} />
-          <Skeleton width="80%" height={24} sx={{ mt: 1 }} />
-          <Skeleton width="100%" height={16} sx={{ mt: 1 }} />
-          <Skeleton width="100%" height={16} sx={{ mt: 0.5 }} />
-          <Skeleton width="100%" height={40} sx={{ mt: 2 }} />
-        </Paper>
-      </Grid>
-    );
-  }
+  const handleOpenModal = () => {
+    setOpenModal(true);
+  };
 
-  if (error) {
-    return (
-      <Grid item xs={12} sm={3}>
-        <Paper sx={{ padding: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
-            Último Blog
-          </Typography>
-          <Typography color="error">{error}</Typography>
-        </Paper>
-      </Grid>
-    );
-  }
+  const handleCloseModal = () => {
+    setOpenModal(false);
+  };
 
   return (
     <Grid item xs={12} sm={3}>
-      <Paper sx={{ padding: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
-          Evento
+      <Paper sx={{ p: 2, height: 'auto' }}>
+        <Typography variant="h6" sx={{ 
+          fontWeight: 700, 
+          mb: 2,
+          color: 'primary.main'
+        }}>
+          Eventos
         </Typography>
-        {latestBlog ? (
-         <Box>
-  <Link 
-    to={`https://coopmov.org/`}
-    target='_blank'
-    sx={{ 
-      cursor: 'pointer',
-      width: '100%', 
-      height: isMobile ? '300px' : '400px', 
-    }}
-  >
-    {latestBlog.imageUrl && (
-      <img
-        src="https://firebasestorage.googleapis.com/v0/b/mjacademy-a3987.appspot.com/o/events%2F1745538260783_WhatsApp%20Image%202025-04-24%20at%2019.34.58_66d8bbde.jpg?alt=media&token=b1a033a4-ca9f-47ac-82ee-1d652a2e9474"
-        alt={latestBlog.title}
-        style={{
-          width: "100%",
-          height: "100%", // agora ocupa todo o espaço do Link pai
-          objectFit: "cover", // mudei para 'cover' para preencher melhor o espaço
-          borderRadius: "8px",
-        }}
-        onError={(e) => {
-          e.target.src = '/placeholder-blog.jpg'; 
-        }}
-      />
-    )}
-  </Link>
-</Box>
+        
+        {eventos.length > 0 ? (
+          <Box sx={{ position: 'relative' }}>
+            {/* Navegação */}
+            {eventos.length > 1 && (
+              <>
+                <IconButton
+                  onClick={handlePrev}
+                  sx={{
+                    position: 'absolute',
+                    left: 8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 1,
+                    bgcolor: 'background.paper',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    boxShadow: 1
+                  }}
+                >
+                  <KeyboardArrowLeft />
+                </IconButton>
+                <IconButton
+                  onClick={handleNext}
+                  sx={{
+                    position: 'absolute',
+                    right: 8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 1,
+                    bgcolor: 'background.paper',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    boxShadow: 1
+                  }}
+                >
+                  <KeyboardArrowRight />
+                </IconButton>
+              </>
+            )}
+
+            {/* Slide Ativo */}
+            <Box sx={{ position: 'relative' }}>
+              <Box
+                onClick={handleOpenModal}
+                sx={{
+                  display: 'block',
+                  position: 'relative',
+                  height: isMobile ? 250 : 350,
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  '&:hover img': {
+                    transform: 'scale(1.03)'
+                  }
+                }}
+              >
+                <img
+                  src={eventos[activeIndex].imagem}
+                  alt={eventos[activeIndex].titulo}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'transform 0.3s ease'
+                  }}
+                />
+                <IconButton
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: 'rgba(0,0,0,0.7)'
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenModal();
+                  }}
+                >
+                  <ZoomIn />
+                </IconButton>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    p: 2,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)'
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      color: 'common.white', 
+                      fontWeight: 700,
+                      textShadow: '0 1px 3px rgba(0,0,0,0.6)'
+                    }}
+                  >
+                    {eventos[activeIndex].titulo}
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'grey.300',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.6)'
+                    }}
+                  >
+                    {eventos[activeIndex].data}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Botão de Visitar */}
+              {eventos[activeIndex].link && (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  endIcon={<OpenInNew />}
+                  href={eventos[activeIndex].link}
+                  target="_blank"
+                  sx={{ mt: 2 }}
+                >
+                  Visitar Evento
+                </Button>
+              )}
+            </Box>
+
+            {/* Indicadores */}
+            {eventos.length > 1 && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                {eventos.map((_, index) => (
+                  <Box
+                    key={index}
+                    onClick={() => setActiveIndex(index)}
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      bgcolor: index === activeIndex ? 'primary.main' : 'grey.400',
+                      mx: 0.5,
+                      cursor: 'pointer'
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
+          </Box>
         ) : (
-          <>
-            <Typography variant="body2" color="textSecondary">
-              Nenhum blog disponível no momento.
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            height: isMobile ? 200 : 300,
+            textAlign: 'center'
+          }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+              Nenhum evento programado
             </Typography>
             <Button
-              onClick={handleNavigateToAllBlogs}
+              href="https://coopmov.org"
+              target="_blank"
               variant="outlined"
-              fullWidth
-              sx={{ mt: 2 }}
+              size="medium"
+              sx={{ mt: 1 }}
             >
-              Ver blogs
+              Ver agenda
             </Button>
-          </>
+          </Box>
         )}
+
+        {/* Modal para imagem ampliada */}
+        <Modal
+          open={openModal}
+          onClose={handleCloseModal}
+          closeAfterTransition
+          BackdropComponent={Backdrop}
+          BackdropProps={{
+            timeout: 500,
+          }}
+        >
+          <Fade in={openModal}>
+            <Box sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: isMobile ? '90%' : '80%',
+              maxWidth: 1200,
+              bgcolor: 'background.paper',
+              boxShadow: 24,
+              p: 2,
+              outline: 'none'
+            }}>
+              <img
+                src={eventos[activeIndex].imagem}
+                alt={eventos[activeIndex].titulo}
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: '80vh',
+                  objectFit: 'contain'
+                }}
+              />
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6">{eventos[activeIndex].titulo}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {eventos[activeIndex].descricao}
+                </Typography>
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Data: {eventos[activeIndex].data}
+                </Typography>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  endIcon={<OpenInNew />}
+                  href={eventos[activeIndex].link}
+                  target="_blank"
+                  sx={{ mt: 2 }}
+                >
+                  Visitar Página do Evento
+                </Button>
+              </Box>
+            </Box>
+          </Fade>
+        </Modal>
       </Paper>
     </Grid>
   );
