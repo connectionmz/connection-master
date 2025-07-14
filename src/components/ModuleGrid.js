@@ -19,14 +19,15 @@ import {
   LocalShipping as TruckIcon,
   Star as StarIcon,
   ShowChart as ChartIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Email
 } from '@mui/icons-material';
 
 export const allModules = [
   { name: 'Proforma', link: '/faturacao', icon: <ReceiptIcon fontSize="large" />, key: 'moduloProforma' },
   { name: 'Market', link: '/market', icon: <StoreIcon fontSize="large" />, key: 'moduloMarket' },
   { name: 'Anunciar', link: '/anunciar', icon: <AdIcon fontSize="large" />, key: 'moduloAnunciar', alwaysEnabled: true },
-  { name: 'SMS', link: '/sms', icon: <SmsIcon fontSize="large" />, key: 'moduloSMS' },
+  { name: 'Alerta', link: '/sms', icon: <Email   fontSize="large" />, key: 'moduloSMS' },
   { name: 'Call Center', link: '/callcenter', icon: <PhoneIcon fontSize="large" />, key: 'moduloCallCenter', alwaysEnabled: true },
   { name: 'Procurement', link: '/procurement', icon: <TruckIcon fontSize="large" />, key: 'moduloProcurement', alwaysEnabled: true },
   { name: 'Recrutamento', link: '/recrutamento', icon: <PersonIcon fontSize="large" />, key: 'moduloRecrutamento', alwaysEnabled: true }
