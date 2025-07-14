@@ -26,7 +26,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider
+  Divider,
+  InputAdornment
 } from '@mui/material';
 import {
   Add,
@@ -53,6 +54,7 @@ import { push, ref, set } from 'firebase/database';
 import { db } from '../../fb';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../BackButton';
+import { NumericFormat } from 'react-number-format';
 
 const ProductFormDesk = ({ user }) => {
   const storeId = user.id;
@@ -69,6 +71,7 @@ const ProductFormDesk = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [currentProductIndex, setCurrentProductIndex] = useState(null);
   const [openMobileDialog, setOpenMobileDialog] = useState(false);
+    const [errors, setErrors] = useState({});
 
   const handleAddProduct = () => {
     setProducts((prev) => [
@@ -380,15 +383,25 @@ const renderDesktopView = () => (
                 </TableCell>
               )}
               <TableCell>
-                <TextField
-                  fullWidth
-                  placeholder="Preço"
-                  type="number"
+                <NumericFormat
                   value={product.price}
-                  onChange={(e) => handleProductChange(index, 'price', e.target.value)}
-                  size={isTablet ? 'small' : 'medium'}
-                  inputProps={{ min: 0, step: 0.01 }}
-                  required
+                  displayType="input"
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  decimalScale={2}
+                  fixedDecimalScale
+                  allowNegative={false}
+                  onValueChange={(values) => {
+                    handleProductChange(index, 'price', values.value);
+                  }}
+                  customInput={TextField}
+                  fullWidth
+                  error={!!errors[`item-preco-${index}`]}
+                  helperText={errors[`item-preco-${index}`]}
+                  size="small"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
+                  }}
                 />
               </TableCell>
               

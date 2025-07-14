@@ -12,7 +12,7 @@ const MarketDesk = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [storeId, setStoreId] = useState(null);
   const [error, setError] = useState(null);
-  const [storeData, setStoreData] = useState(null); // Dados da loja (se existir)
+  const [storeData, setStoreData] = useState(null); 
 
   useEffect(() => {
     const checkStoreExists = async (userId) => {
@@ -22,7 +22,7 @@ const MarketDesk = ({ user }) => {
 
         if (storeSnapshot.exists()) {
           setStoreExists(true);
-          setStoreData(storeSnapshot.val()); // Armazena os dados da loja
+          setStoreData(storeSnapshot.val()); 
         } else {
           setStoreExists(false);
         }
@@ -54,8 +54,7 @@ const MarketDesk = ({ user }) => {
         display="flex"
         justifyContent="center"
         alignItems="center"
-        height="100vh"
-      >
+        height="100vh">
         <CircularProgress />
         <Typography variant="h6" marginLeft={2}>
           Carregando...
@@ -71,8 +70,7 @@ const MarketDesk = ({ user }) => {
         justifyContent="center"
         alignItems="center"
         height="100vh"
-        textAlign="center"
-      >
+        textAlign="center">
         <Alert severity="error" sx={{ width: '80%', maxWidth: 600 }}>
           {error}
         </Alert>
@@ -87,8 +85,7 @@ const MarketDesk = ({ user }) => {
         justifyContent="center"
         alignItems="center"
         height="100vh"
-        textAlign="center"
-      >
+        textAlign="center">
         <Typography variant="h6" color="textSecondary">
           Por favor, faça login para acessar o Market.
         </Typography>
