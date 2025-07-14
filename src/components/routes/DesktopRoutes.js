@@ -184,14 +184,11 @@ const dynamicProtectedPatterns = [
   /^\/inquerito\/.+/
 ];
 
-// Create a custom hook for module checking
   const useModuleCheck = () => {
     const { activeModules } = useActiveModules();
-    
     const isActiveModule = (moduleKey) => {
       return !!activeModules[moduleKey];
     };
-
     return { isActiveModule };
   };
 
@@ -206,12 +203,10 @@ const dynamicProtectedPatterns = [
       dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
     );
 
-    // Case 1: User not logged in and route is protected
     if (!user && isProtected) {
       return <Navigate to="/auth" replace />;
     }
 
-    // Case 2: Route requires a specific module that user doesn't have
     if (requiredModule && !isActiveModule(requiredModule)) {
       const module = allModules.find(m => m.key === requiredModule);
       return (
@@ -403,7 +398,9 @@ const handleSubmitFeedback = async () => {
       : ref(db, 'feedback/anonymousFeedbacks');
 
     const newFeedbackRef = push(feedbackRef);
-    await set(newFeedbackRef, feedbackData);
+    await set(newFeedbackRef, feedbackData); 
+
+    alert('Feedback enviado com sucesso! Obrigado por compartilhar sua opinião.');
 
     setHasFeedback(true);
     setFeedbackForm({
