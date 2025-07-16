@@ -105,7 +105,7 @@ const theme = createTheme({
 
 const DesktopRoutes = ({ user }) => {
 
-  const [language, setLanguage] = useState('pt')
+const [language, setLanguage] = useState('pt')
 const [anchorEl, setAnchorEl] = useState(null)
 const [showTerms, setShowTerms] = useState(false)
 const [showFeedbackModal, setShowFeedbackModal] = useState(false)
@@ -488,9 +488,7 @@ const handleSubmitFeedback = async () => {
   <Route 
     path="/create" 
     element={
-      <GuestRoute user={user}>
         <AuthCreateDesk user={user} />
-      </GuestRoute>
     } 
   />
   <Route path="/setup" element={<CompanyDataFormDesk />} />
