@@ -20,7 +20,8 @@ import {
   Star as StarIcon,
   ShowChart as ChartIcon,
   Person as PersonIcon,
-  Email
+  Email,
+  Event
 } from '@mui/icons-material';
 
 export const allModules = [
@@ -28,6 +29,7 @@ export const allModules = [
   { name: 'Market', link: '/market', icon: <StoreIcon fontSize="large" />, key: 'moduloMarket' },
   { name: 'Anunciar', link: '/anunciar', icon: <AdIcon fontSize="large" />, key: 'moduloAnunciar', alwaysEnabled: true },
   { name: 'Alerta', link: '/sms', icon: <Email   fontSize="large" />, key: 'moduloSMS' },
+  { name: 'Eventos', link: '/evento', icon: <Event   fontSize="large" />, key: 'moduloEventos' },
   { name: 'Call Center', link: '/callcenter', icon: <PhoneIcon fontSize="large" />, key: 'moduloCallCenter', alwaysEnabled: true },
   { name: 'Procurement', link: '/procurement', icon: <TruckIcon fontSize="large" />, key: 'moduloProcurement', alwaysEnabled: true },
   { name: 'Recrutamento', link: '/recrutamento', icon: <PersonIcon fontSize="large" />, key: 'moduloRecrutamento', alwaysEnabled: true }
@@ -58,8 +60,7 @@ const ModuleGrid = ({ activeModules }) => {
           <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={module.name}>
             <Tooltip 
               title={module?.alwaysEnabled || activeModules[module.key] ? '' : 'Clique para adquirir este módulo'}
-              arrow
-            >
+              arrow>
               <Card
                 onClick={() => handleModuleClick(module)}
                 sx={{
@@ -79,8 +80,7 @@ const ModuleGrid = ({ activeModules }) => {
                       ? theme.palette.action.hover 
                       : theme.palette.action.selected
                   }
-                }}
-              >
+                }}>
                 <CardContent sx={{ textAlign: 'center' }}>
                   <Box
                     sx={{
@@ -89,8 +89,7 @@ const ModuleGrid = ({ activeModules }) => {
                       p: 2,
                       mb: 1,
                       display: 'inline-flex'
-                    }}
-                  >
+                    }}>
                     {module.icon}
                   </Box>
                   <Typography variant="body2" color="text.secondary">

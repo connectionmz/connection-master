@@ -90,6 +90,7 @@ import EditProfileDeskSingular from '../desktop/EditProfileDeskSingular';
 import Teste from '../Teste';
 import { ActiveModulesProvider, useActiveModules } from '../../context/ActiveModulesContext';
 import GuestRoute from './GuestRoute';
+import Eventos from '../desktop/Eventos';
 
 const theme = createTheme({
   palette: {
@@ -570,6 +571,12 @@ const handleSubmitFeedback = async () => {
   <Route path="/cotacao" element={
     <ProtectedRoute requiredModule="moduloSMS">
       <NovaCotacaoDesk user={user} />
+    </ProtectedRoute>
+  } />
+
+  <Route path="/evento" element={
+    <ProtectedRoute requiredModule="moduloEventos">
+      <Eventos user={user} />
     </ProtectedRoute>
   } />
 

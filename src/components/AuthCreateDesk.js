@@ -38,7 +38,6 @@ import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
 
-// Email validation helper
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
@@ -71,12 +70,11 @@ const AuthCreateDesk = () => {
     useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        // Se o usuário já estiver autenticado, redireciona para a página inicial
         navigate('/auth');
       }
     });
 
-    return () => unsubscribe(); // Limpeza do listener
+    return () => unsubscribe();
   }, [navigate]);
 
   const saveUserData = useCallback(async (user) => {

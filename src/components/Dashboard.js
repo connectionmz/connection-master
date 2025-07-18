@@ -88,7 +88,6 @@ const Dashboard = ({ user }) => {
     setOpenSnackbar(false);
   };
 
-  // Get the current province or default to "Cabo Delgado"
   const currentProvince = user 
     ? user.provinciaTemp || user.provincia 
     : "Cabo Delgado";
