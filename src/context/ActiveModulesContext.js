@@ -18,7 +18,6 @@ export const ActiveModulesProvider = ({ children, userId }) => {
     const modulesRef = ref(db, `subscriptions/${userId}`);
     const unsubscribe = onValue(modulesRef, (snapshot) => {
       const data = snapshot.val();
-      console.log('Active modules data:', data);
       const modules = {};
 
       if (data) {

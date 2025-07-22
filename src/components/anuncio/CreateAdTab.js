@@ -30,6 +30,7 @@ import {
   StepLabel,
 } from '@mui/material';
 import { formatPrice } from './adUtils';
+import { useActiveModules } from '../../context/ActiveModulesContext';
 
 const PRICES = {
   home: 30,
@@ -46,9 +47,15 @@ const ADDITIONAL_COSTS = {
 const MAX_DAYS = 30;
 const MIN_DAYS = 1;
 
-const steps = ['Dados do Anúncio', 'Pagamento', 'Confirmação'];
-
 const CreateAdTab = ({ user, onAdCreated }) => {
+  const { activeModules } = useActiveModules();
+  const hasSMSModule = activeModules?.moduloSMS;
+
+  // Adjust steps based on SMS module
+  const steps = hasSMSModule 
+    ? ['Dados do Anúncio', 'Confirmação'] 
+    : ['Dados do Anúncio', 'Pagamento', 'Confirmação'];
+
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
     file: null,
@@ -75,7 +82,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
 
   const isDestacarPerfil = formData.tipoAnuncio === 'destacar_perfil';
 
-  // Efeitos para carregar dados
+  // Load data effects
   useEffect(() => {
     const provinciasRef = ref(db, 'provincias');
     const sectoresRef = ref(db, 'sectores_de_atividade');
@@ -137,9 +144,25 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     setEmpresasAtingidas(empresasFiltradas.length);
   };
 
+    const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFormData(prev => ({
+        ...prev,
+        file: selectedFile,
+        imageUrl: URL.createObjectURL(selectedFile),
+      }));
+    }
+  };
+
   const handleNext = () => {
     if (activeStep === 0 && !validateFormStep1()) return;
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    
+    if (hasSMSModule && activeStep === 0) {
+      handleCreateAdWithoutPayment();
+    } else {
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    }
   };
 
   const handleBack = () => {
@@ -170,127 +193,162 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     return true;
   };
 
-  const handleInputChange = (field) => (event) => {
-    setFormData(prev => ({ ...prev, [field]: event.target.value }));
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFormData(prev => ({
-        ...prev,
-        file: selectedFile,
-        imageUrl: URL.createObjectURL(selectedFile),
-      }));
-    }
-  };
-
-  const handleProvinciaChange = (event) => {
-    setSelectedProvincias(event.target.value);
-  };
-
-  const handleSetorChange = (event) => {
-    setSelectedSectores(event.target.value);
-  };
-
-const handlePayment = async () => {
-  setLoading(true);
-  setPaymentError('');
-  
-  try {
-    // 1. Validações iniciais
-    if (!/^258\d{9}$/.test(formData.phoneNumber)) {
-      throw new Error('Número de telefone inválido. Formato: 258XXXXXXXXX (12 dígitos)');
-    }
-
-    // 2. Upload da imagem (se houver)
-    let imageUrl = '';
-    if (formData.file) {
-      const fileRef = createStorageRef(storage, `images/${formData.file.name}`);
-      await uploadBytes(fileRef, formData.file);
-      imageUrl = await getDownloadURL(fileRef);
-    }
-
-    // 3. Criar registro no banco de dados (status: unpaid)
-    const anuncioRef = push(ref(db, 'banners'));
-    const idAnuncio = anuncioRef.key;
-    setCurrentAdId(idAnuncio);
-
-    const expireDate = new Date();
-    expireDate.setDate(expireDate.getDate() + formData.days);
-
-    const anuncioData = {
-      id: idAnuncio,
-      uploadedAt: new Date().toISOString(),
-      expireDate: expireDate.toISOString(),
-      companyId: user.id,
-      days: formData.days,
-      totalCost,
-      provincias: selectedProvincias,
-      sectores: selectedSectores,
-      tipoAnuncio: formData.tipoAnuncio,
-      phoneNumber: formData.phoneNumber,
-      status: 'unpaid'
-    };
-
-    if (imageUrl) anuncioData.imageUrl = imageUrl;
+  const handleCreateAdWithoutPayment = async () => {
+    setLoading(true);
     
-    if (!isDestacarPerfil) {
-      anuncioData.description = formData.description;
-      anuncioData.link = formData.link || '#';
-    } else {
-      anuncioData.description = `Perfil destacado de ${user.nome}`;
-      anuncioData.link = `/perfil/${user.id}`;
+    try {
+      // Upload image if exists
+      let imageUrl = '';
+      if (formData.file) {
+        const fileRef = createStorageRef(storage, `images/${formData.file.name}`);
+        await uploadBytes(fileRef, formData.file);
+        imageUrl = await getDownloadURL(fileRef);
+      }
+
+      // Create ad record with status 'paid'
+      const anuncioRef = push(ref(db, 'banners'));
+      const idAnuncio = anuncioRef.key;
+      setCurrentAdId(idAnuncio);
+
+      const expireDate = new Date();
+      expireDate.setDate(expireDate.getDate() + formData.days);
+
+      const anuncioData = {
+        id: idAnuncio,
+        uploadedAt: new Date().toISOString(),
+        expireDate: expireDate.toISOString(),
+        companyId: user.id,
+        days: formData.days,
+        totalCost,
+        provincias: selectedProvincias,
+        sectores: selectedSectores,
+        tipoAnuncio: formData.tipoAnuncio,
+        phoneNumber: user.phoneNumber || '',
+        status: 'paid',
+        paymentMethod: 'sms_module'
+      };
+
+      if (imageUrl) anuncioData.imageUrl = imageUrl;
+      
+      if (!isDestacarPerfil) {
+        anuncioData.description = formData.description;
+        anuncioData.link = formData.link || '#';
+      } else {
+        anuncioData.description = `Perfil destacado de ${user.nome}`;
+        anuncioData.link = `/perfil/${user.id}`;
+      }
+
+      await set(anuncioRef, anuncioData);
+
+      // Success - move to confirmation step
+      setPaymentSuccess(true);
+      setCurrentAdId(null);
+      setActiveStep(1); // Skip payment step
+      showSnackbar('Anúncio criado com sucesso! (Pagamento via módulo SMS)', 'success');
+      onAdCreated();
+      
+    } catch (error) {
+      console.error('Erro ao criar anúncio:', error);
+      showSnackbar('Erro ao criar anúncio: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    await set(anuncioRef, anuncioData);
+  const handlePayment = async () => {
+    setLoading(true);
+    setPaymentError('');
+    
+    try {
+      // Validate phone number
+      if (!/^258\d{9}$/.test(formData.phoneNumber)) {
+        throw new Error('Número de telefone inválido. Formato: 258XXXXXXXXX (12 dígitos)');
+      }
 
-    // 4. Preparar dados para o pagamento no formato EXATO requerido
-    const paymentData = {
-      amount: totalCost.toString(), // Convertendo para string
-      phoneNumber: formData.phoneNumber, // Já no formato 258XXXXXXXXX
-      reference: `AD${Date.now()}`.substring(0, 12) // Referência simples (máx 12 chars)
-    };
+      // Upload image if exists
+      let imageUrl = '';
+      if (formData.file) {
+        const fileRef = createStorageRef(storage, `images/${formData.file.name}`);
+        await uploadBytes(fileRef, formData.file);
+        imageUrl = await getDownloadURL(fileRef);
+      }
 
-    console.log('Enviando para M-Pesa:', paymentData); // Para debug
+      // Create ad record with status 'unpaid'
+      const anuncioRef = push(ref(db, 'banners'));
+      const idAnuncio = anuncioRef.key;
+      setCurrentAdId(idAnuncio);
 
-    // 5. Processar pagamento
-    const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentData) // Enviando no formato exato
-    });
+      const expireDate = new Date();
+      expireDate.setDate(expireDate.getDate() + formData.days);
 
-    // 6. Processar resposta
-    const responseData = await response.json();
+      const anuncioData = {
+        id: idAnuncio,
+        uploadedAt: new Date().toISOString(),
+        expireDate: expireDate.toISOString(),
+        companyId: user.id,
+        days: formData.days,
+        totalCost,
+        provincias: selectedProvincias,
+        sectores: selectedSectores,
+        tipoAnuncio: formData.tipoAnuncio,
+        phoneNumber: formData.phoneNumber,
+        status: 'unpaid'
+      };
 
-    if (!response.ok) {
-      console.error('Detalhes do erro:', responseData);
-      throw new Error(responseData.details?.output_ResponseDesc || 
-                    responseData.error || 
-                    'Erro ao processar pagamento');
+      if (imageUrl) anuncioData.imageUrl = imageUrl;
+      
+      if (!isDestacarPerfil) {
+        anuncioData.description = formData.description;
+        anuncioData.link = formData.link || '#';
+      } else {
+        anuncioData.description = `Perfil destacado de ${user.nome}`;
+        anuncioData.link = `/perfil/${user.id}`;
+      }
+
+      await set(anuncioRef, anuncioData);
+
+      // Prepare payment data
+      const paymentData = {
+        amount: totalCost.toString(),
+        phoneNumber: formData.phoneNumber,
+        reference: `AD${Date.now()}`.substring(0, 12)
+      };
+
+      // Process payment
+      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.details?.output_ResponseDesc || 
+                      responseData.error || 
+                      'Erro ao processar pagamento');
+      }
+
+      // Update status to paid
+      await set(ref(db, `banners/${idAnuncio}/status`), 'paid');
+      
+      // Success
+      setPaymentSuccess(true);
+      setCurrentAdId(null);
+      setActiveStep(2);
+      showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
+      onAdCreated();
+      
+    } catch (error) {
+      console.error('Erro no pagamento:', error);
+      setPaymentError(error.message);
+      showSnackbar(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
-
-    // 7. Atualizar status para pago
-    await set(ref(db, `banners/${idAnuncio}/status`), 'paid');
-    
-    // 8. Sucesso
-    setPaymentSuccess(true);
-    setCurrentAdId(null);
-    handleNext();
-    showSnackbar('Pagamento efetuado com sucesso! Anúncio ativado.', 'success');
-    onAdCreated();
-    
-  } catch (error) {
-    console.error('Erro no pagamento:', error);
-    setPaymentError(error.message);
-    showSnackbar(error.message, 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const resetForm = () => {
     setFormData({
@@ -299,7 +357,7 @@ const handlePayment = async () => {
       description: '',
       link: '',
       days: 1,
-      phoneNumber:'',
+      phoneNumber: '',
       tipoAnuncio: 'home',
     });
     setSelectedProvincias(user?.provincia ? [user.provincia] : []);
@@ -325,13 +383,19 @@ const handlePayment = async () => {
             <Grid item xs={12} md={8}>
               <Card variant="outlined" sx={{ p: 2 }}>
                 <CardContent>
+                  {hasSMSModule && (
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                      Como você tem o módulo SMS ativo, este anúncio será criado sem custos adicionais.
+                    </Alert>
+                  )}
+
                   <FormControl component="fieldset" sx={{ mb: 3 }}>
                     <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
                       Tipo de Anúncio:
                     </Typography>
                     <RadioGroup
                       value={formData.tipoAnuncio}
-                      onChange={handleInputChange('tipoAnuncio')}
+                      onChange={(e) => setFormData({...formData, tipoAnuncio: e.target.value})}
                       row
                     >
                       <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
@@ -349,7 +413,7 @@ const handlePayment = async () => {
                         multiline
                         rows={3}
                         value={formData.description}
-                        onChange={handleInputChange('description')}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
                         inputProps={{ maxLength: 150 }}
                         helperText={`${formData.description.length}/150 caracteres`}
                         sx={{ mb: 2 }}
@@ -360,7 +424,7 @@ const handlePayment = async () => {
                         variant="outlined"
                         fullWidth
                         value={formData.link}
-                        onChange={handleInputChange('link')}
+                        onChange={(e) => setFormData({...formData, link: e.target.value})}
                         sx={{ mb: 2 }}
                       />
 
@@ -395,7 +459,7 @@ const handlePayment = async () => {
                     <Select
                       multiple
                       value={selectedProvincias}
-                      onChange={handleProvinciaChange}
+                      onChange={(e) => setSelectedProvincias(e.target.value)}
                       renderValue={(selected) => selected.join(', ')}
                       label="Províncias *"
                     >
@@ -413,7 +477,7 @@ const handlePayment = async () => {
                     <Select
                       multiple
                       value={selectedSectores}
-                      onChange={handleSetorChange}
+                      onChange={(e) => setSelectedSectores(e.target.value)}
                       renderValue={(selected) => selected.join(', ')}
                       label="Setores de Atividade *"
                     >
@@ -436,12 +500,12 @@ const handlePayment = async () => {
                       onChange={(e) => {
                         const value = e.target.value;
                         if (value === "") {
-                          setFormData(prev => ({ ...prev, days: "" }));
+                          setFormData({...formData, days: ""});
                         } else {
                           const parsed = parseInt(value);
                           if (!isNaN(parsed)) {
                             const clampedValue = Math.min(Math.max(parsed, MIN_DAYS), MAX_DAYS);
-                            setFormData(prev => ({ ...prev, days: clampedValue }));
+                            setFormData({...formData, days: clampedValue});
                           }
                         }
                       }}
@@ -459,6 +523,12 @@ const handlePayment = async () => {
                   <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                     Resumo do Anúncio
                   </Typography>
+
+                  {hasSMSModule && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                      <strong>Módulo SMS ativo:</strong> Sem custos adicionais
+                    </Alert>
+                  )}
 
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="subtitle2">Tipo:</Typography>
@@ -499,21 +569,52 @@ const handlePayment = async () => {
 
                   <Divider sx={{ my: 2 }} />
 
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Custo Total:
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                      {formatPrice(totalCost)} MT
-                    </Typography>
-                  </Box>
+                  {!hasSMSModule && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                        Custo Total:
+                      </Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                        {formatPrice(totalCost)} MT
+                      </Typography>
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
         );
       case 1:
-        return (
+        return hasSMSModule ? (
+          // Confirmation step for SMS module
+          <Card variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
+            <CardContent>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                  Anúncio Criado!
+                </Typography>
+              </Box>
+
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Seu anúncio foi criado com sucesso usando seu módulo SMS.
+              </Typography>
+
+              <Typography variant="body1" sx={{ mb: 4 }}>
+                ID do Anúncio: <strong>{currentAdId}</strong>
+              </Typography>
+
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={resetForm}
+                sx={{ mt: 2 }}
+              >
+                Criar Novo Anúncio
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          // Payment step for non-SMS users
           <Card variant="outlined" sx={{ p: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
@@ -538,7 +639,7 @@ const handlePayment = async () => {
                     ? rawValue 
                     : `258${rawValue}`;
                   formattedValue = formattedValue.substring(0, 12);
-                  setFormData(prev => ({ ...prev, phoneNumber: formattedValue }));
+                  setFormData({...formData, phoneNumber: formattedValue});
                 }}
                 fullWidth
                 margin="normal"
@@ -635,8 +736,29 @@ const handlePayment = async () => {
             variant="contained"
             onClick={handleNext}
             sx={{ ml: 1 }}
+            disabled={loading}
           >
-            Próximo
+            {loading ? <CircularProgress size={24} /> : 'Próximo'}
+          </Button>
+        </Box>
+      )}
+
+      {!hasSMSModule && activeStep === 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleBack}
+            disabled={loading}
+          >
+            Voltar
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handlePayment}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Pagar Agora'}
           </Button>
         </Box>
       )}

@@ -68,17 +68,13 @@ const SmsDesk = ({ user }) => {
             <li><Typography>Notificações por Email</Typography></li>
             <li><Typography>Cobertura para todos os pedidos do seu setor</Typography></li>
             <li><Typography>Sem custos adicionais</Typography></li>
-            <li><Typography>Renovação mensal automática</Typography></li>
           </Box>
-          
           <Typography paragraph sx={{ fontWeight: 'bold' }}>
             Valor mensal: {formatPrice(MONTHLY_SUBSCRIPTION_PRICE)} MT
           </Typography>
-          
           <Typography variant={isMobile ? 'subtitle1' : 'h6'} sx={{ fontWeight: 'bold', mt: 3, mb: 1 }}>
             Perguntas Frequentes
           </Typography>
-          
           <Box sx={{ 
             '& > *': { 
               mb: 2,
@@ -86,16 +82,8 @@ const SmsDesk = ({ user }) => {
             } 
           }}>
             <Typography>
-              <strong>Como ativo o plano?</strong><br />
-              Basta clicar em "Ativar Assinatura" e seguir os passos para pagamento.
-            </Typography>
-            <Typography>
               <strong>Quais métodos de pagamento aceitamos?</strong><br />
-              M-Pesa e e-Mola. O pagamento é rápido e seguro.
-            </Typography>
-            <Typography>
-              <strong>Posso cancelar a qualquer momento?</strong><br />
-              Sim, você pode cancelar a renovação automática quando quiser.
+              M-Pesa e Transferencias Bancarias.
             </Typography>
             <Typography>
               <strong>Quando recebo as notificações?</strong><br />
@@ -107,5 +95,4 @@ const SmsDesk = ({ user }) => {
     </Box>
   );
 };
-
 export default SmsDesk;

@@ -24,8 +24,7 @@ import {
   CalendarToday,
   LocationOn,
   Link as LinkIcon,
-  Refresh,
-  AccessTime
+  Refresh
 } from '@mui/icons-material';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../../fb';
