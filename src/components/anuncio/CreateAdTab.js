@@ -28,17 +28,10 @@ import {
   Stepper,
   Step,
   StepLabel,
-  useMediaQuery,
-  useTheme,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
 } from '@mui/material';
 import { formatPrice } from './adUtils';
 import { useActiveModules } from '../../context/ActiveModulesContext';
-import CloseIcon from '@mui/icons-material/Close';
+import { UploadIcon } from 'lucide-react';
 
 const PRICES = {
   home: 30,
@@ -56,15 +49,13 @@ const MAX_DAYS = 30;
 const MIN_DAYS = 1;
 
 const CreateAdTab = ({ user, onAdCreated }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { activeModules } = useActiveModules();
-  const hasSMSModule = activeModules?.moduloAnunciar;
+  const hasSMSModule = activeModules?.moduloSMS;
 
   // Adjust steps based on SMS module
   const steps = hasSMSModule 
-    ? ['Dados', 'Confirmação'] 
-    : ['Dados', 'Pagamento', 'Confirmação'];
+    ? ['Dados do Anúncio', 'Confirmação'] 
+    : ['Dados do Anúncio', 'Pagamento', 'Confirmação'];
 
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
@@ -89,8 +80,6 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   const [paymentError, setPaymentError] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [currentAdId, setCurrentAdId] = useState(null);
-  const [openProvinciasDialog, setOpenProvinciasDialog] = useState(false);
-  const [openSectoresDialog, setOpenSectoresDialog] = useState(false);
 
   const isDestacarPerfil = formData.tipoAnuncio === 'destacar_perfil';
 
@@ -156,7 +145,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     setEmpresasAtingidas(empresasFiltradas.length);
   };
 
-  const handleFileChange = (e) => {
+    const handleFileChange = (e) => {
     if (e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFormData(prev => ({
@@ -387,74 +376,32 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  const renderMobileSelectDialog = (title, items, selectedItems, setSelectedItems, open, setOpen) => {
-    return (
-      <Dialog fullScreen open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            {title}
-            <IconButton edge="end" color="inherit" onClick={() => setOpen(false)} aria-label="close">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {items.map((item) => {
-            const value = item.provincia || item.setor;
-            return (
-              <MenuItem key={value} value={value}>
-                <Checkbox checked={selectedItems.includes(value)} />
-                <ListItemText primary={value} />
-              </MenuItem>
-            );
-          })}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)} color="primary" variant="contained">
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
-  };
-
   const renderStepContent = (step) => {
     switch (step) {
       case 0:
         return (
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             <Grid item xs={12} md={8}>
-              <Card variant="outlined" sx={{ p: isMobile ? 1 : 2 }}>
+              <Card variant="outlined" sx={{ p: 2 }}>
                 <CardContent>
                   {hasSMSModule && (
                     <Alert severity="info" sx={{ mb: 3 }}>
-                      Como você tem o módulo Anunciar ativo, este anúncio será criado sem custos adicionais.
+                      Como você tem o módulo SMS ativo, este anúncio será criado sem custos adicionais.
                     </Alert>
                   )}
-                  <FormControl component="fieldset" sx={{ mb: 3, width: '100%' }}>
+
+                  <FormControl component="fieldset" sx={{ mb: 3 }}>
                     <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
                       Tipo de Anúncio:
                     </Typography>
                     <RadioGroup
                       value={formData.tipoAnuncio}
                       onChange={(e) => setFormData({...formData, tipoAnuncio: e.target.value})}
-                      row={!isMobile}
+                      row
                     >
-                      <FormControlLabel 
-                        value="home" 
-                        control={<Radio />} 
-                        label={isMobile ? "Início" : "Página Inicial"} 
-                      />
-                      <FormControlLabel 
-                        value="concurso" 
-                        control={<Radio />} 
-                        label="Concurso" 
-                      />
-                      <FormControlLabel 
-                        value="cotacoes" 
-                        control={<Radio />} 
-                        label={isMobile ? "Cotações" : "Cotações"} 
-                      />
+                      <FormControlLabel value="home" control={<Radio />} label="Página Inicial" />
+                      <FormControlLabel value="concurso" control={<Radio />} label="Concurso" />
+                      <FormControlLabel value="cotacoes" control={<Radio />} label="Cotações" />
                     </RadioGroup>
                   </FormControl>
 
@@ -465,13 +412,14 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                         variant="outlined"
                         fullWidth
                         multiline
-                        rows={isMobile ? 2 : 3}
+                        rows={3}
                         value={formData.description}
                         onChange={(e) => setFormData({...formData, description: e.target.value})}
                         inputProps={{ maxLength: 150 }}
                         helperText={`${formData.description.length}/150 caracteres`}
                         sx={{ mb: 2 }}
                       />
+
                       <TextField
                         label="Link externo (opcional)"
                         variant="outlined"
@@ -480,26 +428,41 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                         onChange={(e) => setFormData({...formData, link: e.target.value})}
                         sx={{ mb: 2 }}
                       />
+
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
                           Imagem do anúncio *
                         </Typography>
-                        <input 
-                          type="file" 
-                          onChange={handleFileChange} 
-                          accept="image/*"
-                          required
-                          style={{ width: '100%' }}
-                        />
-                        {formData.imageUrl && (
+                        <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<UploadIcon />}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      Escolher imagem
+                      <input
+                        type="file"
+                        hidden
+                        onChange={handleFileChange}
+                        accept="image/*"
+                        required
+                      />
+                    </Button>
+                    {formData.imageUrl && (
                           <Box sx={{ mt: 2 }}>
-                            <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                               Pré-visualização:
                             </Typography>
                             <img
                               src={formData.imageUrl}
                               alt="Preview da Imagem"
-                              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }}
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '200px',
+                                borderRadius: '12px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                objectFit: 'cover',
+                              }}
                             />
                           </Box>
                         )}
@@ -507,69 +470,45 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                     </>
                   )}
 
-                  {isMobile ? (
-                    <>
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => setOpenProvinciasDialog(true)}
-                        sx={{ mb: 2 }}
-                      >
-                        Províncias ({selectedProvincias.length})
-                      </Button>
-                      
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => setOpenSectoresDialog(true)}
-                        sx={{ mb: 2 }}
-                      >
-                        Setores ({selectedSectores.length})
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel>Províncias *</InputLabel>
-                        <Select
-                          multiple
-                          value={selectedProvincias}
-                          onChange={(e) => setSelectedProvincias(e.target.value)}
-                          renderValue={(selected) => selected.join(', ')}
-                          label="Províncias *"
-                        >
-                          {provincias.map((provincia) => (
-                            <MenuItem key={provincia.provincia} value={provincia.provincia}>
-                              <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
-                              <ListItemText primary={provincia.provincia} />
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
+                  <FormControl fullWidth sx={{ mb: 3 }}>
+                    <InputLabel>Províncias *</InputLabel>
+                    <Select
+                      multiple
+                      value={selectedProvincias}
+                      onChange={(e) => setSelectedProvincias(e.target.value)}
+                      renderValue={(selected) => selected.join(', ')}
+                      label="Províncias *"
+                    >
+                      {provincias.map((provincia) => (
+                        <MenuItem key={provincia.provincia} value={provincia.provincia}>
+                          <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                          <ListItemText primary={provincia.provincia} />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
-                      <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel>Setores de Atividade *</InputLabel>
-                        <Select
-                          multiple
-                          value={selectedSectores}
-                          onChange={(e) => setSelectedSectores(e.target.value)}
-                          renderValue={(selected) => selected.join(', ')}
-                          label="Setores de Atividade *"
-                        >
-                          {sectores.map((setor) => (
-                            <MenuItem key={setor.setor} value={setor.setor}>
-                              <Checkbox checked={selectedSectores.includes(setor.setor)} />
-                              <ListItemText primary={setor.setor} />
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </>
-                  )}
+                  <FormControl fullWidth sx={{ mb: 3 }}>
+                    <InputLabel>Setores de Atividade *</InputLabel>
+                    <Select
+                      multiple
+                      value={selectedSectores}
+                      onChange={(e) => setSelectedSectores(e.target.value)}
+                      renderValue={(selected) => selected.join(', ')}
+                      label="Setores de Atividade *"
+                    >
+                      {sectores.map((setor) => (
+                        <MenuItem key={setor.setor} value={setor.setor}>
+                          <Checkbox checked={selectedSectores.includes(setor.setor)} />
+                          <ListItemText primary={setor.setor} />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
                   <Box mb={3}>
                     <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
-                      Duração (1-30 dias): *
+                      Duração do Anúncio (1 a 30 dias): *
                     </Typography>
                     <TextField
                       type="number"
@@ -595,15 +534,15 @@ const CreateAdTab = ({ user, onAdCreated }) => {
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <Card variant="outlined" sx={{ position: isMobile ? 'static' : 'sticky', top: 16 }}>
+              <Card variant="outlined" sx={{ position: 'sticky', top: 16 }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                    Resumo
+                    Resumo do Anúncio
                   </Typography>
 
                   {hasSMSModule && (
                     <Alert severity="success" sx={{ mb: 2 }}>
-                      <strong>Módulo Anunciar ativo:</strong> Sem custos
+                      <strong>Módulo SMS ativo:</strong> Sem custos adicionais
                     </Alert>
                   )}
 
@@ -622,26 +561,26 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                   </Box>
 
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2">Províncias:</Typography>
+                    <Typography variant="subtitle2">Províncias selecionadas:</Typography>
                     <Typography>
                       {selectedProvincias.length > 0 
-                        ? (isMobile ? `${selectedProvincias.length} selecionadas` : selectedProvincias.join(', ')) 
-                        : 'Nenhuma'}
+                        ? selectedProvincias.join(', ') 
+                        : 'Nenhuma selecionada'}
                     </Typography>
                   </Box>
 
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2">Setores:</Typography>
+                    <Typography variant="subtitle2">Setores selecionados:</Typography>
                     <Typography>
                       {selectedSectores.length > 0 
-                        ? (isMobile ? `${selectedSectores.length} selecionados` : selectedSectores.join(', ')) 
-                        : 'Nenhum'}
+                        ? selectedSectores.join(', ') 
+                        : 'Nenhum selecionado'}
                     </Typography>
                   </Box>
 
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="subtitle2">Empresas atingidas:</Typography>
-                    <Typography>{empresasAtingidas}</Typography>
+                    <Typography>{empresasAtingidas} empresas</Typography>
                   </Box>
 
                   <Divider sx={{ my: 2 }} />
@@ -664,10 +603,10 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       case 1:
         return hasSMSModule ? (
           // Confirmation step for SMS module
-          <Card variant="outlined" sx={{ p: isMobile ? 1 : 3, textAlign: 'center' }}>
+          <Card variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
             <CardContent>
               <Box sx={{ mb: 3 }}>
-                <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                   Anúncio Criado!
                 </Typography>
               </Box>
@@ -675,15 +614,16 @@ const CreateAdTab = ({ user, onAdCreated }) => {
               <Typography variant="body1" sx={{ mb: 2 }}>
                 Seu anúncio foi criado com sucesso usando seu módulo SMS.
               </Typography>
+
               <Typography variant="body1" sx={{ mb: 4 }}>
-                ID: <strong>{currentAdId}</strong>
+                ID do Anúncio: <strong>{currentAdId}</strong>
               </Typography>
+
               <Button
                 variant="contained"
                 color="primary"
                 onClick={resetForm}
                 sx={{ mt: 2 }}
-                fullWidth={isMobile}
               >
                 Criar Novo Anúncio
               </Button>
@@ -691,9 +631,9 @@ const CreateAdTab = ({ user, onAdCreated }) => {
           </Card>
         ) : (
           // Payment step for non-SMS users
-          <Card variant="outlined" sx={{ p: isMobile ? 1 : 3 }}>
+          <Card variant="outlined" sx={{ p: 3 }}>
             <CardContent>
-              <Typography variant={isMobile ? "h6" : "h5"} gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
                 Pagamento via M-Pesa
               </Typography>
 
@@ -722,8 +662,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                 required
                 helperText={
                   formData.phoneNumber && !/^258\d{9}$/.test(formData.phoneNumber)
-                    ? 'Número inválido. Formato: 258XXXXXXXXX'
-                    : 'Número registado no M-Pesa'
+                    ? 'Número inválido. Formato correto: 258XXXXXXXXX (12 dígitos no total)'
+                    : 'Número de telefone registado no M-Pesa'
                 }
                 error={formData.phoneNumber.length > 0 && !/^258\d{9}$/.test(formData.phoneNumber)}
                 InputProps={{
@@ -738,12 +678,11 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                 </Alert>
               )}
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, gap: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
                 <Button
                   variant="outlined"
                   onClick={handleBack}
                   disabled={loading}
-                  fullWidth={isMobile}
                 >
                   Voltar
                 </Button>
@@ -752,9 +691,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                   color="primary"
                   onClick={handlePayment}
                   disabled={loading}
-                  fullWidth={isMobile}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Pagar'}
+                  {loading ? <CircularProgress size={24} /> : 'Pagar Agora'}
                 </Button>
               </Box>
             </CardContent>
@@ -762,10 +700,10 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         );
       case 2:
         return (
-          <Card variant="outlined" sx={{ p: isMobile ? 1 : 3, textAlign: 'center' }}>
+          <Card variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
             <CardContent>
               <Box sx={{ mb: 3 }}>
-                <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                   Pagamento Concluído!
                 </Typography>
               </Box>
@@ -775,7 +713,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
               </Typography>
 
               <Typography variant="body1" sx={{ mb: 4 }}>
-                ID: <strong>{currentAdId}</strong>
+                ID do Anúncio: <strong>{currentAdId}</strong>
               </Typography>
 
               <Button
@@ -783,7 +721,6 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                 color="primary"
                 onClick={resetForm}
                 sx={{ mt: 2 }}
-                fullWidth={isMobile}
               >
                 Criar Novo Anúncio
               </Button>
@@ -796,37 +733,18 @@ const CreateAdTab = ({ user, onAdCreated }) => {
   };
 
   return (
-    <Paper elevation={isMobile ? 0 : 3} sx={{ p: isMobile ? 1 : 3 }}>
+    <Paper elevation={3} sx={{ p: 3 }}>
       <Box sx={{ mb: 4 }}>
         <Stepper activeStep={activeStep} alternativeLabel>
           {steps.map((label) => (
             <Step key={label}>
-              <StepLabel>{isMobile ? label.substring(0, 3) : label}</StepLabel>
+              <StepLabel>{label}</StepLabel>
             </Step>
           ))}
         </Stepper>
       </Box>
 
       {renderStepContent(activeStep)}
-
-      {/* Mobile dialogs for multi-select */}
-      {renderMobileSelectDialog(
-        "Selecionar Províncias",
-        provincias,
-        selectedProvincias,
-        setSelectedProvincias,
-        openProvinciasDialog,
-        setOpenProvinciasDialog
-      )}
-      
-      {renderMobileSelectDialog(
-        "Selecionar Setores",
-        sectores,
-        selectedSectores,
-        setSelectedSectores,
-        openSectoresDialog,
-        setOpenSectoresDialog
-      )}
 
       {activeStep === 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
@@ -835,7 +753,6 @@ const CreateAdTab = ({ user, onAdCreated }) => {
             onClick={handleNext}
             sx={{ ml: 1 }}
             disabled={loading}
-            fullWidth={isMobile}
           >
             {loading ? <CircularProgress size={24} /> : 'Próximo'}
           </Button>
@@ -843,12 +760,11 @@ const CreateAdTab = ({ user, onAdCreated }) => {
       )}
 
       {!hasSMSModule && activeStep === 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, gap: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
           <Button
             variant="outlined"
             onClick={handleBack}
             disabled={loading}
-            fullWidth={isMobile}
           >
             Voltar
           </Button>
@@ -857,9 +773,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
             color="primary"
             onClick={handlePayment}
             disabled={loading}
-            fullWidth={isMobile}
           >
-            {loading ? <CircularProgress size={24} /> : 'Pagar'}
+            {loading ? <CircularProgress size={24} /> : 'Pagar Agora'}
           </Button>
         </Box>
       )}
@@ -868,7 +783,6 @@ const CreateAdTab = ({ user, onAdCreated }) => {
         open={snackbar.open} 
         autoHideDuration={6000} 
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert 
           onClose={handleCloseSnackbar} 
