@@ -437,16 +437,14 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                       variant="outlined"
                       component="label"
                       startIcon={<UploadIcon />}
-                      sx={{ textTransform: 'none' }}
-                    >
+                      sx={{ textTransform: 'none' }}>
                       Escolher imagem
                       <input
                         type="file"
                         hidden
                         onChange={handleFileChange}
                         accept="image/*"
-                        required
-                      />
+                        required/>
                     </Button>
                     {formData.imageUrl && (
                           <Box sx={{ mt: 2 }}>
