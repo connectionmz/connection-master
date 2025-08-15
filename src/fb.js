@@ -3,30 +3,30 @@ import { getAuth, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
 
-/** 🔵 Configuração do Projeto 1 - Connection Mozambique */
+// 🔵 Configuração do Projeto 1 - Connection Mozambique
 const firebaseConfig1 = {
-  apiKey: "AIzaSyCNNNmVpL9mmwPwighQkz53YlOadIvdRas",
-  authDomain: "connectionmz.firebaseapp.com",
-  projectId: "connectionmz",
-  storageBucket: "connectionmz.firebasestorage.app",
-  messagingSenderId: "1063227375294",
-  appId: "1:1063227375294:web:4d494e2d9951302fade8ef",
-  measurementId: "G-FDXBJWJ0M4"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY_1,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN_1,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID_1,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET_1,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID_1,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID_1,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_1
 };
 
-/** 🔴 Configuração do Projeto 2 - Connections */
+// 🔴 Configuração do Projeto 2 - Connections
 const firebaseConfig2 = {
-  apiKey: "AIzaSyChEniFx32nBnrcOvditSwLTglTBPTCWVQ",
-  authDomain: "connections-d1be1.firebaseapp.com",
-  databaseURL: "https://connections-d1be1-default-rtdb.firebaseio.com",
-  projectId: "connections-d1be1",
-  storageBucket: "connections-d1be1.appspot.com",
-  messagingSenderId: "89340878669",
-  appId: "1:89340878669:web:83a91ab3aab71257c66104",
-  measurementId: "G-HZRYF1DR6N"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY_2,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN_2,
+  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL_2,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID_2,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET_2,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID_2,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID_2,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_2
 };
 
-// Inicializar os dois apps com nomes diferentes
+// Inicializar os dois apps
 const app = initializeApp(firebaseConfig1); // padrão
 const app2 = initializeApp(firebaseConfig2, "appSecundario"); // nome personalizado
 

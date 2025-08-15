@@ -444,7 +444,8 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                         hidden
                         onChange={handleFileChange}
                         accept="image/*"
-                        required/>
+                        required
+                        />
                     </Button>
                     {formData.imageUrl && (
                           <Box sx={{ mt: 2 }}>
@@ -643,7 +644,6 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                   {formatPrice(totalCost)} MT
                 </Typography>
               </Box>
-
               <TextField
                 label="Telefone M-Pesa *"
                 value={formData.phoneNumber}
@@ -669,27 +669,23 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                 }}
                 sx={{ mb: 3 }}
               />
-
               {paymentError && (
                 <Alert severity="error" sx={{ mb: 3 }}>
                   {paymentError}
                 </Alert>
               )}
-
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
                 <Button
                   variant="outlined"
                   onClick={handleBack}
-                  disabled={loading}
-                >
+                  disabled={loading}>
                   Voltar
                 </Button>
                 <Button
                   variant="contained"
                   color="primary"
                   onClick={handlePayment}
-                  disabled={loading}
-                >
+                  disabled={loading}>
                   {loading ? <CircularProgress size={24} /> : 'Pagar Agora'}
                 </Button>
               </Box>
@@ -705,21 +701,17 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                   Pagamento Concluído!
                 </Typography>
               </Box>
-
               <Typography variant="body1" sx={{ mb: 2 }}>
                 Seu anúncio foi criado com sucesso e está ativo.
               </Typography>
-
               <Typography variant="body1" sx={{ mb: 4 }}>
                 ID do Anúncio: <strong>{currentAdId}</strong>
               </Typography>
-
               <Button
                 variant="contained"
                 color="primary"
                 onClick={resetForm}
-                sx={{ mt: 2 }}
-              >
+                sx={{ mt: 2 }}>
                 Criar Novo Anúncio
               </Button>
             </CardContent>
@@ -762,26 +754,22 @@ const CreateAdTab = ({ user, onAdCreated }) => {
           <Button
             variant="outlined"
             onClick={handleBack}
-            disabled={loading}
-          >
+            disabled={loading}>
             Voltar
           </Button>
           <Button
             variant="contained"
             color="primary"
             onClick={handlePayment}
-            disabled={loading}
-          >
+            disabled={loading}>
             {loading ? <CircularProgress size={24} /> : 'Pagar Agora'}
           </Button>
         </Box>
       )}
-
       <Snackbar 
         open={snackbar.open} 
         autoHideDuration={6000} 
-        onClose={handleCloseSnackbar}
-      >
+        onClose={handleCloseSnackbar}>
         <Alert 
           onClose={handleCloseSnackbar} 
           severity={snackbar.severity}
@@ -793,5 +781,4 @@ const CreateAdTab = ({ user, onAdCreated }) => {
     </Paper>
   );
 };
-
 export default CreateAdTab;

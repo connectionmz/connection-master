@@ -146,10 +146,10 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                             const sectorMatch = !cotacaoSector || 
                                              (user?.sector && cotacaoSector === user.sector);
                         
-                            const cotacaoProvincia = cotacao.company?.provincia;
-                            const provinciaMatch = !cotacaoProvincia || 
-                                                cotacaoProvincia === 'Todas' || 
-                                                (user?.provincia && cotacaoProvincia === user.provincia);
+                           const cotacaoProvincias = cotacao.provincias || [];
+                const provinciaMatch = cotacaoProvincias.length === 0 || 
+                                     cotacaoProvincias.includes('Todas') ||
+                                     (user?.provincia && cotacaoProvincias.includes(user.provincia));
                             
                             return sectorMatch && provinciaMatch;
                         });

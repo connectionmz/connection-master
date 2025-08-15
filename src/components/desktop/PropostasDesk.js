@@ -40,6 +40,9 @@ const PropostasDesk = ({user}) => {
     
     onValue(propostasRef, (snapshot) => {
       const data = snapshot.val();
+
+      console.log(data)
+
       if (data) {
         const propostasArray = Object.entries(data).map(([key, value]) => ({
           id: key,
@@ -192,7 +195,6 @@ const PropostasDesk = ({user}) => {
                   <Tooltip title="Ver perfil da empresa">
                     <Avatar
                       onClick={(e) => handleEmpresaClick(e, proposta.from.id)}
-                      src={proposta.from.logo}  // Adicionado para mostrar o logo da empresa
                       sx={{ 
                         width: 40, 
                         height: 40,
