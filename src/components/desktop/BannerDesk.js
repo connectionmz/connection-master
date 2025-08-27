@@ -35,7 +35,8 @@ const BannerDesk = ({ user }) => {
   }, []);
 
   const bannerMatchesUser = useCallback((banner, currentUser) => {
-    if (!currentUser) return false;
+    // Se o usuário não está logado, exibe todos os banners
+    if (!currentUser) return true;
     
     const bannerProvincias = banner.provincias || [];
     const bannerSectores = banner.sectores || [];
@@ -43,6 +44,7 @@ const BannerDesk = ({ user }) => {
     const hasProvinciaFilter = bannerProvincias.length > 0;
     const hasSectorFilter = bannerSectores.length > 0;
 
+    // Se não há filtros no banner, exibe para todos os usuários
     if (!hasProvinciaFilter && !hasSectorFilter) return true;
 
     const userProvincia = currentUser.provinciaTemp || currentUser.provincia || '';
@@ -85,17 +87,24 @@ const BannerDesk = ({ user }) => {
         updates[`anuncios_metrics/${bannerId}/total_cliques`] = increment(1);
         updates[`anuncios_metrics/${bannerId}/ultimo_clique`] = timestamp;
         updates[`anuncios_metrics/${bannerId}/from`] = 'Pagina Inicial';
-        updates[`anuncios_metrics/${bannerId}/company`] = {
-          id: user?.id,
-          nome: user?.nome,
-          provincia: user?.provincia,
-          distrito: user?.distrito,
-          contacto: user?.contacto,
-          sector:user?.sector,
-          email: user?.email
+        
+        // Só adiciona dados do usuário se estiver logado
+        if (user?.id) {
+          updates[`anuncios_metrics/${bannerId}/company`] = {
+            id: user.id,
+            nome: user.nome,
+            provincia: user.provincia,
+            distrito: user.distrito,
+            contacto: user.contacto,
+            sector: user.sector,
+            email: user.email
+          }
+          updates[`users/${userId}/anuncios_clicados/${bannerId}`] = clickData;
+        } else {
+          // Para usuários não logados, registra como 'guest'
+          updates[`anuncios_metrics/${bannerId}/guest_clicks`] = increment(1);
+          updates[`guest_clicks/${clickKey}`] = clickData;
         }
-
-            updates[`users/${userId}/anuncios_clicados/${bannerId}`] = clickData;
 
         await update(ref(db), updates);
     } catch (error) {
