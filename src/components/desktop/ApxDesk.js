@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ref, update } from "firebase/database";
+import { get, onValue, ref, update } from "firebase/database";
 import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../../fb";
 import { signOut } from "firebase/auth";
@@ -32,6 +32,7 @@ const ApxDesk = ({ user }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+    const [provincias, setProvincias] = useState([]);
 
 
 const { activeModules, isLoading } = useActiveModules();
@@ -47,6 +48,19 @@ const { activeModules, isLoading } = useActiveModules();
       .catch((error) => console.error("Logout Error: ", error));
   };
 
+// One-time read
+get(ref(db, 'provincias'))
+  .then((snapshot) => {
+    if (snapshot.exists()) {
+      setProvincias(snapshot.val());
+    } else {
+      setProvincias([]);
+    }
+  })
+  .catch((error) => {
+    console.error("Error fetching data:", error);
+    setProvincias([]);
+  });
   const saveProvince = async () => {
     const isConfirmed = window.confirm(
       `Tem certeza que deseja mudar a localização para ${provinceTemp}?`
@@ -138,14 +152,12 @@ const { activeModules, isLoading } = useActiveModules();
                   '& .MuiSelect-select': { py: 0.5 }
                 }}
               >
-                {[
-                  "Maputo", "Gaza", "Inhambane", "Sofala", "Manica", "Tete",
-                  "Zambézia", "Nampula", "Cabo Delgado", "Niassa",
-                ].map((prov) => (
-                  <MenuItem key={prov} value={prov}>
-                    {prov}
-                  </MenuItem>
-                ))}
+                  <MenuItem value="">Todas</MenuItem>
+                             {provincias.map((prov) => (
+                               <MenuItem key={prov.provincia} value={prov.provincia}>
+                                 {prov.provincia}
+                               </MenuItem>
+                             ))}
               </Select>
             </Box>
             <IconButton 
