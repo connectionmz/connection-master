@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { calculateCTR, formatDate, formatPrice } from './adUtils';
 
-export const generateAdReport = async (ad, stats) => {
+export const generateAdReport = async (ad, adStats, interestedCompanies = []) => {
   const doc = new jsPDF();
   
   // Adicionar logo ou cabeçalho
@@ -18,19 +18,20 @@ export const generateAdReport = async (ad, stats) => {
   doc.setFontSize(10);
   
   const adInfo = [
-    ['Descrição:', ad.description],
+    ['Descrição:', ad.description || 'Nenhuma descrição'],
     ['Tipo:', 
       ad.tipoAnuncio === 'home' ? 'Página Inicial' :
-      ad.tipoAnuncio === 'concurso' ? 'Concurso' :
-      ad.tipoAnuncio === 'cotacoes' ? 'Cotações' : 'Destacar Perfil'
+      ad.tipo === 'concurso' ? 'Concurso' :
+      ad.tipoAnuncio === 'cotacoes' ? 'Cotações' : 
+      ad.tipoAnuncio === 'destacar' ? 'Destacar Perfil' : ad.tipoAnuncio || 'Desconhecido'
     ],
-    ['Duração:', `${ad.days} dias`],
-    ['Custo:', `${formatPrice(ad.totalCost)} MT`],
-    ['Status:', ad.status],
+    ['Duração:', `${ad.days || 0} dias`],
+    ['Custo:', `${formatPrice(ad.totalCost || 0)} MT`],
+    ['Status:', ad.status || 'Desconhecido'],
     ['Criado em:', formatDate(ad.uploadedAt)],
     ['Expira em:', formatDate(ad.expireDate)],
-    ['Províncias:', ad.provincias?.join(', ') || 'Nenhuma'],
-    ['Setores:', ad.sectores?.join(', ') || 'Nenhum'],
+    ['Províncias:', ad.provincias?.join(', ') || 'Todas'],
+    ['Setores:', ad.sectores?.join(', ') || 'Todos'],
   ];
   
   doc.autoTable({
@@ -43,12 +44,11 @@ export const generateAdReport = async (ad, stats) => {
   
   // Estatísticas gerais
   doc.setFontSize(14);
-  doc.text('Estatísticas Gerais', 14, doc.autoTable.previous.finalY + 15);
+  doc.text('Estatísticas de Cliques', 14, doc.autoTable.previous.finalY + 15);
   
   const generalStats = [
-    ['Impressões', stats.impressions],
-    ['Cliques', stats.clicks],
-    ['CTR', `${calculateCTR(stats.clicks, stats.impressions)}%`],
+    ['Total de Cliques', adStats.clicks || 0],
+    ['Potenciais Interessados', interestedCompanies.length || 0],
   ];
   
   doc.autoTable({
@@ -59,55 +59,57 @@ export const generateAdReport = async (ad, stats) => {
     headStyles: { fillColor: [41, 128, 185] },
   });
   
-  // Desempenho por setor
-  if (stats.performanceBySector.length > 0) {
+  // Empresas que clicaram (apenas as top 5)
+  if (adStats.companiesReached && adStats.companiesReached.length > 0) {
     doc.setFontSize(14);
-    doc.text('Desempenho por Setor', 14, doc.autoTable.previous.finalY + 15);
+    doc.text('Empresas que Clicaram no Anúncio', 14, doc.autoTable.previous.finalY + 15);
     
-    const sectorData = stats.performanceBySector.map(sector => [
-      sector.sector,
-      sector.impressions,
-      sector.clicks,
-      `${sector.ctr}%`
-    ]);
-    
-    doc.autoTable({
-      startY: doc.autoTable.previous.finalY + 20,
-      head: [['Setor', 'Impressões', 'Cliques', 'CTR']],
-      body: sectorData,
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] },
-    });
-  }
-  
-  // Empresas atingidas (apenas as top 5)
-  if (stats.companiesReached.length > 0) {
-    doc.setFontSize(14);
-    doc.text('Top 5 Empresas Atingidas', 14, doc.autoTable.previous.finalY + 15);
-    
-    const companiesData = stats.companiesReached.slice(0, 5).map(company => [
+    const companiesData = adStats.companiesReached.slice(0, 5).map(company => [
       company.name,
-      company.impressions,
       company.clicks,
-      `${company.ctr}%`
+      company.interestDescription,
+      company.provincia
     ]);
     
     doc.autoTable({
       startY: doc.autoTable.previous.finalY + 20,
-      head: [['Empresa', 'Impressões', 'Cliques', 'CTR']],
+      head: [['Empresa', 'Cliques', 'Nível Interesse', 'Província']],
       body: companiesData,
       theme: 'grid',
       headStyles: { fillColor: [41, 128, 185] },
     });
     
-    if (stats.companiesReached.length > 5) {
+    if (adStats.companiesReached.length > 5) {
       doc.setFontSize(10);
       doc.text(
-        `+ ${stats.companiesReached.length - 5} outras empresas`, 
+        `+ ${adStats.companiesReached.length - 5} outras empresas`, 
         14, 
         doc.autoTable.previous.finalY + 10
       );
     }
+  }
+  
+  // Potenciais interessados (3+ cliques)
+  if (interestedCompanies && interestedCompanies.length > 0) {
+    doc.setFontSize(14);
+    doc.text('Potenciais Interessados (3+ cliques)', 14, doc.autoTable.previous.finalY + 15);
+    
+    const interestedData = interestedCompanies.map(company => [
+      company.name,
+      company.clicks,
+      company.provincia,
+      company.sector,
+      company.contacto !== 'Não disponível' ? company.contacto : '-',
+      company.email !== 'Não disponível' ? company.email : '-'
+    ]);
+    
+    doc.autoTable({
+      startY: doc.autoTable.previous.finalY + 20,
+      head: [['Empresa', 'Cliques', 'Província', 'Setor', 'Contacto', 'Email']],
+      body: interestedData,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185] },
+    });
   }
   
   // Rodapé

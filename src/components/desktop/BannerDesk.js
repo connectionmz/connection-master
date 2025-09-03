@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ref, onValue, update, serverTimestamp } from "firebase/database";
+import { ref, onValue, update, serverTimestamp, runTransaction } from "firebase/database";
 import { db } from '../../fb';
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -17,16 +17,22 @@ import LanguageIcon from '@mui/icons-material/Language';
 import BusinessIcon from '@mui/icons-material/Business';
 import anunciar from '../../img/anunciar.gif';
 
+// Cache para evitar múltiplas requisições
+const companyCache = new Map();
+const CLICK_DEBOUNCE_TIME = 30000; // 30 segundos
+const MAX_CLICKS_PER_SESSION = 5; // Limite de cliques por sessão
+
 const BannerDesk = ({ user }) => {
   const [banners, setBanners] = useState([]);
   const [companies, setCompanies] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedBanner, setSelectedBanner] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [clickCounts, setClickCounts] = useState({});
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const getUserId = useCallback(() => user?.id || 'desconhecido', [user]);
+  const getUserId = useCallback(() => user?.id || 'guest', [user]);
 
   const isBannerExpired = useCallback((banner) => {
     if (banner.status === 'expired') return true;
@@ -35,7 +41,6 @@ const BannerDesk = ({ user }) => {
   }, []);
 
   const bannerMatchesUser = useCallback((banner, currentUser) => {
-    // Se o usuário não está logado, exibe todos os banners
     if (!currentUser) return true;
     
     const bannerProvincias = banner.provincias || [];
@@ -44,7 +49,6 @@ const BannerDesk = ({ user }) => {
     const hasProvinciaFilter = bannerProvincias.length > 0;
     const hasSectorFilter = bannerSectores.length > 0;
 
-    // Se não há filtros no banner, exibe para todos os usuários
     if (!hasProvinciaFilter && !hasSectorFilter) return true;
 
     const userProvincia = currentUser.provinciaTemp || currentUser.provincia || '';
@@ -72,64 +76,134 @@ const BannerDesk = ({ user }) => {
     ));
   }, [isBannerExpired, bannerMatchesUser]);
 
-  const registerClick = useCallback(async (bannerId) => {
-    const userId = getUserId();
-    const clickKey = `click_${bannerId}_${userId}`;
+const registerClick = useCallback(async (bannerId) => {
+  const userId = getUserId();
+  const now = Date.now();
+  const clickKey = `${bannerId}_${userId}`;
+
+  // Debounce: evitar cliques repetidos em curto período
+  const lastClick = clickCounts[clickKey] || { count: 0, timestamp: 0 };
+  
+  if (now - lastClick.timestamp < CLICK_DEBOUNCE_TIME) {
+    return;
+  }
+
+  // Limitar cliques por sessão para prevenir abuso
+  if (lastClick.count >= MAX_CLICKS_PER_SESSION) {
+    console.log('Limite de cliques atingido para este banner');
+    return;
+  }
+
+  // Atualizar contador local imediatamente para feedback responsivo
+  setClickCounts(prev => ({
+    ...prev,
+    [clickKey]: {
+      count: (prev[clickKey]?.count || 0) + 1,
+      timestamp: now
+    }
+  }));
+
+  try {
+    // Usar runTransaction para garantir atomicidade e obter valores atuais
+    await runTransaction(ref(db, `anuncios_metrics/${bannerId}`), (currentData) => {
+      const data = currentData || {};
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Atualizar total de cliques
+      const newTotalClicks = (data.total_cliques || 0) + 1;
+      
+      // Atualizar cliques por dia
+      const currentDailyClicks = data.cliques_por_dia || {};
+      const newDailyClicks = {
+        ...currentDailyClicks,
+        [today]: (currentDailyClicks[today] || 0) + 1
+      };
+
+      // Preparar dados atualizados
+      const updatedData = {
+        ...data,
+        total_cliques: newTotalClicks,
+        ultimo_clique: serverTimestamp(),
+        from: 'Pagina Inicial',
+        cliques_por_dia: newDailyClicks,
+        device_type: isMobile ? 'mobile' : 'desktop',
+        user_agent: navigator.userAgent.substring(0, 100),
+      };
+
+      // Adicionar dados do usuário se logado
+      if (user?.id) {
+        updatedData.user_data = {
+          ...data.user_data,
+          last_user_id: user.id,
+          last_click_time: serverTimestamp()
+        };
+      } else {
+        updatedData.guest_clicks = (data.guest_clicks || 0) + 1;
+      }
+
+      return updatedData;
+    });
+
+    // Registrar click do usuário (apenas se logado)
+    if (user?.id) {
+      await runTransaction(ref(db, `users/${userId}/anuncios_clicados/${bannerId}`), (currentData) => {
+        const data = currentData || {};
+        
+        return {
+          ...data,
+          timestamp: serverTimestamp(),
+          count: (data.count || 0) + 1,
+          last_click: serverTimestamp(),
+          referrer: document.referrer || 'direct',
+          banner_data: {
+            id: bannerId,
+            clicked_at: serverTimestamp(),
+            device_type: isMobile ? 'mobile' : 'desktop'
+          }
+        };
+      });
+    }
+
+  } catch (error) {
+    console.error('Erro ao registrar clique:', error);
+    // Reverter contador local em caso de erro
+    setClickCounts(prev => ({
+      ...prev,
+      [clickKey]: {
+        count: Math.max(0, (prev[clickKey]?.count || 1) - 1),
+        timestamp: prev[clickKey]?.timestamp || now
+      }
+    }));
+  }
+}, [getUserId, user, isMobile, clickCounts]);
+
+  // Função auxiliar para obter valores atuais (simplificada)
+  const getCurrentValue = useCallback(async (path) => {
+    // Em produção, você pode implementar uma cache local ou
+    // usar uma abordagem diferente dependendo das necessidades
+    return 0; // Valor padrão - em produção, implemente lógica adequada
+  }, []);
+
+  const fetchCompanyData = useCallback(async (companyId) => {
+    if (!companyId || companies[companyId] || companyCache.has(companyId)) {
+      return;
+    }
 
     try {
-        const updates = {};
-        const timestamp = serverTimestamp();
-
-        const clickData = {
-            timestamp,
-            referrer: document.referrer || 'direct',
-        };
-        updates[`anuncios_metrics/${bannerId}/total_cliques`] = increment(1);
-        updates[`anuncios_metrics/${bannerId}/ultimo_clique`] = timestamp;
-        updates[`anuncios_metrics/${bannerId}/from`] = 'Pagina Inicial';
-        
-        // Só adiciona dados do usuário se estiver logado
-        if (user?.id) {
-          updates[`anuncios_metrics/${bannerId}/company`] = {
-            id: user.id,
-            nome: user.nome,
-            provincia: user.provincia,
-            distrito: user.distrito,
-            contacto: user.contacto,
-            sector: user.sector,
-            email: user.email
-          }
-          updates[`users/${userId}/anuncios_clicados/${bannerId}`] = clickData;
-        } else {
-          // Para usuários não logados, registra como 'guest'
-          updates[`anuncios_metrics/${bannerId}/guest_clicks`] = increment(1);
-          updates[`guest_clicks/${clickKey}`] = clickData;
-        }
-
-        await update(ref(db), updates);
-    } catch (error) {
-        console.error('Erro ao registrar clique:', error);
-    }
-  }, [getUserId, user]);
-
-  const fetchCompanyData = useCallback((companyId) => {
-    return new Promise((resolve) => {
-      if (!companyId || companies[companyId]) {
-        resolve();
-        return;
-      }
       const companyRef = ref(db, `company/${companyId}`);
-      const unsubscribe = onValue(companyRef, (snapshot) => {
+      onValue(companyRef, (snapshot) => {
         const companyData = snapshot.val();
         if (companyData) {
+          companyCache.set(companyId, companyData);
           setCompanies((prev) => ({
             ...prev,
             [companyId]: companyData,
           }));
         }
-      });
-      resolve(unsubscribe);
-    });
+      }, { onlyOnce: true });
+    } catch (error) {
+      console.error('Erro ao carregar dados da empresa:', error);
+    }
   }, [companies]);
 
   const handleBannerClick = useCallback((banner) => {
@@ -144,8 +218,8 @@ const BannerDesk = ({ user }) => {
 
   useEffect(() => {
     if (banners.length > 0) {
-      const companyIds = banners.map(banner => banner.companyId).filter(Boolean);
-      companyIds.forEach(fetchCompanyData);
+      const uniqueCompanyIds = [...new Set(banners.map(banner => banner.companyId).filter(Boolean))];
+      uniqueCompanyIds.forEach(fetchCompanyData);
     }
   }, [banners, fetchCompanyData]);
 
@@ -245,7 +319,8 @@ const BannerDesk = ({ user }) => {
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  cursor: 'pointer'
                 }}
                 onClick={() => handleBannerClick(banner)}
               >
@@ -260,14 +335,9 @@ const BannerDesk = ({ user }) => {
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
                     backgroundImage: `url(${banner.imageUrl})`,
-                    '&:before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(0,0,0,0.1)'
+                    '&:hover': {
+                      transform: 'scale(1.02)',
+                      transition: 'transform 0.3s ease'
                     }
                   }}
                 >
@@ -303,7 +373,10 @@ const BannerDesk = ({ user }) => {
                   <Link 
                     href={`/perfil/${company.id}`} 
                     style={{ textDecoration: 'none' }} 
-                    onClick={() => setOpenDialog(false)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDialog(false);
+                    }}
                   >
                     <Avatar
                       src={company.logoUrl || ''}
@@ -315,11 +388,9 @@ const BannerDesk = ({ user }) => {
                         transition: 'transform 0.2s',
                         '&:hover': {
                           transform: 'scale(1.05)',
-                          cursor: 'pointer',
                         }
                       }}
-                    >
-                    </Avatar>
+                    />
                   </Link>
                 </Box>
               </Box>
@@ -385,7 +456,11 @@ const BannerDesk = ({ user }) => {
             alignItems: 'center'
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Link href={`/perfil/${companies[selectedBanner.companyId]?.id}`} style={{ color: 'white', textDecoration: 'none' }}>
+              <Link 
+                href={`/perfil/${companies[selectedBanner.companyId]?.id}`} 
+                style={{ color: 'white', textDecoration: 'none' }}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Typography variant="h6">
                   {companies[selectedBanner.companyId]?.nome || 'Detalhes do Anúncio'}
                 </Typography>
@@ -507,7 +582,11 @@ const BannerDesk = ({ user }) => {
                       {companies[selectedBanner.companyId].website && (
                         <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LanguageIcon color="primary" fontSize="small" />
-                          <Link href={companies[selectedBanner.companyId].website} target="_blank">
+                          <Link 
+                            href={companies[selectedBanner.companyId].website} 
+                            target="_blank"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {companies[selectedBanner.companyId].website}
                           </Link>
                         </Typography>
@@ -526,7 +605,10 @@ const BannerDesk = ({ user }) => {
                       size="large"
                       href={selectedBanner.link}
                       target="_blank"
-                      onClick={() => registerClick(selectedBanner.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        registerClick(selectedBanner.id);
+                      }}
                       sx={{ mt: 2 }}
                     >
                       Visitar Site do Anúncio
@@ -541,13 +623,5 @@ const BannerDesk = ({ user }) => {
     </Box>
   );
 };
-
-function increment(value) {
-  return {
-    '.sv': {
-      'increment': value
-    }
-  };
-}
 
 export default BannerDesk;

@@ -18,12 +18,10 @@ import {
   Chip,
   CircularProgress,
   IconButton,
-  Tooltip,
-  Divider,
   Tabs,
   Tab
 } from '@mui/material';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, get, query, orderByChild, equalTo } from 'firebase/database';
 import { db } from '../../fb';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CloseIcon from '@mui/icons-material/Close';
@@ -37,9 +35,7 @@ import { generateAdReport } from './reportGenerator';
 const AdDetailsDialog = ({ open, onClose, ad }) => {
   const [adStats, setAdStats] = useState({
     clicks: 0,
-    impressions: 0,
     companiesReached: [],
-    performanceBySector: [],
     loadingStats: true,
   });
   const [tabValue, setTabValue] = useState(0);
@@ -48,20 +44,20 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
   const classifyCompaniesByInterest = (companies) => {
     const classified = companies.map(company => {
       let interestLevel = 'baixo';
-      let interestDescription = 'Visualizou o anúncio';
+      let interestDescription = 'Clicou';
       let interestIcon = null;
       
-      if (company.clicks >= 3) {
+      // Apenas 3+ cliques são considerados interessados
+      if (company.clicks >= 2) {
         interestLevel = 'alto';
         interestDescription = '(3+ cliques)';
         interestIcon = <StarIcon color="error" fontSize="small" />;
       } else if (company.clicks === 2) {
-        interestLevel = 'médio';
+        interestLevel = 'baixo';
         interestDescription = '(2 cliques)';
-        interestIcon = <StarIcon color="warning" fontSize="small" />;
       } else if (company.clicks === 1) {
         interestLevel = 'baixo';
-        interestDescription = 'Visualizou o anúncio';
+        interestDescription = '(1 clique)';
       }
       
       return {
@@ -72,165 +68,159 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
       };
     });
 
-    setInterestedCompanies(
-      classified
-        .filter(c => c.interestLevel !== 'baixo')
-        .sort((a, b) => b.clicks - a.clicks)
-    );
+    // Apenas empresas com 3+ cliques são consideradas interessadas
+    const highInterestCompanies = classified
+      .filter(c => c.clicks >= 3)
+      .sort((a, b) => b.clicks - a.clicks);
+
+    setInterestedCompanies(highInterestCompanies);
 
     return classified;
   };
 
-  const fetchAdStats = useCallback(async (adId, companyId, tipoAnuncio) => {
+  const fetchAdStats = useCallback(async (adId) => {
+    if (!adId) {
+      console.error('Missing ad ID for fetchAdStats');
+      setAdStats(prev => ({ ...prev, loadingStats: false }));
+      return;
+    }
+
     setAdStats(prev => ({ ...prev, loadingStats: true }));
     
     try {
-      // Fetch anuncios_metrics
-      const metricsRef = ref(db, `anuncios_metrics`);
-      const metricsSnapshot = await new Promise(resolve => {
-        onValue(metricsRef, (snapshot) => {
-          resolve(snapshot.val() || {});
-        }, { onlyOnce: true });
-      });
+      console.log('Fetching ad stats for ad ID:', adId);
 
-      // Filter metrics by companyId and tipoAnuncio (assuming 'from' matches tipoAnuncio)
-      const adMetrics = Object.values(metricsSnapshot).filter(
-        metric => 
-          metric.company?.id === companyId && 
-          metric.from.toLowerCase() === tipoAnuncio.toLowerCase()
-      );
-
-      // Calculate total clicks and impressions
-      const totalClicks = adMetrics.reduce((sum, metric) => sum + (metric.total_cliques || 0), 0);
-      const uniqueCompanies = new Set(adMetrics.map(metric => metric.company.id));
-      const totalImpressions = adMetrics.length; // Assuming each metric entry is an impression
-
-      // Fetch loja_metrics for additional click data
-      const lojaMetricsRef = ref(db, `loja_metrics`);
-      const lojaMetricsSnapshot = await new Promise(resolve => {
-        onValue(lojaMetricsRef, (snapshot) => {
-          resolve(snapshot.val() || {});
-        }, { onlyOnce: true });
-      });
-
-      // Filter loja_metrics by companyId and tipoAnuncio
-      const lojaMetrics = Object.values(lojaMetricsSnapshot).filter(
-        metric => 
-          metric.company?.id === companyId && 
-          metric.from.toLowerCase() === tipoAnuncio.toLowerCase()
-      );
-
-      const lojaClicks = lojaMetrics.reduce((sum, metric) => sum + (metric.total_cliques || 0), 0);
-      const totalClicksCombined = totalClicks + lojaClicks;
-
-      // Aggregate company stats
-      const companiesStats = {};
+      // Buscar métricas do anúncio específico
+      const metricsRef = ref(db, `anuncios_metrics/${adId}`);
       
-      adMetrics.forEach(metric => {
-        const companyId = metric.company.id;
-        if (!companiesStats[companyId]) {
-          companiesStats[companyId] = {
-            id: companyId,
-            name: metric.company.nome,
-            provincia: metric.company.provincia,
-            sector: metric.company.sector || 'Não informado',
-            impressions: 0,
-            clicks: 0,
-          };
-        }
-        companiesStats[companyId].impressions += 1;
-        companiesStats[companyId].clicks += metric.total_cliques || 0;
-      });
+      const result = await new Promise((resolve) => {
+        onValue(metricsRef, async (snapshot) => {
+          const metricsData = snapshot.val();
+          console.log('Raw metrics data:', metricsData);
 
-      // Include loja_metrics in company stats
-      lojaMetrics.forEach(metric => {
-        const companyId = metric.company?.id || metric.id;
-        if (!companiesStats[companyId]) {
-          companiesStats[companyId] = {
-            id: companyId,
-            name: metric.company?.nome || 'Desconhecido',
-            provincia: metric.company?.provincia || 'Não informado',
-            sector: metric.company?.sector || 'Não informado',
-            impressions: 0,
-            clicks: 0,
-          };
-        }
-        companiesStats[companyId].impressions += 1;
-        companiesStats[companyId].clicks += metric.total_cliques || 0;
-      });
+          let totalClicks = metricsData?.total_cliques || 0;
+          const companiesStats = {};
 
-      // Convert to array and calculate CTR
-      const companiesArray = Object.values(companiesStats).map(company => ({
-        ...company,
-        ctr: calculateCTR(company.clicks, company.impressions),
-      }));
-
-      // Fetch company details for contacts
-      const companiesWithContacts = await Promise.all(
-        companiesArray.map(async company => {
-          const companyData = await new Promise(resolve => {
-            const companyRef = ref(db, `company/${company.id}`);
-            onValue(companyRef, (snapshot) => {
-              resolve(snapshot.val() || {});
+          // Buscar todos os usuários que clicaram neste anúncio
+          // Primeiro, vamos buscar na coleção users para encontrar todos os cliques
+          const usersRef = ref(db, 'users');
+          
+          const usersSnapshot = await new Promise((resolveUsers) => {
+            onValue(usersRef, (snapshot) => {
+              resolveUsers(snapshot.val() || {});
             }, { onlyOnce: true });
           });
-          
-          return {
-            ...company,
-            contacto: companyData.contacto || 'Não disponível',
-            email: companyData.email || 'Não disponível',
-            whatsapp: companyData.contacto ? `https://wa.me/258${companyData.contacto.replace(/\D/g, '')}` : null
-          };
-        })
-      );
 
-      // Classify companies by interest
-      const companiesWithInterest = classifyCompaniesByInterest(companiesWithContacts);
+          const companyIds = new Set();
 
-      // Process performance by sector
-      const sectorsRef = ref(db, 'sectores_de_atividade');
-      const sectorsSnapshot = await new Promise(resolve => {
-        onValue(sectorsRef, (snapshot) => {
-          resolve(snapshot.val() || []);
+          // Adicionar último usuário que clicou (se existir)
+          if (metricsData?.user_data?.last_user_id) {
+            companyIds.add(metricsData.user_data.last_user_id);
+          }
+
+          // Procurar em todos os usuários por cliques neste anúncio
+          Object.entries(usersSnapshot).forEach(([userId, userData]) => {
+            if (userData.anuncios_clicados && userData.anuncios_clicados[adId]) {
+              companyIds.add(userId);
+            }
+          });
+
+          // Buscar dados de todas as empresas que clicaram
+          if (companyIds.size > 0) {
+            const companiesPromises = Array.from(companyIds).map(async (companyId) => {
+              try {
+                const companyRef = ref(db, `company/${companyId}`);
+                const companySnapshot = await get(companyRef);
+                
+                if (companySnapshot.exists()) {
+                  const companyData = companySnapshot.val();
+                  
+                  // Contar cliques deste usuário neste anúncio
+                  let userClicks = 0;
+                  
+                  // Verificar se o usuário tem cliques registrados
+                  if (usersSnapshot[companyId]?.anuncios_clicados?.[adId]?.count) {
+                    userClicks = usersSnapshot[companyId].anuncios_clicados[adId].count;
+                  } else if (companyId === metricsData?.user_data?.last_user_id) {
+                    // Fallback: se for o último usuário que clicou, atribui 1 clique
+                    userClicks = 1;
+                  }
+                  
+                  companiesStats[companyId] = {
+                    id: companyId,
+                    name: companyData.nome || 'Empresa Desconhecida',
+                    provincia: companyData.provincia || 'Não informado',
+                    sector: companyData.sector || 'Não informado',
+                    clicks: userClicks,
+                    contacto: companyData.contacto || 'Não disponível',
+                    email: companyData.email || 'Não disponível'
+                  };
+                } else {
+                  // Se a empresa não existe na coleção company, criar entrada básica
+                  companiesStats[companyId] = {
+                    id: companyId,
+                    name: 'Empresa Desconhecida',
+                    provincia: 'Não informado',
+                    sector: 'Não informado',
+                    clicks: usersSnapshot[companyId]?.anuncios_clicados?.[adId]?.count || 1,
+                    contacto: 'Não disponível',
+                    email: 'Não disponível'
+                  };
+                }
+              } catch (error) {
+                console.error('Error fetching company:', companyId, error);
+              }
+            });
+
+            await Promise.all(companiesPromises);
+          }
+
+          resolve({
+            metrics: metricsData || {},
+            companies: companiesStats,
+            totalClicks
+          });
         }, { onlyOnce: true });
       });
 
-      const sectorStats = sectorsSnapshot
-        .filter(sector => sector?.setor)
-        .map(sector => {
-          const companiesInSector = companiesWithInterest.filter(
-            company => company.sector === sector.setor
-          );
-          
-          const sectorImpressions = companiesInSector.reduce((sum, company) => sum + company.impressions, 0);
-          const sectorClicks = companiesInSector.reduce((sum, company) => sum + company.clicks, 0);
-          
-          return {
-            sector: sector.setor,
-            impressions: sectorImpressions,
-            clicks: sectorClicks,
-            ctr: calculateCTR(sectorClicks, sectorImpressions),
-          };
-        })
-        .filter(sector => sector.impressions > 0);
+      const { metrics, companies, totalClicks } = result;
+
+      // Converter para array
+      const companiesArray = Object.values(companies).map(company => ({
+        ...company,
+        ctr: calculateCTR(company.clicks, 1), // Usando 1 impressão como base
+        whatsapp: company.contacto !== 'Não disponível' ? 
+          `https://wa.me/258${company.contacto.replace(/\D/g, '')}` : null
+      }));
+
+      // Classificar empresas por interesse
+      const companiesWithInterest = classifyCompaniesByInterest(companiesArray);
+
+      console.log('Companies with clicks:', companiesArray);
+      console.log('High interest companies:', companiesWithInterest.filter(c => c.clicks >= 3));
 
       setAdStats({
-        clicks: totalClicksCombined,
-        impressions: totalImpressions + lojaMetrics.length,
+        clicks: totalClicks,
         companiesReached: companiesWithInterest.sort((a, b) => b.clicks - a.clicks),
-        performanceBySector: sectorStats.sort((a, b) => b.impressions - a.impressions),
         loadingStats: false,
       });
+
     } catch (error) {
       console.error('Error fetching ad stats:', error);
-      setAdStats(prev => ({ ...prev, loadingStats: false }));
+      setAdStats(prev => ({ 
+        ...prev, 
+        loadingStats: false,
+        companiesReached: [],
+      }));
     }
   }, []);
 
   useEffect(() => {
-    if (open && ad?.id && ad?.companyId && ad?.tipoAnuncio) {
-      fetchAdStats(ad.id, ad.companyId, ad.tipoAnuncio);
+    if (open && ad?.id) {
+      fetchAdStats(ad.id);
       setTabValue(0);
+    } else if (open) {
+      setAdStats(prev => ({ ...prev, loadingStats: false }));
     }
   }, [open, ad, fetchAdStats]);
 
@@ -247,7 +237,7 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Box display="flex" alignItems="center">
@@ -269,129 +259,128 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
                   <img
                     src={ad.imageUrl}
                     alt="Anúncio"
-                    style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }}
+                    style={{ width: '100%', borderRadius: '8px', marginBottom: '16px', maxHeight: '200px', objectFit: 'cover' }}
                   />
                 )}
-                <Typography><strong>Descrição:</strong> {ad.description}</Typography>
-                <Typography><strong>Tipo:</strong> {
-                  ad.tipoAnuncio === 'home' ? 'Página Inicial' :
-                  ad.tipo === 'concurso' ? 'Concurso' :
-                  ad.tipoAnuncio === 'cotacoes' ? 'Cotações' : 'Destacar Perfil'
-                }</Typography>
-                <Typography><strong>Duração:</strong> {ad.days} dias</Typography>
-                <Typography><strong>Custo:</strong> {formatPrice(ad.totalCost)} MT</Typography>
-                <Typography><strong>Status:</strong> 
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Descrição:</strong> {ad.description || 'Nenhuma descrição'}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Tipo:</strong> {
+                    ad.tipoAnuncio === 'home' ? 'Página Inicial' :
+                    ad.tipo === 'concurso' ? 'Concurso' :
+                    ad.tipoAnuncio === 'cotacoes' ? 'Cotações' : 
+                    ad.tipoAnuncio === 'destacar' ? 'Destacar Perfil' : ad.tipoAnuncio
+                  }
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Duração:</strong> {ad.days || 0} dias
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Custo:</strong> {formatPrice(ad.totalCost || 0)} MT
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Status:</strong> 
                   <Chip 
-                    label={ad.status} 
+                    label={ad.status || 'Desconhecido'} 
                     color={getStatusColor(ad.status)} 
                     size="small" 
                     sx={{ ml: 1 }}/>
                 </Typography>
-                <Typography><strong>Criado em:</strong> {formatDate(ad.uploadedAt)}</Typography>
-                <Typography><strong>Expira em:</strong> {formatDate(ad.expireDate)}</Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Criado em:</strong> {formatDate(ad.uploadedAt)}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Expira em:</strong> {formatDate(ad.expireDate)}
+                </Typography>
               </Box>
+              
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>Segmentação</Typography>
-                <Typography><strong>Províncias:</strong> {ad.provincias?.join(', ') || 'Nenhuma'}</Typography>
-                <Typography><strong>Setores:</strong> {ad.sectores?.join(', ') || 'Nenhum'}</Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Províncias:</strong> {ad.provincias?.join(', ') || 'Todas'}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Setores:</strong> {ad.sectores?.join(', ') || 'Todos'}
+                </Typography>
               </Box>
             </Grid>
+            
             <Grid item xs={12} md={8}>
               {adStats.loadingStats ? (
-                <Box display="flex" justifyContent="center" py={4}>
+                <Box display="flex" justifyContent="center" alignItems="center" py={4}>
                   <CircularProgress />
+                  <Typography variant="body2" sx={{ ml: 2 }}>
+                    Carregando estatísticas...
+                  </Typography>
                 </Box>
               ) : (
                 <>
                   <Box sx={{ mb: 3 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center1">
-                      <Typography variant="h6" gutterBottom>Estatísticas Gerais</Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography variant="h6" gutterBottom>Estatísticas de Cliques</Typography>
                       <Button 
                         variant="outlined" 
                         startIcon={<PictureAsPdfIcon />}
-                        onClick={handleDownloadReport}>
+                        onClick={handleDownloadReport}
+                      >
                         Baixar Relatório
                       </Button>
                     </Box>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6} md={4}>
+                    
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item xs={12} md={6}>
                         <Paper sx={{ p: 2, textAlign: 'center' }}>
-                          <Typography variant="h4">{adStats.impressions}</Typography>
-                          <Typography variant="subtitle1">Impressões</Typography>
-                        </Paper>
-                      </Grid>
-                      <Grid item xs={6} md={4}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
-                          <Typography variant="h4">{adStats.clicks}</Typography>
-                          <Typography variant="subtitle1">Cliques</Typography>
-                        </Paper>
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
-                          <Typography variant="h4">
-                            {calculateCTR(adStats.clicks, adStats.impressions)}%
+                          <Typography variant="h4" color="secondary">
+                            {adStats.clicks}
                           </Typography>
-                          <Typography variant="subtitle1">Taxa de Clique (CTR)</Typography>
+                          <Typography variant="body2">Total de Cliques</Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Paper sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="h4" color="primary">
+                            {interestedCompanies.length}
+                          </Typography>
+                          <Typography variant="body2">Potenciais Interessados (3+ cliques)</Typography>
                         </Paper>
                       </Grid>
                     </Grid>
                   </Box>
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" gutterBottom>Desempenho por Setor</Typography>
-                    {adStats.performanceBySector.length > 0 ? (
-                      <TableContainer component={Paper}>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Setor</TableCell>
-                              <TableCell align="right">Impressões</TableCell>
-                              <TableCell align="right">Cliques</TableCell>
-                              <TableCell align="right">CTR</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {adStats.performanceBySector.map((sector) => (
-                              <TableRow key={sector.sector}>
-                                <TableCell>{sector.sector}</TableCell>
-                                <TableCell align="right">{sector.impressions}</TableCell>
-                                <TableCell align="right">{sector.clicks}</TableCell>
-                                <TableCell align="right">{sector.ctr}%</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    ) : (
-                      <Typography variant="body2">Nenhum dado disponível</Typography>
-                    )}
-                  </Box>
+
                   <Box>
                     <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
-                      <Tab label="Todas Empresas" />
+                      <Tab label={`Todas Empresas (${adStats.companiesReached.length})`} />
                       <Tab 
                         label={
                           <Box display="flex" alignItems="center">
-                            <StarIcon color="warning" sx={{ mr: 1 }} />
+                            <StarIcon color="error" sx={{ mr: 1 }} />
                             Potenciais Interessados ({interestedCompanies.length})
                           </Box>
                         } 
                       />
                     </Tabs>
-                    {tabValue === 0 ? (
-                      <TableContainer component={Paper}>
-                        <Table size="small">
+
+                    {adStats.companiesReached.length === 0 ? (
+                      <Paper sx={{ p: 3, textAlign: 'center' }}>
+                        <Typography variant="body1" color="textSecondary">
+                          Nenhuma empresa clicou neste anúncio ainda
+                        </Typography>
+                      </Paper>
+                    ) : tabValue === 0 ? (
+                      <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                        <Table size="small" stickyHeader>
                           <TableHead>
                             <TableRow>
                               <TableCell>Empresa</TableCell>
                               <TableCell align="center">Interesse</TableCell>
                               <TableCell align="right">Cliques</TableCell>
-                              <TableCell align="right">CTR</TableCell>
                               <TableCell>Contato</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {adStats.companiesReached.slice(0, 5).map((company) => (
-                              <TableRow key={company.id}>
+                            {adStats.companiesReached.map((company) => (
+                              <TableRow key={company.id} hover>
                                 <TableCell>
                                   <Box>
                                     <Typography fontWeight="medium">{company.name}</Typography>
@@ -404,30 +393,32 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
                                   <Chip 
                                     label={company.interestDescription}
                                     color={
-                                      company.interestLevel === 'alto' ? 'error' :
-                                      company.interestLevel === 'médio' ? 'warning' : 'default'
+                                      company.interestLevel === 'alto' ? 'error' : 'default'
                                     }
                                     size="small"
                                     icon={company.interestIcon}
                                   />
                                 </TableCell>
                                 <TableCell align="right">{company.clicks}</TableCell>
-                                <TableCell align="right">{company.ctr}%</TableCell>
                                 <TableCell>
-                                  <Box display="flex" flexDirection="column" gap={1}>
-                                    <Box display="flex" alignItems="center">
-                                      <PhoneIcon fontSize="small" sx={{ mr: 1 }} />
-                                      <Typography>{company.contacto}</Typography>
-                                    </Box>
-                                    <Box display="flex" alignItems="center">
-                                      <EmailIcon fontSize="small" sx={{ mr: 1 }} />
-                                      <a 
-                                        href={`mailto:${company.email}`} 
-                                        style={{ textDecoration: 'none', color: 'inherit' }}
-                                      >
-                                        {company.email}
-                                      </a>
-                                    </Box>
+                                  <Box display="flex" flexDirection="column" gap={0.5}>
+                                    {company.contacto !== 'Não disponível' && (
+                                      <Box display="flex" alignItems="center">
+                                        <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                                        <Typography variant="body2">{company.contacto}</Typography>
+                                      </Box>
+                                    )}
+                                    {company.email !== 'Não disponível' && (
+                                      <Box display="flex" alignItems="center">
+                                        <EmailIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                                        <a 
+                                          href={`mailto:${company.email}`} 
+                                          style={{ textDecoration: 'none', color: 'inherit', fontSize: '0.875rem' }}
+                                        >
+                                          {company.email}
+                                        </a>
+                                      </Box>
+                                    )}
                                   </Box>
                                 </TableCell>
                               </TableRow>
@@ -438,8 +429,8 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
                     ) : (
                       <Box>
                         {interestedCompanies.length > 0 ? (
-                          <TableContainer component={Paper}>
-                            <Table size="small">
+                          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                            <Table size="small" stickyHeader>
                               <TableHead>
                                 <TableRow>
                                   <TableCell>Empresa</TableCell>
@@ -450,7 +441,7 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
                               </TableHead>
                               <TableBody>
                                 {interestedCompanies.map((company) => (
-                                  <TableRow key={company.id}>
+                                  <TableRow key={company.id} hover>
                                     <TableCell>
                                       <Box>
                                         <Typography fontWeight="medium">{company.name}</Typography>
@@ -462,31 +453,37 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
                                     <TableCell align="center">
                                       <Chip 
                                         label={company.interestDescription}
-                                        color={company.interestLevel === 'alto' ? 'error' : 'warning'}
+                                        color="error"
                                         size="small"
                                         icon={<StarIcon />}
                                       />
                                     </TableCell>
                                     <TableCell align="right">{company.clicks}</TableCell>
                                     <TableCell>
-                                      <Box display="flex" gap={1}>
-                                        <Button 
-                                          variant="outlined" 
-                                          size="small" 
-                                          startIcon={<PhoneIcon />}
-                                          href={company.whatsapp || `tel:${company.contacto}`}
-                                          target="_blank"
-                                        >
-                                          Contatar
-                                        </Button>
-                                        <Button 
-                                          variant="outlined" 
-                                          size="small" 
-                                          startIcon={<EmailIcon />}
-                                          href={`mailto:${company.email}`}
-                                        >
-                                          Email
-                                        </Button>
+                                      <Box display="flex" gap={1} flexWrap="wrap">
+                                        {company.contacto !== 'Não disponível' && (
+                                          <Button 
+                                            variant="outlined" 
+                                            size="small" 
+                                            startIcon={<PhoneIcon />}
+                                            href={company.whatsapp || `tel:${company.contacto}`}
+                                            target="_blank"
+                                            sx={{ fontSize: '0.75rem' }}
+                                          >
+                                            WhatsApp
+                                          </Button>
+                                        )}
+                                        {company.email !== 'Não disponível' && (
+                                          <Button 
+                                            variant="outlined" 
+                                            size="small" 
+                                            startIcon={<EmailIcon />}
+                                            href={`mailto:${company.email}`}
+                                            sx={{ fontSize: '0.75rem' }}
+                                          >
+                                            Email
+                                          </Button>
+                                        )}
                                       </Box>
                                     </TableCell>
                                   </TableRow>
@@ -497,7 +494,7 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
                         ) : (
                           <Paper sx={{ p: 3, textAlign: 'center' }}>
                             <Typography variant="body1" color="textSecondary">
-                              Nenhuma empresa demonstrou interesse significativo (2+ cliques)
+                              Nenhuma empresa demonstrou alto interesse (3+ cliques)
                             </Typography>
                           </Paper>
                         )}
@@ -509,9 +506,11 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
             </Grid>
           </Grid>
         ) : (
-          <Typography variant="body1" color="textSecondary">
-            Nenhum anúncio selecionado
-          </Typography>
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+            <Typography variant="body1" color="textSecondary">
+              Nenhum anúncio selecionado
+            </Typography>
+          </Box>
         )}
       </DialogContent>
       <DialogActions>
