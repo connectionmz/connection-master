@@ -64,7 +64,6 @@ const ProductDetailsDesk = ({user}) => {
         
         if (productSnapshot.exists()) {
           const productData = productSnapshot.val();
-          console.log(productData)
           setProduct(productData);
           setViews(productData.views || 0);
           
@@ -78,7 +77,6 @@ const ProductDetailsDesk = ({user}) => {
           const storeSnapshot = await get(storeRef);
           if (storeSnapshot.exists()) {
             setStoreInfo(storeSnapshot.val());
-            console.log(storeSnapshot.val())
           }
         } else {
           setProduct(null);

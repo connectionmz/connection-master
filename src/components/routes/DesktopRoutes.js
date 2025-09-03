@@ -105,31 +105,28 @@ const theme = createTheme({
 })
 
 const DesktopRoutes = ({ user }) => {
+  const [language, setLanguage] = useState('pt')
+  const [anchorEl, setAnchorEl] = useState(null)
+  const [showTerms, setShowTerms] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [hasFeedback, setHasFeedback] = useState(false)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [showReferrerModal, setShowReferrerModal] = useState(false)
+  const [referrerData, setReferrerData] = useState(null)
+  const [feedbackForm, setFeedbackForm] = useState({
+    nome: '',
+    email: '',
+    contacto: '',
+    feedback: ''
+  });
 
-const [language, setLanguage] = useState('pt')
-const [anchorEl, setAnchorEl] = useState(null)
-const [showTerms, setShowTerms] = useState(false)
-const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-const [hasFeedback, setHasFeedback] = useState(false)
-const [feedbackText, setFeedbackText] = useState('')
-const [isLoading, setIsLoading] = useState(false)
-const [showReferrerModal, setShowReferrerModal] = useState(false)
-const [referrerData, setReferrerData] = useState(null)
-const [feedbackForm, setFeedbackForm] = useState({
-  nome: '',
-  email: '',
-  contacto: '',
-  feedback: ''
-});
-
-const [showVerificationAlert, setShowVerificationAlert] = useState(false);
+  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
 
   const isVerify = user?.subscriptions?.isverify
 
   const navigate = useNavigate();
-
   const currentLocation = useLocation();
-
   const isMobile = useMediaQuery('(max-width:600px)');
   
   const fullScreenRoutes = [
@@ -141,49 +138,116 @@ const [showVerificationAlert, setShowVerificationAlert] = useState(false);
     '/forget-password',
   ];
 
-const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
+  const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
 
-const protectedRoutes = [
-  '/cotacoes',
-  '/cotacao',
-  '/proposta',
-  '/enviar-proposta',
-  '/propostas',
-  '/minha_proposta',
-  '/cotacaoPdf',
-  '/concursos',
-  '/concurso',
-  '/faturacao',
-  '/proforma',
-  '/edit-proforma',
-  '/faturas',
-  '/checkout',
-  '/pagamento-modulo',
-  '/post',
-  '/anunciar',
-  '/sms',
-  '/callcenter',
-  '/procurement',
-  '/inquerito',
-  '/destacar',
-  '/analises',
-  '/recrutamento',
-  '/addProduct',
-  '/conexoes',
-  '/inbox',
-  '/perfil',
-  '/editar-perfil',
-  '/painel'
-];
+  // Lista de todas as rotas que requerem autenticação
+  const protectedRoutes = [
+    '/cotacoes',
+    '/cotacao',
+    '/proposta',
+    '/enviar-proposta',
+    '/propostas',
+    '/minha_proposta',
+    '/cotacaoPdf',
+    '/concursos',
+    '/concurso',
+    '/faturacao',
+    '/proforma',
+    '/edit-proforma',
+    '/faturas',
+    '/checkout',
+    '/pagamento-modulo',
+    '/post',
+    '/anunciar',
+    '/sms',
+    '/callcenter',
+    '/procurement',
+    '/inquerito',
+    '/destacar',
+    '/analises',
+    '/recrutamento',
+    '/addProduct',
+    '/conexoes',
+    '/inbox',
+    '/perfil',
+    '/editar-perfil',
+    '/painel',
+    '/app',
+    '/meuperfil',
+    '/editar-meuperfil',
+    '/evento',
+    '/market',
+    '/proposta',
+    '/enviar-proposta',
+    '/propostas',
+    '/minha_proposta',
+    '/cotacaoPdf',
+    '/concursos',
+    '/concurso',
+    '/faturacao',
+    '/proforma',
+    '/edit-proforma',
+    '/faturas',
+    '/checkout',
+    '/pagamento-modulo',
+    '/post',
+    '/anunciar',
+    '/sms',
+    '/callcenter',
+    '/procurement',
+    '/inquerito',
+    '/destacar',
+    '/analises',
+    '/recrutamento',
+    '/addProduct',
+    '/conexoes',
+    '/inbox',
+    '/perfil',
+    '/editar-perfil',
+    '/painel',
+    '/app',
+    '/meuperfil',
+    '/editar-meuperfil',
+    '/evento',
+    '/market'
+  ];
 
-const dynamicProtectedPatterns = [
-  /^\/proposta\/.+/,
-  /^\/cotacao\/.+/,
-  /^\/concurso\/.+/,
-  /^\/proforma\/.+/,
-  /^\/faturas\/.+/,
-  /^\/inquerito\/.+/
-];
+  const dynamicProtectedPatterns = [
+    /^\/proposta\/.+/,
+    /^\/cotacao\/.+/,
+    /^\/concurso\/.+/,
+    /^\/proforma\/.+/,
+    /^\/faturas\/.+/,
+    /^\/inquerito\/.+/,
+    /^\/perfil\/.+/,
+    /^\/produto\/.+/,
+    /^\/loja\/.+/,
+    /^\/product\/.+/,
+    /^\/verproforma\/.+/,
+    /^\/concursoPdf\/.+/,
+    /^\/inquerito\/.+/,
+    /^\/categoria\/.+/,
+    /^\/pagamento-modulo\/.+/,
+    /^\/proposta\/.+/,
+    /^\/cotacao\/.+/,
+    /^\/minha_proposta\/.+/,
+    /^\/cotacaoPdf\/.+/
+  ];
+
+  // Função para verificar se uma rota está protegida
+  const isRouteProtected = (pathname) => {
+    // Verifica se a rota está na lista de rotas protegidas
+    const isProtectedRoute = protectedRoutes.some(route => 
+      pathname.startsWith(route)
+    );
+    
+    // Verifica se a rota corresponde a algum padrão dinâmico
+    const isDynamicProtected = dynamicProtectedPatterns.some(pattern => 
+      pattern.test(pathname)
+    );
+    
+    return isProtectedRoute || isDynamicProtected;
+  };
 
   const useModuleCheck = () => {
     const { activeModules } = useActiveModules();
@@ -199,15 +263,15 @@ const dynamicProtectedPatterns = [
     const navigate = useNavigate();
     const isVerify = user?.subscriptions?.isverify;
 
-    const isProtected = protectedRoutes.some(route => 
-      currentLocation.pathname.startsWith(route) ||
-      dynamicProtectedPatterns.some(pattern => pattern.test(currentLocation.pathname))
-    );
+    // Verifica se a rota atual está protegida
+    const isProtected = isRouteProtected(currentLocation.pathname);
 
+    // Caso 1: Usuário não autenticado e rota protegida
     if (!user && isProtected) {
       return <Navigate to="/auth" replace />;
     }
 
+    // Caso 2: Módulo requerido não está ativo
     if (requiredModule && !isActiveModule(requiredModule)) {
       const module = allModules.find(m => m.key === requiredModule);
       return (
@@ -244,7 +308,7 @@ const dynamicProtectedPatterns = [
       );
     }
 
-    // Case 3: User not verified and route is protected
+    // Caso 3: Usuário não verificado e rota é protegida
     if (!isVerify && isProtected) {
       return (
         <>
@@ -277,16 +341,16 @@ const dynamicProtectedPatterns = [
     return children;
   };
 
-const renderProtectedRoute = (path, element) => (
-  <Route 
-    path={path} 
-    element={
-      <ProtectedRoute>
-        {element}
-      </ProtectedRoute>
-    } 
-  />
-);
+  const renderProtectedRoute = (path, element, requiredModule = null) => (
+    <Route 
+      path={path} 
+      element={
+        <ProtectedRoute requiredModule={requiredModule}>
+          {element}
+        </ProtectedRoute>
+      } 
+    />
+  );
 
   useEffect(() => {
     const acceptedTerms = localStorage.getItem('acceptedTerms');
@@ -358,66 +422,66 @@ const renderProtectedRoute = (path, element) => (
     }));
   };
 
-const handleSubmitFeedback = async () => {
-  if (!feedbackForm.feedback.trim()) {
-    alert('Por favor, insira seu feedback.');
-    return;
-  }
-
-  if (!user) {
-    if (!feedbackForm.nome.trim() || !feedbackForm.email.trim()) {
-      alert('Por favor, preencha seu nome e email.');
+  const handleSubmitFeedback = async () => {
+    if (!feedbackForm.feedback.trim()) {
+      alert('Por favor, insira seu feedback.');
       return;
     }
 
-    const isEmailValid = /\S+@\S+\.\S+/.test(feedbackForm.email.trim());
-    if (!isEmailValid) {
-      alert('Por favor, insira um email válido.');
-      return;
+    if (!user) {
+      if (!feedbackForm.nome.trim() || !feedbackForm.email.trim()) {
+        alert('Por favor, preencha seu nome e email.');
+        return;
+      }
+
+      const isEmailValid = /\S+@\S+\.\S+/.test(feedbackForm.email.trim());
+      if (!isEmailValid) {
+        alert('Por favor, insira um email válido.');
+        return;
+      }
     }
-  }
 
-  setIsLoading(true);
+    setIsLoading(true);
 
-  try {
-    const feedbackData = user ? {
-      nome: user.displayName || 'Usuário Anônimo',
-      email: user.email || 'anonimo@exemplo.com',
-      userId: user.id,
-      feedback: feedbackForm.feedback,
-      timestamp: new Date().toISOString(),
-    } : {
-      nome: feedbackForm.nome,
-      email: feedbackForm.email,
-      contacto: feedbackForm.contacto || '',
-      feedback: feedbackForm.feedback,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      const feedbackData = user ? {
+        nome: user.displayName || 'Usuário Anônimo',
+        email: user.email || 'anonimo@exemplo.com',
+        userId: user.id,
+        feedback: feedbackForm.feedback,
+        timestamp: new Date().toISOString(),
+      } : {
+        nome: feedbackForm.nome,
+        email: feedbackForm.email,
+        contacto: feedbackForm.contacto || '',
+        feedback: feedbackForm.feedback,
+        timestamp: new Date().toISOString(),
+      };
 
-    const feedbackRef = user 
-      ? ref(db, `feedback/${user.id}`) 
-      : ref(db, 'feedback/anonymousFeedbacks');
+      const feedbackRef = user 
+        ? ref(db, `feedback/${user.id}`) 
+        : ref(db, 'feedback/anonymousFeedbacks');
 
-    const newFeedbackRef = push(feedbackRef);
-    await set(newFeedbackRef, feedbackData); 
+      const newFeedbackRef = push(feedbackRef);
+      await set(newFeedbackRef, feedbackData); 
 
-    alert('Feedback enviado com sucesso! Obrigado por compartilhar sua opinião.');
+      alert('Feedback enviado com sucesso! Obrigado por compartilhar sua opinião.');
 
-    setHasFeedback(true);
-    setFeedbackForm({
-      nome: '',
-      email: '',
-      contacto: '',
-      feedback: ''
-    });
-    handleCloseFeedbackModal();
-  } catch (error) {
-    console.error('Erro ao salvar feedback:', error);
-    alert('Erro ao enviar feedback. Tente novamente.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setHasFeedback(true);
+      setFeedbackForm({
+        nome: '',
+        email: '',
+        contacto: '',
+        feedback: ''
+      });
+      handleCloseFeedbackModal();
+    } catch (error) {
+      console.error('Erro ao salvar feedback:', error);
+      alert('Erro ao enviar feedback. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCloseReferrerModal = () => {
     setShowReferrerModal(false);
@@ -426,489 +490,161 @@ const handleSubmitFeedback = async () => {
   return (
     <ThemeProvider theme={theme}>
       <ActiveModulesProvider userId={user?.id}>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: '#F1F1F1',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-  {!isFullScreenRoute && (
-  <>
-    {!user ? (
-      <HeaderDesk />
-    ) : user.type === 'singular' ? (
-      <HeaderDeskSingular user={user} />
-    ) : (
-      <HeaderDesk user={user} />
-    )}
-  </>
-)}
-   <Box
-    component="main"
-    sx={{
-      flex: 1,
-      width: '100%',
-      maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px',
-      margin: '0 auto',
-      padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px',
-      boxSizing: 'border-box',
-      pb: 4, 
-    }}>
-          <Routes>
-  <Route path="/" element={<DashboardComponent user={user} />} />
-  <Route path="/feed" element={<FeedDesk user={user} />} />
-  <Route path="/teste" element={<Teste user={user} />} />
-  <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
-  <Route path="/empresas" element={<ExploreDesk user={user} />} />
-  <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
-  <Route path="/sobre" element={<Sobre />} />
-  <Route path="/noticias" element={<NoticiadosDesk />} />
-  <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user} />} />
-  <Route path="/blog" element={<Blogs />} />
-  <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
-  <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
-  <Route path="/recibos" element={<ReceiptsPage user={user} />} />
-  <Route path="/lojas" element={<StoresDesk user={user} />} />
-  <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
-  <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
-  <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
-  <Route path="/inqueritos" element={<ListaInqueritos user={user}/>} />
-  <Route path="/termos" element={<Terms />} />
-  <Route path="/politicas" element={<Politicas />} />
+        <Box
+          sx={{
+            minHeight: '100vh',
+            backgroundColor: '#F1F1F1',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {!isFullScreenRoute && (
+            <>
+              {!user ? (
+                <HeaderDesk />
+              ) : user.type === 'singular' ? (
+                <HeaderDeskSingular user={user} />
+              ) : (
+                <HeaderDesk user={user} />
+              )}
+            </>
+          )}
+          <Box
+            component="main"
+            sx={{
+              flex: 1,
+              width: '100%',
+              maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px',
+              margin: '0 auto',
+              padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px',
+              boxSizing: 'border-box',
+              pb: 4, 
+            }}
+          >
+            <Routes>
+              {/* Rotas públicas */}
+              <Route path="/" element={<DashboardComponent user={user} />} />
+              <Route path="/feed" element={<FeedDesk user={user} />} />
+              <Route path="/teste" element={<Teste user={user} />} />
+              <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
+              <Route path="/empresas" element={<ExploreDesk user={user} />} />
+              <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
+              <Route path="/sobre" element={<Sobre />} />
+              <Route path="/noticias" element={<NoticiadosDesk />} />
+              <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user} />} />
+              <Route path="/blog" element={<Blogs />} />
+              <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
+              <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
+              <Route path="/recibos" element={<ReceiptsPage user={user} />} />
+              <Route path="/lojas" element={<StoresDesk user={user} />} />
+              <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
+              <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
+              <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
+              <Route path="/inqueritos" element={<ListaInqueritos user={user}/>} />
+              <Route path="/termos" element={<Terms />} />
+              <Route path="/politicas" element={<Politicas />} />
 
-  <Route 
-  path="/auth" 
-  element={
-    <GuestRoute user={user}>
-      <AuthDesk user={user} />
-    </GuestRoute>
-  } 
-/>
-  <Route 
-    path="/create" 
-    element={
-        <AuthCreateDesk user={user} />
-    } 
-  />
-  <Route path="/setup" element={<CompanyDataFormDesk />} />
-  <Route path="/setupUser" element={<UserDataFormDesk />} />
-  <Route path="/forget-password" element={<ForgetPassword />} />
-  <Route path="/change-password" element={<ChangePassword user={user} />} />
-  <Route path="/email-verification" element={<EmailVerification />} />
-  <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
+              <Route 
+                path="/auth" 
+                element={
+                  <GuestRoute user={user}>
+                    <AuthDesk user={user} />
+                  </GuestRoute>
+                } 
+              />
+              <Route 
+                path="/create" 
+                element={
+                  <GuestRoute user={user}>
+                    <AuthCreateDesk user={user} />
+                  </GuestRoute>
+                } 
+              />
+              <Route path="/setup" element={<CompanyDataFormDesk />} />
+              <Route path="/setupUser" element={<UserDataFormDesk />} />
+              <Route path="/forget-password" element={<ForgetPassword />} />
+              <Route path="/change-password" element={<ChangePassword user={user} />} />
+              <Route path="/email-verification" element={<EmailVerification />} />
+              <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
 
-  <Route path="/addProduct" element={
-    <ProtectedRoute requiredModule="moduloMarket">
-      <ProductFormDesk user={user} />
-    </ProtectedRoute>
-  } />
-  
-  <Route path="/conexoes" element={
-    <ProtectedRoute>
-      <ConnectionsDesk user={user} />
-    </ProtectedRoute>
-  } />
-  <Route path="/search" element={
-    <ProtectedRoute>
-      <ConnectionsSearchDesk />
-    </ProtectedRoute>
-  } />
+              {/* Rotas protegidas - Módulos */}
+              {renderProtectedRoute("/addProduct", <ProductFormDesk user={user} />, "moduloMarket")}
+              {renderProtectedRoute("/conexoes", <ConnectionsDesk user={user} />)}
+              {renderProtectedRoute("/search", <ConnectionsSearchDesk />)}
+              {renderProtectedRoute("/parceiros-investidores", <ParceirosInvestidoresDesk />)}
+              {renderProtectedRoute("/app", <ApxDesk user={user} />)}
+              {renderProtectedRoute("/inbox", <InboxDesk user={user} />)}
+              {renderProtectedRoute("/perfil", <ProfileDesk user={user} />)}
+              {renderProtectedRoute("/meuperfil", <ProfileDeskSingular user={user} />)}
+              {renderProtectedRoute("/editar-perfil", <EditProfileDesk user={user} />)}
+              {renderProtectedRoute("/editar-meuperfil", <EditProfileDeskSingular user={user} />)}
+              {renderProtectedRoute("/cotacoes", <CotacoesDesk user={user} />)}
+              {renderProtectedRoute("/cotacao", <NovaCotacaoDesk user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/evento", <Eventos user={user} />, "moduloEventos")}
+              {renderProtectedRoute("/proposta/:id/:cotId", <ProposalDesk user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/cotacaoPdf/:id", <CotacoesPDF user={user}/>, "moduloSMS")}
+              {renderProtectedRoute("/edit-proforma/:numeroProforma", <EditarFaturaDesk user={user} />, "moduloProforma")}
+              {renderProtectedRoute("/verproforma/:numeroProforma/sender/:sender", <VerFaturaDesk user={user} />)}
+              {renderProtectedRoute("/proforma/:numeroProforma", <FaturaDesk user={user} />)}
+              {renderProtectedRoute("/concurso", <PublicarConcursoDesk user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/concurso/:id", <ConcursoDetalhesDesk user={user} />)}
+              {renderProtectedRoute("/concursoPdf/:id", <EditalConcursoPDF user={user} />)}
+              {renderProtectedRoute("/inquerito/:surveyId", <SurveyPageDesk user={user} />)}
+              {renderProtectedRoute("/painel", <PortalDesk user={user} />)}
+              {renderProtectedRoute("/categoria/:categoriaId", <ListaDeServicosDesk user={user} />)}
+              {renderProtectedRoute("/post", <PostInputDesk user={user} />)}
+              {renderProtectedRoute("/pagamento-modulo/:moduleKey", <PagamentoModulo user={user} />)}
+              {renderProtectedRoute("/proforma", <CriarProformaDesk user={user} />)}
+              {renderProtectedRoute("/faturas/:id", <FaturaDesk user={user} />)}
+              {renderProtectedRoute("/enviar-proposta/:id/:companyId", <EnviarPropostaDesk user={user} />)}
+              {renderProtectedRoute("/propostas/:id/propostas", <PropostasDesk user={user} />)}
+              {renderProtectedRoute("/cotacao/:id/proposta/:propostaId", <DetalhesPropostaDesk user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/minha_proposta/cotacao/:id/proposta/:propostaId", <MinhaPropostaDesk user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/cotacao/:id", <CotacaoDetalhesDesk user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/cotacaoPdf/:id", <CotacoesPDF user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/concursos", <ConcursoDesk user={user} />)}
+              {renderProtectedRoute("/faturacao", <FaturacaoDesk user={user} />)}
+              {renderProtectedRoute("/market", <MarketDesk user={user} />, "moduloMarket")}
+              {renderProtectedRoute("/anunciar", <AnunciarDesk user={user} />)}
+              {renderProtectedRoute("/analises", <AnalyticsDesk user={user} />)}
+              {renderProtectedRoute("/callcenter", <CallCenterModuleDesk user={user} />)}
+              {renderProtectedRoute("/procurement", <LogisticaModuleDesk user={user} />)}
+              {renderProtectedRoute("/inquerito", <InqueritosModuleDesk user={user} />)}
+              {renderProtectedRoute("/recrutamento", <RecrutamentoDesk user={user} />)}
+              {renderProtectedRoute("/sms", <SmsDesk user={user} />)}
 
-  <Route path="/parceiros-investidores" element={
-    <ProtectedRoute>
-      <ParceirosInvestidoresDesk />
-    </ProtectedRoute>
-  } />
-
-  <Route path="/app" element={
-    <ProtectedRoute>
-      <ApxDesk user={user} />
-    </ProtectedRoute>
-  } />
-  
-  <Route path="/inbox" element={
-    <ProtectedRoute>
-      <InboxDesk user={user} />
-    </ProtectedRoute>
-  } />
-
-  <Route path="/perfil" element={
-    <ProtectedRoute>
-      <ProfileDesk user={user} />
-    </ProtectedRoute>
-  } />
-
-  
-  <Route path="/meuperfil" element={
-    <ProtectedRoute>
-      <ProfileDeskSingular user={user} />
-    </ProtectedRoute>
-  } />
-
-  
-
-  <Route path="/editar-perfil" element={
-    <ProtectedRoute>
-      <EditProfileDesk user={user} />
-    </ProtectedRoute>
-  } />
-
-    <Route path="/editar-meuperfil" element={
-    <ProtectedRoute>
-      <EditProfileDeskSingular user={user} />
-    </ProtectedRoute>
-  } />
-
-  {/* Cotações e propostas */}
-  <Route path="/cotacoes" element={
-    <ProtectedRoute>
-      <CotacoesDesk user={user} />
-    </ProtectedRoute>
-  } />
-
-  <Route path="/cotacao" element={
-    <ProtectedRoute requiredModule="moduloSMS">
-      <NovaCotacaoDesk user={user} />
-    </ProtectedRoute>
-  } />
-
-  <Route path="/evento" element={
-    <ProtectedRoute requiredModule="moduloEventos">
-      <Eventos user={user} />
-    </ProtectedRoute>
-  } />
-
-  <Route path="/proposta/:id/:cotId" element={
-    <ProtectedRoute>
-      <ProposalDesk user={user} />
-    </ProtectedRoute>
-  } />
-
-  <Route path="/cotacaoPdf/:id" element={
-    <ProtectedRoute requiredModule="moduloSMS">
-      <CotacoesPDF user={user}/>
-    </ProtectedRoute>
-  } />
-  
-  <Route path="/proposta/:id/:cotId" element={
-  <ProtectedRoute requiredModule="moduloSMS">
-    <ProposalDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/edit-proforma/:numeroProforma" element={
-  <ProtectedRoute requiredModule="moduloProforma">
-    <EditarFaturaDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route
-  path="/verproforma/:numeroProforma/sender/:sender"
-  element={
-    <ProtectedRoute>
-      <VerFaturaDesk user={user} />
-    </ProtectedRoute>
-  }
-/>
-
-<Route path="/proforma/:numeroProforma" element={
-  <ProtectedRoute>
-    <FaturaDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/concurso" element={
-  <ProtectedRoute requiredModule="moduloSMS">
-    <PublicarConcursoDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/concurso/:id" element={
-  <ProtectedRoute>
-    <ConcursoDetalhesDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/concursoPdf/:id" element={
-  <ProtectedRoute>
-    <EditalConcursoPDF user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/inquerito/:surveyId" element={
-  <ProtectedRoute>
-    <SurveyPageDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/painel" element={
-  <ProtectedRoute>
-    <PortalDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/categoria/:categoriaId" element={
-  <ProtectedRoute>
-    <ListaDeServicosDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/post" element={
-  <ProtectedRoute>
-    <PostInputDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/pagamento-modulo/:moduleKey" element={
-  <ProtectedRoute>
-    <PagamentoModulo user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/proforma" element={
-  <ProtectedRoute>
-    <CriarProformaDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/faturas/:id" element={
-  <ProtectedRoute>
-    <FaturaDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/enviar-proposta/:id/:companyId" element={
-  <ProtectedRoute>
-    <EnviarPropostaDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/propostas/:id/propostas" element={
-  <ProtectedRoute>
-    <PropostasDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/cotacao/:id/proposta/:propostaId" element={
-  <ProtectedRoute requiredModule="moduloSMS">
-    <DetalhesPropostaDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/minha_proposta/cotacao/:id/proposta/:propostaId" element={
-  <ProtectedRoute requiredModule="moduloSMS">
-    <MinhaPropostaDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/cotacao/:id" element={
-  <ProtectedRoute requiredModule="moduloSMS">
-    <CotacaoDetalhesDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/cotacaoPdf/:id" element={
-  <ProtectedRoute requiredModule="moduloSMS">
-    <CotacoesPDF user={user} />
-  </ProtectedRoute>
-} />
-
-  {/* Concursos */}
-  <Route path="/concursos" element={
-    <ProtectedRoute>
-      <ConcursoDesk user={user} />
-    </ProtectedRoute>
-  } />
-
-<Route path="/faturacao" element={
-  <ProtectedRoute>
-    <FaturacaoDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/market" element={
-  <ProtectedRoute requiredModule="moduloMarket">
-    <MarketDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/anunciar" element={
-  <ProtectedRoute>
-    <AnunciarDesk user={user} />
-  </ProtectedRoute>
-} />
-<Route path="/analises" element={
-  <ProtectedRoute>
-    <AnalyticsDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/callcenter" element={
-  <ProtectedRoute>
-    <CallCenterModuleDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/procurement" element={
-  <ProtectedRoute>
-    <LogisticaModuleDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/inquerito" element={
-  <ProtectedRoute>
-    <InqueritosModuleDesk user={user} />
-  </ProtectedRoute>
-} />
-
-<Route path="/recrutamento" element={
-  <ProtectedRoute>
-    <RecrutamentoDesk user={user} />
-  </ProtectedRoute>
-} />
-<Route path="/sms" element={
-  <ProtectedRoute>
-    <SmsDesk user={user} />
-  </ProtectedRoute>
-} />
-
-</Routes>
-        </Box>
-        {!isFullScreenRoute && <FooterDesk sx={{ 
+              {/* Rota de fallback para rotas não encontradas */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Box>
+          {!isFullScreenRoute && <FooterDesk sx={{ 
             flexShrink: 0,
             marginTop: 'auto' 
           }} />}
-        <Fab
-          color="primary"
-          aria-label="feedback"
-          sx={{
-            position: 'fixed',
-            bottom: isMobile ? 16 : 24,
-            right: isMobile ? 16 : 24,
-            zIndex: 1000,
-            width: isMobile ? 40 : 56,
-            height: isMobile ? 40 : 56,
-            animation: !hasFeedback ? 'pulse 2s infinite' : 'none',
-          }}
-          onClick={handleOpenFeedbackModal}
-        >
-          <FeedbackIcon />
-        </Fab>
-
-        {showFeedbackModal && (
-          <Box
+          
+          {/* Componente de feedback */}
+          <Fab
+            color="primary"
+            aria-label="feedback"
             sx={{
               position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: '#fff',
-              padding: '24px',
-              borderRadius: '8px',
-              boxShadow: 3,
-              zIndex: 1001,
-              width: isMobile ? '90%' : '500px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
+              bottom: isMobile ? 16 : 24,
+              right: isMobile ? 16 : 24,
+              zIndex: 1000,
+              width: isMobile ? 40 : 56,
+              height: isMobile ? 40 : 56,
+              animation: !hasFeedback ? 'pulse 2s infinite' : 'none',
             }}
+            onClick={handleOpenFeedbackModal}
           >
-            <IconButton
-              aria-label="fechar"
-              onClick={handleCloseFeedbackModal}
-              sx={{
-                position: 'absolute',
-                right: '8px',
-                top: '8px',
-                color: 'text.secondary',
-              }}
-            >
-              <Close />
-            </IconButton>
+            <FeedbackIcon />
+          </Fab>
 
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Enviar Feedback
-            </Typography>
-
-            {!user && (
-              <>
-                <TextField
-                  label="Seu nome"
-                  fullWidth
-                  name="nome"
-                  value={feedbackForm.nome}
-                  onChange={handleFeedbackChange}
-                  sx={{ mb: 2 }}
-                  required
-                />
-                <TextField
-                  label="Seu email"
-                  fullWidth
-                  name="email"
-                  type="email"
-                  value={feedbackForm.email}
-                  onChange={handleFeedbackChange}
-                  sx={{ mb: 2 }}
-                  required
-                />
-                <TextField
-                  label="Seu contacto (opcional)"
-                  fullWidth
-                  name="contacto"
-                  value={feedbackForm.contacto}
-                  onChange={handleFeedbackChange}
-                  sx={{ mb: 2 }}
-                />
-              </>
-            )}
-
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Seu feedback:
-            </Typography>
-            <Box sx={{ mb: 2 }}>
-              <ReactQuill
-                value={feedbackForm.feedback}
-                onChange={handleFeedbackEditorChange}
-                modules={{
-                  toolbar: [
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['link'],
-                    ['clean']
-                  ],
-                }}
-                formats={[
-                  'bold', 'italic', 'underline', 'strike',
-                  'list', 'bullet',
-                  'link'
-                ]}
-                style={{ height: '200px', marginBottom: '40px' }}
-              />
-            </Box>
-
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleSubmitFeedback}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Enviando...' : 'Enviar Feedback'}
-            </Button>
-          </Box>
-        )}
-
-        {showReferrerModal && (
-          <Modal
-            open={showReferrerModal}
-            onClose={handleCloseReferrerModal}
-            aria-labelledby="referrer-modal-title"
-            aria-describedby="referrer-modal-description"
-          >
+          {/* Modal de feedback */}
+          {showFeedbackModal && (
             <Box
               sx={{
-                position: 'absolute',
+                position: 'fixed',
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
@@ -916,14 +652,124 @@ const handleSubmitFeedback = async () => {
                 padding: '24px',
                 borderRadius: '8px',
                 boxShadow: 3,
-                width: isMobile ? '90%' : '80%',
-              }}>
-                 <CompanyUpdateDesk/>
+                zIndex: 1001,
+                width: isMobile ? '90%' : '500px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+              }}
+            >
+              <IconButton
+                aria-label="fechar"
+                onClick={handleCloseFeedbackModal}
+                sx={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '8px',
+                  color: 'text.secondary',
+                }}
+              >
+                <Close />
+              </IconButton>
+
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Enviar Feedback
+              </Typography>
+
+              {!user && (
+                <>
+                  <TextField
+                    label="Seu nome"
+                    fullWidth
+                    name="nome"
+                    value={feedbackForm.nome}
+                    onChange={handleFeedbackChange}
+                    sx={{ mb: 2 }}
+                    required
+                  />
+                  <TextField
+                    label="Seu email"
+                    fullWidth
+                    name="email"
+                    type="email"
+                    value={feedbackForm.email}
+                    onChange={handleFeedbackChange}
+                    sx={{ mb: 2 }}
+                    required
+                  />
+                  <TextField
+                    label="Seu contacto (opcional)"
+                    fullWidth
+                    name="contacto"
+                    value={feedbackForm.contacto}
+                    onChange={handleFeedbackChange}
+                    sx={{ mb: 2 }}
+                  />
+                </>
+              )}
+
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Seu feedback:
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <ReactQuill
+                  value={feedbackForm.feedback}
+                  onChange={handleFeedbackEditorChange}
+                  modules={{
+                    toolbar: [
+                      ['bold', 'italic', 'underline', 'strike'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      ['link'],
+                      ['clean']
+                    ],
+                  }}
+                  formats={[
+                    'bold', 'italic', 'underline', 'strike',
+                    'list', 'bullet',
+                    'link'
+                  ]}
+                  style={{ height: '200px', marginBottom: '40px' }}
+                />
+              </Box>
+
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={handleSubmitFeedback}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Enviando...' : 'Enviar Feedback'}
+              </Button>
             </Box>
-          </Modal>
-        )}
-      </Box>
-   </ActiveModulesProvider>
+          )}
+
+          {/* Modal de referenciador */}
+          {showReferrerModal && (
+            <Modal
+              open={showReferrerModal}
+              onClose={handleCloseReferrerModal}
+              aria-labelledby="referrer-modal-title"
+              aria-describedby="referrer-modal-description"
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: '#fff',
+                  padding: '24px',
+                  borderRadius: '8px',
+                  boxShadow: 3,
+                  width: isMobile ? '90%' : '80%',
+                }}
+              >
+                <CompanyUpdateDesk/>
+              </Box>
+            </Modal>
+          )}
+        </Box>
+      </ActiveModulesProvider>
     </ThemeProvider>
   );
 };

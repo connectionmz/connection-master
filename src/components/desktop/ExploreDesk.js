@@ -55,7 +55,6 @@ const Explore = React.memo(({ user }) => {
         const snapshot = await get(companiesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          console.log('Dados das empresas:', data);
           const empresasList = Object.keys(data)
             .map((key) => ({
               id: key,

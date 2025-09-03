@@ -16,15 +16,16 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  AlertTitle,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { Expand, InfoIcon } from 'lucide-react';
-import { LocationCity } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import InfoIcon from '@mui/icons-material/Info';
+import LocationCity from '@mui/icons-material/LocationCity';
+import PublicIcon from '@mui/icons-material/Public';
 
 const FeedDesk = ({ user }) => {
-  console.log(user)
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const theme = useTheme();
@@ -38,10 +39,10 @@ const FeedDesk = ({ user }) => {
 
       if (data) {
         Object.entries(data).forEach(([postId, post]) => {
-          const provinciaUsuario = user?.provinciaTemp || user?.provincia;
-          const shouldIncludePost = user
-            ? post.company.provincia === provinciaUsuario
-            : true;
+          // Se o usuário for nulo, mostrar todos os posts
+          // Se o usuário existir, filtrar por província
+          const shouldIncludePost = !user || 
+            (post.company.provincia === (user?.provinciaTemp || user?.provincia));
 
           if (shouldIncludePost) {
             allPosts.push({
@@ -52,6 +53,7 @@ const FeedDesk = ({ user }) => {
               logoUrl: post.company.logo || 'https://via.placeholder.com/150',
               timestamp: post.timestamp || 0,
               companyId: post.company.id || null,
+              provincia: post.company.provincia || 'Província não especificada'
             });
           }
         });
@@ -60,7 +62,7 @@ const FeedDesk = ({ user }) => {
       allPosts.sort((a, b) => b.timestamp - a.timestamp);
       setPosts(allPosts);
     });
-  }, [user?.provinciaTemp, user?.provincia]);
+  }, [user]);
 
   const handleClick = (postId) => {
     navigate(`/post/${postId}`);
@@ -76,7 +78,7 @@ const FeedDesk = ({ user }) => {
     const minutes = date.getMinutes().toString().padStart(2, '0');
     const formattedTime = `${hours}:${minutes}`;
 
-    return isToday ? `Às ${formattedTime}` : date.toLocaleDateString('pt-BR') + ' ' + formattedTime;
+    return isToday ? `Hoje às ${formattedTime}` : date.toLocaleDateString('pt-BR') + ' ' + formattedTime;
   };
 
   const handleDelete = (postId, e) => {
@@ -95,6 +97,7 @@ const FeedDesk = ({ user }) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
+
   return (
     <Box sx={{ 
       width: '100%', 
@@ -102,6 +105,7 @@ const FeedDesk = ({ user }) => {
       bgcolor: theme.palette.background.default,
       minHeight: 'calc(100vh - 64px)'
     }}>
+      {/* Cabeçalho informativo */}
       <Box 
         sx={{
           display: 'flex',
@@ -115,7 +119,7 @@ const FeedDesk = ({ user }) => {
           boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
         }}
       >
-        <LocationCity sx={{ color: '#1976d2' }} />
+        {user ? <LocationCity sx={{ color: '#1976d2' }} /> : <PublicIcon sx={{ color: '#1976d2' }} />}
         <Typography 
           variant="subtitle1"
           sx={{ 
@@ -131,39 +135,60 @@ const FeedDesk = ({ user }) => {
             }
           }}
         >
-          Exibindo conteúdo de: 
-          <span>
-            {user.provinciaTemp || user.provincia}
-          </span>
+          {user ? 'Exibindo conteúdo de:' : 'Exibindo conteúdo de todas as províncias'}
+          {user && (
+            <span>
+              {user.provinciaTemp || user.provincia}
+            </span>
+          )}
         </Typography>
       </Box>
-            <Accordion defaultExpanded sx={{ mb: 3, borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
-        <AccordionSummary expandIcon={<Expand />}>
+      
+      {/* Painel informativo */}
+      <Accordion defaultExpanded sx={{ mb: 3, borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <InfoIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant="subtitle1" fontWeight="bold">
-            Evidencie trabalhos feitos e transmita credibilidade.
+              Evidencie trabalhos feitos e transmita credibilidade.
             </Typography>
           </Box>
         </AccordionSummary>
         <AccordionDetails>
           <Alert severity="info" sx={{ mb: 2 }}>
-          Histórias que constroem confiança. Conheça os projetos que destacam a competência e o compromisso das empresas que fazem parte da Connection Mozambique.
-                    </Alert>
-          
-
+            Histórias que constroem confiança. Conheça os projetos que destacam a competência e 
+            o compromisso das empresas que fazem parte da Connection Mozambique.
+          </Alert>
+          {!user && (
+            <Alert severity="warning">
+              Você está visualizando posts de todas as províncias. Faça login para ver 
+              apenas conteúdo da sua região.
+            </Alert>
+          )}
         </AccordionDetails>
       </Accordion>
+      
+      {/* Lista de posts */}
       {posts.length === 0 ? (
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center', 
-          height: '60vh'
+          height: '60vh',
+          flexDirection: 'column',
+          gap: 2
         }}>
-          <Typography variant="h6" color="text.secondary">
-            Nenhuma publicação encontrada na sua região.
+          <Typography variant="h6" color="text.secondary" textAlign="center">
+            {user 
+              ? 'Nenhuma publicação encontrada na sua região.' 
+              : 'Nenhuma publicação encontrada.'}
           </Typography>
+          <Chip 
+            icon={<PublicIcon />} 
+            label="Visualizando todas as províncias" 
+            variant="outlined"
+            color={user ? "default" : "primary"}
+          />
         </Box>
       ) : (
         <Grid container spacing={isSmallScreen ? 1 : 2}>
@@ -245,15 +270,28 @@ const FeedDesk = ({ user }) => {
                         border: `2px solid ${theme.palette.background.paper}`
                       }} 
                     />
-                    <Typography 
-                      variant="caption" 
-                      noWrap
-                      sx={{
-                        fontWeight: 500
-                      }}
-                    >
-                      {post.companyName}
-                    </Typography>
+                    <Box>
+                      <Typography 
+                        variant="caption" 
+                        noWrap
+                        sx={{
+                          fontWeight: 500,
+                          display: 'block'
+                        }}
+                      >
+                        {post.companyName}
+                      </Typography>
+                      <Chip 
+                        label={post.provincia} 
+                        size="small" 
+                        sx={{ 
+                          height: '16px', 
+                          fontSize: '0.6rem', 
+                          mt: 0.5,
+                          bgcolor: 'rgba(255,255,255,0.2)'
+                        }} 
+                      />
+                    </Box>
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -267,7 +305,7 @@ const FeedDesk = ({ user }) => {
                       {formatTimestamp(post.timestamp)}
                     </Typography>
 
-                    {post.companyId === user?.id && (
+                    {user && post.companyId === user.id && (
                       <IconButton
                         size="small"
                         sx={{ 

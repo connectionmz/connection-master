@@ -127,7 +127,6 @@ const replyStyle = {
         const likesData = data.likes || {};
         setLikes(Object.keys(likesData).length);
 
-        console.log(Object.keys(likesData).length)
         
         if (user?.id && likesData[user.id]) {
           setHasLiked(true);

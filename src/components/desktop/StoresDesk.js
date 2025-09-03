@@ -181,7 +181,6 @@ const StoresDesk = ({ user }) => {
   
           setStores(filtered);
 
-          console.log(filtered)
           
           filtered.forEach(store => {
             trackInteraction('store', 'impression', store.id);
