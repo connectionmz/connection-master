@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { onValue, ref } from 'firebase/database';
 import { db } from '../fb';
 
@@ -16,27 +16,37 @@ export const ActiveModulesProvider = ({ children, userId }) => {
     }
 
     const modulesRef = ref(db, `subscriptions/${userId}`);
+    
     const unsubscribe = onValue(modulesRef, (snapshot) => {
-      const data = snapshot.val();
-      const modules = {};
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const modules = {};
 
-      if (data) {
         Object.keys(data).forEach(moduleKey => {
           const moduleData = data[moduleKey];
-
-          if (moduleData.isActive && new Date(moduleData.end) > new Date()) {
+          if (moduleData && moduleData.isActive && new Date(moduleData.end) > new Date()) {
             modules[moduleKey] = true;
           }
         });
+        
+        setActiveModules(modules);
+      } else {
+        setActiveModules({});
       }
-      setActiveModules(modules);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching modules:", error);
+      setActiveModules({});
       setIsLoading(false);
     });
+
     return () => unsubscribe();
   }, [userId]);
 
+  const value = useMemo(() => ({ activeModules, isLoading }), [activeModules, isLoading]);
+
   return (
-    <ActiveModulesContext.Provider value={{ activeModules, isLoading }}>
+    <ActiveModulesContext.Provider value={value}>
       {children}
     </ActiveModulesContext.Provider>
   );

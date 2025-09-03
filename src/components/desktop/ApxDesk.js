@@ -25,22 +25,42 @@ import { CameraAlt, ExitToApp, Receipt, Save, ArrowForward, LocationOn } from "@
 import { useActiveModules } from "../../context/ActiveModulesContext";
 
 const ApxDesk = ({ user }) => {
-
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user.provincia);
+  const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user?.provincia || "");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
-    const [provincias, setProvincias] = useState([]);
+  const [provincias, setProvincias] = useState([]);
 
-
-const { activeModules, isLoading } = useActiveModules();
+  const { activeModules, isLoading: modulesLoading } = useActiveModules();
 
   useEffect(() => {
-    setUserData(user);
-    setLoading(false);
-  }, [navigate]);
+    if (user) {
+      setUserData(user);
+      setProvinceTemp(user?.provinciaTemp || user?.provincia || "");
+      setLoading(false);
+    }
+  }, [user]); // Corrigido: usar user como dependência
+
+  useEffect(() => {
+    // One-time read movido para dentro de useEffect
+    const fetchProvincias = async () => {
+      try {
+        const snapshot = await get(ref(db, 'provincias'));
+        if (snapshot.exists()) {
+          setProvincias(snapshot.val());
+        } else {
+          setProvincias([]);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setProvincias([]);
+      }
+    };
+
+    fetchProvincias();
+  }, []); // Executa apenas uma vez
 
   const handleLogout = () => {
     signOut(auth)
@@ -48,20 +68,9 @@ const { activeModules, isLoading } = useActiveModules();
       .catch((error) => console.error("Logout Error: ", error));
   };
 
-// One-time read
-get(ref(db, 'provincias'))
-  .then((snapshot) => {
-    if (snapshot.exists()) {
-      setProvincias(snapshot.val());
-    } else {
-      setProvincias([]);
-    }
-  })
-  .catch((error) => {
-    console.error("Error fetching data:", error);
-    setProvincias([]);
-  });
   const saveProvince = async () => {
+    if (!user?.id) return;
+    
     const isConfirmed = window.confirm(
       `Tem certeza que deseja mudar a localização para ${provinceTemp}?`
     );
@@ -71,13 +80,16 @@ get(ref(db, 'provincias'))
     try {
       const companyRef = ref(db, `company/${user.id}`);
       await update(companyRef, { provinciaTemp: provinceTemp });
-      window.location = '/';
+      // Em vez de recarregar a página, atualize o estado local
+      setUserData(prev => ({ ...prev, provinciaTemp: provinceTemp }));
+      alert("Localização atualizada com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar província: ", error);
+      alert("Erro ao salvar localização.");
     }
   };
 
-  if (loading) {
+  if (loading || modulesLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
         <CircularProgress />
@@ -101,7 +113,7 @@ get(ref(db, 'provincias'))
       }}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" component="div" sx={{ mb: 1, fontWeight: 600 }}>
-          {userData.nome}
+            {userData.nome || "Usuário"}
           </Typography>
           <Typography variant="body1" sx={{ opacity: 0.9 }}>
             Tenha todas as ferramentas essenciais para impulsionar seu negócio.
@@ -152,12 +164,12 @@ get(ref(db, 'provincias'))
                   '& .MuiSelect-select': { py: 0.5 }
                 }}
               >
-                  <MenuItem value="">Todas</MenuItem>
-                             {provincias.map((prov) => (
-                               <MenuItem key={prov.provincia} value={prov.provincia}>
-                                 {prov.provincia}
-                               </MenuItem>
-                             ))}
+                <MenuItem value="">Todas</MenuItem>
+                {provincias.map((prov) => (
+                  <MenuItem key={prov.provincia} value={prov.provincia}>
+                    {prov.provincia}
+                  </MenuItem>
+                ))}
               </Select>
             </Box>
             <IconButton 
@@ -187,25 +199,27 @@ get(ref(db, 'provincias'))
           </Button>
         </Grid>
       </Grid>
-        <Card sx={{ 
-          mb: 3,
-          borderRadius: 2,
-          boxShadow: 3,
-          overflow: 'hidden'
+
+      <Card sx={{ 
+        mb: 3,
+        borderRadius: 2,
+        boxShadow: 3,
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ 
+          p: 3,
+          backgroundColor: theme.palette.background.paper
         }}>
-          <Box sx={{ 
-            p: 3,
-            backgroundColor: theme.palette.background.paper
-          }}>
-            {!user.subscriptions.isverify ? (
-              <Box display="flex" justifyContent="center" alignItems="center" height="100px">
-                Modulos indisponíveis
-              </Box>
-            ) : (
-              <ModuleGrid activeModules={activeModules || {}} />
-            )}
-          </Box>
-        </Card>
+          {!user?.subscriptions?.isverify ? (
+            <Box display="flex" justifyContent="center" alignItems="center" height="100px">
+              Módulos indisponíveis
+            </Box>
+          ) : (
+            <ModuleGrid activeModules={activeModules || {}} />
+          )}
+        </Box>
+      </Card>
+
       <Card sx={{ 
         mb: 3,
         borderRadius: 2,
@@ -218,7 +232,7 @@ get(ref(db, 'provincias'))
                 <Receipt color="primary" sx={{ mr: 1 }} /> Pagamentos
               </Typography>
               <Typography variant="body2" color="text.secondary">
-               Verifique seus comprovativos de pagamento
+                Verifique seus comprovativos de pagamento
               </Typography>
             </Box>
             <Button
@@ -234,6 +248,7 @@ get(ref(db, 'provincias'))
           </Stack>
         </Box>
       </Card>
+
       <Card 
         component={Link} 
         to="/perfil"
@@ -263,10 +278,10 @@ get(ref(db, 'provincias'))
         />
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {userData.nome}
+            {userData.nome || "Usuário"}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {userData.sector}
+            {userData.sector || "Setor não definido"}
           </Typography>
           <Typography variant="body2" sx={{ 
             mt: 0.5,
@@ -275,7 +290,7 @@ get(ref(db, 'provincias'))
             alignItems: 'center'
           }}>
             <LocationOn fontSize="small" sx={{ mr: 0.5 }} />
-            {provinceTemp}
+            {provinceTemp || "Localização não definida"}
           </Typography>
         </Box>
       </Card>
@@ -283,4 +298,4 @@ get(ref(db, 'provincias'))
   );
 };
 
-export default ApxDesk;
+export default React.memo(ApxDesk); 

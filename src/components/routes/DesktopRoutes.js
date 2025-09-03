@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery, Modal, Snackbar, Alert } from '@mui/material';
+import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery, Modal, Snackbar, Alert, CircularProgress } from '@mui/material';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
@@ -104,16 +104,117 @@ const theme = createTheme({
   },
 })
 
+// Lista de rotas protegidas simplificada (removida duplicação)
+const protectedRoutes = [
+  '/cotacoes', '/cotacao', '/proposta', '/enviar-proposta', '/propostas', '/minha_proposta',
+  '/cotacaoPdf', '/concursos', '/concurso', '/faturacao', '/proforma', '/edit-proforma',
+  '/faturas', '/checkout', '/pagamento-modulo', '/post', '/anunciar', '/sms', '/callcenter',
+  '/procurement', '/inquerito', '/destacar', '/analises', '/recrutamento', '/addProduct',
+  '/conexoes', '/inbox', '/perfil', '/editar-perfil', '/painel', '/app', '/meuperfil',
+  '/editar-meuperfil', '/evento', '/market'
+];
+
+// Padrões dinâmicos simplificados
+const dynamicProtectedPatterns = [
+  /^\/proposta\/.+/,
+  /^\/cotacao\/.+/,
+  /^\/concurso\/.+/,
+  /^\/proforma\/.+/,
+  /^\/faturas\/.+/,
+  /^\/inquerito\/.+/,
+  /^\/perfil\/.+/,
+  /^\/produto\/.+/,
+  /^\/loja\/.+/,
+  /^\/product\/.+/,
+  /^\/verproforma\/.+/,
+  /^\/concursoPdf\/.+/,
+  /^\/categoria\/.+/,
+  /^\/pagamento-modulo\/.+/,
+  /^\/minha_proposta\/.+/
+];
+
+// Componente ProtectedRoute movido para fora do DesktopRoutes
+const ProtectedRoute = ({ user, children, requiredModule }) => {
+  const { activeModules, isLoading: modulesLoading } = useActiveModules();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  if (modulesLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Função para verificar se uma rota está protegida
+  const isRouteProtected = (pathname) => {
+    return protectedRoutes.some(route => pathname.startsWith(route)) ||
+           dynamicProtectedPatterns.some(pattern => pattern.test(pathname));
+  };
+
+  const isProtected = isRouteProtected(location.pathname);
+
+  // Caso 1: Usuário não autenticado e rota protegida
+  if (!user && isProtected) {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Caso 2: Módulo requerido não está ativo
+  if (requiredModule && !activeModules[requiredModule]) {
+    const module = allModules.find(m => m.key === requiredModule);
+    return (
+      <Box sx={{ p: 4, textAlign: 'center', maxWidth: 500, margin: 'auto', mt: 8 }}>
+        <Typography variant="h4" gutterBottom color="error.main">
+          Módulo não disponível
+        </Typography>
+        <Typography variant="body1" sx={{ mb: 3 }}>
+          Você não tem acesso ao módulo <strong>{module?.name || requiredModule}</strong>.
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}
+        >
+          Ativar Módulo
+        </Button>
+      </Box>
+    );
+  }
+
+  // Caso 3: Usuário não verificado e rota é protegida
+  if (!user?.subscriptions?.isverify && isProtected) {
+    return (
+      <>
+        {children}
+        <Snackbar open={true} autoHideDuration={6000}>
+          <Alert severity="warning">
+            Sua conta precisa ser verificada para acessar esta funcionalidade.
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => navigate('/app/verification')}
+              sx={{ ml: 1 }}
+            >
+              Verificar agora
+            </Button>
+          </Alert>
+        </Snackbar>
+      </>
+    );
+  }
+
+  return children;
+};
+
 const DesktopRoutes = ({ user }) => {
   const [language, setLanguage] = useState('pt')
   const [anchorEl, setAnchorEl] = useState(null)
   const [showTerms, setShowTerms] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [hasFeedback, setHasFeedback] = useState(false)
-  const [feedbackText, setFeedbackText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showReferrerModal, setShowReferrerModal] = useState(false)
-  const [referrerData, setReferrerData] = useState(null)
   const [feedbackForm, setFeedbackForm] = useState({
     nome: '',
     email: '',
@@ -121,231 +222,21 @@ const DesktopRoutes = ({ user }) => {
     feedback: ''
   });
 
-  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
-
-  const isVerify = user?.subscriptions?.isverify
-
   const navigate = useNavigate();
   const currentLocation = useLocation();
   const isMobile = useMediaQuery('(max-width:600px)');
   
   const fullScreenRoutes = [
-    '/auth',
-    '/email-verification',
-    '/create',
-    '/setup',
-    '/setupUser',
-    '/forget-password',
+    '/auth', '/email-verification', '/create', '/setup', '/setupUser', '/forget-password',
   ];
 
   const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
-
-  // Lista de todas as rotas que requerem autenticação
-  const protectedRoutes = [
-    '/cotacoes',
-    '/cotacao',
-    '/proposta',
-    '/enviar-proposta',
-    '/propostas',
-    '/minha_proposta',
-    '/cotacaoPdf',
-    '/concursos',
-    '/concurso',
-    '/faturacao',
-    '/proforma',
-    '/edit-proforma',
-    '/faturas',
-    '/checkout',
-    '/pagamento-modulo',
-    '/post',
-    '/anunciar',
-    '/sms',
-    '/callcenter',
-    '/procurement',
-    '/inquerito',
-    '/destacar',
-    '/analises',
-    '/recrutamento',
-    '/addProduct',
-    '/conexoes',
-    '/inbox',
-    '/perfil',
-    '/editar-perfil',
-    '/painel',
-    '/app',
-    '/meuperfil',
-    '/editar-meuperfil',
-    '/evento',
-    '/market',
-    '/proposta',
-    '/enviar-proposta',
-    '/propostas',
-    '/minha_proposta',
-    '/cotacaoPdf',
-    '/concursos',
-    '/concurso',
-    '/faturacao',
-    '/proforma',
-    '/edit-proforma',
-    '/faturas',
-    '/checkout',
-    '/pagamento-modulo',
-    '/post',
-    '/anunciar',
-    '/sms',
-    '/callcenter',
-    '/procurement',
-    '/inquerito',
-    '/destacar',
-    '/analises',
-    '/recrutamento',
-    '/addProduct',
-    '/conexoes',
-    '/inbox',
-    '/perfil',
-    '/editar-perfil',
-    '/painel',
-    '/app',
-    '/meuperfil',
-    '/editar-meuperfil',
-    '/evento',
-    '/market'
-  ];
-
-  const dynamicProtectedPatterns = [
-    /^\/proposta\/.+/,
-    /^\/cotacao\/.+/,
-    /^\/concurso\/.+/,
-    /^\/proforma\/.+/,
-    /^\/faturas\/.+/,
-    /^\/inquerito\/.+/,
-    /^\/perfil\/.+/,
-    /^\/produto\/.+/,
-    /^\/loja\/.+/,
-    /^\/product\/.+/,
-    /^\/verproforma\/.+/,
-    /^\/concursoPdf\/.+/,
-    /^\/inquerito\/.+/,
-    /^\/categoria\/.+/,
-    /^\/pagamento-modulo\/.+/,
-    /^\/proposta\/.+/,
-    /^\/cotacao\/.+/,
-    /^\/minha_proposta\/.+/,
-    /^\/cotacaoPdf\/.+/
-  ];
-
-  // Função para verificar se uma rota está protegida
-  const isRouteProtected = (pathname) => {
-    // Verifica se a rota está na lista de rotas protegidas
-    const isProtectedRoute = protectedRoutes.some(route => 
-      pathname.startsWith(route)
-    );
-    
-    // Verifica se a rota corresponde a algum padrão dinâmico
-    const isDynamicProtected = dynamicProtectedPatterns.some(pattern => 
-      pattern.test(pathname)
-    );
-    
-    return isProtectedRoute || isDynamicProtected;
-  };
-
-  const useModuleCheck = () => {
-    const { activeModules } = useActiveModules();
-    const isActiveModule = (moduleKey) => {
-      return !!activeModules[moduleKey];
-    };
-    return { isActiveModule };
-  };
-
-  const ProtectedRoute = ({ children, requiredModule }) => {
-    const { isActiveModule } = useModuleCheck();
-    const currentLocation = useLocation();
-    const navigate = useNavigate();
-    const isVerify = user?.subscriptions?.isverify;
-
-    // Verifica se a rota atual está protegida
-    const isProtected = isRouteProtected(currentLocation.pathname);
-
-    // Caso 1: Usuário não autenticado e rota protegida
-    if (!user && isProtected) {
-      return <Navigate to="/auth" replace />;
-    }
-
-    // Caso 2: Módulo requerido não está ativo
-    if (requiredModule && !isActiveModule(requiredModule)) {
-      const module = allModules.find(m => m.key === requiredModule);
-      return (
-        <Box
-          sx={{
-            p: 4,
-            maxWidth: 500,
-            margin: 'auto',
-            mt: 8,
-            textAlign: 'center',
-            backgroundColor: 'background.paper',
-            boxShadow: 3,
-          }}
-        >
-          <Typography variant="h4" gutterBottom color="error.main" fontWeight={600}>
-            Módulo não disponível
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-            Você não tem acesso ao módulo <strong>{module?.name || requiredModule}</strong>.<br />
-            {module?.description && (
-              <span>{module.description}</span>
-            )}
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ borderRadius: 3, textTransform: 'none', px: 4 }}
-            onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}
-          >
-            Ativar Módulo
-          </Button>
-        </Box>
-      );
-    }
-
-    // Caso 3: Usuário não verificado e rota é protegida
-    if (!isVerify && isProtected) {
-      return (
-        <>
-          {children}
-          <Snackbar
-            open={true}
-            autoHideDuration={6000}
-            onClose={() => {}}
-            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-          >
-            <Alert 
-              severity="warning"
-              sx={{ width: '100%' }}
-            >
-              Sua conta precisa ser verificada para acessar esta funcionalidade.
-              <Button 
-                color="inherit" 
-                size="small" 
-                onClick={() => navigate('/app/verification')}
-                sx={{ ml: 1 }}
-              >
-                Verificar agora
-              </Button>
-            </Alert>
-          </Snackbar>
-        </>
-      );
-    }
-
-    return children;
-  };
 
   const renderProtectedRoute = (path, element, requiredModule = null) => (
     <Route 
       path={path} 
       element={
-        <ProtectedRoute requiredModule={requiredModule}>
+        <ProtectedRoute user={user} requiredModule={requiredModule}>
           {element}
         </ProtectedRoute>
       } 
@@ -363,11 +254,7 @@ const DesktopRoutes = ({ user }) => {
     if (user?.id) {
       const feedbackRef = ref(db, `feedback/${user.id}`);
       onValue(feedbackRef, (snapshot) => {
-        if (snapshot.exists()) {
-          setHasFeedback(true);
-        } else {
-          setHasFeedback(false);
-        }
+        setHasFeedback(snapshot.exists());
       });
 
       if(user.referer && !user.isComplete){
@@ -376,50 +263,22 @@ const DesktopRoutes = ({ user }) => {
     }
   }, [user]);
 
-  const handleLanguageChange = (lang) => {
-    setLanguage(lang);
-    localStorage.setItem('selectedLanguage', lang);
-  };
-
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleAcceptTerms = () => {
-    setShowTerms(false);
-  };
-
   const handleOpenFeedbackModal = () => {
     setShowFeedbackModal(true);
   };
 
   const handleCloseFeedbackModal = () => {
     setShowFeedbackModal(false);
-    setFeedbackForm({
-      nome: '',
-      email: '',
-      contacto: '',
-      feedback: ''
-    });
+    setFeedbackForm({ nome: '', email: '', contacto: '', feedback: '' });
   };
 
   const handleFeedbackChange = (e) => {
     const { name, value } = e.target;
-    setFeedbackForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFeedbackForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFeedbackEditorChange = (value) => {
-    setFeedbackForm(prev => ({
-      ...prev,
-      feedback: value
-    }));
+    setFeedbackForm(prev => ({ ...prev, feedback: value }));
   };
 
   const handleSubmitFeedback = async () => {
@@ -428,17 +287,9 @@ const DesktopRoutes = ({ user }) => {
       return;
     }
 
-    if (!user) {
-      if (!feedbackForm.nome.trim() || !feedbackForm.email.trim()) {
-        alert('Por favor, preencha seu nome e email.');
-        return;
-      }
-
-      const isEmailValid = /\S+@\S+\.\S+/.test(feedbackForm.email.trim());
-      if (!isEmailValid) {
-        alert('Por favor, insira um email válido.');
-        return;
-      }
+    if (!user && (!feedbackForm.nome.trim() || !feedbackForm.email.trim())) {
+      alert('Por favor, preencha seu nome e email.');
+      return;
     }
 
     setIsLoading(true);
@@ -465,15 +316,8 @@ const DesktopRoutes = ({ user }) => {
       const newFeedbackRef = push(feedbackRef);
       await set(newFeedbackRef, feedbackData); 
 
-      alert('Feedback enviado com sucesso! Obrigado por compartilhar sua opinião.');
-
+      alert('Feedback enviado com sucesso!');
       setHasFeedback(true);
-      setFeedbackForm({
-        nome: '',
-        email: '',
-        contacto: '',
-        feedback: ''
-      });
       handleCloseFeedbackModal();
     } catch (error) {
       console.error('Erro ao salvar feedback:', error);
@@ -490,14 +334,7 @@ const DesktopRoutes = ({ user }) => {
   return (
     <ThemeProvider theme={theme}>
       <ActiveModulesProvider userId={user?.id}>
-        <Box
-          sx={{
-            minHeight: '100vh',
-            backgroundColor: '#F1F1F1',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <Box sx={{ minHeight: '100vh', backgroundColor: '#F1F1F1', display: 'flex', flexDirection: 'column' }}>
           {!isFullScreenRoute && (
             <>
               {!user ? (
@@ -509,18 +346,8 @@ const DesktopRoutes = ({ user }) => {
               )}
             </>
           )}
-          <Box
-            component="main"
-            sx={{
-              flex: 1,
-              width: '100%',
-              maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px',
-              margin: '0 auto',
-              padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px',
-              boxSizing: 'border-box',
-              pb: 4, 
-            }}
-          >
+          
+          <Box component="main" sx={{ flex: 1, width: '100%', maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px', margin: '0 auto', padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px', boxSizing: 'border-box', pb: 4 }}>
             <Routes>
               {/* Rotas públicas */}
               <Route path="/" element={<DashboardComponent user={user} />} />
@@ -544,22 +371,8 @@ const DesktopRoutes = ({ user }) => {
               <Route path="/termos" element={<Terms />} />
               <Route path="/politicas" element={<Politicas />} />
 
-              <Route 
-                path="/auth" 
-                element={
-                  <GuestRoute user={user}>
-                    <AuthDesk user={user} />
-                  </GuestRoute>
-                } 
-              />
-              <Route 
-                path="/create" 
-                element={
-                  <GuestRoute user={user}>
-                    <AuthCreateDesk user={user} />
-                  </GuestRoute>
-                } 
-              />
+              <Route path="/auth" element={<GuestRoute user={user}><AuthDesk user={user} /></GuestRoute>} />
+              <Route path="/create" element={<GuestRoute user={user}><AuthCreateDesk user={user} /></GuestRoute>} />
               <Route path="/setup" element={<CompanyDataFormDesk />} />
               <Route path="/setupUser" element={<UserDataFormDesk />} />
               <Route path="/forget-password" element={<ForgetPassword />} />
@@ -567,7 +380,7 @@ const DesktopRoutes = ({ user }) => {
               <Route path="/email-verification" element={<EmailVerification />} />
               <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
 
-              {/* Rotas protegidas - Módulos */}
+              {/* Rotas protegidas */}
               {renderProtectedRoute("/addProduct", <ProductFormDesk user={user} />, "moduloMarket")}
               {renderProtectedRoute("/conexoes", <ConnectionsDesk user={user} />)}
               {renderProtectedRoute("/search", <ConnectionsSearchDesk />)}
@@ -613,157 +426,42 @@ const DesktopRoutes = ({ user }) => {
               {renderProtectedRoute("/recrutamento", <RecrutamentoDesk user={user} />)}
               {renderProtectedRoute("/sms", <SmsDesk user={user} />)}
 
-              {/* Rota de fallback para rotas não encontradas */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Box>
-          {!isFullScreenRoute && <FooterDesk sx={{ 
-            flexShrink: 0,
-            marginTop: 'auto' 
-          }} />}
           
-          {/* Componente de feedback */}
-          <Fab
-            color="primary"
-            aria-label="feedback"
-            sx={{
-              position: 'fixed',
-              bottom: isMobile ? 16 : 24,
-              right: isMobile ? 16 : 24,
-              zIndex: 1000,
-              width: isMobile ? 40 : 56,
-              height: isMobile ? 40 : 56,
-              animation: !hasFeedback ? 'pulse 2s infinite' : 'none',
-            }}
-            onClick={handleOpenFeedbackModal}
-          >
+          {!isFullScreenRoute && <FooterDesk sx={{ flexShrink: 0, marginTop: 'auto' }} />}
+          
+          <Fab color="primary" aria-label="feedback" sx={{ position: 'fixed', bottom: isMobile ? 16 : 24, right: isMobile ? 16 : 24, zIndex: 1000, width: isMobile ? 40 : 56, height: isMobile ? 40 : 56, animation: !hasFeedback ? 'pulse 2s infinite' : 'none' }} onClick={handleOpenFeedbackModal}>
             <FeedbackIcon />
           </Fab>
 
-          {/* Modal de feedback */}
           {showFeedbackModal && (
-            <Box
-              sx={{
-                position: 'fixed',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: '#fff',
-                padding: '24px',
-                borderRadius: '8px',
-                boxShadow: 3,
-                zIndex: 1001,
-                width: isMobile ? '90%' : '500px',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-              }}
-            >
-              <IconButton
-                aria-label="fechar"
-                onClick={handleCloseFeedbackModal}
-                sx={{
-                  position: 'absolute',
-                  right: '8px',
-                  top: '8px',
-                  color: 'text.secondary',
-                }}
-              >
+            <Box sx={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#fff', padding: '24px', borderRadius: '8px', boxShadow: 3, zIndex: 1001, width: isMobile ? '90%' : '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+              <IconButton aria-label="fechar" onClick={handleCloseFeedbackModal} sx={{ position: 'absolute', right: '8px', top: '8px', color: 'text.secondary' }}>
                 <Close />
               </IconButton>
-
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Enviar Feedback
-              </Typography>
-
+              <Typography variant="h6" sx={{ mb: 2 }}>Enviar Feedback</Typography>
               {!user && (
                 <>
-                  <TextField
-                    label="Seu nome"
-                    fullWidth
-                    name="nome"
-                    value={feedbackForm.nome}
-                    onChange={handleFeedbackChange}
-                    sx={{ mb: 2 }}
-                    required
-                  />
-                  <TextField
-                    label="Seu email"
-                    fullWidth
-                    name="email"
-                    type="email"
-                    value={feedbackForm.email}
-                    onChange={handleFeedbackChange}
-                    sx={{ mb: 2 }}
-                    required
-                  />
-                  <TextField
-                    label="Seu contacto (opcional)"
-                    fullWidth
-                    name="contacto"
-                    value={feedbackForm.contacto}
-                    onChange={handleFeedbackChange}
-                    sx={{ mb: 2 }}
-                  />
+                  <TextField label="Seu nome" fullWidth name="nome" value={feedbackForm.nome} onChange={handleFeedbackChange} sx={{ mb: 2 }} required />
+                  <TextField label="Seu email" fullWidth name="email" type="email" value={feedbackForm.email} onChange={handleFeedbackChange} sx={{ mb: 2 }} required />
+                  <TextField label="Seu contacto (opcional)" fullWidth name="contacto" value={feedbackForm.contacto} onChange={handleFeedbackChange} sx={{ mb: 2 }} />
                 </>
               )}
-
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                Seu feedback:
-              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>Seu feedback:</Typography>
               <Box sx={{ mb: 2 }}>
-                <ReactQuill
-                  value={feedbackForm.feedback}
-                  onChange={handleFeedbackEditorChange}
-                  modules={{
-                    toolbar: [
-                      ['bold', 'italic', 'underline', 'strike'],
-                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                      ['link'],
-                      ['clean']
-                    ],
-                  }}
-                  formats={[
-                    'bold', 'italic', 'underline', 'strike',
-                    'list', 'bullet',
-                    'link'
-                  ]}
-                  style={{ height: '200px', marginBottom: '40px' }}
-                />
+                <ReactQuill value={feedbackForm.feedback} onChange={handleFeedbackEditorChange} modules={{ toolbar: [['bold', 'italic', 'underline', 'strike'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link'], ['clean']] }} formats={['bold', 'italic', 'underline', 'strike', 'list', 'bullet', 'link']} style={{ height: '200px', marginBottom: '40px' }} />
               </Box>
-
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                onClick={handleSubmitFeedback}
-                disabled={isLoading}
-              >
+              <Button variant="contained" color="primary" fullWidth onClick={handleSubmitFeedback} disabled={isLoading}>
                 {isLoading ? 'Enviando...' : 'Enviar Feedback'}
               </Button>
             </Box>
           )}
 
-          {/* Modal de referenciador */}
           {showReferrerModal && (
-            <Modal
-              open={showReferrerModal}
-              onClose={handleCloseReferrerModal}
-              aria-labelledby="referrer-modal-title"
-              aria-describedby="referrer-modal-description"
-            >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  backgroundColor: '#fff',
-                  padding: '24px',
-                  borderRadius: '8px',
-                  boxShadow: 3,
-                  width: isMobile ? '90%' : '80%',
-                }}
-              >
+            <Modal open={showReferrerModal} onClose={handleCloseReferrerModal}>
+              <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#fff', padding: '24px', borderRadius: '8px', boxShadow: 3, width: isMobile ? '90%' : '80%' }}>
                 <CompanyUpdateDesk/>
               </Box>
             </Modal>
