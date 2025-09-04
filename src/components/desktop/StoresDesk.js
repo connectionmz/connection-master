@@ -27,7 +27,12 @@ import {
   Badge,
   InputAdornment,
   Button,
-  Alert
+  Alert,
+  Paper,
+  Stack,
+  Breadcrumbs,
+  Rating,
+  Fab
 } from "@mui/material";
 import {
   Share,
@@ -37,18 +42,29 @@ import {
   VisibilityOff,
   Search,
   ShoppingCartCheckout,
-  Add,
-  AddShoppingCart
+  AddShoppingCart,
+  Favorite,
+  FavoriteBorder,
+  NavigateNext,
+  Home,
+  Star,
+  StarHalf,
+  StarBorder,
+  TrendingUp,
+  FlashOn,
+  LocalFireDepartment,
+  Discount,
+  Sell,
+  Whatshot
 } from "@mui/icons-material";
 import { formatPrice } from "../../utils/utils";
 import MyCart from "./ShoppingCart";
 
 const StoresDesk = ({ user }) => {
   const theme = useTheme();
-
   const { activeModules } = useActiveModules();
-
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   // Estados
   const [stores, setStores] = useState([]);
@@ -61,15 +77,13 @@ const StoresDesk = ({ user }) => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [favoriteProducts, setFavoriteProducts] = useState(new Set());
 
   const navigate = useNavigate();
-  // Dados do usuário protegidos
   const userId = user?.id || 'anonymous';
   const userProvince = user?.provinciaTemp || user?.provincia || null;
+  const hasMarket = activeModules?.moduloMarket || false;
 
-
- const hasMarket = activeModules?.moduloMarket || false;  
- 
   const trackInteraction = async (type, action, itemId, storeId = null) => {
     try {
       const timestamp = Date.now();
@@ -106,7 +120,6 @@ const StoresDesk = ({ user }) => {
         };
         
         const clickRef = push(ref(db, 'clicks'));
-        //await set(clickRef, clickData);
       }
       
     } catch (error) {
@@ -119,12 +132,10 @@ const StoresDesk = ({ user }) => {
       const timestamp = Date.now();
       const updates = {};
       
-      // Atualizações para métricas
       updates[`loja_metrics/${storeId}/total_cliques`] = increment(1);
       updates[`loja_metrics/${storeId}/ultimo_clique`] = timestamp;
       updates[`loja_metrics/${storeId}/from`] = 'Pagina Inicial';
       
-      // Adiciona informações da empresa se o usuário estiver logado
       if (user) {
         updates[`loja_metrics/${storeId}/company`] = {
           id: user.id,
@@ -137,10 +148,8 @@ const StoresDesk = ({ user }) => {
         };
       }
       
-      // Aplica todas as atualizações
       await update(ref(db), updates);
       
-      // Registro adicional para analytics
       const clickData = {
         storeId,
         userId: user?.id || 'anonymous',
@@ -173,14 +182,12 @@ const StoresDesk = ({ user }) => {
             settings: store.settings || { showPrices: true }
           }));
   
-          // Exibe todas as lojas se user não existir
           const filtered = !user ? storesData : 
             (userProvince 
               ? storesData.filter(store => store.company?.provincia === userProvince)
               : storesData);
   
           setStores(filtered);
-
           
           filtered.forEach(store => {
             trackInteraction('store', 'impression', store.id);
@@ -196,7 +203,7 @@ const StoresDesk = ({ user }) => {
     };
     
     fetchStores();
-  }, [user, userProvince]); // Adicionei user como dependência
+  }, [user, userProvince]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -218,17 +225,14 @@ const StoresDesk = ({ user }) => {
     try {
       const cartRef = ref(db, `cart/${user.id}/${product.id}`);
       
-      // Verificar se o item já existe no carrinho
       const snapshot = await get(cartRef);
       
       if (snapshot.exists()) {
-        // Atualizar quantidade se já existir
         const currentQuantity = snapshot.val().quantity || 1;
         await update(cartRef, {
           quantity: currentQuantity + 1
         });
       } else {
-        // Adicionar novo item ao carrinho
         await set(cartRef, {
           productId: product.id,
           storeId: product.storeId,
@@ -242,11 +246,9 @@ const StoresDesk = ({ user }) => {
         });
       }
       
-      // Atualizar contador de cliques para o produto
       const productRef = ref(db, `stores/${product.storeId}/products/${product.id}/cartAdds`);
       await set(productRef, increment(1));
       
-      // Feedback para o usuário
       setSnackbarMessage(`${product.name} adicionado ao carrinho!`);
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
@@ -262,19 +264,16 @@ const StoresDesk = ({ user }) => {
   // Função de checkout
   const handleCheckout = async () => {
     try {
-      // 1. Criar pedido
       const orderRef = push(ref(db, 'orders'));
       const orderId = orderRef.key;
       
-      // 2. Obter itens do carrinho
       const cartSnapshot = await get(ref(db, `cart/${user.id}`));
       const cartItems = cartSnapshot.val() || {};
       
-      // 3. Salvar dados do pedido
       await set(orderRef, {
         id: orderId,
         userId: user.id,
-        storeId: Object.values(cartItems)[0]?.storeId, // Assumindo um pedido por loja
+        storeId: Object.values(cartItems)[0]?.storeId,
         items: Object.entries(cartItems).reduce((acc, [id, item]) => {
           acc[id] = {
             productId: item.productId,
@@ -291,10 +290,8 @@ const StoresDesk = ({ user }) => {
         updatedAt: new Date().toISOString()
       });
       
-      // 4. Limpar carrinho
       await remove(ref(db, `cart/${user.id}`));
       
-      // 5. Feedback e redirecionamento
       setSnackbarMessage('Pedido realizado com sucesso!');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);
@@ -308,6 +305,8 @@ const StoresDesk = ({ user }) => {
       setOpenSnackbar(true);
     }
   };
+
+
 
   // Produtos com memoização e registro de impressão
   const products = useMemo(() => {
@@ -326,7 +325,6 @@ const StoresDesk = ({ user }) => {
       : true
     );
 
-    // Registrar impressões dos produtos visíveis
     prods.forEach(product => {
       trackInteraction('product', 'impression', product.id, product.storeId);
     });
@@ -340,6 +338,18 @@ const StoresDesk = ({ user }) => {
       .filter(store => Object.keys(store.products || {}).length > 0)
       .slice(0, 10);
   }, [stores]);
+
+  // Produtos em promoção
+  const discountedProducts = useMemo(() => {
+    return products.filter(product => 
+      product.discountPrice && product.discountPrice < product.price
+    ).slice(0, 8);
+  }, [products]);
+
+  // Produtos mais vendidos (simulado)
+  const bestSellingProducts = useMemo(() => {
+    return [...products].sort(() => Math.random() - 0.5).slice(0, 8);
+  }, [products]);
 
   // Manipuladores de compartilhamento
   const handleShareOpen = (event, productId) => {
@@ -449,110 +459,311 @@ const StoresDesk = ({ user }) => {
     );
   };
 
-// Componente de Link para produto com tracking - VERSÃO CORRIGIDA
-const TrackedProductLink = ({ product, children }) => (
-  <Link 
-    to={`/product/${product.id}/store/${product.storeId}`}
-    onClick={(e) => {
-      e.preventDefault();
-      trackClick(product.storeId)
-        .then(() => {
-          navigate(`/product/${product.id}/store/${product.storeId}`);
-        });
-    }}
-    style={{ textDecoration: 'none', color: 'inherit' }}
-  >
-    {children}
-  </Link>
-);
+  // Componente de Link para produto com tracking
+  const TrackedProductLink = ({ product, children }) => (
+    <Link 
+      to={`/product/${product.id}/store/${product.storeId}`}
+      onClick={(e) => {
+        e.preventDefault();
+        trackClick(product.storeId)
+          .then(() => {
+            navigate(`/product/${product.id}/store/${product.storeId}`);
+          });
+      }}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      {children}
+    </Link>
+  );
 
-// Componente de Link para loja com tracking - VERSÃO CORRIGIDA
-const TrackedStoreLink = ({ store, children }) => (
-  <Link 
-    to={`/loja/${store.id}`}
-    onClick={(e) => {
-      e.preventDefault();
-      trackClick(store.id)
-        .then(() => {
-          navigate(`/loja/${store.id}`);
-        });
-    }}
-    style={{ textDecoration: 'none', color: 'inherit' }}
-  >
-    {children}
-  </Link>
-);
+  // Componente de Link para loja com tracking
+  const TrackedStoreLink = ({ store, children }) => (
+    <Link 
+      to={`/loja/${store.id}`}
+      onClick={(e) => {
+        e.preventDefault();
+        trackClick(store.id)
+          .then(() => {
+            navigate(`/loja/${store.id}`);
+          });
+      }}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      {children}
+    </Link>
+  );
+
+  // Componente de Card de Produto
+  const ProductCard = ({ product }) => (
+    <Card
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: 2,
+        boxShadow: 0,
+        border: '1px solid #e8e8e8',
+        transition: "transform 0.2s, box-shadow 0.2s",
+        "&:hover": {
+          transform: "translateY(-4px)",
+          boxShadow: "0 8px 16px rgba(0,0,0,0.1)",
+        },
+        position: 'relative',
+        backgroundColor: '#fff',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Badges */}
+      {product.isNew && (
+        <Chip
+          label="NOVO"
+          color="success"
+          size="small"
+          sx={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            fontWeight: 'bold',
+            zIndex: 1,
+            fontSize: '10px',
+            height: '20px'
+          }}
+        />
+      )}
+
+      {product.discountPrice && product.discountPrice < product.price && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            backgroundColor: theme.palette.error.main,
+            color: 'white',
+            borderRadius: '12px',
+            padding: '2px 6px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            zIndex: 1
+          }}
+        >
+          -{calculateDiscount(product.discountPrice, product.price)}%
+        </Box>
+      )}
+
+
+      <CardActionArea 
+        component={TrackedProductLink} 
+        product={product}
+        sx={{ flexGrow: 1 }}
+      >
+        {/* Imagem do produto */}
+        <Box
+          sx={{
+            width: "100%",
+            height: isMobile ? 140 : 200,
+            overflow: "hidden",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "#fafafa",
+            position: 'relative'
+          }}
+        >
+          <CardMedia
+            component="img"
+            image={product.imageUrl || '/placeholder-product.png'}
+            alt={product.name}
+            sx={{
+              width: "auto",
+              height: "85%",
+              objectFit: "contain",
+              transition: 'transform 0.3s',
+              '&:hover': {
+                transform: 'scale(1.05)'
+              }
+            }}
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = '/placeholder-product.png';
+            }}
+          />
+        </Box>
+
+        {/* Detalhes do produto */}
+        <CardContent sx={{ p: 2, flexGrow: 1 }}>
+          {/* Nome do produto */}
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+              mb: 1,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              minHeight: 40,
+              fontSize: '0.9rem'
+            }}
+          >
+            {product.name}
+          </Typography>
+
+          {/* Loja */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+            <Avatar 
+              src={product.storeLogo} 
+              sx={{ width: 20, height: 20, mr: 1 }} 
+            />
+            <Typography 
+              variant="caption" 
+              color="text.secondary"
+              sx={{
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                fontSize: '0.75rem'
+              }}
+            >
+              {product.storeName}
+            </Typography>
+          </Box>
+
+          {/* Preço */}
+          <Box sx={{ mt: 'auto' }}>
+            <PriceDisplay product={product} />
+          </Box>
+        </CardContent>
+      </CardActionArea>
+
+      {/* Ações do Produto */}
+      <Box sx={{ 
+        p: 1.5, 
+        display: 'flex', 
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderTop: '1px solid #f0f0f0',
+        backgroundColor: '#fafafa'
+      }}>
+        {/* Botão de Adicionar ao Carrinho */}
+        <Tooltip title="Adicionar ao carrinho">
+          <Button
+            variant="contained"
+            size="small"
+            color="primary"
+            startIcon={<AddShoppingCart fontSize="small" />}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!user) {
+                window.location.href = '/auth';
+              } else {
+                addToCart(product);
+              }
+            }}
+            sx={{
+              textTransform: 'none',
+              fontSize: '0.75rem',
+              borderRadius: 1,
+              px: 1.5,
+              py: 0.5
+            }}
+          >
+            Carrinho
+          </Button>
+        </Tooltip>
+
+        {/* Botão de Compartilhar */}
+        <Tooltip title="Compartilhar">
+          <IconButton 
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShareOpen(e, product.id);
+            }}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+                color: theme.palette.primary.main
+              }
+            }}
+          >
+            <Share fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    </Card>
+  );
 
   return (
     <Box sx={{ 
-      p: isMobile ? 2 : 4, 
-      backgroundColor: '#f8f8f8',
+      p: isMobile ? 1 : 3, 
+      backgroundColor: '#f5f7fa',
       minHeight: '100vh'
     }}>
-        {user && !hasMarket && user.type !== 'singular' && (
-          <Alert
-            severity="warning"
-            action={
-              <Button color="inherit" size="small" onClick={() => window.location = '/pagamento-modulo/moduloMarket'}>
-                Ativar Módulo Mercado
-              </Button>
-            }
-            sx={{ mb: 2 }}
-          >
-            O módulo Mercado está inativo. Para usar este serviço, ative o módulo Mercado.
-          </Alert>
-        )}
+      
 
-      <Box sx={{ 
+      {user && !hasMarket && user.type !== 'singular' && (
+        <Alert
+          severity="warning"
+          action={
+            <Button color="inherit" size="small" onClick={() => window.location = '/pagamento-modulo/moduloMarket'}>
+              Ativar Módulo
+            </Button>
+          }
+          sx={{ mb: 2, maxWidth: 1400, mx: 'auto' }}
+        >
+          O módulo Mercado está inativo. Ative o módulo para usar este serviço.
+        </Alert>
+      )}
+
+      {/* Header Principal */}
+      <Paper elevation={0} sx={{ 
         maxWidth: 1400, 
         mx: 'auto', 
-        mb: 4,
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 2
+        mb: 3,
+        p: 3,
+        borderRadius: 2,
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white'
       }}>
-        <Box>
-          <Typography variant={isMobile ? "h5" : "h4"} sx={{ 
-            fontWeight: "bold",
-            color: theme.palette.primary.main,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
-            <LocalMall fontSize="large" />
-            Lojas e Produtos
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {user?.provinciaTemp || user?.provincia ? 
-              `Mostrando lojas da província de ${user.provinciaTemp || user.provincia}` : 
-              'Mostrando todas lojas disponíveis'}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <TextField
-            label="Pesquisar produto..."
-            variant="outlined"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            fullWidth
-            sx={{ 
-              maxWidth: 600,
-              backgroundColor: '#fff',
-              borderRadius: 1
-            }}
-            size={isMobile ? 'small' : 'medium'}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search color="action" />
-                </InputAdornment>
-              )
-            }}
-          />
-          <Tooltip title="Carrinho de Compras">
-           <IconButton 
+        <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          <Box>
+            <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: "bold", mb: 1 }}>
+             Mercado 
+            </Typography>
+            <Typography variant="body1" sx={{ opacity: 0.9 }}>
+              Encontre produtos e serviços de diversas lojas locais
+              {userProvince && ` em ${userProvince}`}
+            </Typography>
+          </Box>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <TextField
+              placeholder="Pesquisar produtos..."
+              variant="outlined"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ 
+                minWidth: isMobile ? '100%' : 300,
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                borderRadius: 1,
+                '& .MuiOutlinedInput-root': {
+                  color: 'text.primary'
+                }
+              }}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search color="action" />
+                  </InputAdornment>
+                )
+              }}
+            />
+            
+            <Tooltip title="Carrinho de Compras">
+              <IconButton 
                 onClick={() => {
                   if (!user) {
                     window.location.href = '/auth';
@@ -560,311 +771,206 @@ const TrackedStoreLink = ({ store, children }) => (
                     setCartOpen(true);
                   }
                 }}
-                sx={{ position: 'relative' }}
+                sx={{ 
+                  color: 'white',
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.3)'
+                  }
+                }}
               >
-              <Badge 
-                badgeContent={cartItemCount} 
-                color="primary"
-              >
-                <ShoppingCartCheckout />
-              </Badge>
-            </IconButton>
-          </Tooltip>
+                <Badge 
+                  badgeContent={cartItemCount} 
+                  color="error"
+                >
+                  <ShoppingCartCheckout />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
-      </Box>
-      {/* Lojas em destaque */}
+      </Paper>
+
+      {/* Seção de Lojas em Destaque */}
       {featuredStores.length > 0 && (
-  <Box sx={{ 
-    maxWidth: 1400,
-    mx: 'auto',
-    mb: 4,
-    p: 2,
-    backgroundColor: '#fff',
-    borderRadius: 2,
-    boxShadow: 1
-  }}>
-    <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Store color="primary" />
-      Lojas disponíveis
-    </Typography>
-    
-    <Box sx={{
-      display: "flex",
-      overflowX: "auto",
-      gap: 2,
-      py: 1,
-      '&::-webkit-scrollbar': { height: 6 },
-      '&::-webkit-scrollbar-thumb': {
-        backgroundColor: theme.palette.primary.main,
-        borderRadius: 3,
-      },
-    }}>
-      {(featuredStores || []).map((store) => (
-       <Tooltip key={store?.id} title={store?.name || "Loja sem nome"} arrow>
-       <TrackedStoreLink store={store}>
-         <Box sx={{
-           minWidth: 120,
-           display: "flex",
-           flexDirection: "column",
-           alignItems: "center",
-           p: 1,
-           borderRadius: 1,
-           '&:hover': { backgroundColor: '#f5f5f5' }
-         }}>
-           <Badge
-             overlap="circular"
-             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-             badgeContent={
-               store?.company?.verified ? (
-                 <Verified fontSize="small" color="primary" />
-               ) : null
-             }
-           >
-             <Avatar
-               src={store?.company?.logo}
-               sx={{
-                 width: 80,
-                 height: 80,
-                 border: `2px solid ${theme.palette.primary.main}`,
-               }}
-             >
-               {(store?.name || '').charAt(0)}
-             </Avatar>
-           </Badge>
-           <Typography
-             variant="body2"
-             sx={{ 
-               mt: 1,
-               fontWeight: 500,
-               textAlign: 'center',
-               whiteSpace: 'nowrap',
-               overflow: 'hidden',
-               textOverflow: 'ellipsis',
-               maxWidth: '100%'
-             }}
-           >
-             {store?.name || "Loja sem nome"}
-           </Typography>
-         </Box>
-       </TrackedStoreLink>
-     </Tooltip>
-      ))}
-    </Box>
-  </Box>
-)}
-
-      {/* Listagem de produtos */}
-      {loading ? (
-        <Box sx={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          alignItems: 'center',
-          height: '50vh'
-        }}>
-          <CircularProgress size={isMobile ? 40 : 60} />
-        </Box>
-      ) : (
-        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-          {products.length > 0 ? (
-            <Grid container spacing={isMobile ? 1 : 3}>
-              {products.map((product) => (
-                <Grid item xs={6} sm={4} md={3} lg={2.4} key={`${product.storeId}-${product.id}`}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
+        <Box sx={{ maxWidth: 1400, mx: 'auto', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
+              <Store color="primary" />
+              Lojas em Destaque
+            </Typography>
+            <Button 
+              variant="text" 
+              size="small" 
+              endIcon={<NavigateNext />}
+              onClick={() => navigate('/lojas')}
+            >
+              Ver todas
+            </Button>
+          </Box>
+          
+          <Paper elevation={0} sx={{ p: 2, borderRadius: 2, backgroundColor: 'white' }}>
+            <Box sx={{
+              display: "flex",
+              overflowX: "auto",
+              gap: 2,
+              py: 1,
+              '&::-webkit-scrollbar': { height: 6 },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.primary.main,
+                borderRadius: 3,
+              },
+            }}>
+              {featuredStores.map((store) => (
+                <Tooltip key={store.id} title={store.name} arrow>
+                  <TrackedStoreLink store={store}>
+                    <Box sx={{
+                      minWidth: 100,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      p: 2,
                       borderRadius: 2,
-                      boxShadow: 0,
-                      border: '1px solid #eee',
-                      transition: "transform 0.2s, box-shadow 0.2s",
-                      "&:hover": {
-                        transform: "translateY(-5px)",
-                        boxShadow: 3,
-                      },
-                      position: 'relative',
-                      backgroundColor: '#fff'
-                    }}
-                  >
-                    {/* Badges */}
-                    {product.isNew && (
-                      <Chip
-                        label="Novo"
-                        color="success"
-                        size="small"
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          fontWeight: 'bold',
-                          zIndex: 1
-                        }}
-                      />
-                    )}
-
-                    <CardActionArea 
-                      component={TrackedProductLink} 
-                      product={product}
-                      sx={{ flexGrow: 1 }}
-                    >
-                        {/* Imagem do produto */}
-                        <Box
+                      border: '1px solid #e8e8e8',
+                      transition: 'all 0.2s',
+                      '&:hover': { 
+                        backgroundColor: '#f8f9fa',
+                        transform: 'translateY(-2px)',
+                        boxShadow: 1
+                      }
+                    }}>
+                      <Badge
+                        overlap="circular"
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        badgeContent={
+                          store.company?.verified ? (
+                            <Verified fontSize="small" color="primary" />
+                          ) : null
+                        }
+                      >
+                        <Avatar
+                          src={store.company?.logo}
                           sx={{
-                            width: "100%",
-                            height: isMobile ? 120 : 180,
-                            overflow: "hidden",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            backgroundColor: "#fafafa",
-                            position: 'relative'
+                            width: 60,
+                            height: 60,
+                            border: `2px solid ${theme.palette.primary.main}`,
                           }}
                         >
-                          <CardMedia
-                            component="img"
-                            image={product.imageUrl}
-                            alt={product.name}
-                            sx={{
-                              width: "auto",
-                              height: "80%",
-                              objectFit: "contain",
-                              transition: 'transform 0.3s',
-                              '&:hover': {
-                                transform: 'scale(1.05)'
-                              }
-                            }}
-                            loading="lazy"
-                          />
-                        </Box>
-
-                        {/* Detalhes do produto */}
-                        <CardContent sx={{ p: 2 }}>
-                          {/* Nome do produto */}
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: 500,
-                              mb: 1,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              minHeight: 44
-                            }}
-                          >
-                            {product.name}
-                          </Typography>
-
-                          {/* Loja */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Avatar 
-                              src={product.storeLogo} 
-                              sx={{ width: 20, height: 20, mr: 1 }} 
-                            />
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary"
-                              sx={{
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}
-                            >
-                              {product.storeName}
-                            </Typography>
-                          </Box>
-
-                          {/* Preço */}
-                          <Box sx={{ mt: 'auto' }}>
-                            <PriceDisplay product={product} />
-                          </Box>
-                         
-                        </CardContent>
-                      </CardActionArea>
-
-{/* Ações do Produto */}
-<Box sx={{ 
-  p: 1, 
-  display: 'flex', 
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderTop: '1px solid #f0f0f0',
-  backgroundColor: '#fafafa'
-}}>
-  {/* Botão de Adicionar ao Carrinho */}
-{/* Botão de Adicionar ao Carrinho */}
-<Tooltip title="Adicionar ao carrinho">
-  {user && stores.find(store => store.id === product.storeId)?.company?.id !== user.id && (
-    <Button
-      variant="contained"
-      size="small"
-      color="primary"
-      startIcon={<AddShoppingCart fontSize={isMobile ? "small" : "medium"} />}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!user) {
-          window.location.href = '/auth';
-        } else {
-          addToCart(product);
-        }
-      }}
-      sx={{
-        ml: 1,
-        textTransform: 'none',
-        fontSize: isMobile ? '0.75rem' : '0.875rem'
-      }}
-    >
-      {isMobile ? 'Adicionar' : 'Adicionar ao carrinho'}
-    </Button>
-  )}
-</Tooltip>
-
-  {/* Botão de Compartilhar */}
-  <Tooltip title="Compartilhar">
-    <IconButton 
-      size="small"
-      onClick={(e) => {
-        e.stopPropagation();
-        handleShareOpen(e, product.id);
-      }}
-      sx={{
-        color: theme.palette.primary.main,
-        '&:hover': {
-          backgroundColor: theme.palette.primary.light,
-          color: theme.palette.primary.dark
-        }
-      }}
-    >
-      <Share fontSize={isMobile ? "small" : "medium"} />
-    </IconButton>
-  </Tooltip>
-</Box>
-                  </Card>
-                </Grid>
+                          {(store.name || '').charAt(0)}
+                        </Avatar>
+                      </Badge>
+                      <Typography
+                        variant="body2"
+                        sx={{ 
+                          mt: 1,
+                          fontWeight: 500,
+                          textAlign: 'center',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '90%'
+                        }}
+                      >
+                        {store.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {Object.keys(store.products || {}).length} produtos
+                      </Typography>
+                    </Box>
+                  </TrackedStoreLink>
+                </Tooltip>
               ))}
-            </Grid>
-          ) : (
-            <Box sx={{ 
-              width: '100%', 
-              textAlign: 'center', 
-              p: 4,
-              backgroundColor: '#fff',
-              borderRadius: 2,
-              boxShadow: 1
-            }}>
-              <Typography variant="h6" color="text.secondary">
-                {searchQuery ? "Nenhum produto encontrado" : "Nenhum produto disponível"}
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {searchQuery 
-                  ? "Tente ajustar sua pesquisa" 
-                  : "As lojas ainda não adicionaram produtos"}
-              </Typography>
             </Box>
-          )}
+          </Paper>
         </Box>
       )}
+
+      {/* Seção de Ofertas Especiais */}
+      {discountedProducts.length > 0 && (
+        <Box sx={{ maxWidth: 1400, mx: 'auto', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <LocalFireDepartment color="error" />
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+              Ofertas Quentes
+            </Typography>
+            <Chip 
+              label="LIMITADO" 
+              size="small" 
+              color="error" 
+              variant="outlined"
+              sx={{ ml: 1 }}
+            />
+          </Box>
+          
+          <Grid container spacing={2}>
+            {discountedProducts.map((product) => (
+              <Grid item xs={6} sm={4} md={3} lg={2.4} key={`${product.storeId}-${product.id}`}>
+                <ProductCard product={product} />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
+
+      {/* Listagem principal de produtos */}
+      <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            {searchQuery ? `Resultados para "${searchQuery}"` : 'Todos os Produtos'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {products.length} {products.length === 1 ? 'produto' : 'produtos'} encontrado(s)
+          </Typography>
+        </Box>
+
+        {loading ? (
+          <Box sx={{ 
+            display: "flex", 
+            justifyContent: "center", 
+            alignItems: 'center',
+            height: '50vh'
+          }}>
+            <CircularProgress size={isMobile ? 40 : 60} />
+          </Box>
+        ) : (
+          <>
+            {products.length > 0 ? (
+              <Grid container spacing={2}>
+                {products.map((product) => (
+                  <Grid item xs={6} sm={4} md={3} lg={2.4} key={`${product.storeId}-${product.id}`}>
+                    <ProductCard product={product} />
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Paper elevation={0} sx={{ 
+                p: 4, 
+                textAlign: 'center',
+                borderRadius: 2,
+                backgroundColor: 'white'
+              }}>
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  {searchQuery ? "Nenhum produto encontrado" : "Nenhum produto disponível"}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  {searchQuery 
+                    ? "Tente ajustar os termos da sua pesquisa" 
+                    : "As lojas ainda não adicionaram produtos ao catálogo"}
+                </Typography>
+                {searchQuery && (
+                  <Button 
+                    variant="outlined" 
+                    onClick={() => setSearchQuery('')}
+                    startIcon={<Search />}
+                  >
+                    Limpar pesquisa
+                  </Button>
+                )}
+              </Paper>
+            )}
+          </>
+        )}
+      </Box>
 
       {/* Menu de compartilhamento */}
       <Menu
@@ -920,12 +1026,32 @@ const TrackedStoreLink = ({ store, children }) => (
           <ListItemText>Copiar link</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Carrinho de compras */}
       <MyCart
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         userId={user?.id}
         onCheckout={handleCheckout}
       />
+
+      {/* Botão flutuante para carrinho em mobile */}
+      {isMobile && cartItemCount > 0 && (
+        <Fab
+          color="primary"
+          aria-label="carrinho"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+          }}
+          onClick={() => setCartOpen(true)}
+        >
+          <Badge badgeContent={cartItemCount} color="error">
+            <ShoppingCartCheckout />
+          </Badge>
+        </Fab>
+      )}
     </Box>
   );
 };

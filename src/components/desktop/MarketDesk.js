@@ -94,7 +94,7 @@ const MarketDesk = ({ user }) => {
   }
   return (
     <Box sx={{ width: '100%' }} display="flex" justifyContent="center" alignItems="center" padding={2}>
-      <Paper sx={{ width: '100%', maxWidth: 800, padding: 3 }}>
+      <Paper sx={{ width: '100%',padding: 3 }}>
         <BackButton sx={{ mb: 2 }} />
         {storeExists ? (
           <ManageStoreDesk storeId={storeId} storeData={storeData} />

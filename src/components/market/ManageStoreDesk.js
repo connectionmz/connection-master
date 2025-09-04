@@ -36,7 +36,14 @@ import {
   DialogContent,
   DialogActions,
   Divider,
-  Tooltip
+  Tooltip,
+  Chip,
+  Tabs,
+  Tab,
+  FormControlLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import { 
   Search, 
@@ -48,10 +55,37 @@ import {
   Image,
   Category,
   Close,
-  Visibility
+  Visibility,
+  Phone,
+  Email,
+  LocationOn,
+  AccessTime,
+  Language,
+  ExpandMore,
+  Facebook,
+  Instagram,
+  Twitter,
+  WhatsApp
 } from '@mui/icons-material';
 import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import { formatPrice } from '../../utils/utils';
+
+// Componente para abas nas configurações
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`settings-tabpanel-${index}`}
+      aria-labelledby={`settings-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 const ManageStoreDesk = ({ storeId }) => {
   const theme = useTheme();
@@ -90,8 +124,41 @@ const ManageStoreDesk = ({ storeId }) => {
     logo: '',
     settings: {
       showPrices: true
-    }
-  });
+    },
+    // Novos campos adicionados
+    contact: {
+      phone: '',
+      email: '',
+      whatsapp: ''
+    },
+    location: {
+      address: '',
+      city: '',
+      province: '',
+      coordinates: {
+        lat: '',
+        lng: ''
+      }
+    },
+    socialMedia: {
+      facebook: '',
+      instagram: '',
+      twitter: '',
+      website: ''
+    },
+    businessHours: {
+      monday: { open: '', close: '', closed: false },
+      tuesday: { open: '', close: '', closed: false },
+      wednesday: { open: '', close: '', closed: false },
+      thursday: { open: '', close: '', closed: false },
+      friday: { open: '', close: '', closed: false },
+      saturday: { open: '', close: '', closed: false },
+      sunday: { open: '', close: '', closed: false }
+    },
+    policies: {
+      delivery: '',
+      returns: '',
+  }});
   const [productData, setProductData] = useState({
     id: null,
     name: '',
@@ -104,6 +171,7 @@ const ManageStoreDesk = ({ storeId }) => {
   const [logoFile, setLogoFile] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const [settingsTab, setSettingsTab] = useState(0);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -122,7 +190,32 @@ const ManageStoreDesk = ({ storeId }) => {
             name: data.name || '',
             description: data.description || '',
             logo: data.company?.logo || '',
-            settings: data.settings || { showPrices: true }
+            settings: data.settings || { showPrices: true },
+            // Novos campos com valores padrão se não existirem
+            contact: data.contact || { phone: '', email: '', whatsapp: '' },
+            location: data.location || { 
+              address: '', 
+            },
+            socialMedia: data.socialMedia || { 
+              facebook: '', 
+              instagram: '', 
+              twitter: '', 
+              website: '' 
+            },
+            businessHours: data.businessHours || {
+              monday: { open: '', close: '', closed: false },
+              tuesday: { open: '', close: '', closed: false },
+              wednesday: { open: '', close: '', closed: false },
+              thursday: { open: '', close: '', closed: false },
+              friday: { open: '', close: '', closed: false },
+              saturday: { open: '', close: '', closed: false },
+              sunday: { open: '', close: '', closed: false }
+            },
+            policies: data.policies || {
+              delivery: '',
+              returns: '',
+              payments: ''
+            }
           });
         }
       } catch (error) {
@@ -327,6 +420,14 @@ const ManageStoreDesk = ({ storeId }) => {
       updates[`stores/${storeId}/description`] = storeData.description.trim();
       updates[`stores/${storeId}/company/logo`] = logoUrl;
       updates[`stores/${storeId}/settings/showPrices`] = storeData.settings.showPrices;
+      
+      // Novos campos adicionados
+      updates[`stores/${storeId}/contact`] = storeData.contact;
+      updates[`stores/${storeId}/location`] = storeData.location;
+      updates[`stores/${storeId}/socialMedia`] = storeData.socialMedia;
+      updates[`stores/${storeId}/businessHours`] = storeData.businessHours;
+      updates[`stores/${storeId}/policies`] = storeData.policies;
+      
       updates[`stores/${storeId}/updatedAt`] = Date.now();
 
       // Executar atualização atômica
@@ -335,8 +436,7 @@ const ManageStoreDesk = ({ storeId }) => {
       // Atualizar estado local
       setStoreData(prev => ({
         ...prev,
-        logo: logoUrl,
-        settings: { ...prev.settings }
+        logo: logoUrl
       }));
 
       toggleModal('settings', false);
@@ -347,6 +447,39 @@ const ManageStoreDesk = ({ storeId }) => {
     } finally {
       setLoading(prev => ({ ...prev, store: false }));
     }
+  };
+
+  // Handler para mudar as abas nas configurações
+  const handleTabChange = (event, newValue) => {
+    setSettingsTab(newValue);
+  };
+
+  // Handler para atualizar horário de funcionamento
+  const handleBusinessHoursChange = (day, field, value) => {
+    setStoreData(prev => ({
+      ...prev,
+      businessHours: {
+        ...prev.businessHours,
+        [day]: {
+          ...prev.businessHours[day],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  // Handler para toggle de dia fechado
+  const handleDayClosedToggle = (day) => {
+    setStoreData(prev => ({
+      ...prev,
+      businessHours: {
+        ...prev.businessHours,
+        [day]: {
+          ...prev.businessHours[day],
+          closed: !prev.businessHours[day].closed
+        }
+      }
+    }));
   };
 
   // Filtragem e ordenação
@@ -625,7 +758,10 @@ const ManageStoreDesk = ({ storeId }) => {
           
           <IconButton
             color="primary"
-            onClick={() => toggleModal('settings', true)}
+            onClick={() => {
+              toggleModal('settings', true);
+              setSettingsTab(0);
+            }}
             size={isMobile ? 'small' : 'medium'}
             sx={{ 
               order: isMobile ? 1 : 0,
@@ -692,19 +828,23 @@ const ManageStoreDesk = ({ storeId }) => {
         </MenuItem>
       </Menu>
 
-      {/* Modal de Configurações da Loja */}
+      {/* Modal de Configurações da Loja - AGORA COM ABAS */}
       <Dialog
         open={modals.settings}
         onClose={() => toggleModal('settings', false)}
         fullWidth
-        maxWidth="sm"
+        maxWidth="md"
+        fullScreen={isMobile}
       >
         <DialogTitle sx={{ 
           display: 'flex', 
           justifyContent: 'space-between',
           alignItems: 'center',
           bgcolor: 'primary.main',
-          color: 'white'
+          color: 'white',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1
         }}>
           <Typography variant="h6">Configurações da Loja</Typography>
           <IconButton onClick={() => toggleModal('settings', false)} sx={{ color: 'white' }}>
@@ -712,92 +852,406 @@ const ManageStoreDesk = ({ storeId }) => {
           </IconButton>
         </DialogTitle>
         
-        <DialogContent dividers sx={{ pt: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Nome da Loja"
-                value={storeData.name}
-                onChange={(e) => setStoreData(prev => ({ ...prev, name: e.target.value }))}
-                sx={{ mb: 3 }}
-                error={!storeData.name.trim()}
-                helperText={!storeData.name.trim() ? 'Campo obrigatório' : ''}
-                size={isMobile ? 'small' : 'medium'}
-              />
-
-              <TextField
-                fullWidth
-                label="Descrição da Loja"
-                value={storeData.description}
-                onChange={(e) => setStoreData(prev => ({ ...prev, description: e.target.value }))}
-                multiline
-                rows={isMobile ? 3 : 4}
-                sx={{ mb: 3 }}
-                size={isMobile ? 'small' : 'medium'}
-              />
-
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="body1">Exibir Preços</Typography>
-                <Switch
-                  checked={storeData.settings.showPrices}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    settings: { ...prev.settings, showPrices: e.target.checked }
-                  }))}
-                  color="primary"
-                />
-              </Box>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Typography variant="body1" sx={{ mb: 1 }}>
-                Logo da Loja
-              </Typography>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleLogoChange}
-                style={{ display: 'none' }}
-                id="logo-upload"
-              />
-              <label htmlFor="logo-upload">
-                <Button 
-                  variant="contained" 
-                  component="span"
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={settingsTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+            <Tab label="Informações Básicas" />
+            <Tab label="Contacto" />
+            <Tab label="Localização" />
+            <Tab label="Redes Sociais" />
+            <Tab label="Horário" />
+            <Tab label="Políticas" />
+          </Tabs>
+        </Box>
+        
+        <DialogContent dividers sx={{ pt: 3, maxHeight: '60vh', overflow: 'auto' }}>
+          {/* Aba 1: Informações Básicas */}
+          <TabPanel value={settingsTab} index={0}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
                   fullWidth
-                  sx={{ mb: 2 }}
+                  label="Nome da Loja"
+                  value={storeData.name}
+                  onChange={(e) => setStoreData(prev => ({ ...prev, name: e.target.value }))}
+                  sx={{ mb: 3 }}
+                  error={!storeData.name.trim()}
+                  helperText={!storeData.name.trim() ? 'Campo obrigatório' : ''}
                   size={isMobile ? 'small' : 'medium'}
-                >
-                  Alterar Logo
-                </Button>
-              </label>
-              
-              {storeData.logo && (
-                <Box sx={{ 
-                  width: '100%', 
-                  height: isMobile ? 150 : 200,
-                  border: '1px dashed',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <img
-                    src={storeData.logo}
-                    alt="Logo da Loja"
-                    style={{ 
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      objectFit: 'contain'
-                    }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Descrição da Loja"
+                  value={storeData.description}
+                  onChange={(e) => setStoreData(prev => ({ ...prev, description: e.target.value }))}
+                  multiline
+                  rows={isMobile ? 3 : 4}
+                  sx={{ mb: 3 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="body1">Exibir Preços</Typography>
+                  <Switch
+                    checked={storeData.settings.showPrices}
+                    onChange={(e) => setStoreData(prev => ({
+                      ...prev,
+                      settings: { ...prev.settings, showPrices: e.target.checked }
+                    }))}
+                    color="primary"
                   />
                 </Box>
-              )}
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  Logo da Loja
+                </Typography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoChange}
+                  style={{ display: 'none' }}
+                  id="logo-upload"
+                />
+                <label htmlFor="logo-upload">
+                  <Button 
+                    variant="contained" 
+                    component="span"
+                    fullWidth
+                    sx={{ mb: 2 }}
+                    size={isMobile ? 'small' : 'medium'}
+                  >
+                    Alterar Logo
+                  </Button>
+                </label>
+                
+                {storeData.logo && (
+                  <Box sx={{ 
+                    width: '100%', 
+                    height: isMobile ? 150 : 200,
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <img
+                      src={storeData.logo}
+                      alt="Logo da Loja"
+                      style={{ 
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain'
+                      }}
+                    />
+                  </Box>
+                )}
+              </Grid>
             </Grid>
-          </Grid>
+          </TabPanel>
+
+          {/* Aba 2: Contacto */}
+          <TabPanel value={settingsTab} index={1}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Telefone"
+                  value={storeData.contact.phone}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    contact: { ...prev.contact, phone: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Phone fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="WhatsApp"
+                  value={storeData.contact.whatsapp}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    contact: { ...prev.contact, whatsapp: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <WhatsApp fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={storeData.contact.email}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    contact: { ...prev.contact, email: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+            </Grid>
+          </TabPanel>
+
+          {/* Aba 3: Localização */}
+          <TabPanel value={settingsTab} index={2}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Endereço"
+                  value={storeData.location.address}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    location: { ...prev.location, address: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LocationOn fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Cidade"
+                  value={storeData.location.city}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    location: { ...prev.location, city: e.target.value }
+                  }))}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+            </Grid>
+          </TabPanel>
+
+          {/* Aba 4: Redes Sociais */}
+          <TabPanel value={settingsTab} index={3}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Website"
+                  value={storeData.socialMedia.website}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    socialMedia: { ...prev.socialMedia, website: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Language fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Facebook"
+                  value={storeData.socialMedia.facebook}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    socialMedia: { ...prev.socialMedia, facebook: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Facebook fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Instagram"
+                  value={storeData.socialMedia.instagram}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    socialMedia: { ...prev.socialMedia, instagram: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Instagram fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Twitter"
+                  value={storeData.socialMedia.twitter}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    socialMedia: { ...prev.socialMedia, twitter: e.target.value }
+                  }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Twitter fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+            </Grid>
+          </TabPanel>
+
+          {/* Aba 5: Horário de Funcionamento */}
+          <TabPanel value={settingsTab} index={4}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Defina o horário de funcionamento da sua loja. Deixe em branco se não aplicável.
+            </Typography>
+            
+            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
+              const dayNames = {
+                monday: 'Segunda-feira',
+                tuesday: 'Terça-feira',
+                wednesday: 'Quarta-feira',
+                thursday: 'Quinta-feira',
+                friday: 'Sexta-feira',
+                saturday: 'Sábado',
+                sunday: 'Domingo'
+              };
+              
+              return (
+                <Accordion key={day} sx={{ mb: 1 }}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!storeData.businessHours[day].closed}
+                          onChange={() => handleDayClosedToggle(day)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      }
+                      label={dayNames[day]}
+                      sx={{ mr: 2 }}
+                    />
+                    {!storeData.businessHours[day].closed && (
+                      <Chip 
+                        size="small" 
+                        label={`${storeData.businessHours[day].open || '--:--'} - ${storeData.businessHours[day].close || '--:--'}`}
+                        color="primary"
+                        variant="outlined"
+                      />
+                    )}
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <TextField
+                          fullWidth
+                          label="Abre às"
+                          type="time"
+                          value={storeData.businessHours[day].open}
+                          onChange={(e) => handleBusinessHoursChange(day, 'open', e.target.value)}
+                          disabled={storeData.businessHours[day].closed}
+                          size={isMobile ? 'small' : 'medium'}
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          fullWidth
+                          label="Fecha às"
+                          type="time"
+                          value={storeData.businessHours[day].close}
+                          onChange={(e) => handleBusinessHoursChange(day, 'close', e.target.value)}
+                          disabled={storeData.businessHours[day].closed}
+                          size={isMobile ? 'small' : 'medium'}
+                        />
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
+              );
+            })}
+          </TabPanel>
+
+          {/* Aba 6: Políticas */}
+          <TabPanel value={settingsTab} index={5}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Política de Entregas"
+                  value={storeData.policies.delivery}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    policies: { ...prev.policies, delivery: e.target.value }
+                  }))}
+                  multiline
+                  rows={3}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Política de Devoluções"
+                  value={storeData.policies.returns}
+                  onChange={(e) => setStoreData(prev => ({
+                    ...prev,
+                    policies: { ...prev.policies, returns: e.target.value }
+                  }))}
+                  multiline
+                  rows={3}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              </Grid>
+             
+            </Grid>
+          </TabPanel>
         </DialogContent>
         
         <DialogActions sx={{ p: 2 }}>
