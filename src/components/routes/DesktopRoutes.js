@@ -91,6 +91,7 @@ import Teste from '../Teste';
 import { ActiveModulesProvider, useActiveModules } from '../../context/ActiveModulesContext';
 import GuestRoute from './GuestRoute';
 import Eventos from '../desktop/Eventos';
+import Checkout from '../checkout/Checkout';
 
 const theme = createTheme({
   palette: {
@@ -366,11 +367,11 @@ const DesktopRoutes = ({ user }) => {
               <Route path="/lojas" element={<StoresDesk user={user} />} />
               <Route path="/loja/:storeId" element={<StoreDetailDesk />} />
               <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
+               <Route path="/checkout" element={<Checkout user={user}/>} />
               <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
               <Route path="/inqueritos" element={<ListaInqueritos user={user}/>} />
               <Route path="/termos" element={<Terms />} />
               <Route path="/politicas" element={<Politicas />} />
-
               <Route path="/auth" element={<GuestRoute user={user}><AuthDesk user={user} /></GuestRoute>} />
               <Route path="/create" element={<GuestRoute user={user}><AuthCreateDesk user={user} /></GuestRoute>} />
               <Route path="/setup" element={<CompanyDataFormDesk />} />

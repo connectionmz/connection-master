@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ref, get, remove, update, set } from 'firebase/database';
+import { ref, get, remove, update } from 'firebase/database';
 import { db, storage } from '../../fb';
 import { Link } from 'react-router-dom';
 import {
@@ -43,12 +43,15 @@ import {
   FormControlLabel,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  FormControl,
+  Select,
+  InputLabel,
 } from '@mui/material';
-import { 
-  Search, 
-  Edit, 
-  Delete, 
+import {
+  Search,
+  Edit,
+  Delete,
   Settings,
   MoreVert,
   Add,
@@ -65,10 +68,14 @@ import {
   Facebook,
   Instagram,
   Twitter,
-  WhatsApp
+  WhatsApp,
+  Scale,
+  Straighten,
+  LocalShipping,
 } from '@mui/icons-material';
 import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import { formatPrice } from '../../utils/utils';
+import { NumericFormat } from 'react-number-format';
 
 // Componente para abas nas configurações
 function TabPanel(props) {
@@ -98,38 +105,37 @@ const ManageStoreDesk = ({ storeId }) => {
     products: false,
     store: false,
     productUpdate: false,
-    imageUpload: false
+    imageUpload: false,
   });
   const [pagination, setPagination] = useState({
     page: 0,
-    rowsPerPage: isMobile ? 3 : 5
+    rowsPerPage: isMobile ? 3 : 5,
   });
   const [sorting, setSorting] = useState({
     order: 'asc',
-    orderBy: 'name'
+    orderBy: 'name',
   });
-  const [feedback, setFeedback] = useState({ 
-    open: false, 
-    message: '', 
-    severity: 'success' 
+  const [feedback, setFeedback] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
   });
   const [modals, setModals] = useState({
     settings: false,
     editProduct: false,
-    deleteConfirm: false
+    deleteConfirm: false,
   });
   const [storeData, setStoreData] = useState({
     name: '',
     description: '',
     logo: '',
     settings: {
-      showPrices: true
+      showPrices: true,
     },
-    // Novos campos adicionados
     contact: {
       phone: '',
       email: '',
-      whatsapp: ''
+      whatsapp: '',
     },
     location: {
       address: '',
@@ -137,14 +143,14 @@ const ManageStoreDesk = ({ storeId }) => {
       province: '',
       coordinates: {
         lat: '',
-        lng: ''
-      }
+        lng: '',
+      },
     },
     socialMedia: {
       facebook: '',
       instagram: '',
       twitter: '',
-      website: ''
+      website: '',
     },
     businessHours: {
       monday: { open: '', close: '', closed: false },
@@ -153,31 +159,42 @@ const ManageStoreDesk = ({ storeId }) => {
       thursday: { open: '', close: '', closed: false },
       friday: { open: '', close: '', closed: false },
       saturday: { open: '', close: '', closed: false },
-      sunday: { open: '', close: '', closed: false }
+      sunday: { open: '', close: '', closed: false },
     },
     policies: {
       delivery: '',
       returns: '',
-  }});
+      payments: '',
+    },
+  });
   const [productData, setProductData] = useState({
     id: null,
+    type: 'product',
     name: '',
     price: '',
     category: '',
     description: '',
     imageUrl: '',
-    imageFile: null
+    imageFile: null,
+    sku: '',
+    qtd: '',
+    weight: '',
+    height: '',
+    width: '',
+    length: '',
+    nationalShipping: false,
   });
   const [logoFile, setLogoFile] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [settingsTab, setSettingsTab] = useState(0);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        setLoading(prev => ({ ...prev, products: true }));
-        
+        setLoading((prev) => ({ ...prev, products: true }));
+
         const productsRef = ref(db, `stores/${storeId}/products`);
         const productsSnapshot = await get(productsRef);
         setProducts(productsSnapshot.exists() ? Object.entries(productsSnapshot.val()) : []);
@@ -191,16 +208,18 @@ const ManageStoreDesk = ({ storeId }) => {
             description: data.description || '',
             logo: data.company?.logo || '',
             settings: data.settings || { showPrices: true },
-            // Novos campos com valores padrão se não existirem
             contact: data.contact || { phone: '', email: '', whatsapp: '' },
-            location: data.location || { 
-              address: '', 
+            location: data.location || {
+              address: '',
+              city: '',
+              province: '',
+              coordinates: { lat: '', lng: '' },
             },
-            socialMedia: data.socialMedia || { 
-              facebook: '', 
-              instagram: '', 
-              twitter: '', 
-              website: '' 
+            socialMedia: data.socialMedia || {
+              facebook: '',
+              instagram: '',
+              twitter: '',
+              website: '',
             },
             businessHours: data.businessHours || {
               monday: { open: '', close: '', closed: false },
@@ -209,20 +228,20 @@ const ManageStoreDesk = ({ storeId }) => {
               thursday: { open: '', close: '', closed: false },
               friday: { open: '', close: '', closed: false },
               saturday: { open: '', close: '', closed: false },
-              sunday: { open: '', close: '', closed: false }
+              sunday: { open: '', close: '', closed: false },
             },
             policies: data.policies || {
               delivery: '',
               returns: '',
-              payments: ''
-            }
+              payments: '',
+            },
           });
         }
       } catch (error) {
         showFeedback('Erro ao carregar dados. Tente novamente.', 'error');
         console.error('Erro ao buscar dados:', error);
       } finally {
-        setLoading(prev => ({ ...prev, products: false }));
+        setLoading((prev) => ({ ...prev, products: false }));
       }
     };
 
@@ -236,7 +255,10 @@ const ManageStoreDesk = ({ storeId }) => {
 
   // Handlers para modais
   const toggleModal = (modalName, isOpen) => {
-    setModals(prev => ({ ...prev, [modalName]: isOpen }));
+    setModals((prev) => ({ ...prev, [modalName]: isOpen }));
+    if (!isOpen) {
+      setErrors({});
+    }
   };
 
   // Menu de ações para mobile
@@ -254,12 +276,20 @@ const ManageStoreDesk = ({ storeId }) => {
   const handleEditProduct = (productId, product) => {
     setProductData({
       id: productId,
+      type: product.type || 'product',
       name: product.name || '',
       price: product.price ? String(product.price) : '',
       category: product.category || '',
       description: product.description || '',
       imageUrl: product.imageUrl || '',
-      imageFile: null
+      imageFile: null,
+      sku: product.sku || '',
+      qtd: product.qtd ? String(product.qtd) : '',
+      weight: product.weight ? String(product.weight) : '',
+      height: product.height ? String(product.height) : '',
+      width: product.width ? String(product.width) : '',
+      length: product.length ? String(product.length) : '',
+      nationalShipping: product.nationalShipping || false,
     });
     toggleModal('editProduct', true);
     handleMenuClose();
@@ -268,7 +298,6 @@ const ManageStoreDesk = ({ storeId }) => {
   const handleRemoveProduct = async (productId) => {
     toggleModal('deleteConfirm', false);
     try {
-      // Remover imagem do produto se existir
       const product = products.find(([id]) => id === productId)?.[1];
       if (product?.imageUrl) {
         try {
@@ -280,7 +309,7 @@ const ManageStoreDesk = ({ storeId }) => {
       }
 
       await remove(ref(db, `stores/${storeId}/products/${productId}`));
-      setProducts(prev => prev.filter(([key]) => key !== productId));
+      setProducts((prev) => prev.filter(([key]) => key !== productId));
       showFeedback('Produto removido com sucesso!');
     } catch (error) {
       console.error('Erro ao remover produto:', error);
@@ -293,56 +322,98 @@ const ManageStoreDesk = ({ storeId }) => {
   const handleProductImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setProductData(prev => ({ 
-        ...prev, 
+      setProductData((prev) => ({
+        ...prev,
         imageFile: file,
-        imageUrl: URL.createObjectURL(file) 
+        imageUrl: URL.createObjectURL(file),
       }));
     }
   };
 
   // Handler para remover imagem do produto
   const handleRemoveProductImage = () => {
-    setProductData(prev => ({ 
-      ...prev, 
+    setProductData((prev) => ({
+      ...prev,
       imageFile: null,
-      imageUrl: '' 
+      imageUrl: '',
     }));
+  };
+
+  // Validate product data before update
+  const validateProductData = () => {
+    let newErrors = {};
+    let isValid = true;
+
+    if (!productData.name.trim()) {
+      newErrors['name'] = 'Nome é obrigatório';
+      isValid = false;
+    }
+
+    const priceValue = parseFloat(productData.price.replace(',', '.'));
+    if (!productData.price || isNaN(priceValue) || priceValue <= 0) {
+      newErrors['price'] = 'Preço deve ser um número maior que zero';
+      isValid = false;
+    }
+
+    if (productData.type === 'product') {
+      const qtdValue = parseFloat(productData.qtd);
+      if (!productData.qtd || isNaN(qtdValue) || qtdValue <= 0) {
+        newErrors['qtd'] = 'Quantidade deve ser um número maior que zero';
+        isValid = false;
+      }
+      if (productData.nationalShipping) {
+        const weightValue = parseFloat(productData.weight);
+        if (!productData.weight || isNaN(weightValue) || weightValue <= 0) {
+          newErrors['weight'] = 'Peso deve ser um número maior que zero';
+          isValid = false;
+        }
+        const heightValue = parseFloat(productData.height);
+        if (!productData.height || isNaN(heightValue) || heightValue <= 0) {
+          newErrors['height'] = 'Altura deve ser um número maior que zero';
+          isValid = false;
+        }
+        const widthValue = parseFloat(productData.width);
+        if (!productData.width || isNaN(widthValue) || widthValue <= 0) {
+          newErrors['width'] = 'Largura deve ser um número maior que zero';
+          isValid = false;
+        }
+        const lengthValue = parseFloat(productData.length);
+        if (!productData.length || isNaN(lengthValue) || lengthValue <= 0) {
+          newErrors['length'] = 'Comprimento deve ser um número maior que zero';
+          isValid = false;
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    if (!isValid) {
+      showFeedback('Por favor, corrija os erros nos campos obrigatórios.', 'error');
+    }
+    return isValid;
   };
 
   // Atualizar produto com nova imagem
   const handleUpdateProduct = async () => {
-    if (!productData.name.trim()) {
-      showFeedback('O nome do produto é obrigatório.', 'error');
-      return;
-    }
-
-    const price = parseFloat(productData.price.replace(',', '.'));
-    if (isNaN(price) || price < 0) {
-      showFeedback('Preço inválido. Use valores positivos.', 'error');
+    if (!validateProductData()) {
       return;
     }
 
     try {
-      setLoading(prev => ({ ...prev, productUpdate: true }));
+      setLoading((prev) => ({ ...prev, productUpdate: true }));
 
       let imageUrl = productData.imageUrl;
-      
-      // Se houver nova imagem para upload
+
       if (productData.imageFile) {
-        setLoading(prev => ({ ...prev, imageUpload: true }));
-        
-        // Criar referência para o arquivo no Storage
+        setLoading((prev) => ({ ...prev, imageUpload: true }));
+
         const imageRef = storageRef(
-          storage, 
+          storage,
           `products/${storeId}/${productData.id}/${productData.imageFile.name}`
         );
-        
-        // Fazer upload da nova imagem
+
         await uploadBytes(imageRef, productData.imageFile);
         imageUrl = await getDownloadURL(imageRef);
-        
-        // Se havia uma imagem anterior, removê-la
+
         if (productData.imageUrl && productData.imageUrl !== imageUrl) {
           try {
             const oldImageRef = storageRef(storage, productData.imageUrl);
@@ -351,23 +422,31 @@ const ManageStoreDesk = ({ storeId }) => {
             console.warn('Não foi possível remover a imagem antiga:', error);
           }
         }
-        
-        setLoading(prev => ({ ...prev, imageUpload: false }));
+
+        setLoading((prev) => ({ ...prev, imageUpload: false }));
       }
 
+      const priceValue = parseFloat(productData.price.replace(',', '.'));
       const productToUpdate = {
+        type: productData.type,
         name: productData.name.trim(),
-        price: price,
+        price: priceValue,
         category: productData.category.trim(),
         description: productData.description.trim(),
         imageUrl: imageUrl,
-        updatedAt: Date.now()
+        sku: productData.sku.trim(),
+        qtd: productData.type === 'product' ? parseFloat(productData.qtd) : null,
+        weight: productData.type === 'product' && productData.nationalShipping ? parseFloat(productData.weight) : null,
+        height: productData.type === 'product' && productData.nationalShipping ? parseFloat(productData.height) : null,
+        width: productData.type === 'product' && productData.nationalShipping ? parseFloat(productData.width) : null,
+        length: productData.type === 'product' && productData.nationalShipping ? parseFloat(productData.length) : null,
+        nationalShipping: productData.type === 'product' ? productData.nationalShipping : false,
+        updatedAt: Date.now(),
       };
 
       await update(ref(db, `stores/${storeId}/products/${productData.id}`), productToUpdate);
 
-      // Atualizar estado local
-      setProducts(prev =>
+      setProducts((prev) =>
         prev.map(([key, product]) =>
           key === productData.id ? [key, productToUpdate] : [key, product]
         )
@@ -379,10 +458,10 @@ const ManageStoreDesk = ({ storeId }) => {
       console.error('Erro ao atualizar produto:', error);
       showFeedback('Erro ao atualizar o produto.', 'error');
     } finally {
-      setLoading(prev => ({ 
-        ...prev, 
+      setLoading((prev) => ({
+        ...prev,
         productUpdate: false,
-        imageUpload: false 
+        imageUpload: false,
       }));
     }
   };
@@ -392,7 +471,7 @@ const ManageStoreDesk = ({ storeId }) => {
     const file = e.target.files[0];
     if (file) {
       setLogoFile(file);
-      setStoreData(prev => ({ ...prev, logo: URL.createObjectURL(file) }));
+      setStoreData((prev) => ({ ...prev, logo: URL.createObjectURL(file) }));
     }
   };
 
@@ -403,40 +482,33 @@ const ManageStoreDesk = ({ storeId }) => {
     }
 
     try {
-      setLoading(prev => ({ ...prev, store: true }));
+      setLoading((prev) => ({ ...prev, store: true }));
 
       let logoUrl = storeData.logo;
 
-      // Upload do novo logo se houver arquivo
       if (logoFile) {
         const logoRef = storageRef(storage, `store-logos/${storeId}/${logoFile.name}`);
         await uploadBytes(logoRef, logoFile);
         logoUrl = await getDownloadURL(logoRef);
       }
 
-      // Preparar dados para atualização
       const updates = {};
       updates[`stores/${storeId}/name`] = storeData.name.trim();
       updates[`stores/${storeId}/description`] = storeData.description.trim();
       updates[`stores/${storeId}/company/logo`] = logoUrl;
       updates[`stores/${storeId}/settings/showPrices`] = storeData.settings.showPrices;
-      
-      // Novos campos adicionados
       updates[`stores/${storeId}/contact`] = storeData.contact;
       updates[`stores/${storeId}/location`] = storeData.location;
       updates[`stores/${storeId}/socialMedia`] = storeData.socialMedia;
       updates[`stores/${storeId}/businessHours`] = storeData.businessHours;
       updates[`stores/${storeId}/policies`] = storeData.policies;
-      
       updates[`stores/${storeId}/updatedAt`] = Date.now();
 
-      // Executar atualização atômica
       await update(ref(db), updates);
 
-      // Atualizar estado local
-      setStoreData(prev => ({
+      setStoreData((prev) => ({
         ...prev,
-        logo: logoUrl
+        logo: logoUrl,
       }));
 
       toggleModal('settings', false);
@@ -445,7 +517,7 @@ const ManageStoreDesk = ({ storeId }) => {
       console.error('Erro ao atualizar loja:', error);
       showFeedback('Erro ao atualizar as configurações.', 'error');
     } finally {
-      setLoading(prev => ({ ...prev, store: false }));
+      setLoading((prev) => ({ ...prev, store: false }));
     }
   };
 
@@ -456,29 +528,29 @@ const ManageStoreDesk = ({ storeId }) => {
 
   // Handler para atualizar horário de funcionamento
   const handleBusinessHoursChange = (day, field, value) => {
-    setStoreData(prev => ({
+    setStoreData((prev) => ({
       ...prev,
       businessHours: {
         ...prev.businessHours,
         [day]: {
           ...prev.businessHours[day],
-          [field]: value
-        }
-      }
+          [field]: value,
+        },
+      },
     }));
   };
 
   // Handler para toggle de dia fechado
   const handleDayClosedToggle = (day) => {
-    setStoreData(prev => ({
+    setStoreData((prev) => ({
       ...prev,
       businessHours: {
         ...prev.businessHours,
         [day]: {
           ...prev.businessHours[day],
-          closed: !prev.businessHours[day].closed
-        }
-      }
+          closed: !prev.businessHours[day].closed,
+        },
+      },
     }));
   };
 
@@ -493,7 +565,6 @@ const ManageStoreDesk = ({ storeId }) => {
     return [...filteredProducts].sort(([, a], [, b]) => {
       const aValue = a[sorting.orderBy] || '';
       const bValue = b[sorting.orderBy] || '';
-      
       if (sorting.order === 'asc') {
         return aValue.toString().localeCompare(bValue.toString());
       } else {
@@ -504,14 +575,14 @@ const ManageStoreDesk = ({ storeId }) => {
 
   // Paginação
   const handleChangePage = (event, newPage) => {
-    setPagination(prev => ({ ...prev, page: newPage }));
+    setPagination((prev) => ({ ...prev, page: newPage }));
   };
 
   const handleChangeRowsPerPage = (event) => {
-    setPagination(prev => ({
+    setPagination((prev) => ({
       ...prev,
       rowsPerPage: parseInt(event.target.value, 10),
-      page: 0
+      page: 0,
     }));
   };
 
@@ -520,7 +591,7 @@ const ManageStoreDesk = ({ storeId }) => {
     const isAsc = sorting.orderBy === property && sorting.order === 'asc';
     setSorting({
       order: isAsc ? 'desc' : 'asc',
-      orderBy: property
+      orderBy: property,
     });
   };
 
@@ -548,26 +619,27 @@ const ManageStoreDesk = ({ storeId }) => {
                             alt={product.name}
                           />
                         ) : (
-                          <Box sx={{ 
-                            width: 80, 
-                            height: 80, 
-                            bgcolor: 'grey.100',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: 1
-                          }}>
+                          <Box
+                            sx={{
+                              width: 80,
+                              height: 80,
+                              bgcolor: 'grey.100',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 1,
+                            }}
+                          >
                             <Image color="disabled" />
                           </Box>
                         )}
-                        
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="subtitle1" fontWeight="bold">
                             {product?.name || 'Sem nome'}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {storeData.settings.showPrices 
-                              ? `${formatPrice(product?.price) || '0.00'} MZN` 
+                            {storeData.settings.showPrices
+                              ? `${formatPrice(product?.price) || '0.00'} MZN`
                               : '--'}
                           </Typography>
                           <Typography variant="body2">
@@ -575,7 +647,6 @@ const ManageStoreDesk = ({ storeId }) => {
                           </Typography>
                         </Box>
                       </Box>
-                      
                       <IconButton
                         onClick={(e) => handleMenuOpen(e, key)}
                         aria-label="Ações do produto"
@@ -591,131 +662,134 @@ const ManageStoreDesk = ({ storeId }) => {
       );
     } else {
       return (
-        <TableContainer component={Paper} sx={{ mt: 3 }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'grey.200' }}>
-              <TableCell>Imagem</TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sorting.orderBy === 'name'}
-                  direction={sorting.order}
-                  onClick={() => handleRequestSort('name')}
-                >
-                  Nome
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sorting.orderBy === 'price'}
-                  direction={sorting.order}
-                  onClick={() => handleRequestSort('price')}
-                >
-                  Preço
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>Categoria</TableCell>
-              {!isTablet && <TableCell>Descrição</TableCell>}
-              <TableCell>Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedProducts
-              .slice(
-                pagination.page * pagination.rowsPerPage,
-                pagination.page * pagination.rowsPerPage + pagination.rowsPerPage
-              )
-              .map(([key, product]) => (
-                <TableRow key={key} hover>
-                  <TableCell>
-                    <Link to={`/produto/${key}`} style={{ textDecoration: 'none' }}>
-                      {product?.imageUrl ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }}
-                        />
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          Sem imagem
-                        </Typography>
-                      )}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Link to={`/produto/${key}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      {product?.name || 'Sem nome'}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {storeData.settings.showPrices 
-                      ? `${formatPrice(product?.price) || '0.00'} MZN` 
-                      : '--'}
-                  </TableCell>
-                  <TableCell>{product?.category || 'Sem categoria'}</TableCell>
-                  {!isTablet && (
+        <TableContainer component={Paper} sx={{ mt: 3, boxShadow: 2, borderRadius: 2 }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'primary.light', '& th': { color: 'white' } }}>
+                <TableCell sx={{ width: 100 }}>Imagem</TableCell>
+                <TableCell sx={{ width: 300 }}>
+                  <TableSortLabel
+                    active={sorting.orderBy === 'name'}
+                    direction={sorting.order}
+                    onClick={() => handleRequestSort('name')}
+                  >
+                    Nome
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ width: 180 }}>
+                  <TableSortLabel
+                    active={sorting.orderBy === 'price'}
+                    direction={sorting.order}
+                    onClick={() => handleRequestSort('price')}
+                  >
+                    Preço
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ width: 200 }}>Categoria</TableCell>
+                {!isTablet && <TableCell sx={{ width: 350 }}>Descrição</TableCell>}
+                <TableCell sx={{ width: 150 }}>Ações</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedProducts
+                .slice(
+                  pagination.page * pagination.rowsPerPage,
+                  pagination.page * pagination.rowsPerPage + pagination.rowsPerPage
+                )
+                .map(([key, product]) => (
+                  <TableRow key={key} hover>
                     <TableCell>
-                      {product?.description?.length > 50 
-                        ? `${product.description.substring(0, 50)}...` 
-                        : product?.description || 'Sem descrição'}
+                      <Link to={`/produto/${key}`} style={{ textDecoration: 'none' }}>
+                        {product?.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }}
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Sem imagem
+                          </Typography>
+                        )}
+                      </Link>
                     </TableCell>
-                  )}
-                  <TableCell>
-                    <Tooltip title="Ver produto">
-                      <IconButton
-                        color="info"
-                        component={Link}
-                        to={`/produto/${key}/loja/${storeId}`}
-                        aria-label="Ver produto"
-                      >
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Editar produto">
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleEditProduct(key, product)}
-                        aria-label="Editar produto"
-                      >
-                        <Edit />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Remover produto">
-                      <IconButton
-                        color="error"
-                        onClick={() => {
-                          setSelectedProductId(key);
-                          toggleModal('deleteConfirm', true);
-                        }}
-                        aria-label="Remover produto">
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    <TableCell>
+                      <Link to={`/produto/${key}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        {product?.name || 'Sem nome'}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {storeData.settings.showPrices
+                        ? `${formatPrice(product?.price) || '0.00'} MZN`
+                        : '--'}
+                    </TableCell>
+                    <TableCell>{product?.category || 'Sem categoria'}</TableCell>
+                    {!isTablet && (
+                      <TableCell>
+                        {product?.description?.length > 50
+                          ? `${product.description.substring(0, 50)}...`
+                          : product?.description || 'Sem descrição'}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <Tooltip title="Ver produto">
+                        <IconButton
+                          color="info"
+                          component={Link}
+                          to={`/produto/${key}/loja/${storeId}`}
+                          aria-label="Ver produto"
+                        >
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Editar produto">
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleEditProduct(key, product)}
+                          aria-label="Editar produto"
+                        >
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Remover produto">
+                        <IconButton
+                          color="error"
+                          onClick={() => {
+                            setSelectedProductId(key);
+                            toggleModal('deleteConfirm', true);
+                          }}
+                          aria-label="Remover produto"
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       );
     }
   };
 
   return (
-    <Box sx={{ p: isMobile ? 2 : 4, bgcolor: 'white' }}>
-      <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ mb: 3, fontWeight: 'bold' }}>
+    <Box sx={{ p: isMobile ? 2 : 4, bgcolor: 'white', maxWidth: 1400, mx: 'auto' }}>
+      <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
         Gerir Loja
       </Typography>
 
       {/* Barra de pesquisa e ações */}
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: 'space-between', 
-        alignItems: isMobile ? 'stretch' : 'center', 
-        gap: isMobile ? 2 : 0,
-        mb: 3 
-      }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'stretch' : 'center',
+          gap: isMobile ? 2 : 0,
+          mb: 3,
+        }}
+      >
         <TextField
           placeholder="Pesquisar produto..."
           value={searchQuery}
@@ -729,18 +803,19 @@ const ManageStoreDesk = ({ storeId }) => {
           }}
           fullWidth
           size={isMobile ? 'small' : 'medium'}
-          sx={{ 
+          sx={{
             maxWidth: isMobile ? '100%' : '400px',
-            order: isMobile ? 1 : 0
+            order: isMobile ? 1 : 0,
           }}
         />
-        
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          gap: 1,
-          order: isMobile ? 0 : 1
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            order: isMobile ? 0 : 1,
+          }}
+        >
           <Button
             variant="contained"
             color="primary"
@@ -748,14 +823,13 @@ const ManageStoreDesk = ({ storeId }) => {
             to={`/addProduct`}
             size={isMobile ? 'small' : 'medium'}
             startIcon={<Add />}
-            sx={{ 
+            sx={{
               whiteSpace: 'nowrap',
-              order: isMobile ? 0 : 1
+              order: isMobile ? 0 : 1,
             }}
           >
             {isMobile ? 'Adicionar' : 'Adicionar Produto'}
           </Button>
-          
           <IconButton
             color="primary"
             onClick={() => {
@@ -763,9 +837,9 @@ const ManageStoreDesk = ({ storeId }) => {
               setSettingsTab(0);
             }}
             size={isMobile ? 'small' : 'medium'}
-            sx={{ 
+            sx={{
               order: isMobile ? 1 : 0,
-              ml: isMobile ? 0 : 2
+              ml: isMobile ? 0 : 2,
             }}
           >
             <Settings fontSize={isMobile ? 'small' : 'medium'} />
@@ -781,8 +855,6 @@ const ManageStoreDesk = ({ storeId }) => {
       ) : (
         <>
           {renderProducts()}
-          
-          {/* Paginação */}
           <TablePagination
             rowsPerPageOptions={isMobile ? [3, 5, 10] : [5, 10, 25]}
             component="div"
@@ -792,43 +864,45 @@ const ManageStoreDesk = ({ storeId }) => {
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
             labelRowsPerPage={isMobile ? 'Itens:' : 'Itens por página:'}
-            sx={{ 
+            sx={{
               mt: 2,
               '& .MuiTablePagination-toolbar': {
-                paddingLeft: isMobile ? 0 : undefined
-              }
+                paddingLeft: isMobile ? 0 : undefined,
+              },
             }}
           />
         </>
       )}
 
       {/* Menu de ações para mobile */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={() => {
-          const product = products.find(([id]) => id === selectedProductId)?.[1];
-          if (product) handleEditProduct(selectedProductId, product);
-        }}>
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <MenuItem
+          onClick={() => {
+            const product = products.find(([id]) => id === selectedProductId)?.[1];
+            if (product) handleEditProduct(selectedProductId, product);
+          }}
+        >
           <ListItemIcon>
             <Edit fontSize="small" />
           </ListItemIcon>
           <Typography variant="inherit">Editar</Typography>
         </MenuItem>
-        <MenuItem onClick={() => {
-          setSelectedProductId(selectedProductId);
-          toggleModal('deleteConfirm', true);
-        }}>
+        <MenuItem
+          onClick={() => {
+            setSelectedProductId(selectedProductId);
+            toggleModal('deleteConfirm', true);
+          }}
+        >
           <ListItemIcon>
             <Delete fontSize="small" color="error" />
           </ListItemIcon>
-          <Typography variant="inherit" color="error">Remover</Typography>
+          <Typography variant="inherit" color="error">
+            Remover
+          </Typography>
         </MenuItem>
       </Menu>
 
-      {/* Modal de Configurações da Loja - AGORA COM ABAS */}
+      {/* Modal de Configurações da Loja */}
       <Dialog
         open={modals.settings}
         onClose={() => toggleModal('settings', false)}
@@ -836,22 +910,23 @@ const ManageStoreDesk = ({ storeId }) => {
         maxWidth="md"
         fullScreen={isMobile}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          bgcolor: 'primary.main',
-          color: 'white',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1
-        }}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            bgcolor: 'primary.main',
+            color: 'white',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+          }}
+        >
           <Typography variant="h6">Configurações da Loja</Typography>
           <IconButton onClick={() => toggleModal('settings', false)} sx={{ color: 'white' }}>
             <Close />
           </IconButton>
         </DialogTitle>
-        
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={settingsTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
             <Tab label="Informações Básicas" />
@@ -862,7 +937,6 @@ const ManageStoreDesk = ({ storeId }) => {
             <Tab label="Políticas" />
           </Tabs>
         </Box>
-        
         <DialogContent dividers sx={{ pt: 3, maxHeight: '60vh', overflow: 'auto' }}>
           {/* Aba 1: Informações Básicas */}
           <TabPanel value={settingsTab} index={0}>
@@ -872,37 +946,36 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Nome da Loja"
                   value={storeData.name}
-                  onChange={(e) => setStoreData(prev => ({ ...prev, name: e.target.value }))}
-                  sx={{ mb: 3 }}
-                  error={!storeData.name.trim()}
-                  helperText={!storeData.name.trim() ? 'Campo obrigatório' : ''}
+                  onChange={(e) => setStoreData((prev) => ({ ...prev, name: e.target.value }))}
+                  sx={{ mb: 3, minWidth: isMobile ? '100%' : 300 }}
+                  error={!!errors['storeName']}
+                  helperText={errors['storeName'] || ''}
                   size={isMobile ? 'small' : 'medium'}
                 />
-
                 <TextField
                   fullWidth
                   label="Descrição da Loja"
                   value={storeData.description}
-                  onChange={(e) => setStoreData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => setStoreData((prev) => ({ ...prev, description: e.target.value }))}
                   multiline
                   rows={isMobile ? 3 : 4}
-                  sx={{ mb: 3 }}
+                  sx={{ mb: 3, minWidth: isMobile ? '100%' : 330 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
-
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Typography variant="body1">Exibir Preços</Typography>
                   <Switch
                     checked={storeData.settings.showPrices}
-                    onChange={(e) => setStoreData(prev => ({
-                      ...prev,
-                      settings: { ...prev.settings, showPrices: e.target.checked }
-                    }))}
+                    onChange={(e) =>
+                      setStoreData((prev) => ({
+                        ...prev,
+                        settings: { ...prev.settings, showPrices: e.target.checked },
+                      }))
+                    }
                     color="primary"
                   />
                 </Box>
               </Grid>
-
               <Grid item xs={12} md={6}>
                 <Typography variant="body1" sx={{ mb: 1 }}>
                   Logo da Loja
@@ -915,36 +988,31 @@ const ManageStoreDesk = ({ storeId }) => {
                   id="logo-upload"
                 />
                 <label htmlFor="logo-upload">
-                  <Button 
-                    variant="contained" 
-                    component="span"
-                    fullWidth
-                    sx={{ mb: 2 }}
-                    size={isMobile ? 'small' : 'medium'}
-                  >
+                  <Button variant="contained" component="span" fullWidth sx={{ mb: 2 }} size={isMobile ? 'small' : 'medium'}>
                     Alterar Logo
                   </Button>
                 </label>
-                
                 {storeData.logo && (
-                  <Box sx={{ 
-                    width: '100%', 
-                    height: isMobile ? 150 : 200,
-                    border: '1px dashed',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: isMobile ? 150 : 200,
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <img
                       src={storeData.logo}
                       alt="Logo da Loja"
-                      style={{ 
+                      style={{
                         maxWidth: '100%',
                         maxHeight: '100%',
-                        objectFit: 'contain'
+                        objectFit: 'contain',
                       }}
                     />
                   </Box>
@@ -952,7 +1020,6 @@ const ManageStoreDesk = ({ storeId }) => {
               </Grid>
             </Grid>
           </TabPanel>
-
           {/* Aba 2: Contacto */}
           <TabPanel value={settingsTab} index={1}>
             <Grid container spacing={2}>
@@ -961,10 +1028,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Telefone"
                   value={storeData.contact.phone}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    contact: { ...prev.contact, phone: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      contact: { ...prev.contact, phone: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -972,7 +1041,7 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
@@ -981,10 +1050,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="WhatsApp"
                   value={storeData.contact.whatsapp}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    contact: { ...prev.contact, whatsapp: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      contact: { ...prev.contact, whatsapp: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -992,7 +1063,7 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
@@ -1002,10 +1073,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   label="Email"
                   type="email"
                   value={storeData.contact.email}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    contact: { ...prev.contact, email: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      contact: { ...prev.contact, email: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -1013,13 +1086,12 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
             </Grid>
           </TabPanel>
-
           {/* Aba 3: Localização */}
           <TabPanel value={settingsTab} index={2}>
             <Grid container spacing={2}>
@@ -1028,10 +1100,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Endereço"
                   value={storeData.location.address}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    location: { ...prev.location, address: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      location: { ...prev.location, address: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -1039,7 +1113,7 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
@@ -1048,17 +1122,18 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Cidade"
                   value={storeData.location.city}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    location: { ...prev.location, city: e.target.value }
-                  }))}
-                  sx={{ mb: 2 }}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      location: { ...prev.location, city: e.target.value },
+                    }))
+                  }
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
             </Grid>
           </TabPanel>
-
           {/* Aba 4: Redes Sociais */}
           <TabPanel value={settingsTab} index={3}>
             <Grid container spacing={2}>
@@ -1067,10 +1142,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Website"
                   value={storeData.socialMedia.website}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    socialMedia: { ...prev.socialMedia, website: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      socialMedia: { ...prev.socialMedia, website: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -1078,7 +1155,7 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
@@ -1087,10 +1164,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Facebook"
                   value={storeData.socialMedia.facebook}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    socialMedia: { ...prev.socialMedia, facebook: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      socialMedia: { ...prev.socialMedia, facebook: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -1098,7 +1177,7 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
@@ -1107,10 +1186,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Instagram"
                   value={storeData.socialMedia.instagram}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    socialMedia: { ...prev.socialMedia, instagram: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      socialMedia: { ...prev.socialMedia, instagram: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -1118,7 +1199,7 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
@@ -1127,10 +1208,12 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Twitter"
                   value={storeData.socialMedia.twitter}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    socialMedia: { ...prev.socialMedia, twitter: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      socialMedia: { ...prev.socialMedia, twitter: e.target.value },
+                    }))
+                  }
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -1138,19 +1221,17 @@ const ManageStoreDesk = ({ storeId }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
             </Grid>
           </TabPanel>
-
           {/* Aba 5: Horário de Funcionamento */}
           <TabPanel value={settingsTab} index={4}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Defina o horário de funcionamento da sua loja. Deixe em branco se não aplicável.
             </Typography>
-            
             {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
               const dayNames = {
                 monday: 'Segunda-feira',
@@ -1159,9 +1240,8 @@ const ManageStoreDesk = ({ storeId }) => {
                 thursday: 'Quinta-feira',
                 friday: 'Sexta-feira',
                 saturday: 'Sábado',
-                sunday: 'Domingo'
+                sunday: 'Domingo',
               };
-              
               return (
                 <Accordion key={day} sx={{ mb: 1 }}>
                   <AccordionSummary expandIcon={<ExpandMore />}>
@@ -1177,8 +1257,8 @@ const ManageStoreDesk = ({ storeId }) => {
                       sx={{ mr: 2 }}
                     />
                     {!storeData.businessHours[day].closed && (
-                      <Chip 
-                        size="small" 
+                      <Chip
+                        size="small"
                         label={`${storeData.businessHours[day].open || '--:--'} - ${storeData.businessHours[day].close || '--:--'}`}
                         color="primary"
                         variant="outlined"
@@ -1215,7 +1295,6 @@ const ManageStoreDesk = ({ storeId }) => {
               );
             })}
           </TabPanel>
-
           {/* Aba 6: Políticas */}
           <TabPanel value={settingsTab} index={5}>
             <Grid container spacing={2}>
@@ -1224,13 +1303,15 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Política de Entregas"
                   value={storeData.policies.delivery}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    policies: { ...prev.policies, delivery: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      policies: { ...prev.policies, delivery: e.target.value },
+                    }))
+                  }
                   multiline
                   rows={3}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
@@ -1239,32 +1320,32 @@ const ManageStoreDesk = ({ storeId }) => {
                   fullWidth
                   label="Política de Devoluções"
                   value={storeData.policies.returns}
-                  onChange={(e) => setStoreData(prev => ({
-                    ...prev,
-                    policies: { ...prev.policies, returns: e.target.value }
-                  }))}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      policies: { ...prev.policies, returns: e.target.value },
+                    }))
+                  }
                   multiline
                   rows={3}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
                   size={isMobile ? 'small' : 'medium'}
                 />
               </Grid>
-             
             </Grid>
           </TabPanel>
         </DialogContent>
-        
         <DialogActions sx={{ p: 2 }}>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             onClick={() => toggleModal('settings', false)}
             disabled={loading.store}
             size={isMobile ? 'small' : 'medium'}
           >
             Cancelar
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleStoreUpdate}
             disabled={!storeData.name.trim() || loading.store}
             size={isMobile ? 'small' : 'medium'}
@@ -1279,56 +1360,60 @@ const ManageStoreDesk = ({ storeId }) => {
         open={modals.editProduct}
         onClose={() => !loading.productUpdate && toggleModal('editProduct', false)}
         fullWidth
-        maxWidth="sm"
+        maxWidth="md"
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          bgcolor: 'primary.main',
-          color: 'white'
-        }}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            bgcolor: 'primary.main',
+            color: 'white',
+          }}
+        >
           <Typography variant="h6">Editar Produto</Typography>
-          <IconButton 
-            onClick={() => !loading.productUpdate && toggleModal('editProduct', false)} 
+          <IconButton
+            onClick={() => !loading.productUpdate && toggleModal('editProduct', false)}
             sx={{ color: 'white' }}
             disabled={loading.productUpdate}
           >
             <Close />
           </IconButton>
         </DialogTitle>
-        
         <DialogContent dividers sx={{ pt: 3 }}>
           <Grid container spacing={2}>
             {/* Seção de Upload de Imagem */}
-            <Grid item xs={12}>
+            <Grid item xs={12} md={4}>
               <Typography variant="subtitle1" gutterBottom>
                 Imagem do Produto
               </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: 2,
-                mb: 3
-              }}>
-                {/* Preview da Imagem */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  mb: 3,
+                }}
+              >
                 {(productData.imageUrl || productData.imageFile) && (
-                  <Box sx={{ 
-                    width: isMobile ? '100%' : 150,
-                    height: isMobile ? 150 : 150,
-                    position: 'relative',
-                    border: '1px dashed',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    overflow: 'hidden'
-                  }}>
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: isMobile ? 150 : 200,
+                      position: 'relative',
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                    }}
+                  >
                     <img
                       src={productData.imageUrl || URL.createObjectURL(productData.imageFile)}
                       alt="Preview"
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover'
+                        objectFit: 'cover',
                       }}
                     />
                     <IconButton
@@ -1341,22 +1426,15 @@ const ManageStoreDesk = ({ storeId }) => {
                         backgroundColor: 'rgba(0,0,0,0.5)',
                         color: 'white',
                         '&:hover': {
-                          backgroundColor: 'rgba(0,0,0,0.7)'
-                        }
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                        },
                       }}
                     >
                       <Close fontSize="small" />
                     </IconButton>
                   </Box>
                 )}
-                
-                {/* Botões de Upload */}
-                <Box sx={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1,
-                  flex: 1
-                }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <input
                     type="file"
                     accept="image/*"
@@ -1365,8 +1443,8 @@ const ManageStoreDesk = ({ storeId }) => {
                     id="product-image-upload"
                   />
                   <label htmlFor="product-image-upload">
-                    <Button 
-                      variant="outlined" 
+                    <Button
+                      variant="outlined"
                       component="span"
                       fullWidth
                       startIcon={<Image />}
@@ -1375,10 +1453,9 @@ const ManageStoreDesk = ({ storeId }) => {
                       {productData.imageUrl ? 'Alterar Imagem' : 'Adicionar Imagem'}
                     </Button>
                   </label>
-                  
                   {productData.imageUrl && (
-                    <Button 
-                      variant="outlined" 
+                    <Button
+                      variant="outlined"
                       color="error"
                       onClick={handleRemoveProductImage}
                       fullWidth
@@ -1391,89 +1468,219 @@ const ManageStoreDesk = ({ storeId }) => {
                 </Box>
               </Box>
             </Grid>
-            
             {/* Campos do Produto */}
-            <Grid item xs={12}>
+            <Grid item xs={12} md={8}>
+              <FormControl fullWidth sx={{ mb: 2 }} error={!!errors['type']}>
+                <InputLabel>Tipo *</InputLabel>
+                <Select
+                  value={productData.type}
+                  label="Tipo"
+                  onChange={(e) => setProductData((prev) => ({ ...prev, type: e.target.value }))}
+                >
+                  <MenuItem value="product">Produto</MenuItem>
+                  <MenuItem value="service">Serviço</MenuItem>
+                </Select>
+              </FormControl>
               <TextField
-                label="Nome do Produto"
+                label="Nome do Produto *"
                 value={productData.name}
-                onChange={(e) => setProductData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setProductData((prev) => ({ ...prev, name: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
-                error={!productData.name.trim()}
-                helperText={!productData.name.trim() ? 'Campo obrigatório' : ''}
+                sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                error={!!errors['name']}
+                helperText={errors['name'] || 'Ex: Camiseta Branca ou Consultoria de Marketing'}
                 size={isMobile ? 'small' : 'medium'}
+                required
               />
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Preço (MZN)"
+              <NumericFormat
                 value={productData.price}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9.,]/g, '');
-                  setProductData(prev => ({ ...prev, price: value }));
-                }}
+                thousandSeparator="."
+                decimalSeparator=","
+                decimalScale={2}
+                fixedDecimalScale
+                allowNegative={false}
+                onValueChange={(values) => setProductData((prev) => ({ ...prev, price: values.value }))}
+                customInput={TextField}
                 fullWidth
-                sx={{ mb: 2 }}
-                error={isNaN(parseFloat(productData.price.replace(',', '.')))}
-                helperText={
-                  isNaN(parseFloat(productData.price.replace(',', '.'))) 
-                    ? 'Insira um valor numérico válido' 
-                    : ''
-                }
+                label="Preço (MZN) *"
+                sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
+                }}
+                error={!!errors['price']}
+                helperText={errors['price'] || 'Ex: 1234,56'}
                 size={isMobile ? 'small' : 'medium'}
+                required
               />
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
               <TextField
                 label="Categoria"
                 value={productData.category}
-                onChange={(e) => setProductData(prev => ({ ...prev, category: e.target.value }))}
+                onChange={(e) => setProductData((prev) => ({ ...prev, category: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                helperText="Ex: Roupas, Eletrônicos, Serviços"
                 size={isMobile ? 'small' : 'medium'}
               />
-            </Grid>
-            
-            <Grid item xs={12}>
               <TextField
                 label="Descrição"
                 value={productData.description}
-                onChange={(e) => setProductData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setProductData((prev) => ({ ...prev, description: e.target.value }))}
                 multiline
                 rows={isMobile ? 3 : 4}
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                helperText="Detalhes atrativos para o cliente"
                 size={isMobile ? 'small' : 'medium'}
               />
+              {productData.type === 'product' ? (
+                <>
+                  <NumericFormat
+                    value={productData.qtd}
+                    allowNegative={false}
+                    onValueChange={(values) => setProductData((prev) => ({ ...prev, qtd: values.value }))}
+                    customInput={TextField}
+                    fullWidth
+                    label="Quantidade *"
+                    sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                    error={!!errors['qtd']}
+                    helperText={errors['qtd'] || 'Estoque disponível'}
+                    size={isMobile ? 'small' : 'medium'}
+                    required
+                  />
+                  <TextField
+                    label="SKU"
+                    value={productData.sku}
+                    onChange={(e) => setProductData((prev) => ({ ...prev, sku: e.target.value }))}
+                    fullWidth
+                    sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                    helperText="Código interno (ex: CAM-BRANCO-M)"
+                    size={isMobile ? 'small' : 'medium'}
+                  />
+                  <Divider sx={{ my: 2 }} />
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 2, display: 'flex', alignItems: 'center', color: 'primary.main' }}
+                  >
+                    <LocalShipping sx={{ mr: 1 }} /> Frete Nacional
+                  </Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={productData.nationalShipping}
+                        onChange={(e) => setProductData((prev) => ({ ...prev, nationalShipping: e.target.checked }))}
+                        color="primary"
+                      />
+                    }
+                    label="Habilitar frete para todo Moçambique"
+                    sx={{ mb: 2 }}
+                  />
+                  {productData.nationalShipping && (
+                    <>
+                      <NumericFormat
+                        value={productData.weight}
+                        allowNegative={false}
+                        decimalScale={2}
+                        fixedDecimalScale
+                        onValueChange={(values) => setProductData((prev) => ({ ...prev, weight: values.value }))}
+                        customInput={TextField}
+                        fullWidth
+                        label="Peso (kg) *"
+                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start"><Scale fontSize="small" /></InputAdornment>,
+                        }}
+                        error={!!errors['weight']}
+                        helperText={errors['weight'] || 'Ex: 0,50 para roupas leves'}
+                        size={isMobile ? 'small' : 'medium'}
+                        required
+                      />
+                      <NumericFormat
+                        value={productData.height}
+                        allowNegative={false}
+                        decimalScale={2}
+                        fixedDecimalScale
+                        onValueChange={(values) => setProductData((prev) => ({ ...prev, height: values.value }))}
+                        customInput={TextField}
+                        fullWidth
+                        label="Altura (cm) *"
+                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start"><Straighten fontSize="small" /></InputAdornment>,
+                        }}
+                        error={!!errors['height']}
+                        helperText={errors['height'] || 'Ex: 30,00'}
+                        size={isMobile ? 'small' : 'medium'}
+                        required
+                      />
+                      <NumericFormat
+                        value={productData.width}
+                        allowNegative={false}
+                        decimalScale={2}
+                        fixedDecimalScale
+                        onValueChange={(values) => setProductData((prev) => ({ ...prev, width: values.value }))}
+                        customInput={TextField}
+                        fullWidth
+                        label="Largura (cm) *"
+                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start"><Straighten fontSize="small" /></InputAdornment>,
+                        }}
+                        error={!!errors['width']}
+                        helperText={errors['width'] || 'Ex: 20,00'}
+                        size={isMobile ? 'small' : 'medium'}
+                        required
+                      />
+                      <NumericFormat
+                        value={productData.length}
+                        allowNegative={false}
+                        decimalScale={2}
+                        fixedDecimalScale
+                        onValueChange={(values) => setProductData((prev) => ({ ...prev, length: values.value }))}
+                        customInput={TextField}
+                        fullWidth
+                        label="Comprimento (cm) *"
+                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start"><Straighten fontSize="small" /></InputAdornment>,
+                        }}
+                        error={!!errors['length']}
+                        helperText={errors['length'] || 'Ex: 5,00'}
+                        size={isMobile ? 'small' : 'medium'}
+                        required
+                      />
+                    </>
+                  )}
+                </>
+              ) : (
+                <TextField
+                  label="SKU"
+                  value={productData.sku}
+                  onChange={(e) => setProductData((prev) => ({ ...prev, sku: e.target.value }))}
+                  fullWidth
+                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                  helperText="Código opcional para serviços"
+                  size={isMobile ? 'small' : 'medium'}
+                />
+              )}
             </Grid>
           </Grid>
         </DialogContent>
-        
         <DialogActions sx={{ p: 2 }}>
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             onClick={() => toggleModal('editProduct', false)}
             disabled={loading.productUpdate}
             size={isMobile ? 'small' : 'medium'}
           >
             Cancelar
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleUpdateProduct}
-            disabled={
-              !productData.name.trim() || 
-              isNaN(parseFloat(productData.price.replace(',', '.'))) ||
-              loading.productUpdate
-            }
+            disabled={Object.keys(errors).length > 0 || loading.productUpdate}
             size={isMobile ? 'small' : 'medium'}
           >
-            {loading.productUpdate ? (
-              <CircularProgress size={24} />
-            ) : 'Salvar Alterações'}
+            {loading.productUpdate ? <CircularProgress size={24} /> : 'Salvar Alterações'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1490,14 +1697,14 @@ const ManageStoreDesk = ({ storeId }) => {
           <Typography>Tem certeza que deseja remover este produto?</Typography>
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => toggleModal('deleteConfirm', false)}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               handleRemoveProduct(selectedProductId);
               toggleModal('deleteConfirm', false);
@@ -1515,14 +1722,14 @@ const ManageStoreDesk = ({ storeId }) => {
       <Snackbar
         open={feedback.open}
         autoHideDuration={6000}
-        onClose={() => setFeedback(prev => ({ ...prev, open: false }))}
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
         anchorOrigin={{
           vertical: isMobile ? 'bottom' : 'top',
-          horizontal: 'center'
+          horizontal: 'center',
         }}
       >
         <Alert
-          onClose={() => setFeedback(prev => ({ ...prev, open: false }))}
+          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
           severity={feedback.severity}
           sx={{ width: '100%' }}
           variant="filled"

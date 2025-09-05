@@ -248,8 +248,7 @@ const StoreDetailDesk = () => {
                 mb: 3, 
                 p: 3, 
                 borderRadius: 2,
-                background: 'linear-gradient(to right, #f8f9fa, #ffffff)'
-            }}>
+                background: 'linear-gradient(to right, #f8f9fa, #ffffff)'}}>
                 <Grid container spacing={3} alignItems="center">
                     <Grid item xs={12} md={2}>
                         <Avatar 
@@ -263,7 +262,6 @@ const StoreDetailDesk = () => {
                             }}
                         />
                     </Grid>
-                    
                     <Grid item xs={12} md={6}>
                         <Typography variant="h4" sx={{ 
                             fontWeight: 'bold',
@@ -272,9 +270,6 @@ const StoreDetailDesk = () => {
                         }}>
                             {store.name}
                         </Typography>
-                    
-                        
-                        
                         {/*
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                             <Chip icon={<ThumbUp />} label="98% Avaliações Positivas" size="small" color="success" variant="outlined" />
@@ -283,7 +278,6 @@ const StoreDetailDesk = () => {
                         </Box>
                         */}
                     </Grid>
-                    
                     <Grid item xs={12} md={4}>
                         <Stack spacing={2}>
                          {/*
@@ -341,8 +335,7 @@ const StoreDetailDesk = () => {
                             fontWeight: 'bold',
                             fontSize: isMobile ? '0.8rem' : '0.9rem'
                         }
-                    }}
-                >
+                    }}>
                     <Tab icon={<Store />} iconPosition="start" label="Todos os Produtos" />
                     <Tab icon={<LocalShipping />} iconPosition="start" label="Entregas" />
                     <Tab icon={<AssignmentReturn />} iconPosition="start" label="Devoluções" />

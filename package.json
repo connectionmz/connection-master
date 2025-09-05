@@ -20,6 +20,7 @@
     "axios": "^1.7.7",
     "browser-image-resizer": "^2.4.1",
     "chart.js": "^4.4.7",
+    "compressorjs": "^1.2.1",
     "cors": "^2.8.5",
     "crypto-browserify": "^3.12.1",
     "dompurify": "^3.2.5",
