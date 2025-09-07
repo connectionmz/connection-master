@@ -13,7 +13,6 @@ import {
   Card,
   CardContent,
   CardMedia,
-  Chip,
   CircularProgress
 } from '@mui/material';
 import { 
@@ -23,21 +22,23 @@ import {
   ZoomIn,
   CalendarToday,
   LocationOn,
-  Link as LinkIcon,
   Refresh,
   AccessTime
 } from '@mui/icons-material';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../../fb';
+import { useNavigate } from 'react-router-dom';
 
 const Evento = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [openModal, setOpenModal] = useState(false);
   const [viewMode, setViewMode] = useState('carousel');
   const [eventos, setEventos] = useState([]);
+  const [filteredEventos, setFilteredEventos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const isMobile = useMediaQuery('(max-width:600px)');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEventos = () => {
@@ -48,15 +49,47 @@ const Evento = () => {
         onValue(eventosRef, (snapshot) => {
           const data = snapshot.val();
           if (data) {
-            // Convert object to array and filter active events
+            // Converter objeto em array e filtrar eventos ativos
             const eventosArray = Object.keys(data).map(key => ({
               id: key,
               ...data[key]
-            })).filter(evento => evento.status === 'Ativo');
+            }))
+            .filter(evento => {
+              // Verificar se o evento está ativo
+              if (evento.status !== 'Ativo') return false;
+              
+              // Verificar se o evento já expirou (se tiver data de fim)
+              if (evento.dataFim) {
+                try {
+                  const hoje = new Date();
+                  // CORREÇÃO: Usar a data diretamente no formato YYYY-MM-DD
+                  const dataFimEvento = new Date(evento.dataFim);
+                  return dataFimEvento >= hoje;
+                } catch (error) {
+                  console.error("Erro ao processar data:", error);
+                  return true; // Se houver erro na data, mantém o evento
+                }
+              }
+              
+              return true;
+            })
+            // Ordenar por data de criação (mais recente primeiro)
+            .sort((a, b) => {
+              try {
+                const dataA = a.criadoEm ? new Date(a.criadoEm) : new Date(0);
+                const dataB = b.criadoEm ? new Date(b.criadoEm) : new Date(0);
+                return dataB - dataA;
+              } catch (error) {
+                console.error("Erro ao ordenar eventos:", error);
+                return 0;
+              }
+            });
             
             setEventos(eventosArray);
+            setFilteredEventos(eventosArray);
           } else {
             setEventos([]);
+            setFilteredEventos([]);
           }
           setLoading(false);
         }, (error) => {
@@ -76,13 +109,13 @@ const Evento = () => {
 
   const handleNext = () => {
     setActiveIndex((prevIndex) => 
-      prevIndex === eventos.length - 1 ? 0 : prevIndex + 1
+      prevIndex === filteredEventos.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   const handlePrev = () => {
     setActiveIndex((prevIndex) => 
-      prevIndex === 0 ? eventos.length - 1 : prevIndex - 1
+      prevIndex === 0 ? filteredEventos.length - 1 : prevIndex - 1
     );
   };
 
@@ -108,11 +141,65 @@ const Evento = () => {
         const eventosArray = Object.keys(data).map(key => ({
           id: key,
           ...data[key]
-        })).filter(evento => evento.status === 'Ativo');
+        }))
+        .filter(evento => {
+          if (evento.status !== 'Ativo') return false;
+          
+          if (evento.dataFim) {
+            try {
+              const hoje = new Date();
+              // CORREÇÃO: Usar a data diretamente no formato YYYY-MM-DD
+              const dataFimEvento = new Date(evento.dataFim);
+              return dataFimEvento >= hoje;
+            } catch (error) {
+              console.error("Erro ao processar data:", error);
+              return true;
+            }
+          }
+          
+          return true;
+        })
+        .sort((a, b) => {
+          try {
+            const dataA = a.criadoEm ? new Date(a.criadoEm) : new Date(0);
+            const dataB = b.criadoEm ? new Date(b.criadoEm) : new Date(0);
+            return dataB - dataA;
+          } catch (error) {
+            console.error("Erro ao ordenar eventos:", error);
+            return 0;
+          }
+        });
+        
         setEventos(eventosArray);
+        setFilteredEventos(eventosArray);
       }
       setLoading(false);
     });
+  };
+
+  const handleEventClick = (eventoId) => {
+    // Navegar para a página do evento
+    navigate(`/verEvento/${eventoId}`);
+  };
+
+  // Função para formatar data no formato DD/MM/YYYY
+  const formatarData = (dataString) => {
+    if (!dataString) return '';
+    
+    try {
+      // Se a data estiver no formato YYYY-MM-DD
+      if (dataString.includes('-')) {
+        const partes = dataString.split('-');
+        if (partes.length === 3) {
+          return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+      }
+      
+      return dataString;
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return dataString;
+    }
   };
 
   if (loading) {
@@ -158,7 +245,7 @@ const Evento = () => {
             Eventos
           </Typography>
           <Box>
-            {eventos.length > 1 && (
+            {filteredEventos.length > 1 && (
               <Button 
                 size="small" 
                 onClick={toggleViewMode}
@@ -173,11 +260,11 @@ const Evento = () => {
           </Box>
         </Box>
         
-        {eventos.length > 0 ? (
+        {filteredEventos.length > 0 ? (
           viewMode === 'carousel' ? (
             <Box sx={{ position: 'relative' }}>
               {/* Navegação */}
-              {eventos.length > 1 && (
+              {filteredEventos.length > 1 && (
                 <>
                   <IconButton
                     onClick={handlePrev}
@@ -215,7 +302,7 @@ const Evento = () => {
               {/* Slide Ativo */}
               <Box sx={{ position: 'relative' }}>
                 <Box
-                  onClick={() => handleOpenModal(activeIndex)}
+                  onClick={() => handleEventClick(filteredEventos[activeIndex].id)}
                   sx={{
                     display: 'block',
                     position: 'relative',
@@ -229,8 +316,8 @@ const Evento = () => {
                   }}
                 >
                   <img
-                    src={eventos[activeIndex].imagemDestaqueURL || '/default-event.jpg'}
-                    alt={eventos[activeIndex].titulo}
+                    src={filteredEventos[activeIndex].imagemDestaqueURL || '/default-event.jpg'}
+                    alt={filteredEventos[activeIndex].titulo}
                     style={{
                       width: '100%',
                       height: '100%',
@@ -278,7 +365,7 @@ const Evento = () => {
                         fontSize: isMobile ? '1rem' : '1.25rem'
                       }}
                     >
-                      {eventos[activeIndex].titulo}
+                      {filteredEventos[activeIndex].titulo}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                       <CalendarToday sx={{ 
@@ -293,32 +380,43 @@ const Evento = () => {
                           textShadow: '0 1px 2px rgba(0,0,0,0.6)'
                         }}
                       >
-                        {eventos[activeIndex].dataInicio}
-                        {eventos[activeIndex].dataFim && ` a ${eventos[activeIndex].dataFim}`}
+                        {formatarData(filteredEventos[activeIndex].dataInicio)}
+                        {filteredEventos[activeIndex].dataFim && ` a ${formatarData(filteredEventos[activeIndex].dataFim)}`}
                       </Typography>
                     </Box>
                   </Box>
                 </Box>
 
                 {/* Botão de Visitar */}
-                {eventos[activeIndex].linkExterno && (
+                {filteredEventos[activeIndex].linkExterno && (
                   <Button
                     fullWidth
                     variant="contained"
                     endIcon={<OpenInNew />}
-                    href={eventos[activeIndex].linkExterno}
+                    href={filteredEventos[activeIndex].linkExterno}
                     target="_blank"
                     sx={{ mt: 2 }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Visitar Evento
                   </Button>
                 )}
+                
+                {/* Botão para página do evento */}
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => handleEventClick(filteredEventos[activeIndex].id)}
+                  sx={{ mt: 1 }}
+                >
+                  Ver Detalhes
+                </Button>
               </Box>
 
               {/* Indicadores */}
-              {eventos.length > 1 && (
+              {filteredEventos.length > 1 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                  {eventos.map((_, index) => (
+                  {filteredEventos.map((_, index) => (
                     <Box
                       key={index}
                       onClick={() => setActiveIndex(index)}
@@ -348,23 +446,23 @@ const Evento = () => {
                 borderRadius: '3px',
               }
             }}>
-              {eventos.map((evento, index) => (
+              {filteredEventos.map((evento, index) => (
                 <Card 
                   key={evento.id} 
                   sx={{ 
                     mb: 2,
+                    cursor: 'pointer',
                     '&:hover': {
                       boxShadow: 2
                     }
                   }}
+                  onClick={() => handleEventClick(evento.id)}
                 >
                   <CardMedia
                     component="img"
                     height="140"
                     image={evento.imagemDestaqueURL || '/default-event.jpg'}
                     alt={evento.titulo}
-                    onClick={() => handleOpenModal(index)}
-                    sx={{ cursor: 'pointer' }}
                   />
                   <CardContent>
                     <Typography gutterBottom variant="h6" component="div">
@@ -373,8 +471,8 @@ const Evento = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <CalendarToday sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
-                        {evento.dataInicio}
-                        {evento.dataFim && ` a ${evento.dataFim}`}
+                        {formatarData(evento.dataInicio)}
+                        {evento.dataFim && ` a ${formatarData(evento.dataFim)}`}
                       </Typography>
                     </Box>
                     {evento.local && (
@@ -385,31 +483,33 @@ const Evento = () => {
                         </Typography>
                       </Box>
                     )}
-                    {evento.categorias && evento.categorias.length > 0 && (
-                      <Box sx={{ mt: 1, mb: 1 }}>
-                        {evento.categorias.map((cat, i) => (
-                          <Chip 
-                            key={i} 
-                            label={cat} 
-                            size="small" 
-                            sx={{ mr: 1, mb: 1 }} 
-                          />
-                        ))}
+                    {evento.criadoPor && evento.criadoPor.nome && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Por: {evento.criadoPor.nome}
+                        </Typography>
                       </Box>
                     )}
-                    {evento.linkExterno && (
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                      {evento.linkExterno && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          endIcon={<OpenInNew />}
+                          href={evento.linkExterno}
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Site Oficial
+                        </Button>
+                      )}
                       <Button
-                        fullWidth
-                        variant="outlined"
+                        variant="contained"
                         size="small"
-                        endIcon={<OpenInNew />}
-                        href={evento.linkExterno}
-                        target="_blank"
-                        sx={{ mt: 1 }}
                       >
-                        Mais informações
+                        Ver Detalhes
                       </Button>
-                    )}
+                    </Box>
                   </CardContent>
                 </Card>
               ))}
@@ -465,11 +565,11 @@ const Evento = () => {
               maxHeight: '90vh',
               overflowY: 'auto'
             }}>
-              {eventos.length > 0 && (
+              {filteredEventos.length > 0 && (
                 <>
                   <img
-                    src={eventos[activeIndex].imagemDestaqueURL || '/default-event.jpg'}
-                    alt={eventos[activeIndex].titulo}
+                    src={filteredEventos[activeIndex].imagemDestaqueURL || '/default-event.jpg'}
+                    alt={filteredEventos[activeIndex].titulo}
                     style={{
                       width: '100%',
                       height: 'auto',
@@ -479,63 +579,79 @@ const Evento = () => {
                     }}
                   />
                   <Box sx={{ mt: 2 }}>
-                    <Typography variant="h5">{eventos[activeIndex].titulo}</Typography>
+                    <Typography variant="h5">{filteredEventos[activeIndex].titulo}</Typography>
+                    
+                    {filteredEventos[activeIndex].criadoPor && filteredEventos[activeIndex].criadoPor.nome && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Publicado por: {filteredEventos[activeIndex].criadoPor.nome}
+                      </Typography>
+                    )}
                     
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
                       <CalendarToday sx={{ mr: 1, color: 'text.secondary' }} />
                       <Typography variant="body1">
-                        {eventos[activeIndex].dataInicio}
-                        {eventos[activeIndex].dataFim && ` a ${eventos[activeIndex].dataFim}`}
+                        {formatarData(filteredEventos[activeIndex].dataInicio)}
+                        {filteredEventos[activeIndex].dataFim && ` a ${formatarData(filteredEventos[activeIndex].dataFim)}`}
                       </Typography>
                     </Box>
                     
-                    {eventos[activeIndex].horaInicio && (
+                    {filteredEventos[activeIndex].horaInicio && (
                       <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                         <AccessTime sx={{ mr: 1, color: 'text.secondary' }} />
                         <Typography variant="body1">
-                          {eventos[activeIndex].horaInicio}
-                          {eventos[activeIndex].horaFim && ` às ${eventos[activeIndex].horaFim}`}
+                          {filteredEventos[activeIndex].horaInicio}
+                          {filteredEventos[activeIndex].horaFim && ` às ${filteredEventos[activeIndex].horaFim}`}
                         </Typography>
                       </Box>
                     )}
                     
-                    {eventos[activeIndex].local && (
+                    {filteredEventos[activeIndex].local && (
                       <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                         <LocationOn sx={{ mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body1">{eventos[activeIndex].local}</Typography>
+                        <Typography variant="body1">{filteredEventos[activeIndex].local}</Typography>
                       </Box>
                     )}
                     
-                    {eventos[activeIndex].endereco && (
+                    {filteredEventos[activeIndex].endereco && (
                       <Typography variant="body2" sx={{ mt: 1, ml: 3 }}>
-                        {eventos[activeIndex].endereco}
+                        {filteredEventos[activeIndex].endereco}
                       </Typography>
                     )}
                     
-                    {eventos[activeIndex].categorias && eventos[activeIndex].categorias.length > 0 && (
+                    {filteredEventos[activeIndex].descricao && (
                       <Box sx={{ mt: 2 }}>
-                        {eventos[activeIndex].categorias.map((cat, i) => (
-                          <Chip key={i} label={cat} sx={{ mr: 1, mb: 1 }} />
-                        ))}
+                        <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+                          {filteredEventos[activeIndex].descricao}
+                        </Typography>
                       </Box>
                     )}
                     
-                    <Typography variant="body1" sx={{ mt: 2 }}>
-                      {eventos[activeIndex].descricao}
-                    </Typography>
-                    
-                    {eventos[activeIndex].linkExterno && (
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        endIcon={<OpenInNew />}
-                        href={eventos[activeIndex].linkExterno}
-                        target="_blank"
-                        sx={{ mt: 3 }}
-                      >
-                        Acessar Site do Evento
-                      </Button>
+                    {filteredEventos[activeIndex].organizador && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Organizador: {filteredEventos[activeIndex].organizador}
+                        </Typography>
+                      </Box>
                     )}
+                    
+                    <Box sx={{ display: 'flex', gap: 2, mt: 3, flexWrap: 'wrap' }}>
+                      {filteredEventos[activeIndex].linkExterno && (
+                        <Button
+                          variant="outlined"
+                          endIcon={<OpenInNew />}
+                          href={filteredEventos[activeIndex].linkExterno}
+                          target="_blank"
+                        >
+                          Site Oficial
+                        </Button>
+                      )}
+                      <Button
+                        variant="contained"
+                        onClick={() => handleEventClick(filteredEventos[activeIndex].id)}
+                      >
+                        Ver Página do Evento
+                      </Button>
+                    </Box>
                   </Box>
                 </>
               )}

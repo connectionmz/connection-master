@@ -92,6 +92,7 @@ import { ActiveModulesProvider, useActiveModules } from '../../context/ActiveMod
 import GuestRoute from './GuestRoute';
 import Eventos from '../desktop/Eventos';
 import Checkout from '../checkout/Checkout';
+import VerEvento from '../desktop/VerEvento';
 
 const theme = createTheme({
   palette: {
@@ -353,6 +354,7 @@ const DesktopRoutes = ({ user }) => {
               {/* Rotas públicas */}
               <Route path="/" element={<DashboardComponent user={user} />} />
               <Route path="/feed" element={<FeedDesk user={user} />} />
+              <Route path="/verEvento/:id" element={<VerEvento user={user} />} />
               <Route path="/teste" element={<Teste user={user} />} />
               <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
               <Route path="/empresas" element={<ExploreDesk user={user} />} />
