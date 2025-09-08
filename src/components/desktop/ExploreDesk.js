@@ -48,43 +48,51 @@ const Explore = React.memo(({ user }) => {
   const isMobile = useMediaQuery('(max-width:600px)');
 
   // Carregar dados iniciais
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const companiesRef = ref(db, 'company');
-        const snapshot = await get(companiesRef);
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const empresasList = Object.keys(data)
-            .map((key) => ({
-              id: key,
-              ...data[key],
-            }))
-            // Filter out the current user's company only if user exists and has an id
-            .filter((empresa) => !user?.id || empresa.id !== user.id);
-          setCompanies(empresasList);
-        }
-      } catch (error) {
-        console.error('Error fetching companies:', error);
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const fetchCompanies = async () => {
+    try {
+      const companiesRef = ref(db, 'company');
+      const snapshot = await get(companiesRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const empresasList = Object.keys(data)
+          .map((key) => ({
+            id: key,
+            ...data[key],
+          }))
+          // Filtra empresas: remove a do usuário atual (se aplicável) e apenas tipo diferente de "singular"
+          .filter((empresa) => {
+  // Não mostrar empresa do usuário atual (se logado)
+  if (user?.id && empresa.id === user.id) return false;
+  
+  // Não mostrar empresas do tipo "singular"
+  if (empresa.type === 'singular') return false;
+  
+  return true;
+});
+        setCompanies(empresasList);
       }
-    };
-    
-    onValue(ref(db, 'provincias'), (snapshot) => {
-      setProvincias(snapshot.val() || []);
-    });
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  onValue(ref(db, 'provincias'), (snapshot) => {
+    setProvincias(snapshot.val() || []);
+  });
 
-    onValue(ref(db, 'sectores_de_atividade'), (snapshot) => {
-      setSectores(snapshot.val() || []);
-    });
+  onValue(ref(db, 'sectores_de_atividade'), (snapshot) => {
+    setSectores(snapshot.val() || []);
+  });
 
-    onValue(ref(db, 'tipos_entidades'), (snapshot) => {
-      setTiposEntidades(snapshot.val() || []);
-    });
+  onValue(ref(db, 'tipos_entidades'), (snapshot) => {
+    setTiposEntidades(snapshot.val() || []);
+  });
 
-    fetchCompanies();
-  }, [user?.id]); // Only re-run if user.id changes
+  fetchCompanies();
+}, [user?.id]); // Apenas re-executa se user.id mudar
 
   // Atualizar subsectores quando o setor é alterado
   useEffect(() => {

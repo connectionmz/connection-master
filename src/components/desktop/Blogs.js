@@ -55,40 +55,47 @@ const Blogs = () => {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
-
-const fetchPosts = useCallback(async () => {
-  try {
-    setLoading(true);
-    const snapshot = await get(ref(db, 'blogPost'));
-    if (snapshot.exists()) {
-      const data = snapshot.val();
-      console.log('Dados recebidos:', data);
-      
-      // Convert to array and sort by timestamp in descending order
-      const postsArray = Object.keys(data).map((key) => ({
-        id: key,
-        ...data[key],
-        comments: data[key].comments 
-          ? Object.entries(data[key].comments).map(([commentId, comment]) => ({
-              id: commentId,
-              ...comment
-            })) 
-          : []
-      })).sort((a, b) => b.timestamp - a.timestamp); // Sort by timestamp descending
-      
-      setPosts(postsArray);
-      setFilteredPosts(postsArray);
-    } else {
-      setPosts([]);
-      setFilteredPosts([]);
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const snapshot = await get(ref(db, 'blogPost'));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        console.log('Dados recebidos:', data);
+        
+        // Convert to array and sort by timestamp in descending order
+        const postsArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+          comments: data[key].comments 
+            ? Object.entries(data[key].comments).map(([commentId, comment]) => ({
+                id: commentId,
+                ...comment
+              })) 
+            : []
+        })).sort((a, b) => b.timestamp - a.timestamp); // Sort by timestamp descending
+        
+        setPosts(postsArray);
+        setFilteredPosts(postsArray);
+      } else {
+        setPosts([]);
+        setFilteredPosts([]);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar posts:', err);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Erro ao buscar posts:', err);
-    setError(true);
-  } finally {
-    setLoading(false);
-  }
-}, []);
+  }, []);
+
+  // Função auxiliar para obter a data do post
+  const getPostDate = (post) => {
+    if (!post.date) return new Date(0); // Data mínima se não houver data
+    const [day, month, year] = post.date.split('/');
+    const [hours = 0, minutes = 0, seconds = 0] = post.time ? post.time.split(':') : [];
+    return new Date(year, month - 1, day, hours, minutes, seconds);
+  };
 
   // Filtra e ordena os posts
   useEffect(() => {
@@ -103,8 +110,8 @@ const fetchPosts = useCallback(async () => {
         (post.comments && post.comments.some(comment => 
           comment.comment.toLowerCase().includes(query) ||
           (comment.user && comment.user.nome.toLowerCase().includes(query))
-        )
-      ))
+        ))
+      );
     }
     
     // Filtro por categoria
@@ -114,24 +121,15 @@ const fetchPosts = useCallback(async () => {
     
     // Ordenação
     if (sortBy === 'recent') {
-      result.sort((a, b) => {
-        const dateA = new Date(`${a.date} ${a.time || '00:00:00'}`);
-        const dateB = new Date(`${b.date} ${b.time || '00:00:00'}`);
-        return dateB - dateA;
-      });
+      result.sort((a, b) => getPostDate(b) - getPostDate(a));
     } else if (sortBy === 'oldest') {
-      result.sort((a, b) => {
-        const dateA = new Date(`${a.date} ${a.time || '00:00:00'}`);
-        const dateB = new Date(`${b.date} ${b.time || '00:00:00'}`);
-        return dateA - dateB;
-      });
+      result.sort((a, b) => getPostDate(a) - getPostDate(b));
     } else if (sortBy === 'title') {
       result.sort((a, b) => a.title.localeCompare(b.title));
     }
     
     setFilteredPosts(result);
   }, [posts, searchQuery, selectedCategory, sortBy]);
-
 
   const formatPostDate = (dateStr, timeStr) => {
     try {
@@ -149,7 +147,6 @@ const fetchPosts = useCallback(async () => {
       return dateStr || 'Data desconhecida';
     }
   };
-
 
   const formatDate = (dateString, timeString) => {
     try {
@@ -301,7 +298,7 @@ const fetchPosts = useCallback(async () => {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="caption" color="text.secondary">
                         {formatPostDate(post.date, post.time)}
-                        </Typography>
+                      </Typography>
                     </Box>
                     
                     <Typography 
