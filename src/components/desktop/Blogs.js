@@ -61,7 +61,6 @@ const Blogs = () => {
       const snapshot = await get(ref(db, 'blogPost'));
       if (snapshot.exists()) {
         const data = snapshot.val();
-        console.log('Dados recebidos:', data);
         
         // Convert to array and sort by timestamp in descending order
         const postsArray = Object.keys(data).map((key) => ({
@@ -89,7 +88,6 @@ const Blogs = () => {
     }
   }, []);
 
-  // Função auxiliar para obter a data do post
   const getPostDate = (post) => {
     if (!post.date) return new Date(0); // Data mínima se não houver data
     const [day, month, year] = post.date.split('/');
