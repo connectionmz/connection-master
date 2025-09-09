@@ -17,7 +17,9 @@ import {
   ListItemIcon,
   ListItemText,
   Snackbar,
-  Alert
+  Alert,
+  Menu,
+  MenuItem
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
@@ -28,18 +30,19 @@ import FeedIcon from "@mui/icons-material/Feed";
 import PeopleIcon from "@mui/icons-material/People";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import DownloadIcon from "@mui/icons-material/Download";
 import logo from "../../img/bg2.png";
 import { db } from "../../fb";
 import { Dashboard } from "@mui/icons-material";
 
 const HeaderDesk = ({ user }) => {
-
   const [pendingConnections, setPendingConnections] = useState(0);
   const [pendingQuotes, setPendingQuotes] = useState(0);
   const [pendingContests, setPendingContests] = useState(0);
   const [pendingNotifications, setPendingNotifications] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
+  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,6 +59,14 @@ const HeaderDesk = ({ user }) => {
     "/inbox",
     "/conexoes"
   ];
+
+  const handleDownloadClick = (event) => {
+    setDownloadAnchorEl(event.currentTarget);
+  };
+
+  const handleDownloadClose = () => {
+    setDownloadAnchorEl(null);
+  };
 
   const handleNavigation = (path) => {
     if (!user) return true;
@@ -100,7 +111,6 @@ const HeaderDesk = ({ user }) => {
           setPendingQuotes(0);
         }
       });
-
 
       const unsubscribeContests = onValue(targetUserContestsRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -264,6 +274,48 @@ const HeaderDesk = ({ user }) => {
           </Link>
         );
       })}
+      
+      {/* Botão de Download APK */}
+      <Button
+        variant="contained"
+        color="success"
+        startIcon={<DownloadIcon />}
+        onClick={handleDownloadClick}
+        sx={{
+          ml: 1,
+          backgroundColor: "#4caf50",
+          "&:hover": {
+            backgroundColor: "#388e3c",
+          },
+        }}
+      >
+        Baixar App
+      </Button>
+
+      <Menu
+        anchorEl={downloadAnchorEl}
+        open={Boolean(downloadAnchorEl)}
+        onClose={handleDownloadClose}
+      >
+        <MenuItem 
+          onClick={handleDownloadClose}
+          component="a"
+          href="https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Versão Android (APK)
+        </MenuItem>
+      {/*  <MenuItem 
+          onClick={handleDownloadClose}
+          component="a"
+          href="https://apps.apple.com/app/id/SEU_ID_NA_APP_STORE"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Versão iOS (App Store)
+        </MenuItem>*/}
+      </Menu>
     </Box>
   );
 
@@ -281,6 +333,15 @@ const HeaderDesk = ({ user }) => {
           
           {isMobile ? (
             <Box display="flex" alignItems="center">
+              {/* Botão de Download APK para mobile */}
+              <IconButton 
+                color="success" 
+                onClick={handleDownloadClick}
+                sx={{ mr: 1 }}
+              >
+                <DownloadIcon />
+              </IconButton>
+              
               <IconButton onClick={toggleDrawer(true)}>
                 <MenuIcon />
               </IconButton>
@@ -302,6 +363,18 @@ const HeaderDesk = ({ user }) => {
                       <ListItemText primary={item.label} />
                     </ListItem>
                   ))}
+                  
+                  {/* Item de Download no menu mobile */}
+                  <ListItem
+                    button
+                    onClick={handleDownloadClick}
+                  >
+                    <ListItemIcon>
+                      <DownloadIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Baixar App" />
+                  </ListItem>
+                  
                   {publicPanel && (
                     <ListItem
                       button
@@ -322,17 +395,18 @@ const HeaderDesk = ({ user }) => {
             <Box display="flex" alignItems="center" gap={2}>
               {renderNavItems()}
               {publicPanel && (
-              <Button
-              onClick={() => navigate("/painel")}
-              sx={{
-                "&:hover": { backgroundColor: "#1565c0" },
-                padding: "6px 12px",
-                fontWeight: "bold",
-                minWidth: "40px",
-              }}
-            >Painel
-              <Dashboard />
-            </Button>
+                <Button
+                  onClick={() => navigate("/painel")}
+                  sx={{
+                    "&:hover": { backgroundColor: "#1565c0" },
+                    padding: "6px 12px",
+                    fontWeight: "bold",
+                    minWidth: "40px",
+                  }}
+                >
+                  Painel
+                  <Dashboard />
+                </Button>
               )}
             </Box>
           )}
@@ -391,4 +465,5 @@ const HeaderDesk = ({ user }) => {
     </>
   );
 };
+
 export default HeaderDesk;

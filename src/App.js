@@ -24,19 +24,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
 
-const PROVINCIAS_MOCAMBIQUE = [
-  "Maputo Cidade",
-  "Maputo Província",
-  "Gaza",
-  "Inhambane",
-  "Sofala",
-  "Manica",
-  "Tete",
-  "Zambézia",
-  "Nampula",
-  "Cabo Delgado",
-  "Niassa"
-]
 
 const App = () => {
   const [userData, setUserData] = useState(null);
