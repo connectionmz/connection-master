@@ -21,7 +21,7 @@ import {
   Box,
 } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
-//import sendEmailInquerito from '../sms/SendMail';
+import { sendEmailInquerito } from '../sms/SendMail';
 
 const CriarInqueritoDesk = ({ user }) => {
   const [titulo, setTitulo] = useState('');
@@ -220,7 +220,7 @@ const CriarInqueritoDesk = ({ user }) => {
               <p>Acesse o inquérito: <a href="${link}">${link}</a></p>
             `
           };
-          //await sendEmailInquerito(emailData); // Implemente esta função conforme seu sistema de email
+          await sendEmailInquerito(emailData); 
         }
       }
 

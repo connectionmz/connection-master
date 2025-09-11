@@ -92,5 +92,26 @@ const SendMailProforma = async (to, emailMessage) => {
   }
 };
 
+const sendEmailInquerito = async (to, emailMessage) => {
+  const textContent = `
+  Detalhes do pedido:
+  ${emailMessage.message}
+  `;
 
-export {sendEmail, SendMailProforma, sendEmailConcurso};
+  const emailData = {
+    to,
+    subject: "Nova Proforma Criada",
+    text: textContent, 
+  };
+
+  try {
+    const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData);
+    console.log('E-mail enviado com sucesso:', response.data);
+    return true; 
+  } catch (error) {
+    console.error('Erro ao enviar o e-mail:', error);
+    return false; 
+  }
+};
+
+export {sendEmail, SendMailProforma, sendEmailConcurso, sendEmailInquerito};
