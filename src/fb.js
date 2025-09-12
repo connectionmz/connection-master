@@ -27,32 +27,116 @@ const firebaseConfig2 = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_2
 };
 
-// ✅ CORRETO: Inicializar o app com automaticDataCollectionEnabled
-const app = initializeApp(firebaseConfig1, {
-  automaticDataCollectionEnabled: true  // ← AQUI é o lugar correto
-});
+// Debug: Verificar se variáveis de ambiente estão carregando
+console.log('Modo:', process.env.NODE_ENV);
+console.log('API Key 1 carregada:', !!process.env.REACT_APP_FIREBASE_API_KEY_1);
+console.log('reCAPTCHA Key carregada:', !!process.env.REACT_APP_RECAPTCHA_V3_KEY_1);
 
-const app2 = initializeApp(firebaseConfig2, "appSecundario");
+// ✅ Inicializar apps
+let app, app2;
 
-// 🔵 App Check APENAS para o Projeto 1
-const appCheck1 = initializeAppCheck(app, {
-  provider: new ReCaptchaV3Provider(process.env.REACT_APP_RECAPTCHA_V3_KEY_1),
-  isTokenAutoRefreshEnabled: true  // ← APENAS isso no App Check
-});
+try {
+  app = initializeApp(firebaseConfig1, {
+    automaticDataCollectionEnabled: true
+  });
+  console.log('App 1 inicializado com sucesso');
+} catch (error) {
+  console.error('Erro ao inicializar App 1:', error);
+  // Fallback: inicializar app padrão sem configuração
+  app = initializeApp({ 
+    apiKey: "dev-key-dummy",
+    authDomain: "dummy.firebaseapp.com",
+    projectId: "dummy-project"
+  }, "fallback-app-1");
+}
 
-// 🔵 App 1 - Connection Mozambique (COM App Check)
-const auth = getAuth(app);
-export const db = getDatabase(app);
-export const storage = getStorage(app);
+try {
+  app2 = initializeApp(firebaseConfig2, "appSecundario");
+  console.log('App 2 inicializado com sucesso');
+} catch (error) {
+  console.error('Erro ao inicializar App 2:', error);
+  // Fallback para desenvolvimento
+  app2 = initializeApp({ 
+    apiKey: "dev-key-dummy-2",
+    authDomain: "dummy2.firebaseapp.com",
+    projectId: "dummy-project-2"
+  }, "fallback-app-2");
+}
 
-// 🔴 App 2 - Connections (SEM App Check)
-export const db2 = getDatabase(app2);
-export const storage2 = getStorage(app2);
+// 🔵 App Check APENAS em produção e se a chave existir
+let appCheck1 = null;
+if (process.env.NODE_ENV === 'production' && process.env.REACT_APP_RECAPTCHA_V3_KEY_1) {
+  try {
+    appCheck1 = initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(process.env.REACT_APP_RECAPTCHA_V3_KEY_1),
+      isTokenAutoRefreshEnabled: true
+    });
+    console.log('App Check inicializado com sucesso (produção)');
+  } catch (error) {
+    console.warn('Erro ao inicializar App Check:', error);
+  }
+} else {
+  console.log('App Check desativado (desenvolvimento ou chave não encontrada)');
+  
+  // Mock do App Check para desenvolvimento
+  if (typeof window !== 'undefined') {
+    window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+}
+
+// 🔵 Serviços do App 1 - Connection Mozambique
+let auth, db, storage;
+try {
+  auth = getAuth(app);
+  db = getDatabase(app);
+  storage = getStorage(app);
+  console.log('Serviços do App 1 inicializados');
+} catch (error) {
+  console.error('Erro ao inicializar serviços do App 1:', error);
+}
+
+// 🔴 Serviços do App 2 - Connections
+let db2, storage2;
+try {
+  db2 = getDatabase(app2);
+  storage2 = getStorage(app2);
+  console.log('Serviços do App 2 inicializados');
+} catch (error) {
+  console.error('Erro ao inicializar serviços do App 2:', error);
+}
 
 // Providers
-auth.settings.appVerificationDisabledForTesting = true;
 const googleProvider = new GoogleAuthProvider();
 const emailProvider = EmailAuthProvider;
 
-export { auth, googleProvider, emailProvider };
+// ⚠️ Configurações de desenvolvimento
+if (process.env.NODE_ENV === 'development') {
+  if (auth) {
+    auth.settings.appVerificationDisabledForTesting = true;
+    console.log('Modo desenvolvimento: verificação de app desativada');
+  }
+  
+  // Debug token para App Check em desenvolvimento
+  if (typeof window !== 'undefined') {
+    window.self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+}
+
+// ✅ Exportações com fallbacks
+export { 
+  auth, 
+  googleProvider, 
+  emailProvider 
+};
+
+export { 
+  db, 
+  storage 
+};
+
+export { 
+  db2, 
+  storage2 
+};
+
 export default app;
