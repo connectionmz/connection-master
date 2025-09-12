@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
+import { initializeAppCheck, ReCaptchaV3Provider } from '@firebase/app-check';
 
 // 🔵 Configuração do Projeto 1 - Connection Mozambique
 const firebaseConfig1 = {
@@ -26,20 +27,29 @@ const firebaseConfig2 = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_2
 };
 
-// Inicializar os dois apps
-const app = initializeApp(firebaseConfig1); // padrão
-const app2 = initializeApp(firebaseConfig2, "appSecundario"); // nome personalizado
+// ✅ CORRETO: Inicializar o app com automaticDataCollectionEnabled
+const app = initializeApp(firebaseConfig1, {
+  automaticDataCollectionEnabled: true  // ← AQUI é o lugar correto
+});
 
-// 🔵 App 1 - Connection Mozambique
+const app2 = initializeApp(firebaseConfig2, "appSecundario");
+
+// 🔵 App Check APENAS para o Projeto 1
+const appCheck1 = initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider(process.env.REACT_APP_RECAPTCHA_V3_KEY_1),
+  isTokenAutoRefreshEnabled: true  // ← APENAS isso no App Check
+});
+
+// 🔵 App 1 - Connection Mozambique (COM App Check)
 const auth = getAuth(app);
 export const db = getDatabase(app);
 export const storage = getStorage(app);
 
-// 🔴 App 2 - Connections
+// 🔴 App 2 - Connections (SEM App Check)
 export const db2 = getDatabase(app2);
 export const storage2 = getStorage(app2);
 
-// Providers (usando o app1 por padrão)
+// Providers
 auth.settings.appVerificationDisabledForTesting = true;
 const googleProvider = new GoogleAuthProvider();
 const emailProvider = EmailAuthProvider;
