@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { 
@@ -8,7 +8,8 @@ import {
   VisibilityOff,
   Person as PersonalIcon,
   Business as BusinessIcon,
-  ArrowForward as ArrowForwardIcon
+  ArrowForward as ArrowForwardIcon,
+  Security as SecurityIcon
 } from '@mui/icons-material';
 import { 
   Snackbar, 
@@ -29,17 +30,89 @@ import {
   CardContent,
   CardActions,
   Avatar,
-  Divider
+  Divider,
+  Stepper,
+  Step,
+  StepLabel
 } from '@mui/material';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
-import { auth, db, googleProvider } from '../fb';
+import fbApp, { auth, db, googleProvider } from '../fb';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
 import { HomeIcon } from 'lucide-react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-const AccountTypeSelector = ({ onSelect }) => {
+// Constantes de segurança
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutos
+const RATE_LIMIT_TIME = 3000; // 3 segundos
+
+// Funções de segurança
+const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};
+
+const validatePassword = (password) => {
+  // Mínimo 8 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial
+  const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  return re.test(password);
+};
+
+const sanitizeInput = (value) => {
+  if (typeof value === 'string') {
+    return value
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/on\w+=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>]*)/gi, '')
+      .replace(/javascript:/gi, '')
+      .trim();
+  }
+  return value;
+};
+
+const validateInputLength = (value, maxLength = 255) => {
+  return value.length <= maxLength;
+};
+
+const checkForSuspiciousPatterns = (data) => {
+  const suspiciousPatterns = [
+    /<script>/i,
+    /javascript:/i,
+    /onload=/i,
+    /onerror=/i,
+    /eval\(/i,
+    /document\.cookie/i,
+    /window\.location/i,
+    /alert\(/i,
+    /prompt\(/i,
+    /confirm\(/i,
+    /union.*select/i,
+    /select.*from/i,
+    /insert.*into/i,
+    /delete.*from/i,
+    /drop.*table/i,
+    /or.*1=1/i
+  ];
+  
+  const dataString = JSON.stringify(data).toLowerCase();
+  return suspiciousPatterns.some(pattern => pattern.test(dataString));
+};
+
+const sanitizeDataBeforeSave = (data) => {
+  const sanitized = { ...data };
+  
+  Object.keys(sanitized).forEach(key => {
+    if (typeof sanitized[key] === 'string') {
+      sanitized[key] = sanitizeInput(sanitized[key]);
+    }
+  });
+  
+  return sanitized;
+};
+
+export const AccountTypeSelector = ({ onSelect }) => {
   const [selectedType, setSelectedType] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -154,7 +227,7 @@ const accountTypes = [
   );
 };
 
-const AuthDesk = ({ data }) => {
+const AuthDesk = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -168,29 +241,117 @@ const AuthDesk = ({ data }) => {
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [showAccountTypeDialog, setShowAccountTypeDialog] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [lastSubmitTime, setLastSubmitTime] = useState(0);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState(null);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [securityStep, setSecurityStep] = useState(0); // 0: login, 1: verificação adicional
   
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
   const theme = useTheme();
 
+  const siteKey = process.env.REACT_APP_RECAPTCHA_V3_KEY_1;
+
+  // Carregar script do reCAPTCHA v3
+  useEffect(() => {
+    if (siteKey && !document.getElementById('recaptcha-script')) {
+      const script = document.createElement('script');
+      script.id = 'recaptcha-script';
+      script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+
+      return () => {
+        document.body.removeChild(script);
+      };
+    }
+  }, [siteKey]);
+
+  // Verificar se está em período de bloqueio
+  useEffect(() => {
+    const checkLockout = () => {
+      if (lockoutUntil && Date.now() < lockoutUntil) {
+        setIsLockedOut(true);
+        
+        // Timer para liberar automaticamente
+        const timeout = lockoutUntil - Date.now();
+        setTimeout(() => {
+          setIsLockedOut(false);
+          setLockoutUntil(null);
+          setLoginAttempts(0);
+          localStorage.removeItem('loginAttempts');
+          localStorage.removeItem('loginLockout');
+        }, timeout);
+      } else {
+        setIsLockedOut(false);
+      }
+    };
+    
+    checkLockout();
+  }, [lockoutUntil]);
+
+  // Recuperar estado de bloqueio ao carregar o componente
+  useEffect(() => {
+    const savedLockout = localStorage.getItem('loginLockout');
+    const savedAttempts = localStorage.getItem('loginAttempts');
+    
+    if (savedLockout && Date.now() < parseInt(savedLockout)) {
+      setLockoutUntil(parseInt(savedLockout));
+      setLoginAttempts(parseInt(savedAttempts || '0'));
+    } else {
+      // Limpar dados antigos
+      localStorage.removeItem('loginLockout');
+      localStorage.removeItem('loginAttempts');
+    }
+  }, []);
+
+  // Função para verificar e incrementar tentativas
+  const handleFailedLoginAttempt = () => {
+    const newAttempts = loginAttempts + 1;
+    setLoginAttempts(newAttempts);
+    localStorage.setItem('loginAttempts', newAttempts.toString());
+    
+    if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+      const lockoutTime = Date.now() + LOCKOUT_TIME;
+      setLockoutUntil(lockoutTime);
+      localStorage.setItem('loginLockout', lockoutTime.toString());
+      
+      setErrorMessage(`Muitas tentativas de login. Sua conta foi temporariamente bloqueada por ${LOCKOUT_TIME/60000} minutos.`);
+      setShowSnackbar(true);
+    }
+  };
+
   const saveUserData = async (user) => {
+    if (checkForSuspiciousPatterns(user)) {
+      console.error('Dados suspeitos detectados');
+      setErrorMessage('Dados inválidos detectados. Por favor, verifique as informações.');
+      setShowSnackbar(true);
+      return;
+    }
+
     const userRef = ref(db, 'users/' + user.uid);
     const userData = {
-      displayName: user.displayName || 'Usuário Anônimo',
+      displayName: sanitizeInput(user.displayName || 'Usuário Anônimo'),
       uid: user.uid,
-      email: user.email || 'anonimo@exemplo.com',
-      profilepic: user.photoURL || '',
-      provider: user.providerData[0]?.providerId || 'anonymous',
+      email: sanitizeInput(user.email || 'anonimo@exemplo.com'),
+      profilepic: sanitizeInput(user.photoURL || ''),
+      provider: sanitizeInput(user.providerData[0]?.providerId || 'anonymous'),
       country: 'Unknown',
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      loginCount: 1 // Será incrementado em login subsequentes
     };
 
-    await set(userRef, userData);
-    setCurrentUser(user);
+    const sanitizedData = sanitizeDataBeforeSave(userData);
 
-    const companyRef = ref(db, 'company/' + user.uid);
     try {
+      await set(userRef, sanitizedData);
+      setCurrentUser(user);
+
+      const companyRef = ref(db, 'company/' + user.uid);
       const snapshot = await get(companyRef);
       if (!snapshot.exists()) {
         setShowAccountTypeDialog(true);
@@ -198,7 +359,9 @@ const AuthDesk = ({ data }) => {
         navigate('/');
       }
     } catch (error) {
-      console.error('Erro ao buscar dados da empresa:', error.message);
+      console.error('Erro ao salvar dados do usuário:', error.message);
+      setErrorMessage('Erro ao processar login. Tente novamente.');
+      setShowSnackbar(true);
     }
   };
 
@@ -211,18 +374,95 @@ const AuthDesk = ({ data }) => {
     }
   };
 
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
+const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false) => {
+  if (isLockedOut) {
+    const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
+    setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
+    setShowSnackbar(true);
+    return;
+  }
+
+  // ⚠️ EM DESENVOLVIMENTO: Ignora completamente o CAPTCHA
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Modo desenvolvimento: ignorando CAPTCHA');
+    return asyncCallback();
+  }
+
+  // ⚠️ SE NÃO HOUVER CHAVE: Também ignora
+  if (!siteKey) {
+    console.warn('reCAPTCHA não configurado. Procedendo sem verificação.');
+    return asyncCallback();
+  }
+
+  // ✅ Verifica se o reCAPTCHA está carregado
+  if (typeof window.grecaptcha === 'undefined') {
+    console.error('reCAPTCHA não carregado');
+    setErrorMessage('Sistema de segurança não carregado. Recarregue a página.');
+    setShowSnackbar(true);
+    return;
+  }
+
+  try {
+    await window.grecaptcha.ready();
+    const token = await window.grecaptcha.execute(siteKey, { 
+      action: actionName 
+    });
+
+    console.log('Token reCAPTCHA gerado:', token ? 'Sim' : 'Não');
+
+    // ⚠️ Se não conseguir token, continua mesmo assim
+    if (!token) {
+      console.warn('Não foi possível gerar token reCAPTCHA, continuando...');
+      return asyncCallback();
+    }
+
+    const functions = getFunctions(fbApp);
+    const verifyRecaptcha = httpsCallable(functions, 'verifyRecaptcha');
+    
+    const { data } = await verifyRecaptcha({ 
+      recaptchaToken: token, 
+      expectedAction: actionName 
+    });
+
+    if (!data.success) {
+      console.warn('Verificação CAPTCHA falhou, mas continuando...', data);
+    }
+
+    return asyncCallback();
+    
+  } catch (error) {
+    console.error('Erro no CAPTCHA, mas continuando:', error);
+    // ⚠️ Em caso de erro, continua sem CAPTCHA
+    return asyncCallback();
+  }
+};
 
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
+
+    if (isLockedOut) {
+      const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
+      setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
+      setShowSnackbar(true);
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastSubmitTime < RATE_LIMIT_TIME) {
+      setErrorMessage('Aguarde alguns segundos antes de tentar novamente');
+      setShowSnackbar(true);
+      return;
+    }
+    setLastSubmitTime(now);
+
     setIsEmailLoading(true);
     setEmailError(false);
     setPasswordError(false);
     
-    if (!email) {
+    const sanitizedEmail = sanitizeInput(email);
+    const sanitizedPassword = sanitizeInput(password);
+
+    if (!sanitizedEmail) {
       setEmailError(true);
       setErrorMessage('Por favor, insira seu email');
       setShowSnackbar(true);
@@ -230,7 +470,7 @@ const AuthDesk = ({ data }) => {
       return;
     }
     
-    if (!validateEmail(email)) {
+    if (!validateEmail(sanitizedEmail)) {
       setEmailError(true);
       setErrorMessage('Por favor, insira um email válido');
       setShowSnackbar(true);
@@ -238,19 +478,49 @@ const AuthDesk = ({ data }) => {
       return;
     }
     
-    if (!password) {
+    if (!validateInputLength(sanitizedEmail, 255)) {
+      setEmailError(true);
+      setErrorMessage('Email muito longo');
+      setShowSnackbar(true);
+      setIsEmailLoading(false);
+      return;
+    }
+    
+    if (!sanitizedPassword) {
       setPasswordError(true);
       setErrorMessage('Por favor, insira sua senha');
       setShowSnackbar(true);
       setIsEmailLoading(false);
       return;
     }
+
+    if (!validateInputLength(sanitizedPassword, 100)) {
+      setPasswordError(true);
+      setErrorMessage('Senha muito longa');
+      setShowSnackbar(true);
+      setIsEmailLoading(false);
+      return;
+    }
+
+    if (!validatePassword(sanitizedPassword)) {
+      setPasswordError(true);
+      setErrorMessage('Senha inválida. Deve ter pelo menos 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial.');
+      setShowSnackbar(true);
+      setIsEmailLoading(false);
+      return;
+    }
     
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      await saveUserData(result.user);
+      await performVerifiedAction('email_login', async () => {
+        const result = await signInWithEmailAndPassword(auth, sanitizedEmail, sanitizedPassword);
+        setLoginAttempts(0);
+        localStorage.removeItem('loginAttempts');
+        localStorage.removeItem('loginLockout');
+        await saveUserData(result.user);
+      });
     } catch (error) {
-      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || error.message;
+      handleFailedLoginAttempt();
+      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
       setErrorMessage(userFriendlyMessage);
       setShowSnackbar(true);
       if (error.code?.includes('email')) setEmailError(true);
@@ -263,12 +533,18 @@ const AuthDesk = ({ data }) => {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setErrorMessage('');
-  
+
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await saveUserData(result.user);
+      await performVerifiedAction('google_login', async () => {
+        const result = await signInWithPopup(auth, googleProvider);
+        setLoginAttempts(0);
+        localStorage.removeItem('loginAttempts');
+        localStorage.removeItem('loginLockout');
+        await saveUserData(result.user);
+      }, true);
     } catch (error) {
-      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || error.message;
+      handleFailedLoginAttempt();
+      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
       setErrorMessage(userFriendlyMessage);
       setShowSnackbar(true);
     } finally {
@@ -297,6 +573,7 @@ const AuthDesk = ({ data }) => {
           <Fade in={true} timeout={500}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 400, width: '100%', p: 4 }}>
               <Box component="img" src={logo} alt="Logo" sx={{ width: 144, mb: 4, transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.05)' } }} />
+              
               <Box component="form" onSubmit={handleEmailSignIn} noValidate sx={{ width: '100%', mt: 1 }}>
                 <TextField
                   margin="normal"
@@ -308,8 +585,9 @@ const AuthDesk = ({ data }) => {
                   autoComplete="email"
                   autoFocus
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(sanitizeInput(e.target.value))}
                   error={emailError}
+                  disabled={isLockedOut}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': { borderColor: 'divider' },
@@ -330,10 +608,11 @@ const AuthDesk = ({ data }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   error={passwordError}
+                  disabled={isLockedOut}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton onClick={togglePasswordVisibility} edge="end">
+                        <IconButton onClick={togglePasswordVisibility} edge="end" disabled={isLockedOut}>
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
@@ -352,7 +631,7 @@ const AuthDesk = ({ data }) => {
                   fullWidth
                   variant="contained"
                   size="large"
-                  disabled={isEmailLoading || isGoogleLoading || isGuestLoading}
+                  disabled={isEmailLoading || isGoogleLoading || isGuestLoading || isLockedOut}
                   startIcon={isEmailLoading ? <CircularProgress size={20} /> : <Email />}
                   sx={{
                     mt: 3,
@@ -365,10 +644,13 @@ const AuthDesk = ({ data }) => {
                     '&:hover': {
                       transform: 'translateY(-2px)',
                       boxShadow: 2
+                    },
+                    '&:disabled': {
+                      opacity: isLockedOut ? 0.5 : 0.7
                     }
                   }}
                 >
-                  {isEmailLoading ? 'Entrando...' : 'Entrar com Email'}
+                  {isLockedOut ? 'Conta Bloqueada' : isEmailLoading ? 'Entrando...' : 'Entrar com Email'}
                 </Button>
 
                 <Grid container spacing={2} sx={{ mt: 3, mb: 2 }}>
@@ -377,7 +659,7 @@ const AuthDesk = ({ data }) => {
                       fullWidth
                       variant="contained"
                       size="large"
-                      disabled={isGoogleLoading || isEmailLoading || isGuestLoading}
+                      disabled={isGoogleLoading || isEmailLoading || isGuestLoading || isLockedOut}
                       onClick={handleGoogleSignIn}
                       startIcon={isGoogleLoading ? <CircularProgress size={20} /> : <Google />}
                       sx={{
@@ -387,10 +669,13 @@ const AuthDesk = ({ data }) => {
                         fontSize: '1rem',
                         backgroundColor: '#d32f2f',
                         color: '#fff',
-                        '&:hover': { backgroundColor: '#b71c1c' }
+                        '&:hover': { backgroundColor: '#b71c1c' },
+                        '&:disabled': {
+                          opacity: isLockedOut ? 0.5 : 0.7
+                        }
                       }}
                     >
-                      {isGoogleLoading ? 'Entrando...' : 'Google'}
+                      {isLockedOut ? 'Conta Bloqueada' : isGoogleLoading ? 'Entrando...' : 'Google'}
                     </Button>
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -399,7 +684,7 @@ const AuthDesk = ({ data }) => {
                       fullWidth
                       variant="outlined"
                       size="large"
-                      disabled={isGuestLoading || isEmailLoading || isGoogleLoading}
+                      disabled={isGuestLoading || isEmailLoading || isGoogleLoading || isLockedOut}
                       onClick={() => navigate('/')}
                       startIcon={isGuestLoading ? <CircularProgress size={20} /> : <HomeIcon />}
                       sx={{
@@ -416,12 +701,12 @@ const AuthDesk = ({ data }) => {
                           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                         },
                         '&.Mui-disabled': {
-                          opacity: 0.7,
+                          opacity: isLockedOut ? 0.5 : 0.7,
                           transform: 'none'
                         }
                       }}
                     >
-                      {isGuestLoading ? 'Redirecionando...' : 'Visitante'}
+                      {isLockedOut ? 'Conta Bloqueada' : isGuestLoading ? 'Redirecionando...' : 'Visitante'}
                     </Button>
                   </Grid>
                 </Grid>
@@ -451,6 +736,14 @@ const AuthDesk = ({ data }) => {
                   </Link>
                 </Typography>
               </Box>
+              
+              {loginAttempts > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="warning.main">
+                    Tentativas falhas: {loginAttempts} de {MAX_LOGIN_ATTEMPTS}
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </Fade>
         </Grid>
@@ -489,18 +782,15 @@ const AuthDesk = ({ data }) => {
           </Alert>
         </Snackbar>
       </Grid>
-
       <Dialog
         open={showAccountTypeDialog}
         onClose={() => setShowAccountTypeDialog(false)}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 2, p: 0, overflow: 'visible' } }}
-      >
+        PaperProps={{ sx: { borderRadius: 2, p: 0, overflow: 'visible' } }}>
         <AccountTypeSelector onSelect={handleAccountTypeSelect} />
       </Dialog>
     </>
   );
 };
-
-export default AuthDesk;
+export default AuthDesk; 

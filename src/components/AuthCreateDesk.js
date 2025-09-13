@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   useMediaQuery, 
@@ -7,7 +7,8 @@ import {
 import { 
   Email, 
   Visibility, 
-  VisibilityOff 
+  VisibilityOff,
+  Security as SecurityIcon
 } from '@mui/icons-material';
 import { 
   Snackbar, 
@@ -24,6 +25,13 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  Dialog,
+  DialogContent,
+  DialogActions,
+  Card,
+  CardContent,
+  AlertTitle,
+  LinearProgress
 } from '@mui/material';
 import { 
   auth, 
@@ -31,23 +39,86 @@ import {
 } from '../fb';
 import { 
   createUserWithEmailAndPassword, 
-  sendEmailVerification 
+  sendEmailVerification,
+  signOut 
 } from 'firebase/auth';
 import { get, ref, set } from 'firebase/database';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import fbApp from '../fb';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
 
+// Constantes de segurança
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutos
+const RATE_LIMIT_TIME = 5000; // 5 segundos
+
+// Funções de segurança
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
 };
 
 const validatePassword = (password) => {
-  return password.length >= 6;
+  // Mínimo 8 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial
+  const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  return re.test(password);
+};
+
+const sanitizeInput = (value) => {
+  if (typeof value === 'string') {
+    return value
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/on\w+=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>]*)/gi, '')
+      .replace(/javascript:/gi, '')
+      .trim();
+  }
+  return value;
+};
+
+const validateInputLength = (value, maxLength = 255) => {
+  return value.length <= maxLength;
+};
+
+const checkForSuspiciousPatterns = (data) => {
+  const suspiciousPatterns = [
+    /<script>/i,
+    /javascript:/i,
+    /onload=/i,
+    /onerror=/i,
+    /eval\(/i,
+    /document\.cookie/i,
+    /window\.location/i,
+    /alert\(/i,
+    /prompt\(/i,
+    /confirm\(/i,
+    /union.*select/i,
+    /select.*from/i,
+    /insert.*into/i,
+    /delete.*from/i,
+    /drop.*table/i,
+    /or.*1=1/i
+  ];
+  
+  const dataString = JSON.stringify(data).toLowerCase();
+  return suspiciousPatterns.some(pattern => pattern.test(dataString));
+};
+
+const sanitizeDataBeforeSave = (data) => {
+  const sanitized = { ...data };
+  
+  Object.keys(sanitized).forEach(key => {
+    if (typeof sanitized[key] === 'string') {
+      sanitized[key] = sanitizeInput(sanitized[key]);
+    }
+  });
+  
+  return sanitized;
 };
 
 const AuthCreateDesk = () => {
+
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -61,43 +132,182 @@ const AuthCreateDesk = () => {
     email: false,
     password: false
   });
+  const [lastSubmitTime, setLastSubmitTime] = useState(0);
+  const [creationAttempts, setCreationAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState(null);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [showSecurityDialog, setShowSecurityDialog] = useState(false);
+  const [securityChecklist, setSecurityChecklist] = useState({
+    emailValid: false,
+    passwordStrong: false,
+    termsAccepted: false,
+    captchaVerified: false
+  });
 
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const siteKey = process.env.REACT_APP_RECAPTCHA_V3_KEY_1;
+  const recaptchaRef = useRef();
 
+  // Carregar script do reCAPTCHA v3
+  useEffect(() => {
+    if (siteKey && !document.getElementById('recaptcha-script')) {
+      const script = document.createElement('script');
+      script.id = 'recaptcha-script';
+      script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        console.log('reCAPTCHA script carregado com sucesso');
+      };
+      script.onerror = (error) => {
+        console.error('Erro ao carregar script reCAPTCHA:', error);
+      };
+      document.body.appendChild(script);
+    }
+  }, [siteKey]);
 
-    useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        navigate('/auth');
+  // Verificar bloqueio
+  useEffect(() => {
+    const checkLockout = () => {
+      if (lockoutUntil && Date.now() < lockoutUntil) {
+        setIsLockedOut(true);
+        
+        const timeout = lockoutUntil - Date.now();
+        setTimeout(() => {
+          setIsLockedOut(false);
+          setLockoutUntil(null);
+          setCreationAttempts(0);
+          localStorage.removeItem('creationAttempts');
+          localStorage.removeItem('creationLockout');
+        }, timeout);
+      } else {
+        setIsLockedOut(false);
       }
-    });
+    };
+    
+    checkLockout();
+  }, [lockoutUntil]);
 
-    return () => unsubscribe();
-  }, [navigate]);
+  // Recuperar estado de bloqueio
+  useEffect(() => {
+    const savedLockout = localStorage.getItem('creationLockout');
+    const savedAttempts = localStorage.getItem('creationAttempts');
+    
+    if (savedLockout && Date.now() < parseInt(savedLockout)) {
+      setLockoutUntil(parseInt(savedLockout));
+      setCreationAttempts(parseInt(savedAttempts || '0'));
+    } else {
+      localStorage.removeItem('creationLockout');
+      localStorage.removeItem('creationAttempts');
+    }
+  }, []);
+
+  // Atualizar checklist de segurança
+  useEffect(() => {
+    setSecurityChecklist({
+      emailValid: validateEmail(formData.email),
+      passwordStrong: validatePassword(formData.password),
+      termsAccepted: termsAccepted,
+      captchaVerified: false // Será definido durante a submissão
+    });
+  }, [formData, termsAccepted]);
+
+  const handleFailedCreationAttempt = () => {
+    const newAttempts = creationAttempts + 1;
+    setCreationAttempts(newAttempts);
+    localStorage.setItem('creationAttempts', newAttempts.toString());
+    
+    if (newAttempts >= MAX_ATTEMPTS) {
+      const lockoutTime = Date.now() + LOCKOUT_TIME;
+      setLockoutUntil(lockoutTime);
+      localStorage.setItem('creationLockout', lockoutTime.toString());
+      
+      setErrorMessage(`Muitas tentativas de criação de conta. Sua conta foi temporariamente bloqueada por ${LOCKOUT_TIME/60000} minutos.`);
+    }
+  };
 
   const saveUserData = useCallback(async (user) => {
+    if (checkForSuspiciousPatterns(user)) {
+      console.error('Dados suspeitos detectados');
+      setErrorMessage('Dados inválidos detectados. Por favor, verifique as informações.');
+      return;
+    }
+
     const userRef = ref(db, 'users/' + user.uid);
     const userData = {
-      displayName: user.displayName || 'Usuário Anônimo',
+      displayName: sanitizeInput(user.displayName || 'Usuário Anônimo'),
       uid: user.uid,
-      email: user.email || 'anonimo@exemplo.com',
-      profilepic: user.photoURL || '',
-      provider: user.providerData[0]?.providerId || 'anonymous',
+      email: sanitizeInput(user.email || 'anonimo@exemplo.com'),
+      profilepic: sanitizeInput(user.photoURL || ''),
+      provider: sanitizeInput(user.providerData[0]?.providerId || 'anonymous'),
       country: 'Unknown',
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
+      creationDate: new Date().toISOString(),
+      emailVerified: user.emailVerified,
+      loginCount: 0
     };
 
-    await set(userRef, userData);
+    const sanitizedData = sanitizeDataBeforeSave(userData);
+
+    try {
+      await set(userRef, sanitizedData);
+      console.log('Dados do usuário salvos com sucesso');
+    } catch (error) {
+      console.error('Erro ao salvar dados do usuário:', error.message);
+      setErrorMessage('Erro ao processar criação de conta. Tente novamente.');
+      throw error;
+    }
   }, []);
+
+  const performVerifiedAction = async (actionName, asyncCallback) => {
+    if (isLockedOut) {
+      const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
+      setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
+      return;
+    }
+
+    if (!siteKey || typeof window.grecaptcha === 'undefined') {
+      console.warn('reCAPTCHA não disponível. Procedendo sem verificação.');
+      return asyncCallback();
+    }
+
+    try {
+      await window.grecaptcha.ready();
+      const token = await window.grecaptcha.execute(siteKey, { action: actionName });
+
+      const functions = getFunctions(fbApp);
+      const verifyRecaptcha = httpsCallable(functions, 'verifyRecaptcha');
+      const { data } = await verifyRecaptcha({ 
+        recaptchaToken: token, 
+        expectedAction: actionName 
+      });
+
+      if (!data.success || data.score < 0.5) {
+        console.warn('Verificação CAPTCHA com score baixo:', data.score);
+        setSecurityChecklist(prev => ({ ...prev, captchaVerified: false }));
+        throw new Error('Verificação de segurança falhou');
+      }
+
+      setSecurityChecklist(prev => ({ ...prev, captchaVerified: true }));
+      return asyncCallback();
+    } catch (error) {
+      console.error('Erro na verificação CAPTCHA:', error);
+      setErrorMessage('Falha na verificação de segurança. Tente novamente.');
+      handleFailedCreationAttempt();
+      throw error;
+    }
+  };
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
+    const sanitizedValue = sanitizeInput(value);
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: sanitizedValue
     }));
     
     if (errors[name]) {
@@ -108,16 +318,13 @@ const AuthCreateDesk = () => {
     }
   }, [errors]);
 
-  const handleEmailSignIn = useCallback(async (e) => {
-    e.preventDefault();
-    
-    setErrors({
+  const validateForm = () => {
+    const newErrors = {
       email: false,
       password: false
-    });
+    };
     
     let hasError = false;
-    const newErrors = { ...errors };
     
     if (!formData.email) {
       newErrors.email = true;
@@ -127,16 +334,24 @@ const AuthCreateDesk = () => {
       newErrors.email = true;
       hasError = true;
       setErrorMessage('Por favor, insira um email válido');
+    } else if (!validateInputLength(formData.email, 255)) {
+      newErrors.email = true;
+      hasError = true;
+      setErrorMessage('Email muito longo');
     }
     
     if (!formData.password) {
       newErrors.password = true;
       hasError = true;
       setErrorMessage('Por favor, insira sua senha');
+    } else if (!validateInputLength(formData.password, 100)) {
+      newErrors.password = true;
+      hasError = true;
+      setErrorMessage('Senha muito longa');
     } else if (!validatePassword(formData.password)) {
       newErrors.password = true;
       hasError = true;
-      setErrorMessage('A senha deve ter pelo menos 6 caracteres');
+      setErrorMessage('Senha deve ter pelo menos 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial (@$!%*?&)');
     }
     
     if (!termsAccepted) {
@@ -144,39 +359,170 @@ const AuthCreateDesk = () => {
       setErrorMessage('Você deve aceitar os Termos de Uso e a Política de Privacidade.');
     }
     
-    if (hasError) {
-      setErrors(newErrors);
+    setErrors(newErrors);
+    return !hasError;
+  };
+
+  const handleEmailSignIn = useCallback(async (e) => {
+    e.preventDefault();
+    
+    if (isLockedOut) {
+      const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
+      setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastSubmitTime < RATE_LIMIT_TIME) {
+      setErrorMessage('Aguarde alguns segundos antes de tentar novamente');
+      return;
+    }
+    setLastSubmitTime(now);
+    
+    if (!validateForm()) {
       return;
     }
     
     setIsLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
+    setShowSecurityDialog(true);
 
-  try {
-    const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-    await sendEmailVerification(result.user);
-    await saveUserData(result.user);
-    setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
-    setFormData({ email: '', password: '' });
-    setTermsAccepted(false);
-    alert("Sua conta foi criada com sucesso. Faca seu primeiro login com as usa credenciais para continuar")
-  } catch (error) {
-      const userFriendlyMessage = getFirebaseErrorMessage(error.code);
+    try {
+      await performVerifiedAction('signup', async () => {
+        const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        await sendEmailVerification(result.user);
+        await saveUserData(result.user);
+        
+        setCreationAttempts(0);
+        localStorage.removeItem('creationAttempts');
+        localStorage.removeItem('creationLockout');
+        
+        setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
+        setFormData({ email: '', password: '' });
+        setTermsAccepted(false);
+        
+        // Logout imediato para forçar login após verificação de email
+        await signOut(auth);
+        
+        setShowSecurityDialog(false);
+        alert("Sua conta foi criada com sucesso. Verifique seu email e faça login com suas credenciais para continuar.");
+        navigate('/auth');
+      });
+    } catch (error) {
+      handleFailedCreationAttempt();
+      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
       setErrorMessage(userFriendlyMessage);
       
       const errorFields = { email: false, password: false };
-      if (error.code.includes('email')) errorFields.email = true;
-      if (error.code.includes('password')) errorFields.password = true;
+      if (error.code?.includes('email')) errorFields.email = true;
+      if (error.code?.includes('password')) errorFields.password = true;
       setErrors(errorFields);
+      
+      setShowSecurityDialog(false);
     } finally {
       setIsLoading(false);
     }
-  }, [formData, termsAccepted, saveUserData, navigate]);
+  }, [formData, termsAccepted, saveUserData, navigate, isLockedOut, lastSubmitTime, lockoutUntil]);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
   }, []);
+
+  const SecurityCheckDialog = () => (
+    <Dialog open={showSecurityDialog} maxWidth="sm" fullWidth>
+      <DialogContent>
+        <Box display="flex" flexDirection="column" alignItems="center" p={2}>
+          <SecurityIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            Verificação de Segurança
+          </Typography>
+          <Typography variant="body2" color="textSecondary" textAlign="center" mb={3}>
+            Estamos realizando verificações de segurança para proteger sua conta.
+          </Typography>
+          
+          <Box width="100%" mb={2}>
+            <LinearProgress />
+          </Box>
+          
+          <Box width="100%">
+            <Typography variant="body2" gutterBottom>
+              Verificações em andamento:
+            </Typography>
+            <Box component="ul" pl={2} mt={1}>
+              <Box component="li" color={securityChecklist.emailValid ? 'success.main' : 'text.secondary'}>
+                <Typography variant="body2">
+                  Email válido: {securityChecklist.emailValid ? '✓' : '...'}
+                </Typography>
+              </Box>
+              <Box component="li" color={securityChecklist.passwordStrong ? 'success.main' : 'text.secondary'}>
+                <Typography variant="body2">
+                  Senha forte: {securityChecklist.passwordStrong ? '✓' : '...'}
+                </Typography>
+              </Box>
+              <Box component="li" color={securityChecklist.termsAccepted ? 'success.main' : 'text.secondary'}>
+                <Typography variant="body2">
+                  Termos aceitos: {securityChecklist.termsAccepted ? '✓' : '...'}
+                </Typography>
+              </Box>
+              <Box component="li" color={securityChecklist.captchaVerified ? 'success.main' : 'text.secondary'}>
+                <Typography variant="body2">
+                  Verificação de segurança: {securityChecklist.captchaVerified ? '✓' : '...'}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const PasswordStrengthIndicator = () => {
+    if (!formData.password) return null;
+    
+    const hasMinLength = formData.password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(formData.password);
+    const hasLowerCase = /[a-z]/.test(formData.password);
+    const hasNumber = /\d/.test(formData.password);
+    const hasSpecialChar = /[@$!%*?&]/.test(formData.password);
+    
+    const strength = [hasMinLength, hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar]
+      .filter(Boolean).length;
+    
+    return (
+      <Box mt={1} mb={2}>
+        <Typography variant="caption" display="block" gutterBottom>
+          Força da senha:
+        </Typography>
+        <LinearProgress 
+          variant="determinate" 
+          value={strength * 20} 
+          color={
+            strength <= 2 ? 'error' : 
+            strength <= 3 ? 'warning' : 'success'
+          }
+          sx={{ height: 8, borderRadius: 4, mb: 1 }}
+        />
+        <Box component="ul" pl={2}>
+          <Box component="li" color={hasMinLength ? 'success.main' : 'error.main'}>
+            <Typography variant="caption">Mínimo 8 caracteres</Typography>
+          </Box>
+          <Box component="li" color={hasUpperCase ? 'success.main' : 'error.main'}>
+            <Typography variant="caption">Pelo menos uma letra maiúscula</Typography>
+          </Box>
+          <Box component="li" color={hasLowerCase ? 'success.main' : 'error.main'}>
+            <Typography variant="caption">Pelo menos uma letra minúscula</Typography>
+          </Box>
+          <Box component="li" color={hasNumber ? 'success.main' : 'error.main'}>
+            <Typography variant="caption">Pelo menos um número</Typography>
+          </Box>
+          <Box component="li" color={hasSpecialChar ? 'success.main' : 'error.main'}>
+            <Typography variant="caption">Pelo menos um caractere especial (@$!%*?&)</Typography>
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
 
   return (
     <Grid container component="main" sx={{ height: '100vh' }}>
@@ -188,7 +534,8 @@ const AuthCreateDesk = () => {
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center',
-          backgroundColor: 'background.paper'
+          backgroundColor: 'background.paper',
+          overflow: 'auto'
         }}
       >
         <Fade in={true} timeout={500}>
@@ -197,7 +544,7 @@ const AuthCreateDesk = () => {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              maxWidth: 400,
+              maxWidth: 450,
               width: '100%',
               p: 4
             }}
@@ -219,6 +566,13 @@ const AuthCreateDesk = () => {
             <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
               Criar nova conta
             </Typography>
+
+            {isLockedOut && (
+              <Alert severity="warning" sx={{ width: '100%', mb: 2 }}>
+                <AlertTitle>Conta Temporariamente Bloqueada</AlertTitle>
+                Muitas tentativas de criação. Tente novamente em {Math.ceil((lockoutUntil - Date.now()) / 60000)} minutos.
+              </Alert>
+            )}
             
             <Box 
               component="form" 
@@ -240,6 +594,7 @@ const AuthCreateDesk = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 error={errors.email}
+                disabled={isLockedOut}
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
@@ -258,13 +613,14 @@ const AuthCreateDesk = () => {
                 required
                 fullWidth
                 name="password"
-                label="Senha (mínimo 6 caracteres)"
+                label="Senha"
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="new-password"
                 value={formData.password}
                 onChange={handleInputChange}
                 error={errors.password}
+                disabled={isLockedOut}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -272,6 +628,7 @@ const AuthCreateDesk = () => {
                         aria-label="toggle password visibility"
                         onClick={togglePasswordVisibility}
                         edge="end"
+                        disabled={isLockedOut}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -279,7 +636,7 @@ const AuthCreateDesk = () => {
                   ),
                 }}
                 sx={{
-                  mb: 2,
+                  mb: 1,
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
                       borderColor: 'divider',
@@ -290,6 +647,8 @@ const AuthCreateDesk = () => {
                   }
                 }}
               />
+
+              <PasswordStrengthIndicator />
               
               <FormControlLabel
                 control={
@@ -298,6 +657,7 @@ const AuthCreateDesk = () => {
                     onChange={() => setTermsAccepted(!termsAccepted)}
                     name="terms"
                     color="primary"
+                    disabled={isLockedOut}
                     sx={{
                       '&.Mui-checked': {
                         color: 'primary.main',
@@ -325,7 +685,7 @@ const AuthCreateDesk = () => {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={isLoading || !termsAccepted}
+                disabled={isLoading || isLockedOut}
                 startIcon={isLoading ? <CircularProgress size={20} /> : <Email />}
                 sx={{
                   mt: 1,
@@ -345,7 +705,7 @@ const AuthCreateDesk = () => {
                   }
                 }}
               >
-                {isLoading ? 'Criando conta...' : 'Criar conta'}
+                {isLockedOut ? 'Conta Bloqueada' : isLoading ? 'Criando conta...' : 'Criar conta'}
               </Button>
               
               <Typography variant="body2" align="center" sx={{ color: 'text.secondary' }}>
@@ -362,6 +722,14 @@ const AuthCreateDesk = () => {
                   Entrar agora
                 </Link>
               </Typography>
+
+              {creationAttempts > 0 && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <Typography variant="caption" color="warning.main">
+                    Tentativas falhas: {creationAttempts} de {MAX_ATTEMPTS}
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </Box>
         </Fade>
@@ -407,24 +775,22 @@ const AuthCreateDesk = () => {
           {errorMessage}
         </Alert>
       </Snackbar>
-      
       <Snackbar
         open={!!successMessage}
         autoHideDuration={6000}
         onClose={() => setSuccessMessage('')}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert 
           severity="success" 
           sx={{ 
             width: '100%',
             boxShadow: 3
           }}
-          onClose={() => setSuccessMessage('')}
-        >
+          onClose={() => setSuccessMessage('')}>
           {successMessage}
         </Alert>
       </Snackbar>
+      <SecurityCheckDialog />
     </Grid>
   );
 };
