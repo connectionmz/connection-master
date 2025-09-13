@@ -382,19 +382,15 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
     return;
   }
 
-  // ⚠️ EM DESENVOLVIMENTO: Ignora completamente o CAPTCHA
   if (process.env.NODE_ENV === 'development') {
-    console.log('Modo desenvolvimento: ignorando CAPTCHA');
     return asyncCallback();
   }
 
-  // ⚠️ SE NÃO HOUVER CHAVE: Também ignora
   if (!siteKey) {
     console.warn('reCAPTCHA não configurado. Procedendo sem verificação.');
     return asyncCallback();
   }
 
-  // ✅ Verifica se o reCAPTCHA está carregado
   if (typeof window.grecaptcha === 'undefined') {
     console.error('reCAPTCHA não carregado');
     setErrorMessage('Sistema de segurança não carregado. Recarregue a página.');
@@ -408,9 +404,6 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
       action: actionName 
     });
 
-    console.log('Token reCAPTCHA gerado:', token ? 'Sim' : 'Não');
-
-    // ⚠️ Se não conseguir token, continua mesmo assim
     if (!token) {
       console.warn('Não foi possível gerar token reCAPTCHA, continuando...');
       return asyncCallback();
@@ -432,7 +425,6 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
     
   } catch (error) {
     console.error('Erro no CAPTCHA, mas continuando:', error);
-    // ⚠️ Em caso de erro, continua sem CAPTCHA
     return asyncCallback();
   }
 };
@@ -727,7 +719,6 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
                   </Grid>
                 </Grid>
               </Box>
-              
               <Box sx={{ mt: 4, textAlign: 'center' }}>
                 <Typography variant="caption" color="text.secondary">
                   Ao continuar, você concorda com nossos{' '}
