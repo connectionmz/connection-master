@@ -727,14 +727,6 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
                   </Link>
                 </Typography>
               </Box>
-              
-              {loginAttempts > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="warning.main">
-                    Tentativas falhas: {loginAttempts} de {MAX_LOGIN_ATTEMPTS}
-                  </Typography>
-                </Box>
-              )}
             </Box>
           </Fade>
         </Grid>
