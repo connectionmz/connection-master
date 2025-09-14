@@ -1,9 +1,19 @@
+// firebase/config.js
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  EmailAuthProvider 
+} from "firebase/auth";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
-import { initializeAppCheck, ReCaptchaV3Provider } from '@firebase/app-check';
+import { initializeAppCheck, ReCaptchaV3Provider } from "@firebase/app-check";
 
+/**
+ * ======================
+ * Firebase Configs
+ * ======================
+ */
 const firebaseConfig1 = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY_1,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN_1,
@@ -26,82 +36,99 @@ const firebaseConfig2 = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_2
 };
 
+/**
+ * ======================
+ * Inicialização dos Apps
+ * ======================
+ */
 let app, app2;
 
 try {
   app = initializeApp(firebaseConfig1);
 } catch (error) {
-  console.error('Erro ao inicializar App 1:', error);
-  throw new Error('Falha na inicialização do Firebase');
+  console.error("❌ Erro ao inicializar App 1:", error);
+  throw new Error("Falha na inicialização do Firebase");
 }
 
 try {
   app2 = initializeApp(firebaseConfig2, "appSecundario");
 } catch (error) {
-  console.warn('App 2 não inicializado - usando apenas app principal:', error.message);
+  console.warn("⚠️ App 2 não inicializado:", error.message);
   app2 = null;
 }
 
+/**
+ * ======================
+ * App Check (Segurança)
+ * ======================
+ */
 let appCheck1 = null;
 if (process.env.REACT_APP_RECAPTCHA_V3_KEY_1) {
   try {
     appCheck1 = initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(process.env.REACT_APP_RECAPTCHA_V3_KEY_1),
-      isTokenAutoRefreshEnabled: false 
+      isTokenAutoRefreshEnabled: true, // sempre atualizar o token
     });
   } catch (error) {
-    console.warn('Erro ao inicializar App Check:', error);
+    console.warn("⚠️ Erro ao inicializar App Check:", error);
   }
 }
 
-let auth, db, storage;
-try {
-  auth = getAuth(app);
-  db = getDatabase(app);
-  storage = getStorage(app);
-} catch (error) {
-  console.error('Erro ao inicializar serviços do App 1:', error);
-  throw new Error('Falha na inicialização dos serviços Firebase');
-}
+/**
+ * ======================
+ * Serviços App 1
+ * ======================
+ */
+const auth = getAuth(app);
+const db = getDatabase(app);
+const storage = getStorage(app);
 
+/**
+ * ======================
+ * Serviços App 2
+ * ======================
+ */
 let db2 = null, storage2 = null;
 if (app2) {
-  try {
-    db2 = getDatabase(app2);
-    storage2 = getStorage(app2);
-  } catch (error) {
-    console.warn('Erro ao inicializar serviços do App 2:', error);
-  }
+  db2 = getDatabase(app2);
+  storage2 = getStorage(app2);
 }
 
+/**
+ * ======================
+ * Providers de Autenticação
+ * ======================
+ */
 const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
 const emailProvider = EmailAuthProvider;
 
-if (process.env.NODE_ENV === 'development') {
-  
-  if (typeof window !== 'undefined' && !window.FIREBASE_APPCHECK_DEBUG_TOKEN) {
+/**
+ * ======================
+ * Debug App Check (somente DEV)
+ * ======================
+ */
+if (process.env.NODE_ENV === "development") {
+  if (typeof window !== "undefined" && !window.FIREBASE_APPCHECK_DEBUG_TOKEN) {
     window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   }
 }
 
+/**
+ * ======================
+ * Exports
+ * ======================
+ */
 export { 
   auth, 
   googleProvider, 
-  emailProvider 
-};
-
-export { 
+  emailProvider, 
   db, 
-  storage 
-};
-
-export { 
+  storage, 
   db2, 
-  storage2 
+  storage2, 
+  appCheck1 
 };
 
 export default app;
