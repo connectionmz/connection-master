@@ -35,7 +35,7 @@ import {
   Step,
   StepLabel
 } from '@mui/material';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
 import fbApp, { auth, db, googleProvider } from '../fb';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
@@ -253,6 +253,19 @@ const AuthDesk = () => {
 
   const siteKey = process.env.REACT_APP_RECAPTCHA_V3_KEY_1;
 
+  // Configurar persistência de autenticação
+  useEffect(() => {
+    const configureAuthPersistence = async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (error) {
+        console.error('Erro ao configurar persistência:', error);
+      }
+    };
+    
+    configureAuthPersistence();
+  }, []);
+
   // Carregar script do reCAPTCHA v3
   useEffect(() => {
     if (siteKey && !document.getElementById('recaptcha-script')) {
@@ -307,6 +320,25 @@ const AuthDesk = () => {
     }
   }, []);
 
+  // Adicione este useEffect para debug
+  useEffect(() => {
+    const checkAuthState = async () => {
+      try {
+        const functions = getFunctions(fbApp);
+        
+        // Verifique se o reCAPTCHA está carregado
+        if (typeof window.grecaptcha !== 'undefined') {
+        } else {
+          console.warn('reCAPTCHA não está carregado');
+        }
+      } catch (error) {
+        console.error('Erro ao verificar configuração:', error);
+      }
+    };
+
+    checkAuthState();
+  }, []);
+
   // Função para verificar e incrementar tentativas
   const handleFailedLoginAttempt = () => {
     const newAttempts = loginAttempts + 1;
@@ -324,6 +356,7 @@ const AuthDesk = () => {
   };
 
   const saveUserData = async (user) => {
+    
     if (checkForSuspiciousPatterns(user)) {
       console.error('Dados suspeitos detectados');
       setErrorMessage('Dados inválidos detectados. Por favor, verifique as informações.');
@@ -379,9 +412,10 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
     const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
     setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
     setShowSnackbar(true);
-    return;
+    throw new Error('Account locked');
   }
 
+  // Em desenvolvimento, pule a verificação reCAPTCHA
   if (process.env.NODE_ENV === 'development') {
     return asyncCallback();
   }
@@ -395,7 +429,7 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
     console.error('reCAPTCHA não carregado');
     setErrorMessage('Sistema de segurança não carregado. Recarregue a página.');
     setShowSnackbar(true);
-    return;
+    throw new Error('reCAPTCHA not loaded');
   }
 
   try {
@@ -421,6 +455,7 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
       console.warn('Verificação CAPTCHA falhou, mas continuando...', data);
     }
 
+    // IMPORTANTE: Retornar o resultado da callback
     return asyncCallback();
     
   } catch (error) {
@@ -494,13 +529,7 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
       return;
     }
 
-    if (!validatePassword(sanitizedPassword)) {
-      setPasswordError(true);
-      setErrorMessage('Senha inválida. Deve ter pelo menos 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial.');
-      setShowSnackbar(true);
-      setIsEmailLoading(false);
-      return;
-    }
+    // Removida a validação de força da senha no login (mantenha apenas para cadastro)
     
     try {
       await performVerifiedAction('email_login', async () => {
@@ -527,17 +556,59 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
     setErrorMessage('');
 
     try {
-      await performVerifiedAction('google_login', async () => {
-        const result = await signInWithPopup(auth, googleProvider);
-        setLoginAttempts(0);
-        localStorage.removeItem('loginAttempts');
-        localStorage.removeItem('loginLockout');
-        await saveUserData(result.user);
+      // Tente primeiro sem App Check (modo direto)
+      
+      // Em desenvolvimento, use signInWithPopup diretamente
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          const result = await signInWithPopup(auth, googleProvider);
+          setLoginAttempts(0);
+          localStorage.removeItem('loginAttempts');
+          localStorage.removeItem('loginLockout');
+          await saveUserData(result.user);
+          setIsGoogleLoading(false);
+          return;
+        } catch (error) {
+          console.error('Erro no login Google (dev):', error);
+          
+          // Se falhar, tente com redirecionamento como fallback
+          if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/popup-blocked') {
+            setErrorMessage('Popup bloqueado. Por favor, permita popups para este site e tente novamente.');
+            setShowSnackbar(true);
+          } else {
+            handleFailedLoginAttempt();
+            const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
+            setErrorMessage(userFriendlyMessage);
+            setShowSnackbar(true);
+          }
+          setIsGoogleLoading(false);
+          return;
+        }
+      }
+
+      // Em produção, tente com verificação
+      const result = await performVerifiedAction('google_login', async () => {
+        return await signInWithPopup(auth, googleProvider);
       }, true);
+      
+      setLoginAttempts(0);
+      localStorage.removeItem('loginAttempts');
+      localStorage.removeItem('loginLockout');
+      await saveUserData(result.user);
+      
     } catch (error) {
-      handleFailedLoginAttempt();
-      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
-      setErrorMessage(userFriendlyMessage);
+      console.error('Erro no login Google:', error);
+      
+      // Tratamento específico para erros de popup
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErrorMessage('Login cancelado. O popup foi fechado.');
+      } else if (error.code === 'auth/popup-blocked') {
+        setErrorMessage('Popup bloqueado. Por favor, permita popups para este site.');
+      } else {
+        handleFailedLoginAttempt();
+        const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
+        setErrorMessage(userFriendlyMessage);
+      }
       setShowSnackbar(true);
     } finally {
       setIsGoogleLoading(false);
@@ -776,4 +847,4 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
     </>
   );
 };
-export default AuthDesk; 
+export default AuthDesk;
