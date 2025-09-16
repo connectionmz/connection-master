@@ -1,5 +1,5 @@
 // firebase/config.js
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -38,20 +38,21 @@ const firebaseConfig2 = {
 
 /**
  * ======================
- * Inicialização dos Apps
+ * Inicialização com Singleton Pattern
  * ======================
  */
-let app, app2;
 
-try {
-  app = initializeApp(firebaseConfig1);
-} catch (error) {
-  console.error("❌ Erro ao inicializar App 1:", error);
-  throw new Error("Falha na inicialização do Firebase");
-}
+// App 1 (DEFAULT)
+const app = getApps().length === 0 
+  ? initializeApp(firebaseConfig1, { automaticDataCollectionEnabled: true })
+  : getApp();
 
+// App 2 (Secundário)
+let app2 = null;
 try {
-  app2 = initializeApp(firebaseConfig2, "appSecundario");
+  app2 = getApps().find(app => app.name === 'appSecundario') 
+    ? getApp('appSecundario')
+    : initializeApp(firebaseConfig2, "appSecundario");
 } catch (error) {
   console.warn("⚠️ App 2 não inicializado:", error.message);
   app2 = null;
@@ -59,7 +60,18 @@ try {
 
 /**
  * ======================
- * App Check (Segurança)
+ * Debug App Check (DEV)
+ * ======================
+ */
+if (process.env.NODE_ENV === "development") {
+  if (typeof window !== "undefined") {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+}
+
+/**
+ * ======================
+ * App Check
  * ======================
  */
 let appCheck1 = null;
@@ -67,7 +79,7 @@ if (process.env.REACT_APP_RECAPTCHA_V3_KEY_1) {
   try {
     appCheck1 = initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(process.env.REACT_APP_RECAPTCHA_V3_KEY_1),
-      isTokenAutoRefreshEnabled: true, // sempre atualizar o token
+      isTokenAutoRefreshEnabled: true,
     });
   } catch (error) {
     console.warn("⚠️ Erro ao inicializar App Check:", error);
@@ -103,17 +115,6 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 const emailProvider = EmailAuthProvider;
-
-/**
- * ======================
- * Debug App Check (somente DEV)
- * ======================
- */
-if (process.env.NODE_ENV === "development") {
-  if (typeof window !== "undefined" && !window.FIREBASE_APPCHECK_DEBUG_TOKEN) {
-    window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-  }
-}
 
 /**
  * ======================

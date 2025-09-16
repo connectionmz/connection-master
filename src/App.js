@@ -94,7 +94,6 @@ const App = () => {
             endereco: data.endereco || 'Endereço não informado',
           });
           setShouldSetup(false);
-          showSuccess('Dados carregados com sucesso!');
         } else {
           setUserData(null);
           setShouldSetup(true);
