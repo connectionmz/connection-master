@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, useNavigate } from 'react-router-dom';
 import { 
   Box,
   CssBaseline,
@@ -15,6 +15,7 @@ import { ref, onValue, off, get } from 'firebase/database';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
+import AuthDesk from './components/AuthDesk';
 
 // Tema customizado
 const theme = createTheme({
@@ -41,6 +42,41 @@ const theme = createTheme({
     borderRadius: 8,
   },
 });
+
+// Componente wrapper para usar useNavigate
+const AppContent = ({ 
+  userData, 
+  authUser, 
+  loading, 
+  shouldSetup, 
+  onLogout, 
+  onSetupComplete 
+}) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Se não há usuário autenticado, redireciona para auth
+    if (!authUser && !loading) {
+      navigate('/auth');
+    }
+  }, [authUser, loading, navigate]);
+
+  // Se não está autenticado, mostra a página de autenticação
+  if (!authUser) {
+    return <AuthDesk />;
+  }
+
+  return (
+    <DesktopRoutes 
+      user={userData} 
+      authUser={authUser}
+      loading={loading}
+      shouldSetup={shouldSetup}
+      onLogout={onLogout}
+      onSetupComplete={onSetupComplete}
+    />
+  );
+};
 
 const App = () => {
   const [userData, setUserData] = useState(null);
@@ -169,10 +205,13 @@ const App = () => {
   // Renderizar loading enquanto verifica autenticação
   if (authChecking) {
     return (
-      <Backdrop open sx={{ color: '#fff', zIndex: theme.zIndex.drawer + 1, flexDirection: 'column' }}>
-        <CircularProgress color="inherit" />
-        <Typography sx={{ mt: 2 }}>Carregando...</Typography>
-      </Backdrop>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Backdrop open sx={{ color: '#fff', zIndex: theme.zIndex.drawer + 1, flexDirection: 'column' }}>
+          <CircularProgress color="inherit" />
+          <Typography sx={{ mt: 2 }}>Carregando...</Typography>
+        </Backdrop>
+      </ThemeProvider>
     );
   }
 
@@ -181,8 +220,8 @@ const App = () => {
       <CssBaseline />
       <Router>
         <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <DesktopRoutes 
-            user={userData} 
+          <AppContent 
+            userData={userData} 
             authUser={authUser}
             loading={loading}
             shouldSetup={shouldSetup}

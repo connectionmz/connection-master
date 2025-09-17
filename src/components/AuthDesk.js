@@ -741,37 +741,6 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
                       {isLockedOut ? 'Conta Bloqueada' : isGoogleLoading ? 'Entrando...' : 'Google'}
                     </Button>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      type="button"
-                      fullWidth
-                      variant="outlined"
-                      size="large"
-                      disabled={isGuestLoading || isEmailLoading || isGoogleLoading || isLockedOut}
-                      onClick={() => navigate('/')}
-                      startIcon={isGuestLoading ? <CircularProgress size={20} /> : <HomeIcon />}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1.1rem',
-                        fontWeight: 500,
-                        letterSpacing: '0.5px',
-                        transition: 'all 0.3s ease-in-out',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        '&:active': {
-                          transform: 'translateY(0)',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                        },
-                        '&.Mui-disabled': {
-                          opacity: isLockedOut ? 0.5 : 0.7,
-                          transform: 'none'
-                        }
-                      }}
-                    >
-                      {isLockedOut ? 'Conta Bloqueada' : isGuestLoading ? 'Redirecionando...' : 'Visitante'}
-                    </Button>
-                  </Grid>
                 </Grid>
 
                 <Grid container justifyContent="space-between">
