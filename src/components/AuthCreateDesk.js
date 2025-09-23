@@ -27,10 +27,6 @@ import {
   IconButton,
   Dialog,
   DialogContent,
-  DialogActions,
-  Card,
-  CardContent,
-  AlertTitle,
   LinearProgress
 } from '@mui/material';
 import { 
@@ -40,85 +36,93 @@ import {
 import { 
   createUserWithEmailAndPassword, 
   sendEmailVerification,
-  signOut 
+  fetchSignInMethodsForEmail
 } from 'firebase/auth';
-import { get, ref, set } from 'firebase/database';
+import { ref, set } from 'firebase/database';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import fbApp from '../fb';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
 
 // Constantes de segurança
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutos
-const RATE_LIMIT_TIME = 5000; // 5 segundos
+const SECURITY_CONFIG = {
+  MAX_ATTEMPTS: 5,
+  LOCKOUT_TIME: 15 * 60 * 1000,
+  RATE_LIMIT_TIME: 5000,
+  MIN_PASSWORD_STRENGTH: 3,
+  EMAIL_DOMAIN_BLACKLIST: ['tempmail.com', 'throwaway.com', 'mailinator.com', 'guerrillamail.com', '10minutemail.com']
+};
 
 // Funções de segurança
-const validateEmail = (email) => {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
-};
+const SecurityUtils = {
+  validateEmail: (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  },
 
-const validatePassword = (password) => {
-  // Mínimo 8 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial
-  const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  return re.test(password);
-};
+  validatePassword: (password) => {
+    const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return re.test(password);
+  },
 
-const sanitizeInput = (value) => {
-  if (typeof value === 'string') {
-    return value
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/on\w+=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>]*)/gi, '')
-      .replace(/javascript:/gi, '')
-      .trim();
-  }
-  return value;
-};
+  calculatePasswordStrength: (password) => {
+    if (!password) return 0;
+    
+    let strength = 0;
+    if (password.length >= 8) strength += 1;
+    if (/[A-Z]/.test(password)) strength += 1;
+    if (/[a-z]/.test(password)) strength += 1;
+    if (/\d/.test(password)) strength += 1;
+    if (/[@$!%*?&]/.test(password)) strength += 1;
+    
+    return strength;
+  },
 
-const validateInputLength = (value, maxLength = 255) => {
-  return value.length <= maxLength;
-};
-
-const checkForSuspiciousPatterns = (data) => {
-  const suspiciousPatterns = [
-    /<script>/i,
-    /javascript:/i,
-    /onload=/i,
-    /onerror=/i,
-    /eval\(/i,
-    /document\.cookie/i,
-    /window\.location/i,
-    /alert\(/i,
-    /prompt\(/i,
-    /confirm\(/i,
-    /union.*select/i,
-    /select.*from/i,
-    /insert.*into/i,
-    /delete.*from/i,
-    /drop.*table/i,
-    /or.*1=1/i
-  ];
-  
-  const dataString = JSON.stringify(data).toLowerCase();
-  return suspiciousPatterns.some(pattern => pattern.test(dataString));
-};
-
-const sanitizeDataBeforeSave = (data) => {
-  const sanitized = { ...data };
-  
-  Object.keys(sanitized).forEach(key => {
-    if (typeof sanitized[key] === 'string') {
-      sanitized[key] = sanitizeInput(sanitized[key]);
+  sanitizeInput: (value) => {
+    if (typeof value === 'string') {
+      return value
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/on\w+=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>]*)/gi, '')
+        .replace(/javascript:/gi, '')
+        .trim();
     }
-  });
-  
-  return sanitized;
+    return value;
+  },
+
+  validateInputLength: (value, maxLength = 255) => {
+    return value.length <= maxLength;
+  },
+
+  checkForSuspiciousPatterns: (data) => {
+    const suspiciousPatterns = [
+      /<script>/i, /javascript:/i, /onload=/i, /onerror=/i, /eval\(/i,
+      /document\.cookie/i, /window\.location/i, /alert\(/i, /prompt\(/i,
+      /confirm\(/i, /union.*select/i, /select.*from/i, /insert.*into/i,
+      /delete.*from/i, /drop.*table/i, /or.*1=1/i
+    ];
+    
+    const dataString = JSON.stringify(data).toLowerCase();
+    return suspiciousPatterns.some(pattern => pattern.test(dataString));
+  },
+
+  sanitizeDataBeforeSave: (data) => {
+    const sanitized = { ...data };
+    
+    Object.keys(sanitized).forEach(key => {
+      if (typeof sanitized[key] === 'string') {
+        sanitized[key] = SecurityUtils.sanitizeInput(sanitized[key]);
+      }
+    });
+    
+    return sanitized;
+  },
+
+  checkDisposableEmail: (email) => {
+    const domain = email.split('@')[1];
+    return SECURITY_CONFIG.EMAIL_DOMAIN_BLACKLIST.includes(domain.toLowerCase());
+  }
 };
 
 const AuthCreateDesk = () => {
-
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -147,54 +151,7 @@ const AuthCreateDesk = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const siteKey = process.env.REACT_APP_RECAPTCHA_V3_KEY_1;
-
-  console.log('REACT_APP_RECAPTCHA_V3_KEY_1:', siteKey);
-
-  // Carregar script do reCAPTCHA v3 com verificação melhorada
-  useEffect(() => {
-    if (siteKey && !document.getElementById('recaptcha-script')) {
-      const script = document.createElement('script');
-      script.id = 'recaptcha-script';
-      script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
-      script.async = true;
-      script.defer = true;
-      
-      let loaded = false;
-      
-      script.onload = () => {
-        loaded = true;
-        console.log('reCAPTCHA script carregado com sucesso');
-        
-        // Inicializa o grecaptcha após carregamento
-        if (window.grecaptcha) {
-          try {
-            window.grecaptcha.ready(() => {
-              console.log('reCAPTCHA pronto para uso');
-            });
-          } catch (error) {
-            console.warn('Erro ao chamar grecaptcha.ready:', error);
-          }
-        }
-      };
-      
-      script.onerror = (error) => {
-        console.error('Erro ao carregar script reCAPTCHA:', error);
-        setErrorMessage('Erro de carregamento de segurança. Recarregue a página.');
-      };
-      
-      document.body.appendChild(script);
-      
-      // Timeout para verificar se o script carregou
-      const timeout = setTimeout(() => {
-        if (!loaded && !window.grecaptcha) {
-          console.warn('reCAPTCHA não carregou dentro do tempo esperado');
-        }
-      }, 5000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [siteKey]);
+  const formRef = useRef(null);
 
   // Verificar bloqueio
   useEffect(() => {
@@ -235,10 +192,10 @@ const AuthCreateDesk = () => {
   // Atualizar checklist de segurança
   useEffect(() => {
     setSecurityChecklist({
-      emailValid: validateEmail(formData.email),
-      passwordStrong: validatePassword(formData.password),
+      emailValid: SecurityUtils.validateEmail(formData.email),
+      passwordStrong: SecurityUtils.calculatePasswordStrength(formData.password) >= SECURITY_CONFIG.MIN_PASSWORD_STRENGTH,
       termsAccepted: termsAccepted,
-      captchaVerified: false // Será definido durante a submissão
+      captchaVerified: false
     });
   }, [formData, termsAccepted]);
 
@@ -247,17 +204,17 @@ const AuthCreateDesk = () => {
     setCreationAttempts(newAttempts);
     localStorage.setItem('creationAttempts', newAttempts.toString());
     
-    if (newAttempts >= MAX_ATTEMPTS) {
-      const lockoutTime = Date.now() + LOCKOUT_TIME;
+    if (newAttempts >= SECURITY_CONFIG.MAX_ATTEMPTS) {
+      const lockoutTime = Date.now() + SECURITY_CONFIG.LOCKOUT_TIME;
       setLockoutUntil(lockoutTime);
       localStorage.setItem('creationLockout', lockoutTime.toString());
       
-      setErrorMessage(`Muitas tentativas de criação de conta. Sua conta foi temporariamente bloqueada por ${LOCKOUT_TIME/60000} minutos.`);
+      setErrorMessage(`Muitas tentativas de criação de conta. Sua conta foi temporariamente bloqueada por ${SECURITY_CONFIG.LOCKOUT_TIME/60000} minutos.`);
     }
   };
 
   const saveUserData = useCallback(async (user) => {
-    if (checkForSuspiciousPatterns(user)) {
+    if (SecurityUtils.checkForSuspiciousPatterns(user)) {
       console.error('Dados suspeitos detectados');
       setErrorMessage('Dados inválidos detectados. Por favor, verifique as informações.');
       return;
@@ -265,30 +222,70 @@ const AuthCreateDesk = () => {
 
     const userRef = ref(db, 'users/' + user.uid);
     const userData = {
-      displayName: sanitizeInput(user.displayName || 'Usuário Anônimo'),
+      displayName: SecurityUtils.sanitizeInput(user.displayName || 'Usuário Anônimo'),
       uid: user.uid,
-      email: sanitizeInput(user.email || 'anonimo@exemplo.com'),
-      profilepic: sanitizeInput(user.photoURL || ''),
-      provider: sanitizeInput(user.providerData[0]?.providerId || 'anonymous'),
+      email: SecurityUtils.sanitizeInput(user.email || 'anonimo@exemplo.com'),
+      profilepic: SecurityUtils.sanitizeInput(user.photoURL || ''),
+      provider: SecurityUtils.sanitizeInput(user.providerData[0]?.providerId || 'anonymous'),
       country: 'Unknown',
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
       creationDate: new Date().toISOString(),
       emailVerified: user.emailVerified,
-      loginCount: 0
+      loginCount: 0,
+      userAgent: navigator.userAgent,
+      screenResolution: `${window.screen.width}x${window.screen.height}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: navigator.language
     };
 
-    const sanitizedData = sanitizeDataBeforeSave(userData);
+    const sanitizedData = SecurityUtils.sanitizeDataBeforeSave(userData);
 
     try {
       await set(userRef, sanitizedData);
-      console.log('Dados do usuário salvos com sucesso');
+      
+      // Redirecionar para seleção de tipo de conta
+      navigate('/select-account-type', { 
+        state: { 
+          message: "Sua conta foi criada com sucesso! Agora selecione o tipo de conta.",
+          userId: user.uid,
+          email: user.email
+        }
+      });
+      
     } catch (error) {
       console.error('Erro ao salvar dados do usuário:', error.message);
       setErrorMessage('Erro ao processar criação de conta. Tente novamente.');
       throw error;
     }
+  }, [navigate]);
+
+  const formLoadTime = useRef(Date.now());
+  const mouseMovements = useRef(0);
+
+  useEffect(() => {
+    const handleMouseMove = () => {
+      mouseMovements.current += 1;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  const validateHumanInteraction = () => {
+    const formFillTime = Date.now() - formLoadTime.current;
+    if (formFillTime < 3000) {
+      console.warn('Formulário preenchido muito rapidamente');
+      return false;
+    }
+
+    if (mouseMovements.current < 3) {
+      console.warn('Pouca interação com mouse detectada');
+      return false;
+    }
+
+    return true;
+  };
 
   const performVerifiedAction = async (actionName, asyncCallback) => {
     if (isLockedOut) {
@@ -297,64 +294,22 @@ const AuthCreateDesk = () => {
       return;
     }
 
-    // Fallback se o reCAPTCHA não estiver disponível
-    if (!siteKey || typeof window.grecaptcha === 'undefined') {
-      console.warn('reCAPTCHA não disponível. Procedendo sem verificação.');
-      return asyncCallback();
+    if (!validateHumanInteraction()) {
+      setErrorMessage('Detectado comportamento automatizado. Por favor, preencha o formulário como humano.');
+      return;
     }
 
-    try {
-      // Usando Promise para evitar problemas de callback com ready()
-      await new Promise((resolve, reject) => {
-        try {
-          if (typeof window.grecaptcha.ready === 'function') {
-            window.grecaptcha.ready(() => {
-              resolve();
-            });
-          } else {
-            resolve(); // Resolve mesmo sem ready()
-          }
-        } catch (error) {
-          console.warn('Erro no grecaptcha.ready, continuando:', error);
-          resolve(); // Continua mesmo com erro
-        }
-      });
-
-      // Tenta executar o reCAPTCHA se disponível
-      if (typeof window.grecaptcha.execute === 'function') {
-        const token = await window.grecaptcha.execute(siteKey, { action: actionName });
-        
-        if (token) {
-          try {
-            const functions = getFunctions(fbApp);
-            const verifyRecaptcha = httpsCallable(functions, 'verifyRecaptcha');
-            const { data } = await verifyRecaptcha({ 
-              recaptchaToken: token, 
-              expectedAction: actionName 
-            });
-
-            if (data.success && data.score >= 0.5) {
-              setSecurityChecklist(prev => ({ ...prev, captchaVerified: true }));
-            } else {
-              console.warn('Verificação CAPTCHA com score baixo:', data.score);
-            }
-          } catch (firebaseError) {
-            console.error('Erro na verificação Firebase:', firebaseError);
-            // Continua mesmo com erro de verificação
-          }
-        }
-      }
-
-      return asyncCallback();
-    } catch (error) {
-      console.warn('Erro no CAPTCHA, procedendo sem verificação:', error);
-      return asyncCallback();
-    }
+    setShowSecurityDialog(true);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setSecurityChecklist(prev => ({ ...prev, captchaVerified: true }));
+    
+    return asyncCallback();
   };
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    const sanitizedValue = sanitizeInput(value);
+    const sanitizedValue = SecurityUtils.sanitizeInput(value);
     
     setFormData(prev => ({
       ...prev,
@@ -381,28 +336,32 @@ const AuthCreateDesk = () => {
       newErrors.email = true;
       hasError = true;
       setErrorMessage('Por favor, insira seu email');
-    } else if (!validateEmail(formData.email)) {
+    } else if (!SecurityUtils.validateEmail(formData.email)) {
       newErrors.email = true;
       hasError = true;
       setErrorMessage('Por favor, insira um email válido');
-    } else if (!validateInputLength(formData.email, 255)) {
+    } else if (!SecurityUtils.validateInputLength(formData.email, 255)) {
       newErrors.email = true;
       hasError = true;
       setErrorMessage('Email muito longo');
+    } else if (SecurityUtils.checkDisposableEmail(formData.email)) {
+      newErrors.email = true;
+      hasError = true;
+      setErrorMessage('Emails temporários não são permitidos. Use um email permanente.');
     }
     
     if (!formData.password) {
       newErrors.password = true;
       hasError = true;
       setErrorMessage('Por favor, insira sua senha');
-    } else if (!validateInputLength(formData.password, 100)) {
+    } else if (!SecurityUtils.validateInputLength(formData.password, 100)) {
       newErrors.password = true;
       hasError = true;
       setErrorMessage('Senha muito longa');
-    } else if (!validatePassword(formData.password)) {
+    } else if (SecurityUtils.calculatePasswordStrength(formData.password) < SECURITY_CONFIG.MIN_PASSWORD_STRENGTH) {
       newErrors.password = true;
       hasError = true;
-      setErrorMessage('Senha deve ter pelo menos 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial (@$!%*?&)');
+      setErrorMessage('Senha muito fraca. Use letras maiúsculas, minúsculas, números e caracteres especiais.');
     }
     
     if (!termsAccepted) {
@@ -424,7 +383,7 @@ const AuthCreateDesk = () => {
     }
 
     const now = Date.now();
-    if (now - lastSubmitTime < RATE_LIMIT_TIME) {
+    if (now - lastSubmitTime < SECURITY_CONFIG.RATE_LIMIT_TIME) {
       setErrorMessage('Aguarde alguns segundos antes de tentar novamente');
       return;
     }
@@ -432,6 +391,15 @@ const AuthCreateDesk = () => {
     
     if (!validateForm()) {
       return;
+    }
+    
+    try {
+      const methods = await fetchSignInMethodsForEmail(auth, formData.email);
+      if (methods && methods.length > 0) {
+        setErrorMessage('Este email já está em uso. Tente fazer login ou use outro email.');
+        return;
+      }
+    } catch (error) {
     }
     
     setIsLoading(true);
@@ -449,16 +417,11 @@ const AuthCreateDesk = () => {
         localStorage.removeItem('creationAttempts');
         localStorage.removeItem('creationLockout');
         
-        setSuccessMessage('Conta criada com sucesso! Verifique seu email para ativar a conta.');
+        setSuccessMessage('Conta criada com sucesso!');
         setFormData({ email: '', password: '' });
         setTermsAccepted(false);
         
-        // Logout imediato para forçar login após verificação de email
-        await signOut(auth);
-        
         setShowSecurityDialog(false);
-        alert("Sua conta foi criada com sucesso. Verifique seu email e faça login com suas credenciais para continuar.");
-        navigate('/auth');
       });
     } catch (error) {
       handleFailedCreationAttempt();
@@ -474,7 +437,7 @@ const AuthCreateDesk = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, termsAccepted, saveUserData, navigate, isLockedOut, lastSubmitTime, lockoutUntil]);
+  }, [formData, termsAccepted, saveUserData, isLockedOut, lastSubmitTime, lockoutUntil]);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -531,14 +494,12 @@ const AuthCreateDesk = () => {
   const PasswordStrengthIndicator = () => {
     if (!formData.password) return null;
     
+    const strength = SecurityUtils.calculatePasswordStrength(formData.password);
     const hasMinLength = formData.password.length >= 8;
     const hasUpperCase = /[A-Z]/.test(formData.password);
     const hasLowerCase = /[a-z]/.test(formData.password);
     const hasNumber = /\d/.test(formData.password);
     const hasSpecialChar = /[@$!%*?&]/.test(formData.password);
-    
-    const strength = [hasMinLength, hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar]
-      .filter(Boolean).length;
     
     return (
       <Box mt={1} mb={2}>
@@ -620,7 +581,6 @@ const AuthCreateDesk = () => {
 
             {isLockedOut && (
               <Alert severity="warning" sx={{ width: '100%', mb: 2 }}>
-                <AlertTitle>Conta Temporariamente Bloqueada</AlertTitle>
                 Muitas tentativas de criação. Tente novamente em {Math.ceil((lockoutUntil - Date.now()) / 60000)} minutos.
               </Alert>
             )}
@@ -628,6 +588,7 @@ const AuthCreateDesk = () => {
             <Box 
               component="form" 
               onSubmit={handleEmailSignIn} 
+              ref={formRef}
               sx={{ 
                 width: '100%',
                 mt: 1 

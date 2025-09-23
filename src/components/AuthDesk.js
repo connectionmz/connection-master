@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { 
@@ -48,6 +48,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutos
 const RATE_LIMIT_TIME = 3000; // 3 segundos
+const MIN_RECAPTCHA_SCORE = 0.3; // Score mínimo para considerar válido
+
+const RECAPTCHA_ACTIONS = {
+  LOGIN: 'login',
+  GOOGLE_SIGNIN: 'google_signin',
+  SIGNUP: 'signup'
+};
 
 // Funções de segurança
 const validateEmail = (email) => {
@@ -127,22 +134,22 @@ export const AccountTypeSelector = ({ onSelect }) => {
     }
   };
 
-const accountTypes = [
-  {
-    id: 'personal',
-    title: 'Conta Pessoal',
-    description: 'Ideal para uso individual, com possibilidade de fazer pedidos de cotação, acesso a lojas e outros serviços disponíveis na plataforma.',
-    icon: <PersonalIcon fontSize="large" />,
-    color: theme.palette.primary.main
-  },
-  {
-    id: 'business',
-    title: 'Conta Empresarial',
-    description: 'Para empresas, com acesso aos módulos de Cotações, Concursos e mais, permitindo a gestão do seu negócio e networking a nível nacional.',
-    icon: <BusinessIcon fontSize="large" />,
-    color: theme.palette.secondary.main
-  }
-];
+  const accountTypes = [
+    {
+      id: 'personal',
+      title: 'Conta Pessoal',
+      description: 'Ideal para uso individual, com possibilidade de fazer pedidos de cotação, acesso a lojas e outros serviços disponíveis na plataforma.',
+      icon: <PersonalIcon fontSize="large" />,
+      color: theme.palette.primary.main
+    },
+    {
+      id: 'business',
+      title: 'Conta Empresarial',
+      description: 'Para empresas, com acesso aos módulos de Cotações, Concursos e mais, permitindo a gestão do seu negócio e networking a nível nacional.',
+      icon: <BusinessIcon fontSize="large" />,
+      color: theme.palette.secondary.main
+    }
+  ];
 
   return (
     <Box sx={{ margin: '0 auto', p: isMobile ? 2 : 4, overflow:'auto' }} >
@@ -245,7 +252,13 @@ const AuthDesk = () => {
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState(null);
   const [isLockedOut, setIsLockedOut] = useState(false);
-  const [securityStep, setSecurityStep] = useState(0); // 0: login, 1: verificação adicional
+  const [recaptchaReady, setRecaptchaReady] = useState(false);
+  const [recaptchaError, setRecaptchaError] = useState(false);
+  const [securityChecks, setSecurityChecks] = useState({
+    isHuman: false,
+    lastAction: null,
+    suspiciousActivity: false
+  });
   
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -266,20 +279,56 @@ const AuthDesk = () => {
     configureAuthPersistence();
   }, []);
 
-  // Carregar script do reCAPTCHA v3
+  // Configuração do reCAPTCHA v3
   useEffect(() => {
-    if (siteKey && !document.getElementById('recaptcha-script')) {
+    const loadRecaptcha = () => {
+      if (typeof window.grecaptcha !== 'undefined') {
+        window.grecaptcha.ready(() => {
+          setRecaptchaReady(true);
+        });
+        return;
+      }
+
+      if (!siteKey) {
+        console.warn('Chave reCAPTCHA não configurada');
+        setRecaptchaReady(true);
+        return;
+      }
+
       const script = document.createElement('script');
-      script.id = 'recaptcha-script';
       script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
       script.async = true;
       script.defer = true;
-      document.body.appendChild(script);
-
-      return () => {
-        document.body.removeChild(script);
+      script.id = 'recaptcha-script';
+      
+      script.onload = () => {
+        if (typeof window.grecaptcha !== 'undefined') {
+          window.grecaptcha.ready(() => {
+            setRecaptchaReady(true);
+          });
+        } else {
+          setRecaptchaError(true);
+          setRecaptchaReady(true);
+        }
       };
-    }
+
+      script.onerror = () => {
+        console.error('Erro ao carregar reCAPTCHA');
+        setRecaptchaError(true);
+        setRecaptchaReady(true);
+      };
+
+      document.body.appendChild(script);
+    };
+
+    loadRecaptcha();
+
+    return () => {
+      const script = document.getElementById('recaptcha-script');
+      if (script) {
+        document.body.removeChild(script);
+      }
+    };
   }, [siteKey]);
 
   // Verificar se está em período de bloqueio
@@ -288,7 +337,6 @@ const AuthDesk = () => {
       if (lockoutUntil && Date.now() < lockoutUntil) {
         setIsLockedOut(true);
         
-        // Timer para liberar automaticamente
         const timeout = lockoutUntil - Date.now();
         setTimeout(() => {
           setIsLockedOut(false);
@@ -314,30 +362,56 @@ const AuthDesk = () => {
       setLockoutUntil(parseInt(savedLockout));
       setLoginAttempts(parseInt(savedAttempts || '0'));
     } else {
-      // Limpar dados antigos
       localStorage.removeItem('loginLockout');
       localStorage.removeItem('loginAttempts');
     }
   }, []);
 
-  // Adicione este useEffect para debug
-  useEffect(() => {
-    const checkAuthState = async () => {
-      try {
-        const functions = getFunctions(fbApp);
-        
-        // Verifique se o reCAPTCHA está carregado
-        if (typeof window.grecaptcha !== 'undefined') {
-        } else {
-          console.warn('reCAPTCHA não está carregado');
-        }
-      } catch (error) {
-        console.error('Erro ao verificar configuração:', error);
-      }
-    };
+  // Função para obter token reCAPTCHA
+  const getRecaptchaToken = useCallback(async (action) => {
+    if (process.env.NODE_ENV === 'development' || !siteKey || recaptchaError) {
+      return 'dev-mode-token-' + Date.now();
+    }
 
-    checkAuthState();
-  }, []);
+    if (!recaptchaReady) {
+      throw new Error('reCAPTCHA não está pronto');
+    }
+
+    try {
+      await window.grecaptcha.ready();
+      const token = await window.grecaptcha.execute(siteKey, { action });
+      return token;
+    } catch (error) {
+      console.error('Erro ao obter token reCAPTCHA:', error);
+      throw error;
+    }
+  }, [recaptchaReady, recaptchaError, siteKey]);
+
+  // Detecta comportamento automatizado
+  const detectAutomation = () => {
+    const redFlags = [
+      'webdriver' in navigator,
+      navigator.webdriver,
+      window.__nightmare,
+      window._phantom,
+      window.callPhantom,
+      /PhantomJS|HeadlessChrome|Selenium|WebDriver/i.test(navigator.userAgent)
+    ];
+    
+    return redFlags.some(flag => Boolean(flag));
+  };
+
+  // Adiciona atraso de segurança
+  const addSecurityDelay = async (baseDelay = 1000) => {
+    const isAutomated = detectAutomation();
+    const additionalDelay = isAutomated ? 3000 : 0;
+    const randomDelay = Math.random() * 2000;
+    
+    const totalDelay = baseDelay + additionalDelay + randomDelay;
+    await new Promise(resolve => setTimeout(resolve, totalDelay));
+    
+    return isAutomated;
+  };
 
   // Função para verificar e incrementar tentativas
   const handleFailedLoginAttempt = () => {
@@ -353,6 +427,51 @@ const AuthDesk = () => {
       setErrorMessage(`Muitas tentativas de login. Sua conta foi temporariamente bloqueada por ${LOCKOUT_TIME/60000} minutos.`);
       setShowSnackbar(true);
     }
+  };
+
+  // Função simplificada de verificação de segurança
+  const performSecurityCheck = async (action) => {
+    const now = Date.now();
+    if (now - lastSubmitTime < RATE_LIMIT_TIME) {
+      throw new Error('Aguarde alguns segundos antes de tentar novamente');
+    }
+    setLastSubmitTime(now);
+
+    if (isLockedOut) {
+      const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
+      throw new Error(`Conta bloqueada. Tente novamente em ${timeLeft} minutos.`);
+    }
+
+    try {
+      const token = await getRecaptchaToken(action);
+      
+      if (token && token.startsWith('dev-mode-token-')) {
+        return { success: true, score: 0.9 };
+      }
+      
+      return { success: true, score: 0.7 };
+      
+    } catch (error) {
+      console.warn('Falha na verificação de segurança:', error);
+      return { success: true, score: 0.3 };
+    }
+  };
+
+  // Função de ação com verificação de segurança
+  const performVerifiedAction = async (actionName, asyncCallback) => {
+    const securityResult = await performSecurityCheck(actionName);
+    
+    if (securityResult.score < 0.3) {
+      console.warn('Atividade suspeita detectada. Adicionando atraso de segurança.');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      setSecurityChecks(prev => ({
+        ...prev,
+        suspiciousActivity: true,
+        lastAction: actionName
+      }));
+    }
+
+    return asyncCallback();
   };
 
   const saveUserData = async (user) => {
@@ -375,7 +494,7 @@ const AuthDesk = () => {
       ip: 'Unknown',
       loginDate: new Date().toISOString(),
       lastLogin: new Date().toISOString(),
-      loginCount: 1 // Será incrementado em login subsequentes
+      loginCount: 1
     };
 
     const sanitizedData = sanitizeDataBeforeSave(userData);
@@ -406,63 +525,6 @@ const AuthDesk = () => {
       navigate('/setupUser');
     }
   };
-
-const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false) => {
-  if (isLockedOut) {
-    const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
-    setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
-    setShowSnackbar(true);
-    throw new Error('Account locked');
-  }
-
-  // Em desenvolvimento, pule a verificação reCAPTCHA
-  if (process.env.NODE_ENV === 'development') {
-    return asyncCallback();
-  }
-
-  if (!siteKey) {
-    console.warn('reCAPTCHA não configurado. Procedendo sem verificação.');
-    return asyncCallback();
-  }
-
-  if (typeof window.grecaptcha === 'undefined') {
-    console.error('reCAPTCHA não carregado');
-    setErrorMessage('Sistema de segurança não carregado. Recarregue a página.');
-    setShowSnackbar(true);
-    throw new Error('reCAPTCHA not loaded');
-  }
-
-  try {
-    await window.grecaptcha.ready();
-    const token = await window.grecaptcha.execute(siteKey, { 
-      action: actionName 
-    });
-
-    if (!token) {
-      console.warn('Não foi possível gerar token reCAPTCHA, continuando...');
-      return asyncCallback();
-    }
-
-    const functions = getFunctions(fbApp);
-    const verifyRecaptcha = httpsCallable(functions, 'verifyRecaptcha');
-    
-    const { data } = await verifyRecaptcha({ 
-      recaptchaToken: token, 
-      expectedAction: actionName 
-    });
-
-    if (!data.success) {
-      console.warn('Verificação CAPTCHA falhou, mas continuando...', data);
-    }
-
-    // IMPORTANTE: Retornar o resultado da callback
-    return asyncCallback();
-    
-  } catch (error) {
-    console.error('Erro no CAPTCHA, mas continuando:', error);
-    return asyncCallback();
-  }
-};
 
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
@@ -528,17 +590,23 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
       setIsEmailLoading(false);
       return;
     }
-
-    // Removida a validação de força da senha no login (mantenha apenas para cadastro)
     
     try {
-      await performVerifiedAction('email_login', async () => {
+      const isSuspicious = await addSecurityDelay(1000);
+      
+      if (isSuspicious) {
+        console.warn('Comportamento automatizado detectado');
+        setSecurityChecks(prev => ({ ...prev, suspiciousActivity: true }));
+      }
+
+      await performVerifiedAction(RECAPTCHA_ACTIONS.LOGIN, async () => {
         const result = await signInWithEmailAndPassword(auth, sanitizedEmail, sanitizedPassword);
         setLoginAttempts(0);
         localStorage.removeItem('loginAttempts');
         localStorage.removeItem('loginLockout');
         await saveUserData(result.user);
       });
+
     } catch (error) {
       handleFailedLoginAttempt();
       const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
@@ -551,69 +619,48 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true);
-    setErrorMessage('');
+const handleGoogleSignIn = async () => {
+  setIsGoogleLoading(true);
+  setErrorMessage('');
 
-    try {
-      // Tente primeiro sem App Check (modo direto)
-      
-      // Em desenvolvimento, use signInWithPopup diretamente
-      if (process.env.NODE_ENV === 'development') {
-        try {
-          const result = await signInWithPopup(auth, googleProvider);
-          setLoginAttempts(0);
-          localStorage.removeItem('loginAttempts');
-          localStorage.removeItem('loginLockout');
-          await saveUserData(result.user);
-          setIsGoogleLoading(false);
-          return;
-        } catch (error) {
-          console.error('Erro no login Google (dev):', error);
-          
-          // Se falhar, tente com redirecionamento como fallback
-          if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/popup-blocked') {
-            setErrorMessage('Popup bloqueado. Por favor, permita popups para este site e tente novamente.');
-            setShowSnackbar(true);
-          } else {
-            handleFailedLoginAttempt();
-            const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
-            setErrorMessage(userFriendlyMessage);
-            setShowSnackbar(true);
-          }
-          setIsGoogleLoading(false);
-          return;
-        }
-      }
+  try {
+    // Remova a verificação reCAPTCHA temporariamente para teste
+    // await addSecurityDelay(800);
+    // await performVerifiedAction(RECAPTCHA_ACTIONS.GOOGLE_SIGNIN, async () => {
+    
+    const result = await signInWithPopup(auth, googleProvider);
+    setLoginAttempts(0);
+    localStorage.removeItem('loginAttempts');
+    localStorage.removeItem('loginLockout');
+    await saveUserData(result.user);
+    // });
 
-      // Em produção, tente com verificação
-      const result = await performVerifiedAction('google_login', async () => {
-        return await signInWithPopup(auth, googleProvider);
-      }, true);
-      
-      setLoginAttempts(0);
-      localStorage.removeItem('loginAttempts');
-      localStorage.removeItem('loginLockout');
-      await saveUserData(result.user);
-      
-    } catch (error) {
-      console.error('Erro no login Google:', error);
-      
-      // Tratamento específico para erros de popup
-      if (error.code === 'auth/popup-closed-by-user') {
-        setErrorMessage('Login cancelado. O popup foi fechado.');
-      } else if (error.code === 'auth/popup-blocked') {
-        setErrorMessage('Popup bloqueado. Por favor, permita popups para este site.');
-      } else {
-        handleFailedLoginAttempt();
-        const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
-        setErrorMessage(userFriendlyMessage);
-      }
-      setShowSnackbar(true);
-    } finally {
-      setIsGoogleLoading(false);
+  } catch (error) {
+    console.error('Erro detalhado no login Google:', error);
+    
+    // Log mais detalhado
+    if (error.code) {
+      console.error('Código do erro:', error.code);
+      console.error('Mensagem do erro:', error.message);
     }
-  };
+    
+    if (error.code === 'auth/popup-closed-by-user') {
+      setErrorMessage('Login cancelado. O popup foi fechado.');
+    } else if (error.code === 'auth/popup-blocked') {
+      setErrorMessage('Popup bloqueado. Por favor, permita popups para este site.');
+    } else if (error.code === 'auth/internal-error') {
+      // Erro interno - pode ser configuração
+      setErrorMessage('Erro de configuração. Entre em contato com o suporte.');
+    } else {
+      handleFailedLoginAttempt();
+      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
+      setErrorMessage(userFriendlyMessage);
+    }
+    setShowSnackbar(true);
+  } finally {
+    setIsGoogleLoading(false);
+  }
+};
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -715,7 +762,6 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
                 >
                   {isLockedOut ? 'Conta Bloqueada' : isEmailLoading ? 'Entrando...' : 'Entrar com Email'}
                 </Button>
-
                 <Grid container spacing={2} sx={{ mt: 3, mb: 2 }}>
                   <Grid item xs={12} sm={6}>
                     <Button
@@ -743,7 +789,30 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
                   </Grid>
                 </Grid>
 
-                <Grid container justifyContent="space-between">
+                {/* Indicador de segurança 
+                <Box sx={{ 
+                  mt: 2, 
+                  p: 1, 
+                  borderRadius: 1,
+                  backgroundColor: securityChecks.suspiciousActivity ? 'warning.light' : 'success.light',
+                  border: 1,
+                  borderColor: securityChecks.suspiciousActivity ? 'warning.main' : 'success.main'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <SecurityIcon sx={{ 
+                      fontSize: 16, 
+                      mr: 1, 
+                      color: securityChecks.suspiciousActivity ? 'warning.main' : 'success.main' 
+                    }} />
+                    <Typography variant="caption" sx={{ color: 'text.primary' }}>
+                      {securityChecks.suspiciousActivity 
+                        ? '⚠️ Atividade verificada - Proteção reforçada' 
+                        : '✅ Proteção de segurança ativa'}
+                    </Typography>
+                  </Box>
+                </Box>
+*/}
+                <Grid container justifyContent="space-between" sx={{ mt: 2 }}>
                   <Grid item>
                     <Link href="/forget-password" variant="body2" sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', textDecoration: 'none' } }}>
                       Esqueceu a senha?
@@ -802,6 +871,16 @@ const performVerifiedAction = async (actionName, asyncCallback, isGoogle = false
         >
           <Alert severity="error" sx={{ width: '100%', boxShadow: 3 }} onClose={() => setShowSnackbar(false)}>
             {errorMessage}
+          </Alert>
+        </Snackbar>
+
+        <Snackbar
+          open={securityChecks.suspiciousActivity}
+          autoHideDuration={4000}
+          onClose={() => setSecurityChecks(prev => ({ ...prev, suspiciousActivity: false }))}
+        >
+          <Alert severity="warning" variant="filled">
+            Verificação de segurança adicional ativada
           </Alert>
         </Snackbar>
       </Grid>

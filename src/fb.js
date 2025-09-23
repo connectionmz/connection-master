@@ -3,7 +3,9 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  EmailAuthProvider 
+  EmailAuthProvider, 
+  setPersistence, 
+  browserLocalPersistence 
 } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
@@ -94,6 +96,15 @@ if (process.env.REACT_APP_RECAPTCHA_V3_KEY_1) {
 const auth = getAuth(app);
 const db = getDatabase(app);
 const storage = getStorage(app);
+
+// 🔐 Configurar persistência de sessão
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("🔥 Persistência configurada: browserLocalPersistence");
+  })
+  .catch((error) => {
+    console.error("⚠️ Erro ao definir persistência:", error);
+  });
 
 /**
  * ======================

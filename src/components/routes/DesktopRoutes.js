@@ -93,6 +93,7 @@ import GuestRoute from './GuestRoute';
 import Eventos from '../desktop/Eventos';
 import Checkout from '../checkout/Checkout';
 import VerEvento from '../desktop/VerEvento';
+import SelectAccountType from '../SelectAccountType';
 
 const theme = createTheme({
   palette: {
@@ -157,11 +158,6 @@ const ProtectedRoute = ({ user, children, requiredModule }) => {
 
   const isProtected = isRouteProtected(location.pathname);
 
-  // Caso 1: Usuário não autenticado e rota protegida
-  if (!user && isProtected) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
-  }
-
   // Caso 2: Módulo requerido não está ativo
   if (requiredModule && !activeModules[requiredModule]) {
     const module = allModules.find(m => m.key === requiredModule);
@@ -184,32 +180,12 @@ const ProtectedRoute = ({ user, children, requiredModule }) => {
     );
   }
 
-  // Caso 3: Usuário não verificado e rota é protegida
-  if (!user?.subscriptions?.isverify && isProtected) {
-    return (
-      <>
-        {children}
-        <Snackbar open={true} autoHideDuration={6000}>
-          <Alert severity="warning">
-            Sua conta precisa ser verificada para acessar esta funcionalidade.
-            <Button 
-              color="inherit" 
-              size="small" 
-              onClick={() => navigate('/app/verification')}
-              sx={{ ml: 1 }}
-            >
-              Verificar agora
-            </Button>
-          </Alert>
-        </Snackbar>
-      </>
-    );
-  }
 
   return children;
 };
 
 const DesktopRoutes = ({ user }) => {
+
   const [language, setLanguage] = useState('pt')
   const [anchorEl, setAnchorEl] = useState(null)
   const [showTerms, setShowTerms] = useState(false)
@@ -376,6 +352,7 @@ const DesktopRoutes = ({ user }) => {
               <Route path="/politicas" element={<Politicas />} />
               <Route path="/auth" element={<GuestRoute user={user}><AuthDesk user={user} /></GuestRoute>} />
               <Route path="/create" element={<GuestRoute user={user}><AuthCreateDesk user={user} /></GuestRoute>} />
+              <Route path="/select-account-type" element={<GuestRoute user={user}><SelectAccountType /></GuestRoute>} />
               <Route path="/setup" element={<CompanyDataFormDesk />} />
               <Route path="/setupUser" element={<UserDataFormDesk />} />
               <Route path="/forget-password" element={<ForgetPassword />} />

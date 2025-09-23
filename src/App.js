@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
 import { 
   Box,
   CssBaseline,
@@ -11,11 +11,10 @@ import {
 } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { auth, db } from './fb';
-import { ref, onValue, off, get } from 'firebase/database';
+import { ref, onValue } from 'firebase/database';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { SaveLogError } from './utils/SaveLogError';
 import DesktopRoutes from './components/routes/DesktopRoutes';
-import AuthDesk from './components/AuthDesk';
 
 // Tema customizado
 const theme = createTheme({
@@ -43,48 +42,12 @@ const theme = createTheme({
   },
 });
 
-// Componente wrapper para usar useNavigate
-const AppContent = ({ 
-  userData, 
-  authUser, 
-  loading, 
-  shouldSetup, 
-  onLogout, 
-  onSetupComplete 
-}) => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Se não há usuário autenticado, redireciona para auth
-    if (!authUser && !loading) {
-      navigate('/auth');
-    }
-  }, [authUser, loading, navigate]);
-
-  // Se não está autenticado, mostra a página de autenticação
-  if (!authUser) {
-    return <AuthDesk />;
-  }
-
-  return (
-    <DesktopRoutes 
-      user={userData} 
-      authUser={authUser}
-      loading={loading}
-      shouldSetup={shouldSetup}
-      onLogout={onLogout}
-      onSetupComplete={onSetupComplete}
-    />
-  );
-};
-
 const App = () => {
   const [userData, setUserData] = useState(null);
   const [authUser, setAuthUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
-  const [shouldSetup, setShouldSetup] = useState(false);
   const unsubscribeRef = useRef(null);
 
   const showError = (message) => {
@@ -95,6 +58,7 @@ const App = () => {
     setSnackbar({ open: true, message, severity: 'success' });
   };
 
+  // limpar listener do Realtime Database
   const cleanupRealtimeListener = () => {
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
@@ -102,17 +66,7 @@ const App = () => {
     }
   };
 
-  const checkUserSetup = async (userId) => {
-    try {
-      const userRef = ref(db, `company/${userId}`);
-      const snapshot = await get(userRef);
-      return snapshot.exists();
-    } catch (error) {
-      SaveLogError('app', error);
-      return false;
-    }
-  };
-
+  // configurar listener em tempo real para os dados da empresa
   const setupRealtimeListener = (userId) => {
     try {
       cleanupRealtimeListener();
@@ -129,10 +83,8 @@ const App = () => {
             displayName: data.nome || 'Nome da Empresa',
             endereco: data.endereco || 'Endereço não informado',
           });
-          setShouldSetup(false);
         } else {
           setUserData(null);
-          setShouldSetup(true);
         }
         setLoading(false);
       }, (error) => {
@@ -147,51 +99,21 @@ const App = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setUserData(null);
-      setAuthUser(null);
-      setShouldSetup(false);
-      showSuccess('Logout realizado com sucesso!');
-    } catch (error) {
-      SaveLogError('app', error);
-      showError('Erro ao fazer logout.');
-    }
-  };
-
-  const handleSetupComplete = () => {
-    setShouldSetup(false);
-    if (authUser) {
-      setupRealtimeListener(authUser.uid);
-    }
-  };
-
+  // observar o estado de autenticação
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      setAuthChecking(false);
-      
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setAuthUser(user);
-        
-        // Verificar se o usuário completou o setup
-        const hasSetup = await checkUserSetup(user.uid);
-        
-        if (hasSetup) {
-          setupRealtimeListener(user.uid);
-        } else {
-          setShouldSetup(true);
-          setLoading(false);
-        }
+        setupRealtimeListener(user.uid);
       } else {
-        cleanupRealtimeListener();
-        setUserData(null);
         setAuthUser(null);
-        setShouldSetup(false);
-        setLoading(false);
+        setUserData(null);
+        cleanupRealtimeListener();
       }
+      setAuthChecking(false);
     });
 
+    // cleanup no unmount
     return () => {
       unsubscribeAuth();
       cleanupRealtimeListener();
@@ -202,7 +124,6 @@ const App = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // Renderizar loading enquanto verifica autenticação
   if (authChecking) {
     return (
       <ThemeProvider theme={theme}>
@@ -220,13 +141,10 @@ const App = () => {
       <CssBaseline />
       <Router>
         <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <AppContent 
-            userData={userData} 
+          <DesktopRoutes 
+            user={userData}
             authUser={authUser}
-            loading={loading}
-            shouldSetup={shouldSetup}
-            onLogout={handleLogout}
-            onSetupComplete={handleSetupComplete}
+            onSignOut={() => signOut(auth)}
           />
           
           <Snackbar 

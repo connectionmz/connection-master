@@ -31,9 +31,11 @@ import PeopleIcon from "@mui/icons-material/People";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DownloadIcon from "@mui/icons-material/Download";
+import LogoutIcon from "@mui/icons-material/Logout";
 import logo from "../../img/bg2.png";
-import { db } from "../../fb";
+import { db, auth } from "../../fb";
 import { Dashboard } from "@mui/icons-material";
+import { signOut } from "firebase/auth";
 
 const HeaderDesk = ({ user }) => {
   const [pendingConnections, setPendingConnections] = useState(0);
@@ -57,7 +59,8 @@ const HeaderDesk = ({ user }) => {
     "/cotacoes",
     "/feed",
     "/inbox",
-    "/conexoes"
+    "/conexoes",
+    "/app"
   ];
 
   const handleDownloadClick = (event) => {
@@ -68,14 +71,39 @@ const HeaderDesk = ({ user }) => {
     setDownloadAnchorEl(null);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
+
   const handleNavigation = (path) => {
-    if (!user) return true;
+    if (!user) {
+      navigate("/auth");
+      return false;
+    }
     
     if (!isVerify && protectedRoutes.includes(path)) {
       setShowVerificationAlert(true);
       return false;
     }
+    
     return true;
+  };
+
+  // Função específica para o menu mobile
+  const handleMobileNavigation = (path, e) => {
+    if (e) e.preventDefault();
+    
+    if (!handleNavigation(path)) {
+      setDrawerOpen(false);
+      return;
+    }
+    
+    navigate(path);
+    setDrawerOpen(false);
   };
 
   useEffect(() => {
@@ -116,7 +144,7 @@ const HeaderDesk = ({ user }) => {
         if (snapshot.exists()) {
           const pendingCount = Object.values(snapshot.val()).filter(
             (contest) => contest.status === "Aberta" && 
-            user.sector ===contest.setor &&
+            user.sector === contest.setor &&
               !(contest.views && contest.views[user.id]) &&
               contest.company.id !== user.id
           ).length;
@@ -152,6 +180,9 @@ const HeaderDesk = ({ user }) => {
       to: "/empresas", 
       icon: <DomainIcon />, 
       label: "Empresas",
+      onClick: (e) => {
+        if (!handleNavigation("/empresas")) e.preventDefault();
+      }
     },
     { 
       to: "/lojas", 
@@ -189,6 +220,9 @@ const HeaderDesk = ({ user }) => {
       to: "/feed", 
       icon: <FeedIcon />, 
       label: "Feed",
+      onClick: (e) => {
+        if (!handleNavigation("/feed")) e.preventDefault();
+      }
     },
     {
       to: user ? "/inbox" : "/auth",
@@ -215,13 +249,22 @@ const HeaderDesk = ({ user }) => {
       }
     },
     {
-      to: user ? "/app" : "/auth",
+      to: user ? (isVerify ? "/app" : "#") : "/auth",
       icon: (
-        <Avatar src={user?.logoUrl || ""} alt="Perfil">
+        <Avatar src={user?.logoUrl || ""} alt="Perfil" sx={{ width: 32, height: 32 }}>
           {!user?.logoUrl && <AccountCircleIcon />}
         </Avatar>
       ),
-      label: "Perfil"
+      label: "Perfil",
+      onClick: (e) => {
+        if (user && !isVerify) {
+          e.preventDefault();
+          setShowVerificationAlert(true);
+        } else if (!user) {
+          e.preventDefault();
+          navigate("/auth");
+        }
+      }
     },
   ];
 
@@ -250,24 +293,29 @@ const HeaderDesk = ({ user }) => {
               flexDirection: "column",
               alignItems: "center",
               textDecoration: "none",
+              pointerEvents: item.to === "#" ? "none" : "auto",
+              opacity: item.to === "#" ? 0.7 : 1
             }}
-            onClick={item.onClick}
-          >
+            onClick={item.onClick}>
             <IconButton
               sx={{
                 color: isActive ? "#1976d2" : "#444",
                 backgroundColor: isActive ? "#e3f2fd" : "transparent",
                 "&:hover": {
-                  color: "#1976d2",
-                  transform: "scale(1.1)",
-                  transition: "transform 0.3s ease, color 0.3s",
+                  color: item.to !== "#" ? "#1976d2" : "#444",
+                  transform: item.to !== "#" ? "scale(1.1)" : "none",
+                  transition: item.to !== "#" ? "transform 0.3s ease, color 0.3s" : "none",
                 },
-              }}
-            >
+              }}>
               {item.icon}
             </IconButton>
             {!isMobile && (
-              <Typography variant="caption" sx={{ color: isActive ? "#1976d2" : "#444" }}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: isActive ? "#1976d2" : "#444",
+                  opacity: item.to === "#" ? 0.7 : 1
+                }}>
                 {item.label}
               </Typography>
             )}
@@ -275,7 +323,6 @@ const HeaderDesk = ({ user }) => {
         );
       })}
       
-      {/* Botão de Download APK */}
       <Button
         variant="contained"
         color="success"
@@ -306,18 +353,50 @@ const HeaderDesk = ({ user }) => {
         >
           Versão Android (APK)
         </MenuItem>
-      {/*  <MenuItem 
-          onClick={handleDownloadClose}
-          component="a"
-          href="https://apps.apple.com/app/id/SEU_ID_NA_APP_STORE"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Versão iOS (App Store)
-        </MenuItem>*/}
       </Menu>
     </Box>
   );
+
+  // Renderizar itens do menu mobile com lógica correta
+  const renderMobileMenuItems = () => {
+    return navItems.map((item, index) => {
+      const isDisabled = item.to === "#";
+      
+      return (
+        <ListItem
+          button
+          key={index}
+          component={isDisabled ? "div" : Link}
+          to={isDisabled ? undefined : item.to}
+          onClick={(e) => {
+            if (isDisabled) {
+              e.preventDefault();
+              setShowVerificationAlert(true);
+              setDrawerOpen(false);
+            } else {
+              handleMobileNavigation(item.to, e);
+            }
+          }}
+          sx={{
+            opacity: isDisabled ? 0.7 : 1,
+            pointerEvents: isDisabled ? "none" : "auto",
+            backgroundColor: location.pathname === item.to ? "#e3f2fd" : "transparent",
+            '&:hover': {
+              backgroundColor: isDisabled ? "transparent" : "#f5f5f5",
+            }
+          }}
+        >
+          <ListItemIcon sx={{ color: isDisabled ? "#999" : "inherit" }}>
+            {item.icon}
+          </ListItemIcon>
+          <ListItemText 
+            primary={item.label} 
+            sx={{ color: isDisabled ? "#999" : "inherit" }} 
+          />
+        </ListItem>
+      );
+    });
+  };
 
   return (
     <>
@@ -325,15 +404,14 @@ const HeaderDesk = ({ user }) => {
         <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
           <Box display="flex" alignItems="center" gap={2}>
             <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
-              <Link to="/" className="flex items-center space-x-2">
-                <img src={logo} alt="Logo" style={{ width: isMobile ? "30%" : "20%" }} />
+              <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                <img src={logo} alt="Logo" style={{ width: isMobile ? "100px" : "120px" }} />
               </Link>
             </Typography>
           </Box>
           
           {isMobile ? (
             <Box display="flex" alignItems="center">
-              {/* Botão de Download APK para mobile */}
               <IconButton 
                 color="success" 
                 onClick={handleDownloadClick}
@@ -346,28 +424,33 @@ const HeaderDesk = ({ user }) => {
                 <MenuIcon />
               </IconButton>
               
-              <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
-                <List>
-                  {navItems.map((item, index) => (
-                    <ListItem
-                      button
-                      key={index}
-                      component={Link}
-                      to={item.to}
-                      onClick={(e) => {
-                        if (item.onClick) item.onClick(e);
-                        toggleDrawer(false)();
-                      }}
-                    >
-                      <ListItemIcon>{item.icon}</ListItemIcon>
-                      <ListItemText primary={item.label} />
-                    </ListItem>
-                  ))}
+              <Drawer 
+                anchor="right" 
+                open={drawerOpen} 
+                onClose={toggleDrawer(false)}
+                sx={{
+                  '& .MuiDrawer-paper': {
+                    width: 280,
+                    boxSizing: 'border-box',
+                  },
+                }}
+              >
+                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    Menu
+                  </Typography>
+                </Box>
+                
+                <List sx={{ pt: 0 }}>
+                  {renderMobileMenuItems()}
                   
-                  {/* Item de Download no menu mobile */}
+                  {/* Item de Download */}
                   <ListItem
                     button
-                    onClick={handleDownloadClick}
+                    onClick={() => {
+                      handleDownloadClick();
+                      setDrawerOpen(false);
+                    }}
                   >
                     <ListItemIcon>
                       <DownloadIcon />
@@ -375,17 +458,58 @@ const HeaderDesk = ({ user }) => {
                     <ListItemText primary="Baixar App" />
                   </ListItem>
                   
+                  {/* Painel Público */}
                   {publicPanel && (
                     <ListItem
                       button
-                      component={Link}
-                      to="/painel"
-                      onClick={toggleDrawer(false)}
+                      onClick={() => handleMobileNavigation("/painel")}
                     >
                       <ListItemIcon>
                         <DomainIcon />
                       </ListItemIcon>
                       <ListItemText primary="Painel Público" />
+                    </ListItem>
+                  )}
+                  
+                  {/* Botão de Logout no Mobile */}
+                  {user && (
+                    <ListItem
+                      button
+                      onClick={() => {
+                        handleLogout();
+                        setDrawerOpen(false);
+                      }}
+                      sx={{
+                        color: 'error.main',
+                        '&:hover': {
+                          backgroundColor: 'error.light',
+                        }
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'error.main' }}>
+                        <LogoutIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Sair" />
+                    </ListItem>
+                  )}
+                  
+                  {/* Informação de verificação */}
+                  {user && !isVerify && (
+                    <ListItem
+                      sx={{
+                        backgroundColor: 'warning.light',
+                        m: 1,
+                        borderRadius: 1,
+                        flexDirection: 'column',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'warning.dark' }}>
+                        Conta não verificada
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'warning.dark' }}>
+                        Acesso limitado a algumas funcionalidades
+                      </Typography>
                     </ListItem>
                   )}
                 </List>
@@ -432,21 +556,35 @@ const HeaderDesk = ({ user }) => {
               <Typography variant="body2">
                 Os dados da sua empresa estão a ser verificados. Assim que o processo for concluído, o acesso será concedido.
                 Você será notificado através do e-mail{' '}
-                <Link href={`mailto:${user.email}`}>{user.email}</Link>.
+                <Link href={`mailto:${user.email}`} style={{ color: '#1976d2' }}>{user.email}</Link>.
               </Typography>
               <Typography variant="body2">
                 Para suporte use{' '}
-                <a href="tel:+258866656104">+258 86 665 6104</a> ou pelo e-mail{' '}
-                <a href="mailto:suporte@connectionmozambique.com">
+                <a href="tel:+258866656104" style={{ color: '#1976d2' }}>+258 86 665 6104</a> ou pelo e-mail{' '}
+                <a href="mailto:suporte@connectionmozambique.com" style={{ color: '#1976d2' }}>
                   suporte@connectionmozambique.com
                 </a>.
               </Typography>
+              
+              {/* BOTÃO DE LOGOUT ALTERNATIVO */}
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<LogoutIcon />}
+                  onClick={handleLogout}
+                  sx={{ mt: 1 }}
+                >
+                  Fazer Logout
+                </Button>
+              </Box>
             </Box>
           </Alert>
         </Snackbar>
       )}
       
-      {user && !isVerify && (
+      {user && !isVerify && !isMobile && (
         <Box 
           sx={{
             backgroundColor: 'warning.light',
@@ -455,11 +593,31 @@ const HeaderDesk = ({ user }) => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            flexDirection: { xs: 'column', sm: 'row' }
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2
           }}>
-          <Typography variant="body2" sx={{ textAlign: 'center' }}>
+          <Typography variant="body2" sx={{ textAlign: 'center', color: 'warning.dark' }}>
             Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
           </Typography>
+          
+          {/* BOTÃO DE LOGOUT NA BARRA DE AVISO */}
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            sx={{ 
+              color: 'error.main',
+              borderColor: 'error.main',
+              '&:hover': {
+                backgroundColor: 'error.light',
+                borderColor: 'error.dark'
+              }
+            }}
+          >
+            Sair
+          </Button>
         </Box>
       )}
     </>

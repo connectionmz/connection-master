@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../fb';
-import { ref, onValue, push, set } from 'firebase/database';
-import { getStorage, ref as storageRef } from 'firebase/storage';
-import { getApp } from 'firebase/app';
+import { ref, onValue } from 'firebase/database';
 import {
   Box,
   Typography,
@@ -14,16 +12,14 @@ import {
   TextField,
   CircularProgress,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
 } from '@mui/material';
 import BackButton from './BackButton';
 import PagamentoAccordion from '../according/PagamentoAccordion';
 
 const PagamentoModulo = ({ user }) => {
+  const API_KEY = process.env.REACT_APP_API_KEY;
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+  
   const { moduleKey } = useParams();
   const [modules, setModules] = useState([]);
   const [currentModule, setCurrentModule] = useState(null);
@@ -32,12 +28,8 @@ const PagamentoModulo = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [existingPayment, setExistingPayment] = useState(null);
-  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const [isLoadingModules, setIsLoadingModules] = useState(true);
   const navigate = useNavigate();
-
-  const app = getApp();
-  const storage = getStorage(app);
 
   useEffect(() => {
     const modulesRef = ref(db, 'modules/modulos');
@@ -75,6 +67,8 @@ const PagamentoModulo = ({ user }) => {
             
             if (userPayments.length > 0) {
               setExistingPayment(userPayments[0]);
+            } else {
+              setExistingPayment(null);
             }
           }
         });
@@ -82,13 +76,13 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [modules, moduleKey, isLoadingModules, user?.id]);
 
-  const calculateSubscriptionEnd = (validade) => {
-    const now = Date.now();
-    const durationInMs = {
-      Mensal: 30 * 24 * 60 * 60 * 1000, 
-      Anual: 365 * 24 * 60 * 60 * 1000,
-    };
-    return now + (durationInMs[validade] || durationInMs.Mensal); 
+  const validatePhoneNumber = (phone) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('258') && cleaned.length === 12) {
+      const prefix = cleaned.substring(3, 5);
+      return ['82', '83', '84', '85', '86', '87', '88'].includes(prefix);
+    }
+    return false;
   };
 
   const handleSubmit = async (e) => {
@@ -99,9 +93,18 @@ const PagamentoModulo = ({ user }) => {
       return;
     }
 
-    if (!phoneNumber) {
-      setError('Por favor, verifique o número de telefone.');
+    if (!phoneNumber || !validatePhoneNumber(phoneNumber)) {
+      setError('Por favor, insira um número de telefone moçambicano válido (formato: 2588XXXXXXXX).');
       return;
+    }
+
+    // Verificar se já existe pagamento ativo
+    if (existingPayment?.status === 'pago') {
+      const now = Date.now();
+      if (existingPayment.subscription?.end > now) {
+        setError('Você já possui uma assinatura ativa para este módulo.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -113,117 +116,36 @@ const PagamentoModulo = ({ user }) => {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9]/g, "");
 
-      const response = await fetch('https://mpesa-server-bay.vercel.app/pagar', {
+      const response = await fetch(`${BACKEND_URL}/pagar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
         },
         body: JSON.stringify({
           amount: currentModule.price,
-          phoneNumber,
-          reference: sanitizedReference
+          phoneNumber: phoneNumber,
+          reference: sanitizedReference,
+          moduleKey: moduleKey,
+          userId: user.id
         }),
       });
 
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || 'Falha ao processar pagamento');
+        throw new Error(data.message || data.error || 'Falha ao processar pagamento');
       }
-
-      const now = Date.now();
-      const subscriptionEnd = calculateSubscriptionEnd(currentModule.validade);
-
-      const paymentData = {
-        userId: user.id,
-        userName: user.displayName || '',
-        userEmail: user.email || '',
-        nome: user.nome || '',
-        telefone: user.contacto || '',
-        moduleKey,
-        moduleName: currentModule?.name || '',
-        moduleType: currentModule?.type || 'standard',
-        amount: currentModule.price,
-        reference: currentModule.name,
-        status: 'pago',
-        timestamp: existingPayment?.timestamp || now,
-        updatedAt: now,
-        mpesaResponse: data.data,
-        
-        subscription: {
-          isActive: true,
-          start: now,
-          end: subscriptionEnd,
-          durationDays: currentModule.validade === 'Anual' ? 365 : 30,
-          moduleKey,
-          moduleName: currentModule?.name || '',
-          subscriptionType: currentModule.validade.toLowerCase(),
-        }
-      };
-
-      let paymentRef;
-      if (existingPayment) {
-        paymentRef = ref(db, `payments/${existingPayment.key}`);
-        await set(paymentRef, paymentData);
-      } else {
-        const paymentsRef = ref(db, 'payments');
-        paymentRef = push(paymentsRef);
-        await set(paymentRef, paymentData);
-      }
-
-      const subscriptionRef = ref(db, `subscriptions/${user.id}/${moduleKey}`);
-      await set(subscriptionRef, {
-        isActive: true,
-        start: now,
-        end: subscriptionEnd,
-        durationDays: currentModule.validade === 'Anual' ? 365 : 30,
-        moduleKey,
-        moduleName: currentModule?.name || '',
-        subscriptionType: currentModule.validade.toLowerCase(),
-        paymentId: existingPayment?.key || paymentRef.key,
-        validade: currentModule.validade,
-      });
 
       setPaymentSuccess(true);
-      setExistingPayment({
-        ...(existingPayment || {}),
-        ...paymentData,
-        key: existingPayment?.key || paymentRef.key
-      });
+      
     } catch (err) {
       console.error('Erro ao processar pagamento:', err);
       setError(err.message || 'Ocorreu um erro ao processar o pagamento. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
-      setShowReplaceDialog(false);
     }
   };
-
-  const handleCancelReplace = () => {
-    setShowReplaceDialog(false);
-  };
-
-  useEffect(() => {
-    if (user?.id) {
-      const subscriptionsRef = ref(db, `subscriptions/${user.id}`);
-      onValue(subscriptionsRef, (snapshot) => {
-        const subscriptions = snapshot.val();
-        if (subscriptions) {
-          const now = Date.now();
-          Object.entries(subscriptions).forEach(([key, sub]) => {
-            if (sub.end < now && sub.isActive) {
-              // Update status to expired
-              const subRef = ref(db, `subscriptions/${user.id}/${key}`);
-              set(subRef, {
-                ...sub,
-                isActive: false
-              });
-            }
-          });
-        }
-      });
-    }
-  }, [user?.id]);
 
   if (isLoadingModules) {
     return (
@@ -316,9 +238,7 @@ const PagamentoModulo = ({ user }) => {
                 value={`${currentModule.price.toLocaleString('pt-PT')} MT`}
                 fullWidth
                 margin="normal"
-                InputProps={{
-                  readOnly: true,
-                }}
+                InputProps={{ readOnly: true }}
                 sx={{ mb: 2 }}
               />
               
@@ -327,9 +247,7 @@ const PagamentoModulo = ({ user }) => {
                 value={currentModule.name}
                 fullWidth
                 margin="normal"
-                InputProps={{
-                  readOnly: true,
-                }}
+                InputProps={{ readOnly: true }}
                 sx={{ mb: 2 }}
               />
               
@@ -341,7 +259,8 @@ const PagamentoModulo = ({ user }) => {
                 margin="normal"
                 required
                 placeholder="258XXXXXXXXX"
-                helperText="Número de telefone registado no M-Pesa (formato 258XXXXXXXXX)"
+                helperText="Número de telefone registado no M-Pesa (formato 2588XXXXXXXX)"
+                error={phoneNumber && !validatePhoneNumber(phoneNumber)}
                 sx={{ mb: 3 }}
               />
               
@@ -355,7 +274,7 @@ const PagamentoModulo = ({ user }) => {
                 type="submit"
                 variant="contained"
                 color="primary"
-                disabled={loading}
+                disabled={loading || !phoneNumber || !validatePhoneNumber(phoneNumber)}
                 size="large"
                 fullWidth
                 sx={{ py: 1.5 }}
@@ -365,46 +284,11 @@ const PagamentoModulo = ({ user }) => {
             </Box>
           ) : (
             <Alert severity="success" sx={{ width: '100%' }}>
-              Pagamento processado com sucesso!
-              
-              {existingPayment?.mpesaResponse && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Módulo:</strong> {currentModule.name}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Valor:</strong> {currentModule.price.toLocaleString('pt-PT')} MT
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Transação:</strong> {existingPayment.mpesaResponse.output_TransactionID || 'N/A'}
-                  </Typography>
-                </Box>
-              )}
+              Pagamento processado com sucesso! Sua assinatura foi ativada.
             </Alert>
           )}
         </CardActions>
       </Card>
-      
-      <Dialog
-        open={showReplaceDialog}
-        onClose={handleCancelReplace}
-      >
-        <DialogTitle>Novo pagamento?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Você já iniciou um pagamento para este módulo. Tem certeza que deseja realizar um novo pagamento?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelReplace}>Cancelar</Button>
-          <Button onClick={handleSubmit} color="primary" disabled={loading}>
-            {loading ? <CircularProgress size={24} /> : 'Confirmar Pagamento'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
