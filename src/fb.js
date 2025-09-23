@@ -40,6 +40,29 @@ const firebaseConfig2 = {
 
 /**
  * ======================
+ * Logger para Produção/Desenvolvimento
+ * ======================
+ */
+const logger = {
+  info: (message, data) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔥 ${message}`, data || '');
+    }
+  },
+  warn: (message, error) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`⚠️ ${message}`, error || '');
+    }
+  },
+  error: (message, error) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`❌ ${message}`, error || '');
+    }
+  }
+};
+
+/**
+ * ======================
  * Inicialização com Singleton Pattern
  * ======================
  */
@@ -56,18 +79,18 @@ try {
     ? getApp('appSecundario')
     : initializeApp(firebaseConfig2, "appSecundario");
 } catch (error) {
-  console.warn("⚠️ App 2 não inicializado:", error.message);
+  logger.warn("App 2 não inicializado", error.message);
   app2 = null;
 }
 
 /**
  * ======================
- * Debug App Check (DEV)
+ * Debug App Check (DEV apenas)
  * ======================
  */
 if (process.env.NODE_ENV === "development") {
   if (typeof window !== "undefined") {
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   }
 }
 
@@ -83,8 +106,9 @@ if (process.env.REACT_APP_RECAPTCHA_V3_KEY_1) {
       provider: new ReCaptchaV3Provider(process.env.REACT_APP_RECAPTCHA_V3_KEY_1),
       isTokenAutoRefreshEnabled: true,
     });
+    logger.info("App Check inicializado com sucesso");
   } catch (error) {
-    console.warn("⚠️ Erro ao inicializar App Check:", error);
+    logger.warn("Erro ao inicializar App Check", error);
   }
 }
 
@@ -100,10 +124,10 @@ const storage = getStorage(app);
 // 🔐 Configurar persistência de sessão
 setPersistence(auth, browserLocalPersistence)
   .then(() => {
-    console.log("🔥 Persistência configurada: browserLocalPersistence");
+    logger.info("Persistência configurada: browserLocalPersistence");
   })
   .catch((error) => {
-    console.error("⚠️ Erro ao definir persistência:", error);
+    logger.error("Erro ao definir persistência", error);
   });
 
 /**
@@ -115,6 +139,7 @@ let db2 = null, storage2 = null;
 if (app2) {
   db2 = getDatabase(app2);
   storage2 = getStorage(app2);
+  logger.info("Serviços do App 2 inicializados");
 }
 
 /**
