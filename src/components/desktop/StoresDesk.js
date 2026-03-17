@@ -362,8 +362,32 @@ const StoresDesk = ({ user }) => {
     return () => unsub();
   }, [user?.id]);
 
+  /* ── Cart & checkout ───────────────────────────────────────────── */
+  const handlePayNow = (product) => {
+    if (!user) { window.location.href = '/auth'; return; }
+    const price = Number(product.discountPrice) || Number(product.price) || 0;
+    const subtotal = price;
+    const shipping = (product.type || 'product') === 'product' && product.nationalShipping && product.weight
+      ? BASE_SHIPPING_FEE + (Number(product.weight) * SHIPPING_RATE_PER_KG) : 0;
+    navigate('/checkout', { state: { product: { productId: product.id, storeId: product.storeId, name: product.name,
+      price, quantity: 1, imageUrl: product.imageUrl, storeName: product.storeName,
+      shippingCost: shipping, subtotal, iva: 0, total: subtotal + shipping,
+      nationalShipping: product.nationalShipping || false, type: product.type || 'product' } } });
+  };
 
-
+  const handleCheckout = async () => {
+    try {
+      const orderRef = push(ref(db, 'orders'));
+      const cartSnap = await get(ref(db, `cart/${user.id}`));
+      const items = cartSnap.val() || {};
+      await set(orderRef, { id: orderRef.key, userId: user.id, items,
+        total: Object.values(items).reduce((s, i) => s + ((Number(i.discountPrice) || Number(i.price) || 0) * i.quantity), 0),
+        status: 'pending', createdAt: new Date().toISOString() });
+      await remove(ref(db, `cart/${user.id}`));
+      setSnackbarMessage('Pedido realizado com sucesso!'); setSnackbarSeverity('success'); setOpenSnackbar(true);
+      navigate(`/order/${orderRef.key}`); setCartOpen(false);
+    } catch (e) { setSnackbarMessage('Erro ao finalizar pedido'); setSnackbarSeverity('error'); setOpenSnackbar(true); }
+  };
 
   /* ── Derived data ──────────────────────────────────────────────── */
   const products = useMemo(() => {
@@ -825,6 +849,9 @@ const StoresDesk = ({ user }) => {
         selectedStore={selectedStore}
         onSelectStore={setSelectedStore}
       />
+
+      {/* Cart */}
+      <MyCart open={cartOpen} onClose={() => setCartOpen(false)} userId={user?.id} onCheckout={handleCheckout} />
 
       {/* Mobile FAB */}
       {isMobile && cartItemCount > 0 && (
