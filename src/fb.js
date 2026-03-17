@@ -1,15 +1,14 @@
-// firebase/config.js
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getAuth, 
   GoogleAuthProvider, 
   EmailAuthProvider, 
   setPersistence, 
-  browserLocalPersistence 
+  browserLocalPersistence,
+  inMemoryPersistence 
 } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
-import { initializeAppCheck, ReCaptchaV3Provider } from "@firebase/app-check";
 
 /**
  * ======================
@@ -27,90 +26,14 @@ const firebaseConfig1 = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_1
 };
 
-const firebaseConfig2 = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY_2,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN_2,
-  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL_2,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID_2,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET_2,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID_2,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID_2,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_2
-};
-
 /**
  * ======================
- * Logger para Produção/Desenvolvimento
+ * Inicialização
  * ======================
  */
-const logger = {
-  info: (message, data) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔥 ${message}`, data || '');
-    }
-  },
-  warn: (message, error) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(`⚠️ ${message}`, error || '');
-    }
-  },
-  error: (message, error) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.error(`❌ ${message}`, error || '');
-    }
-  }
-};
-
-/**
- * ======================
- * Inicialização com Singleton Pattern
- * ======================
- */
-
-// App 1 (DEFAULT)
 const app = getApps().length === 0 
   ? initializeApp(firebaseConfig1, { automaticDataCollectionEnabled: true })
   : getApp();
-
-// App 2 (Secundário)
-let app2 = null;
-try {
-  app2 = getApps().find(app => app.name === 'appSecundario') 
-    ? getApp('appSecundario')
-    : initializeApp(firebaseConfig2, "appSecundario");
-} catch (error) {
-  logger.warn("App 2 não inicializado", error.message);
-  app2 = null;
-}
-
-/**
- * ======================
- * Debug App Check (DEV apenas)
- * ======================
- */
-if (process.env.NODE_ENV === "development") {
-  if (typeof window !== "undefined") {
-    window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-  }
-}
-
-/**
- * ======================
- * App Check
- * ======================
- */
-let appCheck1 = null;
-if (process.env.REACT_APP_RECAPTCHA_V3_KEY_1) {
-  try {
-    appCheck1 = initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(process.env.REACT_APP_RECAPTCHA_V3_KEY_1),
-      isTokenAutoRefreshEnabled: true,
-    });
-    logger.info("App Check inicializado com sucesso");
-  } catch (error) {
-    logger.warn("Erro ao inicializar App Check", error);
-  }
-}
 
 /**
  * ======================
@@ -121,26 +44,26 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 const storage = getStorage(app);
 
-// 🔐 Configurar persistência de sessão
-setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    logger.info("Persistência configurada: browserLocalPersistence");
-  })
-  .catch((error) => {
-    logger.error("Erro ao definir persistência", error);
-  });
+// Configurar persistência de forma mais robusta
+const initializeAuthPersistence = async () => {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    return true;
+  } catch (error) {
+    console.error("Erro ao definir persistência", error);
+    
+    // Fallback: tentar persistência em memória
+    try {
+      await setPersistence(auth, inMemoryPersistence);
+    } catch (fallbackError) {
+      console.error("Erro no fallback de persistência", fallbackError);
+    }
+    return false;
+  }
+};
 
-/**
- * ======================
- * Serviços App 2
- * ======================
- */
-let db2 = null, storage2 = null;
-if (app2) {
-  db2 = getDatabase(app2);
-  storage2 = getStorage(app2);
-  logger.info("Serviços do App 2 inicializados");
-}
+// Inicializar imediatamente
+initializeAuthPersistence();
 
 /**
  * ======================
@@ -162,10 +85,8 @@ export {
   googleProvider, 
   emailProvider, 
   db, 
-  storage, 
-  db2, 
-  storage2, 
-  appCheck1 
+  storage,
+  initializeAuthPersistence
 };
 
 export default app;

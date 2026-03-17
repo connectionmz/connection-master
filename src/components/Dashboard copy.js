@@ -22,11 +22,16 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { Link, useNavigate } from "react-router-dom";
 import { get, limitToFirst, onValue, orderByKey, query, ref, set } from "firebase/database";
 import { db } from "../fb";
+import MarqueeAnuncios from "./MarqueeAnuncios";
+import BannerDesk from "./desktop/BannerDesk";
 import StorieListDesk from "./desktop/StorieListDesk";
+import CategoriaList from "./desktop/CategoriasList";
+import LatestBlogPost from "./desktop/LatestBlogPost";
+import Evento from "./desktop/Evento";
 import { SearchIcon } from "lucide-react";
-import StoresDesk from "./desktop/StoresDesk";
 
 const Dashboard = ({ user }) => {
+
   const T = {
   navy:     '#08192E',
   navyMid:  '#0E2849',
@@ -282,9 +287,11 @@ const STATS = [
                     border: `1px solid rgba(200,144,58,0.1)`,
                   }
                 }} />
+        
                 <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
                   <Grid container spacing={4} alignItems="center">
                     <Grid item xs={12} md={7}>
+                      {/* Eyebrow badge */}
                       <Box
                         className="animate-fade-up"
                         sx={{
@@ -299,6 +306,7 @@ const STATS = [
                       
                       </Box>
         
+                      {/* Headline */}
                       <Typography
                         className="animate-fade-up delay-1"
                         component="h1"
@@ -327,6 +335,7 @@ const STATS = [
                         </Box>
                       </Typography>
                           
+                      {/* Search bar */}
                       <Box
                         className="animate-fade-up delay-3"
                         sx={{
@@ -378,6 +387,7 @@ const STATS = [
                         </Button>
                       </Box>
         
+                      {/* Quick links */}
                       <Box className="animate-fade-up delay-4" sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                           Popular:
@@ -405,9 +415,11 @@ const STATS = [
                       </Box>
                     </Grid>
         
+                    {/* Hero visual — 3 floating cards */}
                     {!isTablet && (
                       <Grid item md={5} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <Box className="animate-fade-in delay-2" sx={{ position: 'relative', width: 300, height: 340 }}>
+                          {/* Card 1 — Cotação */}
                           <Box sx={{
                             position: 'absolute', top: 0, left: 20,
                             background: T.white, borderRadius: '16px',
@@ -421,7 +433,7 @@ const STATS = [
                               </Box>
                               <Box>
                                 <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: T.text, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Cotação Recebida</Typography>
-                                <Typography sx={{ fontSize: '0.68rem', color: T.textSub, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Empresa Pemba, Lda</Typography>
+                                <Typography sx={{ fontSize: '0.68rem', color: T.textSub, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Construtora Maputo, Lda</Typography>
                               </Box>
                             </Box>
                             <Box sx={{ bgcolor: T.surface, borderRadius: '8px', px: 1.5, py: 1 }}>
@@ -434,6 +446,7 @@ const STATS = [
                             </Box>
                           </Box>
         
+                          {/* Card 2 — Produto */}
                           <Box sx={{
                             position: 'absolute', bottom: 0, right: 0,
                             background: T.white, borderRadius: '16px',
@@ -455,6 +468,7 @@ const STATS = [
                             </Box>
                           </Box>
         
+                          {/* Badge — live */}
                           <Box sx={{
                             position: 'absolute', top: 120, right: 8,
                             background: T.navy, borderRadius: '100px',
@@ -473,8 +487,14 @@ const STATS = [
               </Box>
      
         <StorieListDesk user={user} />
-        <Grid>
-         <StoresDesk/>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <MarqueeAnuncios user={user} />
+            <Box>
+              <BannerDesk user={user} />
+            </Box>
+          </Grid>
+      <Evento/>
         </Grid>
       </Container>
       <Snackbar

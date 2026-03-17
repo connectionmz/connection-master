@@ -1,4 +1,47 @@
 import axios from 'axios';
+import { auth } from '../../fb';
+
+const getAuthToken = async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Usuário não autenticado. Faça login novamente.');
+  }
+
+  let token;
+  try {
+    token = await user.getIdToken();
+  } catch (tokenError) {
+    if (tokenError.code === 'auth/requests-blocked') {
+      token = await user.getIdToken(false);
+    } else {
+      throw tokenError;
+    }
+  }
+  
+  return token;
+};
+
+const sendEmailWithAuth = async (emailData) => {
+  try {
+    const token = await getAuthToken();
+    
+    const response = await axios.post(
+      'https://mohvi-sendmail.vercel.app/send-email', 
+      emailData, 
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao enviar o e-mail:', error);
+    return false;
+  }
+};
 
 const sendEmail = async (to, emailMessage) => {
   const textContent = `
@@ -18,20 +61,7 @@ const sendEmail = async (to, emailMessage) => {
     text: textContent, 
   };
 
-  try {
-    // URL corrigida com protocolo http://
-    const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    console.log('E-mail enviado com sucesso:', response.data);
-    return true; 
-  } catch (error) {
-    console.error('Erro ao enviar o e-mail:', error);
-    return false; 
-  }
+  return await sendEmailWithAuth(emailData);
 };
 
 const sendEmailConcurso = async (to, emailMessage) => {
@@ -55,19 +85,7 @@ const sendEmailConcurso = async (to, emailMessage) => {
     text: textContent, 
   };
 
-  try {
-    const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    console.log('E-mail enviado com sucesso:', response.data);
-    return true; 
-  } catch (error) {
-    console.error('Erro ao enviar o e-mail:', error);
-    return false; 
-  }
+  return await sendEmailWithAuth(emailData);
 };
 
 const SendMailProforma = async (to, emailMessage) => {
@@ -82,14 +100,7 @@ const SendMailProforma = async (to, emailMessage) => {
     text: textContent, 
   };
 
-  try {
-    const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData);
-    console.log('E-mail enviado com sucesso:', response.data);
-    return true; 
-  } catch (error) {
-    console.error('Erro ao enviar o e-mail:', error);
-    return false; 
-  }
+  return await sendEmailWithAuth(emailData);
 };
 
 const sendEmailInquerito = async (to, emailMessage) => {
@@ -100,18 +111,11 @@ const sendEmailInquerito = async (to, emailMessage) => {
 
   const emailData = {
     to,
-    subject: "Nova Proforma Criada",
+    subject: "Novo Inquérito Criado", // Corrigido o assunto
     text: textContent, 
   };
 
-  try {
-    const response = await axios.post('https://mohvi-sendmail.vercel.app/send-email', emailData);
-    console.log('E-mail enviado com sucesso:', response.data);
-    return true; 
-  } catch (error) {
-    console.error('Erro ao enviar o e-mail:', error);
-    return false; 
-  }
+  return await sendEmailWithAuth(emailData);
 };
 
-export {sendEmail, SendMailProforma, sendEmailConcurso, sendEmailInquerito};
+export { sendEmail, SendMailProforma, sendEmailConcurso, sendEmailInquerito };

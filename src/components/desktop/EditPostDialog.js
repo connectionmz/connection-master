@@ -30,8 +30,6 @@ const EditPostDialog = ({
   const [error, setError] = useState('');
   const [content, setContent] = useState(post.description);
 
-  console.log(post)
-
   const modules = useMemo(() => ({
     toolbar: [
       ['bold', 'italic', 'underline'],

@@ -27,7 +27,11 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  useTheme
+  useTheme,
+  Paper,
+  Fade,
+  Chip,
+  Container,
 } from '@mui/material';
 
 import {
@@ -42,16 +46,87 @@ import {
   Edit as EditIcon,
   MoreVert as MoreVertIcon,
   Close as CloseIcon,
-  Check as CheckIcon
+  Check as CheckIcon,
+  Reply as ReplyIcon,
+  AccessTime as AccessTimeIcon,
+  Verified as VerifiedIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
-import ReplyIcon from '@mui/icons-material/Reply';
 import BackButton from '../BackButton';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatDateTime } from '../../utils/utils';
 import EditPostDialog from './EditPostDialog';
 
+/* ── Design tokens — consistente com StoresDesk ─────────────────────── */
+const T = {
+  navy:        '#08192E',
+  navyMid:     '#0E2849',
+  navyLight:   '#183A63',
+  navyCard:    '#0D2240',
+  gold:        '#C8903A',
+  goldLight:   '#E8B96A',
+  goldPale:    '#FDF3E3',
+  white:       '#FFFFFF',
+  text:        '#0F1C2D',
+  textSub:     '#6B89A5',
+  border:      '#E0E8F0',
+  borderMid:   '#C5D4E3',
+  surface:     '#F4F7FB',
+  darkBorder:  'rgba(255,255,255,0.08)',
+  darkBorderMid:'rgba(255,255,255,0.14)',
+  darkText:    'rgba(255,255,255,0.88)',
+  darkTextSub: 'rgba(255,255,255,0.52)',
+  darkMuted:   'rgba(255,255,255,0.30)',
+  success:     '#10b981',
+  error:       '#ef4444',
+  warning:     '#f59e0b',
+};
 
+const KEYFRAMES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:.6; transform:scale(1.05); }
+  }
+  .fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .post-card {
+    background: ${T.navyCard};
+    border: 1px solid ${T.darkBorder};
+    border-radius: 24px;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .comment-card {
+    background: ${T.navyCard};
+    border: 1px solid ${T.darkBorder};
+    border-radius: 16px;
+    transition: border-color 0.2s ease;
+    margin-bottom: 12px;
+  }
+  .comment-card:hover {
+    border-color: ${T.gold} !important;
+  }
+  .reply-card {
+    background: rgba(13,34,64,0.6);
+    border-left: 3px solid ${T.gold};
+    border-radius: 12px;
+    margin-top: 8px;
+    padding: 12px;
+  }
+`;
+
+const BG_GRID = {
+  position:'absolute', inset:0, pointerEvents:'none', opacity:0.02,
+  backgroundImage:`linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundSize:'56px 56px',
+};
 
 const PostDetailPageDesk = ({ user }) => {
   const { postId } = useParams();
@@ -72,30 +147,9 @@ const PostDetailPageDesk = ({ user }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
+  
   const isMobile = useMediaQuery('(max-width:600px)');
-
-
   const theme = useTheme();
-
-  // Estilo para comentários principais
-const mainCommentStyle = {
-  mb: 2,
-  p: 2,
-  backgroundColor: 'background.paper',
-  borderRadius: 2,
-  border: '1px solid',
-  borderColor: 'divider',
-  position: 'relative'
-};
-
-// Estilo para respostas
-const replyStyle = {
-  mt: 2,
-  ml: 4,
-  pl: 2,
-  borderLeft: `2px solid ${theme.palette.primary.main}`,
-  backgroundColor: theme.palette.action.hover
-};
 
   // Formatador de data
   const formatDate = (dateString) => {
@@ -120,13 +174,12 @@ const replyStyle = {
           companyName: data.company?.name || 'Empresa Desconhecida',
           logoUrl: data.company?.logo || 'https://via.placeholder.com/150',
           companyId: data.company?.id,
-          createdAt: data.createdAt || new Date().toISOString()
+          createdAt: data.createdAt || new Date().toISOString(),
+          verified: data.company?.verified || false,
         });
         
-        // Verificar likes de forma mais robusta
         const likesData = data.likes || {};
         setLikes(Object.keys(likesData).length);
-
         
         if (user?.id && likesData[user.id]) {
           setHasLiked(true);
@@ -134,7 +187,6 @@ const replyStyle = {
           setHasLiked(false);
         }
         
-        // Ordenar comentários
         const commentsData = Object.entries(data.comments || {}).map(([id, comment]) => ({
           id,
           ...comment
@@ -147,7 +199,6 @@ const replyStyle = {
             return dateB - dateA;
           })
         );
-        
       } else {
         setPost(null);
       }
@@ -224,6 +275,7 @@ const replyStyle = {
       [commentId]: !prev[commentId]
     }));
   };
+
   const handleLike = async () => {
     if (!checkUserAuth()) return;
     
@@ -234,28 +286,24 @@ const replyStyle = {
       const likeSnapshot = await get(postRef);
       
       if (likeSnapshot.exists()) {
-        // Remover like se já existir
         await remove(postRef);
         setHasLiked(false);
         setSnackbar({
           open: true,
           message: 'Gosto removido',
           severity: 'info',
-          autoHideDuration: 2000
         });
       } else {
-        // Adicionar like com informações adicionais
         await set(postRef, {
           timestamp: new Date().toISOString(),
           userId: user.id,
-          userName: user.nome // Opcional: armazenar nome para exibição
+          userName: user.nome
         });
         setHasLiked(true);
         setSnackbar({
           open: true,
           message: 'Gostou',
           severity: 'success',
-          autoHideDuration: 2000
         });
       }
     } catch (error) {
@@ -270,7 +318,6 @@ const replyStyle = {
     }
   };
   
-
   const handleShare = (event) => {
     setShareAnchorEl(event.currentTarget);
   };
@@ -301,7 +348,7 @@ const replyStyle = {
           .then(() => {
             setSnackbar({ 
               open: true, 
-              message: 'Link copiado para a área de transferência!', 
+              message: 'Link copiado!', 
               severity: 'success' 
             });
           })
@@ -323,6 +370,7 @@ const replyStyle = {
     
     handleCloseShareMenu();
   };
+
   const handleReport = () => {
     if (!checkUserAuth()) return;
     setDenunciaModalOpen(true);
@@ -332,7 +380,7 @@ const replyStyle = {
     if (!checkUserAuth() || !motivoDenuncia.trim()) {
       setSnackbar({ 
         open: true, 
-        message: 'Por favor, insira um motivo para a denúncia.', 
+        message: 'Por favor, insira um motivo.', 
         severity: 'error' 
       });
       return;
@@ -360,7 +408,7 @@ const replyStyle = {
         
         setSnackbar({ 
           open: true, 
-          message: 'Denúncia enviada com sucesso!', 
+          message: 'Denúncia enviada!', 
           severity: 'success' 
         });
       }
@@ -435,7 +483,7 @@ const replyStyle = {
     if (user?.id !== post.companyId) {
       setSnackbar({
         open: true,
-        message: 'Você não tem permissão para editar esta publicação',
+        message: 'Sem permissão para editar',
         severity: 'error'
       });
       return;
@@ -465,12 +513,13 @@ const replyStyle = {
   if (loading) {
     return (
       <Box sx={{ 
+        minHeight: '100vh', 
+        bgcolor: T.navy,
         display: 'flex', 
         justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+        alignItems: 'center' 
       }}>
-        <CircularProgress size={60} />
+        <CircularProgress size={60} thickness={4} sx={{ color: T.gold }} />
       </Box>
     );
   }
@@ -478,707 +527,693 @@ const replyStyle = {
   if (!post) {
     return (
       <Box sx={{ 
-        textAlign: 'center', 
-        mt: 4,
-        p: 3 
+        minHeight: '100vh', 
+        bgcolor: T.navy,
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        p: 2
       }}>
-        <Typography variant="h6" color="error">
-          Post não encontrado ou foi removido!
-        </Typography>
-        <Button 
-          variant="contained" 
-          sx={{ mt: 2 }} 
-          onClick={() => window.history.back()}
-        >
-          Voltar
-        </Button>
+        <Paper sx={{ 
+          p: 4, 
+          bgcolor: T.navyCard,
+          border: `1px solid ${T.darkBorder}`,
+          borderRadius: 3,
+          textAlign: 'center',
+          maxWidth: 400
+        }}>
+          <WarningIcon sx={{ fontSize: 48, color: T.warning, mb: 2 }} />
+          <Typography sx={{ color: T.white, fontSize: '1.2rem', mb: 1 }}>
+            Post não encontrado
+          </Typography>
+          <Button 
+            variant="outlined"
+            onClick={() => window.history.back()}
+            sx={{ 
+              borderColor: T.darkBorder,
+              color: T.darkText,
+              '&:hover': { borderColor: T.gold, color: T.gold }
+            }}
+          >
+            Voltar
+          </Button>
+        </Paper>
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        width: isMobile ? '100%' : '60%',
-        maxWidth: '800px',
-        margin: '0 auto',
-        p: isMobile ? 1 : 2,
-        pb: 6
-      }}
-    >
-      <BackButton sx={{ mb: 2 }} />
+    <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+      <style>{KEYFRAMES}</style>
       
-      {/* Post Card */}
-      <Card sx={{ 
-        boxShadow: 3, 
-        mb: 2,
-        borderRadius: 2,
-        overflow: 'hidden'
-      }}>
-        <Box sx={{ position: 'relative' }}>
-          <CardMedia
-            component="img"
-            height={isMobile ? 250 : 400}
-            image={post.url}
-            alt={`Post ${post.id}`}
-            sx={{ 
-              objectFit: 'cover',
-              width: '100%'
-            }}
-          />
-        </Box>
-        <CardContent>
-        <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            mb: 2 
-          }}>
-            <Link to={`/perfil/${post.companyId}`}  underline="none" sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-              <Avatar 
-                src={post.logoUrl} 
+      {/* Background Grid */}
+      <Box sx={BG_GRID} />
+
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 4 }}>
+        <BackButton sx={{ color: T.darkText, mb: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }} />
+
+        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
+          {/* Post Card */}
+          <Card className="post-card" sx={{ mb: 3 }}>
+            {/* Media */}
+            <Box sx={{ position: 'relative' }}>
+              <CardMedia
+                component="img"
+                height={isMobile ? 250 : 400}
+                image={post.url}
+                alt={`Post ${post.id}`}
                 sx={{ 
-                  width: 40, 
-                  height: 40, 
-                }} 
+                  objectFit: 'cover',
+                  width: '100%'
+                }}
               />
-            </Link>
-            <Box>
-            <Link 
-              to={`/perfil/${post.companyId}`} 
-              underline="hover" 
-              color="inherit"
->                <Typography variant="subtitle1" fontWeight="bold">
-                  {post.companyName}
-                </Typography>
-              </Link>
-              <Typography variant="caption" color="text.secondary">
-                {new Date(post.createdAt).toLocaleDateString('pt-PT', {
-                  day: '2-digit',
-                  month: 'long',
-                }) + ' às ' + 
-                new Date(post.createdAt).toLocaleTimeString('pt-PT', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                })}
-              </Typography>
             </Box>
-          </Box>
-          
-          <Typography 
-              variant="body1"
-              sx={{ 
-                mb: 2,
-                lineHeight: 1.6
-              }}
-              dangerouslySetInnerHTML={{ __html: post.description }}
-            />
-        </CardContent>
-        {/* Interaction Buttons */}
-        <Box
-          sx={{
-            px: 2,
-            pb: 1,
-            display: 'flex',
-            gap: 1,
-            justifyContent: 'space-between',
-            borderTop: '1px solid #eee'
-          }}
-        >
-         <Tooltip title={hasLiked ? "Remover curtida" : "Curtir"}>
-  <Button
-    id="like-button"
-    startIcon={
-      loadingLike ? (
-        <CircularProgress size={20} color="inherit" />
-      ) : hasLiked ? (
-        <ThumbUpIcon color="primary" />
-      ) : (
-        <ThumbUpOutlinedIcon />
-      )
-    }
-    onClick={handleLike}
-    variant="text"
-    color={hasLiked ? "primary" : "inherit"}
-    disabled={loadingLike}
-    sx={{
-      textTransform: 'none',
-      minWidth: 'auto',
-      transition: 'all 0.2s ease',
-      '&:hover': {
-        backgroundColor: theme.palette.action.hover,
-        transform: 'scale(1.05)'
-      },
-      '&.Mui-disabled': {
-        opacity: 0.7
-      }
-    }}
-  >
-    <Badge 
-      badgeContent={likes} 
-      color="primary"
-      max={999}
-      sx={{ 
-        '& .MuiBadge-badge': {
-          right: -5,
-          top: 5,
-          fontWeight: 'bold',
-          fontSize: '0.7rem'
-        }
-      }}
-    />
-    {!isMobile && (
-      <Typography variant="body2" sx={{ ml: 0.5 }}>
-        {hasLiked}
-      </Typography>
-    )}
-  </Button>
-</Tooltip>
-          {(user?.id === post.companyId) && (
-            <Tooltip title="Editar publicação">
-              <Button
-                startIcon={<EditIcon />}
-                onClick={handleEditClick}
-                variant="text"
-                color="inherit"
-                sx={{ 
-                  textTransform: 'none',
-                  minWidth: 'auto'
-                }}
-              >
-                {!isMobile && "Editar"}
-              </Button>
-            </Tooltip>
-          )}
-          <Tooltip title="Compartilhar">
-            <Button
-              startIcon={<ShareOutlinedIcon />}
-              onClick={handleShare}
-              variant="text"
-              color="inherit"
-              sx={{ 
-                textTransform: 'none',
-                minWidth: 'auto'
-              }}
-            >
-              Compartilhar
-            </Button>
-          </Tooltip>
-          
-          <Tooltip title="Denunciar">
-            <Button
-              startIcon={<FlagOutlinedIcon />}
-              onClick={handleReport}
-              variant="text"
-              color="inherit"
-              sx={{ 
-                textTransform: 'none',
-                minWidth: 'auto'
-              }}
-            >
-              Denunciar
-            </Button>
-          </Tooltip>
-        </Box>
-      </Card>
 
-     {/* Comments Section */}
-<Card sx={{ 
-  boxShadow: 3, 
-  mb: 2,
-  borderRadius: 2
-}}>
-  <CardContent>
-    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-      Comentários ({comments.filter(c => !c.parentId).length})
-    </Typography>
-    
-    <Box sx={{ 
-      display: 'flex', 
-      alignItems: 'flex-start',
-      gap: 1,
-      mb: 2
-    }}>
-      <Avatar 
-        src={user?.avatar} 
-        sx={{ 
-          width: 40, 
-          height: 40 
-        }} 
-      />
-      <Box sx={{ flex: 1 }}>
-        {replyingTo && (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            mb: 1,
-            p: 1,
-            backgroundColor: theme.palette.action.selected,
-            borderRadius: 1
-          }}>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                flexGrow: 1,
-                fontStyle: 'italic'
-              }}
-            >
-              Respondendo a um comentário...
-            </Typography>
-            <Button 
-              size="small" 
-              onClick={() => setReplyingTo(null)}
-              startIcon={<CloseIcon fontSize="small" />}
-            >
-              Cancelar
-            </Button>
-          </Box>
-        )}
-        <TextField
-          id="comment-input"
-          label={replyingTo ? "Escreva sua resposta..." : "Escreva um comentário..."}
-          multiline
-          rows={2}
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          onKeyPress={handleCommentKeyPress}
-          fullWidth
-          variant="outlined"
-          margin="normal"
-          InputProps={{
-            endAdornment: (
-              <IconButton 
-                onClick={handleAddComment} 
-                color="primary"
-                disabled={!commentText.trim()}
-              >
-                <SendIcon />
-              </IconButton>
-            ),
-          }}
-          sx={{ 
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 4
-            }
-          }}
-        />
-      </Box>
-    </Box>
-    
-    <Divider sx={{ my: 2 }} />
-    
-    {comments.filter(c => !c.parentId).length === 0 ? (
-      <Typography 
-        variant="body2" 
-        color="textSecondary" 
-        sx={{ 
-          textAlign: 'center',
-          py: 3
-        }}
-      >
-        Seja o primeiro a comentar!
-      </Typography>
-    ) : (
-      comments
-        .filter(comment => !comment.parentId)
-        .map((comment) => {
-          const replies = comments.filter(c => c.parentId === comment.id);
-          const hasReplies = replies.length > 0;
-          const repliesVisible = showReplies[comment.id] || false;
-
-          return (
-            <React.Fragment key={comment.id}>
-              <Box
-                sx={{
-                  mb: 2,
-                  p: 2,
-                  backgroundColor: 'background.paper',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  position: 'relative'
-                }}
-              >
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'flex-start',
-                  gap: 2
-                }}>
-                  <Avatar 
-                    src={comment.userAvatar} 
-                    sx={{ 
-                      width: 40, 
-                      height: 40 
-                    }} 
-                  />
-                  
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 0.5
-                    }}>
-                      <Typography 
-                        variant="subtitle2" 
-                        fontWeight="bold"
-                      >
-                        {comment.userName}
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary"
-                      >
-                        {formatDateTime(comment.data)}
-                      </Typography>
-                    </Box>
-                    
-                    {editingCommentId === comment.id ? (
-                      <Box sx={{ mt: 1 }}>
-                        <TextField
-                          fullWidth
-                          multiline
-                          value={editedCommentText}
-                          onChange={(e) => setEditedCommentText(e.target.value)}
-                          sx={{ mb: 1 }}
-                        />
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'flex-end',
-                          gap: 1
-                        }}>
-                          <Button 
-                            variant="outlined" 
-                            size="small"
-                            onClick={() => setEditingCommentId(null)}
-                            startIcon={<CloseIcon />}
-                          >
-                            Cancelar
-                          </Button>
-                          <Button 
-                            variant="contained" 
-                            size="small"
-                            onClick={() => handleSaveEdit(comment.id)}
-                            startIcon={<CheckIcon />}
-                          >
-                            Salvar
-                          </Button>
-                        </Box>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              {/* Company Info */}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Link to={`/perfil/${post.companyId}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', mr: 2 }}>
+                  <Badge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    badgeContent={post.verified ? (
+                      <Box sx={{ 
+                        width: 16, 
+                        height: 16, 
+                        borderRadius: '50%', 
+                        bgcolor: T.gold,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: `2px solid ${T.navyCard}`
+                      }}>
+                        <VerifiedIcon sx={{ fontSize: 10, color: T.navy }} />
                       </Box>
-                    ) : (
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          whiteSpace: 'pre-line',
-                          wordBreak: 'break-word'
-                        }}
-                      >
-                        {comment.comment}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-                
-                {/* Botões de ação */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mt: 1
-                }}>
-               <Button
-                      size="small"
-                      startIcon={<ReplyIcon fontSize="small" />}
-                      onClick={() => handleReply(comment.id, comment.userName)}
+                    ) : null}
+                  >
+                    <Avatar 
+                      src={post.logoUrl} 
                       sx={{ 
-                        color: 'text.secondary',
-                        // Desabilita visualmente se for o próprio comentário
-                        ...(comment.userId === user?.id && {
-                          opacity: 0.5,
-                          cursor: 'not-allowed',
-                          pointerEvents: 'none'
-                        })
+                        width: 48, 
+                        height: 48,
+                        border: `2px solid ${T.gold}`,
+                        bgcolor: T.navy,
+                      }} 
+                    >
+                      {post.companyName.charAt(0)}
+                    </Avatar>
+                  </Badge>
+                </Link>
+                
+                <Box>
+                  <Link to={`/perfil/${post.companyId}`} style={{ textDecoration: 'none' }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        fontWeight: 700,
+                        color: T.white,
+                        '&:hover': { color: T.gold }
                       }}
-                      disabled={comment.userId === user?.id}
                     >
-                      Responder
-                    </Button>
+                      {post.companyName}
+                    </Typography>
+                  </Link>
                   
-                  {(comment.userId === user?.id || post.companyId === user?.id) && (
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      {comment.userId === user?.id && (
-                        <Tooltip title="Editar">
-                          <IconButton
-                            onClick={() => handleEditComment(comment.id, comment.comment)}
-                            size="small"
-                            color="primary"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Excluir">
-                        <IconButton
-                          onClick={() => handleDeleteComment(comment.id)}
-                          size="small"
-                          color="error"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  )}
-                </Box>
-                
-                {/* Controle de respostas */}
-                {hasReplies && (
-                  <Box sx={{ mt: 1 }}>
-                    <Button
-                      size="small"
-                      onClick={() => toggleReplies(comment.id)}
-                      sx={{ color: 'blue' }}
-                    >
-                      {repliesVisible ? 'Ocultar respostas' : `Mostrar ${replies.length} resposta${replies.length !== 1 ? 's' : ''}`}
-                    </Button>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                    <AccessTimeIcon sx={{ fontSize: 14, color: T.darkMuted }} />
+                    <Typography variant="caption" sx={{ color: T.darkMuted }}>
+                      {formatDate(post.createdAt)}
+                    </Typography>
                   </Box>
-                )}
-                
-                {/* Lista de respostas */}
-                {repliesVisible && replies.map(reply => (
-                  <Box
-                    key={reply.id}
+                </Box>
+              </Box>
+
+              {/* Description */}
+              <Typography 
+                variant="body1"
+                sx={{ 
+                  color: T.darkTextSub,
+                  lineHeight: 1.8,
+                  mb: 3,
+                  fontSize: '1rem'
+                }}
+                dangerouslySetInnerHTML={{ __html: post.description }}
+              />
+
+              {/* Interaction Buttons */}
+              <Box sx={{
+                display: 'flex',
+                gap: 1,
+                justifyContent: 'space-between',
+                borderTop: `1px solid ${T.darkBorder}`,
+                pt: 2,
+              }}>
+                <Tooltip title={hasLiked ? "Remover curtida" : "Curtir"} arrow>
+                  <Button
+                    startIcon={
+                      loadingLike ? (
+                        <CircularProgress size={20} sx={{ color: T.gold }} />
+                      ) : hasLiked ? (
+                        <ThumbUpIcon sx={{ color: T.gold }} />
+                      ) : (
+                        <ThumbUpOutlinedIcon sx={{ color: T.darkTextSub }} />
+                      )
+                    }
+                    onClick={handleLike}
+                    disabled={loadingLike}
                     sx={{
-                      mt: 2,
-                      ml: 4,
-                      pl: 2,
-                      borderLeft: `2px solid ${theme.palette.divider}`
+                      color: hasLiked ? T.gold : T.darkTextSub,
+                      textTransform: 'none',
+                      '&:hover': {
+                        bgcolor: 'rgba(200,144,58,0.08)',
+                      },
                     }}
                   >
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'flex-start',
-                      gap: 2
-                    }}>
-                      <Avatar 
-                        src={reply.userAvatar} 
-                        sx={{ 
-                          width: 32, 
-                          height: 32 
-                        }} 
-                      />
-                      
-                      <Box sx={{ flex: 1 }}>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          mb: 0.5
-                        }}>
-                          <Typography 
-                            variant="subtitle2" 
-                            fontWeight="bold"
-                          >
-                            {reply.userName}
-                            <Typography 
-                              component="span" 
-                              variant="caption" 
-                              color="text.secondary"
-                              sx={{ ml: 1 }}
-                            >
-                              respondeu
-                            </Typography>
-                          </Typography>
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary"
-                          >
-                            {formatDateTime(reply.data)}
-                          </Typography>
-                        </Box>
-                        
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            whiteSpace: 'pre-line',
-                            wordBreak: 'break-word'
-                          }}>
-                          {reply.comment}
-                        </Typography>                        
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'flex-end',
-                          mt: 1,
-                          gap: 0.5
-                        }}>
-                    {(reply.userId !== user?.id) && (
-                          <Tooltip title="Responder">
-                            <IconButton
-                              onClick={() => handleReply(comment.id, reply.userName)}
-                              size="small"
-                              color="primary"
-                            >
-                              <ReplyIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                          
-                          {(reply.userId === user?.id || post.companyId === user?.id) && (
-                            <>
-                              {reply.userId === user?.id && (
-                                <Tooltip title="Editar">
-                                  <IconButton
-                                    onClick={() => handleEditComment(reply.id, reply.comment)}
-                                    size="small"
-                                    color="primary"
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              <Tooltip title="Excluir">
-                                <IconButton
-                                  onClick={() => handleDeleteComment(reply.id)}
-                                  size="small"
-                                  color="error"
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </>
-                          )}
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Box>
-                ))}
+                    <Badge 
+                      badgeContent={likes} 
+                      sx={{ 
+                        '& .MuiBadge-badge': {
+                          bgcolor: T.gold,
+                          color: T.navy,
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                        }
+                      }}
+                    />
+                    {!isMobile && "Curtir"}
+                  </Button>
+                </Tooltip>
+
+                {user?.id === post.companyId && (
+                  <Tooltip title="Editar publicação" arrow>
+                    <Button
+                      startIcon={<EditIcon sx={{ color: T.darkTextSub }} />}
+                      onClick={handleEditClick}
+                      sx={{
+                        color: T.darkTextSub,
+                        textTransform: 'none',
+                        '&:hover': {
+                          color: T.gold,
+                          bgcolor: 'rgba(200,144,58,0.08)',
+                        },
+                      }}
+                    >
+                      {!isMobile && "Editar"}
+                    </Button>
+                  </Tooltip>
+                )}
+
+                <Tooltip title="Compartilhar" arrow>
+                  <Button
+                    startIcon={<ShareOutlinedIcon sx={{ color: T.darkTextSub }} />}
+                    onClick={handleShare}
+                    sx={{
+                      color: T.darkTextSub,
+                      textTransform: 'none',
+                      '&:hover': {
+                        color: T.gold,
+                        bgcolor: 'rgba(200,144,58,0.08)',
+                      },
+                    }}
+                  >
+                    {!isMobile && "Compartilhar"}
+                  </Button>
+                </Tooltip>
+
+                <Tooltip title="Denunciar" arrow>
+                  <Button
+                    startIcon={<FlagOutlinedIcon sx={{ color: T.darkTextSub }} />}
+                    onClick={handleReport}
+                    sx={{
+                      color: T.darkTextSub,
+                      textTransform: 'none',
+                      '&:hover': {
+                        color: T.error,
+                        bgcolor: 'rgba(239,68,68,0.08)',
+                      },
+                    }}
+                  >
+                    {!isMobile && "Denunciar"}
+                  </Button>
+                </Tooltip>
               </Box>
-            </React.Fragment>
-          );
-        })
-    )}
-  </CardContent>
-</Card>
+            </CardContent>
+          </Card>
+
+          {/* Comments Section */}
+          <Card className="post-card">
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontFamily: '"Playfair Display", serif',
+                  fontWeight: 700,
+                  color: T.white,
+                  mb: 3
+                }}
+              >
+                Comentários ({comments.filter(c => !c.parentId).length})
+              </Typography>
+
+              {/* Add Comment */}
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
+                <Avatar 
+                  src={user?.avatar} 
+                  sx={{ 
+                    width: 40, 
+                    height: 40,
+                    border: `2px solid ${T.gold}`,
+                    bgcolor: T.navy,
+                  }} 
+                />
+                
+                <Box sx={{ flex: 1 }}>
+                  {replyingTo && (
+                    <Paper sx={{ 
+                      p: 1, 
+                      mb: 1,
+                      bgcolor: 'rgba(200,144,58,0.08)',
+                      border: `1px solid ${T.darkBorder}`,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Typography variant="caption" sx={{ color: T.gold }}>
+                        Respondendo a um comentário...
+                      </Typography>
+                      <Button 
+                        size="small" 
+                        onClick={() => setReplyingTo(null)}
+                        sx={{ color: T.darkMuted }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </Button>
+                    </Paper>
+                  )}
+
+                  <TextField
+                    id="comment-input"
+                    placeholder={replyingTo ? "Escreva sua resposta..." : "Escreva um comentário..."}
+                    multiline
+                    rows={2}
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    onKeyPress={handleCommentKeyPress}
+                    fullWidth
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        color: T.white,
+                        bgcolor: 'rgba(255,255,255,0.03)',
+                        '& fieldset': { borderColor: T.darkBorder },
+                        '&:hover fieldset': { borderColor: T.gold },
+                        '&.Mui-focused fieldset': { borderColor: T.gold },
+                      },
+                    }}
+                    InputProps={{
+                      endAdornment: (
+                        <IconButton 
+                          onClick={handleAddComment} 
+                          disabled={!commentText.trim()}
+                          sx={{ 
+                            color: commentText.trim() ? T.gold : T.darkMuted,
+                          }}
+                        >
+                          <SendIcon />
+                        </IconButton>
+                      ),
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              <Divider sx={{ borderColor: T.darkBorder, my: 3 }} />
+
+              {/* Comments List */}
+              {comments.filter(c => !c.parentId).length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography sx={{ color: T.darkMuted }}>
+                    Seja o primeiro a comentar!
+                  </Typography>
+                </Box>
+              ) : (
+                comments
+                  .filter(comment => !comment.parentId)
+                  .map((comment) => {
+                    const replies = comments.filter(c => c.parentId === comment.id);
+                    const hasReplies = replies.length > 0;
+                    const repliesVisible = showReplies[comment.id] || false;
+
+                    return (
+                      <Box key={comment.id} className="fade-up">
+                        {/* Main Comment */}
+                        <Paper className="comment-card" sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Avatar 
+                              src={comment.userAvatar} 
+                              sx={{ 
+                                width: 40, 
+                                height: 40,
+                                border: `2px solid ${T.gold}`,
+                                bgcolor: T.navy,
+                              }} 
+                            />
+                            
+                            <Box sx={{ flex: 1 }}>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                mb: 0.5
+                              }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: T.white }}>
+                                  {comment.userName}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: T.darkMuted }}>
+                                  {formatDate(comment.data)}
+                                </Typography>
+                              </Box>
+                              
+                              {editingCommentId === comment.id ? (
+                                <Box sx={{ mt: 1 }}>
+                                  <TextField
+                                    fullWidth
+                                    multiline
+                                    value={editedCommentText}
+                                    onChange={(e) => setEditedCommentText(e.target.value)}
+                                    sx={{
+                                      '& .MuiOutlinedInput-root': {
+                                        color: T.white,
+                                        bgcolor: 'rgba(255,255,255,0.03)',
+                                        '& fieldset': { borderColor: T.darkBorder },
+                                      },
+                                    }}
+                                  />
+                                  <Box sx={{ display: 'flex', gap: 1, mt: 1, justifyContent: 'flex-end' }}>
+                                    <Button 
+                                      size="small"
+                                      onClick={() => setEditingCommentId(null)}
+                                      sx={{ color: T.darkMuted }}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                    <Button 
+                                      size="small"
+                                      onClick={() => handleSaveEdit(comment.id)}
+                                      sx={{ color: T.gold }}
+                                    >
+                                      Salvar
+                                    </Button>
+                                  </Box>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" sx={{ color: T.darkTextSub, lineHeight: 1.6 }}>
+                                  {comment.comment}
+                                </Typography>
+                              )}
+                              
+                              {/* Comment Actions */}
+                              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                                <Button
+                                  size="small"
+                                  startIcon={<ReplyIcon sx={{ fontSize: 14 }} />}
+                                  onClick={() => handleReply(comment.id, comment.userName)}
+                                  disabled={comment.userId === user?.id}
+                                  sx={{ 
+                                    color: T.darkTextSub,
+                                    fontSize: '0.7rem',
+                                    '&:hover': { color: T.gold }
+                                  }}
+                                >
+                                  Responder
+                                </Button>
+                                
+                                {(comment.userId === user?.id || post.companyId === user?.id) && (
+                                  <>
+                                    {comment.userId === user?.id && (
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleEditComment(comment.id, comment.comment)}
+                                        sx={{ color: T.gold }}
+                                      >
+                                        <EditIcon fontSize="small" />
+                                      </IconButton>
+                                    )}
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleDeleteComment(comment.id)}
+                                      sx={{ color: T.error }}
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </>
+                                )}
+                              </Box>
+
+                              {/* Show/Hide Replies Button */}
+                              {hasReplies && (
+                                <Box sx={{ mt: 1 }}>
+                                  <Button
+                                    size="small"
+                                    onClick={() => toggleReplies(comment.id)}
+                                    sx={{ color: T.gold, fontSize: '0.7rem' }}
+                                  >
+                                    {repliesVisible ? 'Ocultar respostas' : `Mostrar ${replies.length} resposta${replies.length !== 1 ? 's' : ''}`}
+                                  </Button>
+                                </Box>
+                              )}
+
+                              {/* Replies */}
+                              {repliesVisible && replies.map(reply => (
+                                <Box key={reply.id} className="reply-card" sx={{ mt: 2, ml: 4 }}>
+                                  <Box sx={{ display: 'flex', gap: 1.5 }}>
+                                    <Avatar 
+                                      src={reply.userAvatar} 
+                                      sx={{ 
+                                        width: 32, 
+                                        height: 32,
+                                        border: `1px solid ${T.gold}`,
+                                      }} 
+                                    />
+                                    
+                                    <Box sx={{ flex: 1 }}>
+                                      <Box sx={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        mb: 0.5
+                                      }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: T.white }}>
+                                          {reply.userName}
+                                          <Typography component="span" variant="caption" sx={{ color: T.darkMuted, ml: 1 }}>
+                                            respondeu
+                                          </Typography>
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: T.darkMuted }}>
+                                          {formatDate(reply.data)}
+                                        </Typography>
+                                      </Box>
+                                      
+                                      <Typography variant="body2" sx={{ color: T.darkTextSub, lineHeight: 1.6 }}>
+                                        {reply.comment}
+                                      </Typography>
+                                      
+                                      <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, justifyContent: 'flex-end' }}>
+                                        {reply.userId !== user?.id && (
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => handleReply(comment.id, reply.userName)}
+                                            sx={{ color: T.gold }}
+                                          >
+                                            <ReplyIcon fontSize="small" />
+                                          </IconButton>
+                                        )}
+                                        
+                                        {(reply.userId === user?.id || post.companyId === user?.id) && (
+                                          <>
+                                            {reply.userId === user?.id && (
+                                              <IconButton
+                                                size="small"
+                                                onClick={() => handleEditComment(reply.id, reply.comment)}
+                                                sx={{ color: T.gold }}
+                                              >
+                                                <EditIcon fontSize="small" />
+                                              </IconButton>
+                                            )}
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => handleDeleteComment(reply.id)}
+                                              sx={{ color: T.error }}
+                                            >
+                                              <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                          </>
+                                        )}
+                                      </Box>
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                        </Paper>
+                      </Box>
+                    );
+                  })
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      </Container>
+
+      {/* Share Menu */}
       <Menu
         anchorEl={shareAnchorEl}
         open={Boolean(shareAnchorEl)}
         onClose={handleCloseShareMenu}
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            bgcolor: T.navyCard,
+            border: `1px solid ${T.darkBorder}`,
+            borderRadius: '12px',
+            mt: 1,
+          }
+        }}
       >
-        <MenuItem onClick={() => shareOnPlatform('whatsapp')}>
+        {[
+          { key: 'whatsapp', label: 'WhatsApp', icon: 'https://cdn-icons-png.flaticon.com/512/124/124034.png' },
+          { key: 'facebook', label: 'Facebook', icon: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' },
+          { key: 'twitter', label: 'Twitter', icon: 'https://cdn-icons-png.flaticon.com/512/124/124021.png' },
+        ].map((item) => (
+          <MenuItem 
+            key={item.key} 
+            onClick={() => shareOnPlatform(item.key)}
+            sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
+          >
+            <ListItemIcon>
+              <Box component="img" src={item.icon} alt={item.label} sx={{ width: 20, height: 20 }} />
+            </ListItemIcon>
+            <ListItemText>{item.label}</ListItemText>
+          </MenuItem>
+        ))}
+        <MenuItem 
+          onClick={() => shareOnPlatform('copy')}
+          sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
+        >
           <ListItemIcon>
-            <img 
-              src="https://cdn-icons-png.flaticon.com/512/124/124034.png" 
-              alt="WhatsApp" 
-              width={24} 
-              height={24} 
-            />
-          </ListItemIcon>
-          <ListItemText>WhatsApp</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform('facebook')}>
-          <ListItemIcon>
-            <img 
-              src="https://cdn-icons-png.flaticon.com/512/124/124010.png" 
-              alt="Facebook" 
-              width={24} 
-              height={24} 
-            />
-          </ListItemIcon>
-          <ListItemText>Facebook</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform('twitter')}>
-          <ListItemIcon>
-            <img 
-              src="https://cdn-icons-png.flaticon.com/512/124/124021.png" 
-              alt="Twitter" 
-              width={24} 
-              height={24} 
-            />
-          </ListItemIcon>
-          <ListItemText>Twitter</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform('copy')}>
-          <ListItemIcon>
-            <ShareIcon fontSize="small" />
+            <ShareIcon sx={{ fontSize: 20, color: T.gold }} />
           </ListItemIcon>
           <ListItemText>Copiar link</ListItemText>
         </MenuItem>
       </Menu>
+
+      {/* Report Dialog */}
       <Dialog 
         open={denunciaModalOpen} 
         onClose={() => setDenunciaModalOpen(false)}
         fullWidth
         maxWidth="sm"
+        PaperProps={{
+          sx: {
+            bgcolor: T.navyCard,
+            border: `1px solid ${T.darkBorder}`,
+            borderRadius: '16px',
+          }
+        }}
       >
-        <DialogTitle sx={{ fontWeight: 'bold' }}>
+        <DialogTitle sx={{ 
+          color: T.white, 
+          fontFamily: '"Playfair Display", serif',
+          borderBottom: `1px solid ${T.darkBorder}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
           Denunciar Post
-          <IconButton
-            aria-label="close"
-            onClick={() => setDenunciaModalOpen(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
+          <IconButton onClick={() => setDenunciaModalOpen(false)} sx={{ color: T.darkMuted }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body1" gutterBottom>
-            Por favor, descreva o motivo da sua denúncia. Nossa equipe irá analisar o conteúdo.
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography sx={{ color: T.darkTextSub, mb: 2 }}>
+            Por favor, descreva o motivo da sua denúncia.
           </Typography>
           <TextField
             fullWidth
             multiline
             rows={4}
-            label="Motivo da Denúncia"
+            placeholder="Motivo da Denúncia"
             value={motivoDenuncia}
             onChange={(e) => setMotivoDenuncia(e.target.value)}
-            sx={{ mt: 2 }}
-            helperText="Seja específico para nos ajudar a entender o problema"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                color: T.white,
+                bgcolor: 'rgba(255,255,255,0.03)',
+                '& fieldset': { borderColor: T.darkBorder },
+                '&:hover fieldset': { borderColor: T.gold },
+                '&.Mui-focused fieldset': { borderColor: T.gold },
+              },
+            }}
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 3, borderTop: `1px solid ${T.darkBorder}` }}>
           <Button 
             onClick={() => setDenunciaModalOpen(false)}
-            variant="outlined"
+            sx={{ color: T.darkMuted }}
           >
             Cancelar
           </Button>
           <Button 
             onClick={handleDenunciar} 
-            color="error"
             variant="contained"
             disabled={!motivoDenuncia.trim()}
+            sx={{
+              bgcolor: T.error,
+              color: T.white,
+              '&:hover': { bgcolor: '#dc2626' },
+              '&.Mui-disabled': { bgcolor: T.darkMuted }
+            }}
           >
             Enviar Denúncia
           </Button>
         </DialogActions>
       </Dialog>
-        <EditPostDialog
-          open={editDialogOpen}
-          onClose={() => setEditDialogOpen(false)}
-          post={post}
-          user={user}
-          onSave={(updatedPost) => {
-            setPost(updatedPost);
-            setSnackbar({
-              open: true,
-              message: 'Publicação atualizada com sucesso!',
-              severity: 'success'
-            });
-          }}
-        />
+
+      {/* Edit Post Dialog */}
+      <EditPostDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        post={post}
+        user={user}
+        onSave={(updatedPost) => {
+          setPost(updatedPost);
+          setSnackbar({
+            open: true,
+            message: 'Publicação atualizada!',
+            severity: 'success'
+          });
+        }}
+      />
+
+      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={4000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
         <Alert 
           onClose={handleCloseSnackbar} 
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          sx={{
+            bgcolor: snackbar.severity === 'success' ? T.gold : 
+                     snackbar.severity === 'error' ? T.error : T.warning,
+            color: T.white,
+            borderRadius: '12px',
+            '& .MuiAlert-icon': { color: T.white }
+          }}
         >
           {snackbar.message}
         </Alert>
@@ -1186,4 +1221,5 @@ const replyStyle = {
     </Box>
   );
 };
+
 export default PostDetailPageDesk;

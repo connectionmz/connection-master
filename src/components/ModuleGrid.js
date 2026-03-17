@@ -34,7 +34,9 @@ export const allModules = [
   { name: 'Call Center', link: '/callcenter', icon: <PhoneIcon fontSize="large" />, key: 'moduloCallCenter', alwaysEnabled: true },
   { name: 'Procurement', link: '/procurement', icon: <TruckIcon fontSize="large" />, key: 'moduloProcurement', alwaysEnabled: true },
   { name: 'Recrutamento', link: '/recrutamento', icon: <PersonIcon fontSize="large" />, key: 'moduloRecrutamento', alwaysEnabled: true },
-  { name: 'Inquerito', link: '/inquerito', icon: <SquareActivity fontSize="large" />, key: 'moduloInquerito', alwaysEnabled: true }
+
+  {/*  { name: 'Inquerito', link: '/inquerito', icon: <SquareActivity fontSize="large" />, key: 'moduloInquerito', alwaysEnabled: true }
+*/}
 ];
 
 const ModuleGrid = ({ activeModules }) => {

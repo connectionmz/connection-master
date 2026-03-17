@@ -48,21 +48,18 @@ const Evento = () => {
         
         onValue(eventosRef, (snapshot) => {
           const data = snapshot.val();
+
           if (data) {
-            // Converter objeto em array e filtrar eventos ativos
             const eventosArray = Object.keys(data).map(key => ({
               id: key,
               ...data[key]
             }))
             .filter(evento => {
-              // Verificar se o evento está ativo
               if (evento.status !== 'Ativo') return false;
               
-              // Verificar se o evento já expirou (se tiver data de fim)
               if (evento.dataFim) {
                 try {
                   const hoje = new Date();
-                  // CORREÇÃO: Usar a data diretamente no formato YYYY-MM-DD
                   const dataFimEvento = new Date(evento.dataFim);
                   return dataFimEvento >= hoje;
                 } catch (error) {

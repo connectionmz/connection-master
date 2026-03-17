@@ -19,7 +19,16 @@ import {
   Snackbar,
   Alert,
   Menu,
-  MenuItem
+  MenuItem,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Container,
+  Tooltip,
+  Fade,
+  Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
@@ -32,10 +41,56 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DownloadIcon from "@mui/icons-material/Download";
 import LogoutIcon from "@mui/icons-material/Logout";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import CloseIcon from "@mui/icons-material/Close";
+import VerifiedIcon from "@mui/icons-material/Verified";
+import WarningIcon from "@mui/icons-material/Warning";
 import logo from "../../img/bg2.png";
 import { db, auth } from "../../fb";
-import { Dashboard } from "@mui/icons-material";
 import { signOut } from "firebase/auth";
+import { ShareIcon } from "lucide-react";
+
+/* ── Design tokens — consistente com StoresDesk ─────────────────────── */
+const T = {
+  navy:        '#08192E',
+  navyMid:     '#0E2849',
+  navyLight:   '#183A63',
+  navyCard:    '#0D2240',
+  gold:        '#C8903A',
+  goldLight:   '#E8B96A',
+  goldPale:    '#FDF3E3',
+  white:       '#FFFFFF',
+  text:        '#0F1C2D',
+  textSub:     '#6B89A5',
+  border:      '#E0E8F0',
+  borderMid:   '#C5D4E3',
+  surface:     '#F4F7FB',
+  darkBorder:  'rgba(255,255,255,0.08)',
+  darkBorderMid:'rgba(255,255,255,0.14)',
+  darkText:    'rgba(255,255,255,0.88)',
+  darkTextSub: 'rgba(255,255,255,0.52)',
+  darkMuted:   'rgba(255,255,255,0.30)',
+  success:     '#10b981',
+  error:       '#ef4444',
+  warning:     '#f59e0b',
+};
+
+const KEYFRAMES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:.6; transform:scale(1.1); }
+  }
+  .notification-badge {
+    animation: pulse 2s ease infinite;
+  }
+`;
+
+const BG_GRID = {
+  position:'absolute', inset:0, pointerEvents:'none', opacity:0.02,
+  backgroundImage:`linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundSize:'56px 56px',
+};
 
 const HeaderDesk = ({ user }) => {
   const [pendingConnections, setPendingConnections] = useState(0);
@@ -45,6 +100,8 @@ const HeaderDesk = ({ user }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -52,8 +109,12 @@ const HeaderDesk = ({ user }) => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const isVerify = user?.subscriptions?.isverify === "true";
 
+  // URLs
+  const apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e";
+  const shortApkUrl = "https://bit.ly/connectionmz-apk";
+
   const protectedRoutes = [
-    "/empresas",
+    "/explorar",
     "/lojas",
     "/concursos", 
     "/cotacoes",
@@ -63,47 +124,165 @@ const HeaderDesk = ({ user }) => {
     "/app"
   ];
 
+  // Menu items estruturados
+  const mainNavItems = [
+    {
+      to: "/explorar",
+      icon: <DomainIcon />,
+      label: "Empresas",
+      requiresAuth: false,
+      requiresVerify: false,
+    },
+    {
+      to: "/lojas",
+      icon: <StoreMallDirectoryIcon />,
+      label: "Lojas",
+      requiresAuth: false,
+      requiresVerify: false,
+    },
+    {
+      to: "/cotacoes",
+      icon: <DescriptionIcon />,
+      label: "Cotações",
+      badge: pendingQuotes,
+      requiresAuth: true,
+      requiresVerify: true,
+    },
+    {
+      to: "/feed",
+      icon: <FeedIcon />,
+      label: "Feed",
+      requiresAuth: true,
+      requiresVerify: true,
+    },
+  ];
+
+  const notificationNavItems = [
+    {
+      to: "/inbox",
+      icon: <NotificationsIcon />,
+      label: "Notificações",
+      badge: pendingNotifications,
+      requiresAuth: true,
+      requiresVerify: true,
+    },
+    {
+      to: "/conexoes",
+      icon: <PeopleIcon />,
+      label: "Conexões",
+      badge: pendingConnections,
+      requiresAuth: true,
+      requiresVerify: true,
+    },
+  ];
+
   const handleDownloadClick = (event) => {
-    setDownloadAnchorEl(event.currentTarget);
+    if (isMobile) {
+      setDownloadDialogOpen(true);
+    } else {
+      setDownloadAnchorEl(event.currentTarget);
+    }
   };
 
   const handleDownloadClose = () => {
     setDownloadAnchorEl(null);
   };
 
+  const handleDownloadDialogClose = () => {
+    setDownloadDialogOpen(false);
+  };
+
+  const handleDirectDownload = () => {
+    const link = document.createElement('a');
+    link.href = apkDownloadUrl;
+    link.setAttribute('download', 'connectionmozambique.apk');
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setDownloadDialogOpen(false);
+  };
+
+  const handleOpenInNewTab = () => {
+    window.open(apkDownloadUrl, '_blank', 'noopener,noreferrer');
+    setDownloadDialogOpen(false);
+  };
+
+  const handleShareApp = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Connection Mozambique App',
+        text: 'Baixe o app Connection Mozambique para Android',
+        url: shortApkUrl,
+      }).catch((error) => console.log('Erro ao compartilhar:', error));
+    } else {
+      navigator.clipboard.writeText(shortApkUrl)
+        .then(() => alert('Link copiado!'))
+        .catch(() => {
+          const textArea = document.createElement('textarea');
+          textArea.value = shortApkUrl;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          alert('Link copiado!');
+        });
+    }
+    setDownloadDialogOpen(false);
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      navigate("/");
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
   };
 
-  const handleNavigation = (path) => {
-    if (!user) {
+  const handleNavigation = (path, requiresAuth, requiresVerify) => {
+    if (requiresAuth && !user) {
       navigate("/auth");
       return false;
     }
     
-    if (!isVerify && protectedRoutes.includes(path)) {
+    if (requiresVerify && !isVerify) {
       setShowVerificationAlert(true);
       return false;
     }
     
+    navigate(path);
     return true;
   };
 
-  // Função específica para o menu mobile
-  const handleMobileNavigation = (path, e) => {
-    if (e) e.preventDefault();
+  const handleMobileNavigation = (path, requiresAuth, requiresVerify) => {
+    if (requiresAuth && !user) {
+      navigate("/auth");
+      setDrawerOpen(false);
+      return;
+    }
     
-    if (!handleNavigation(path)) {
+    if (requiresVerify && !isVerify) {
+      setShowVerificationAlert(true);
       setDrawerOpen(false);
       return;
     }
     
     navigate(path);
     setDrawerOpen(false);
+  };
+
+  const handleProfileMenuOpen = (event) => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    setProfileMenuAnchor(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileMenuAnchor(null);
   };
 
   useEffect(() => {
@@ -175,368 +354,643 @@ const HeaderDesk = ({ user }) => {
     }
   }, [user?.id, user?.sector]);
 
-  const navItems = [
-    { 
-      to: "/empresas", 
-      icon: <DomainIcon />, 
-      label: "Empresas",
-      onClick: (e) => {
-        if (!handleNavigation("/empresas")) e.preventDefault();
-      }
-    },
-    { 
-      to: "/lojas", 
-      icon: <StoreMallDirectoryIcon />, 
-      label: "Lojas",
-      onClick: (e) => {
-        if (!handleNavigation("/lojas")) e.preventDefault();
-      }
-    },
-    {
-      to: user ? "/concursos" : "/auth",
-      icon: (
-        <Badge badgeContent={user ? pendingContests || 0 : 0} color="error" overlap="circular">
-          <GavelIcon />
-        </Badge>
-      ),
-      label: "Concursos",
-      onClick: (e) => {
-        if (user && !handleNavigation("/concursos")) e.preventDefault();
-      }
-    },
-    {
-      to: user ? "/cotacoes" : "/auth",
-      icon: (
-        <Badge badgeContent={user ? pendingQuotes || 0 : 0} color="error" overlap="circular">
-          <DescriptionIcon />
-        </Badge>
-      ),
-      label: "Cotações",
-      onClick: (e) => {
-        if (user && !handleNavigation("/cotacoes")) e.preventDefault();
-      }
-    },
-    { 
-      to: "/feed", 
-      icon: <FeedIcon />, 
-      label: "Feed",
-      onClick: (e) => {
-        if (!handleNavigation("/feed")) e.preventDefault();
-      }
-    },
-    {
-      to: user ? "/inbox" : "/auth",
-      icon: (
-        <Badge badgeContent={user ? pendingNotifications || 0 : 0} color="error" overlap="circular">
-          <NotificationsIcon />
-        </Badge>
-      ),
-      label: "Notificações",
-      onClick: (e) => {
-        if (user && !handleNavigation("/inbox")) e.preventDefault();
-      }
-    },
-    {
-      to: user ? "/conexoes" : "/auth",
-      icon: (
-        <Badge badgeContent={user ? pendingConnections || 0 : 0} color="error" overlap="circular">
-          <PeopleIcon />
-        </Badge>
-      ),
-      label: "Conexões",
-      onClick: (e) => {
-        if (user && !handleNavigation("/conexoes")) e.preventDefault();
-      }
-    },
-    {
-      to: user ? (isVerify ? "/app" : "#") : "/auth",
-      icon: (
-        <Avatar src={user?.logoUrl || ""} alt="Perfil" sx={{ width: 32, height: 32 }}>
-          {!user?.logoUrl && <AccountCircleIcon />}
-        </Avatar>
-      ),
-      label: "Perfil",
-      onClick: (e) => {
-        if (user && !isVerify) {
-          e.preventDefault();
-          setShowVerificationAlert(true);
-        } else if (!user) {
-          e.preventDefault();
-          navigate("/auth");
-        }
-      }
-    },
-  ];
-
   const toggleDrawer = (open) => (event) => {
-    if (
-      event.type === "keydown" &&
-      (event.key === "Tab" || event.key === "Shift")
-    ) {
+    if (event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
       return;
     }
     setDrawerOpen(open);
   };
 
-  const renderNavItems = () => (
-    <Box display="flex" alignItems="center" gap={isMobile ? 1 : 3}>
-      {navItems.map((item, index) => {
-        const isActive = location.pathname === item.to;
-        return (
-          <Link
-            to={item.to}
-            key={index}
-            title={item.label}
-            style={{
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              textDecoration: "none",
-              pointerEvents: item.to === "#" ? "none" : "auto",
-              opacity: item.to === "#" ? 0.7 : 1
-            }}
-            onClick={item.onClick}>
-            <IconButton
-              sx={{
-                color: isActive ? "#1976d2" : "#444",
-                backgroundColor: isActive ? "#e3f2fd" : "transparent",
-                "&:hover": {
-                  color: item.to !== "#" ? "#1976d2" : "#444",
-                  transform: item.to !== "#" ? "scale(1.1)" : "none",
-                  transition: item.to !== "#" ? "transform 0.3s ease, color 0.3s" : "none",
-                },
-              }}>
-              {item.icon}
-            </IconButton>
-            {!isMobile && (
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  color: isActive ? "#1976d2" : "#444",
-                  opacity: item.to === "#" ? 0.7 : 1
-                }}>
-                {item.label}
-              </Typography>
-            )}
-          </Link>
-        );
-      })}
-      
-      <Button
-        variant="contained"
-        color="success"
-        startIcon={<DownloadIcon />}
-        onClick={handleDownloadClick}
-        sx={{
-          ml: 1,
-          backgroundColor: "#4caf50",
-          "&:hover": {
-            backgroundColor: "#388e3c",
-          },
-        }}
-      >
-        Baixar App
-      </Button>
-
-      <Menu
-        anchorEl={downloadAnchorEl}
-        open={Boolean(downloadAnchorEl)}
-        onClose={handleDownloadClose}
-      >
-        <MenuItem 
-          onClick={handleDownloadClose}
-          component="a"
-          href="https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Versão Android (APK)
-        </MenuItem>
-      </Menu>
-    </Box>
-  );
-
-  // Renderizar itens do menu mobile com lógica correta
-  const renderMobileMenuItems = () => {
-    return navItems.map((item, index) => {
-      const isDisabled = item.to === "#";
-      
-      return (
-        <ListItem
-          button
-          key={index}
-          component={isDisabled ? "div" : Link}
-          to={isDisabled ? undefined : item.to}
-          onClick={(e) => {
-            if (isDisabled) {
-              e.preventDefault();
-              setShowVerificationAlert(true);
-              setDrawerOpen(false);
-            } else {
-              handleMobileNavigation(item.to, e);
-            }
-          }}
-          sx={{
-            opacity: isDisabled ? 0.7 : 1,
-            pointerEvents: isDisabled ? "none" : "auto",
-            backgroundColor: location.pathname === item.to ? "#e3f2fd" : "transparent",
-            '&:hover': {
-              backgroundColor: isDisabled ? "transparent" : "#f5f5f5",
-            }
-          }}
-        >
-          <ListItemIcon sx={{ color: isDisabled ? "#999" : "inherit" }}>
-            {item.icon}
-          </ListItemIcon>
-          <ListItemText 
-            primary={item.label} 
-            sx={{ color: isDisabled ? "#999" : "inherit" }} 
-          />
-        </ListItem>
-      );
-    });
+  const isActiveRoute = (path) => {
+    return location.pathname === path;
   };
 
   return (
     <>
-      <AppBar position="sticky" sx={{ backgroundColor: "#FFF", boxShadow: 3 }}>
-        <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
+      <style>{KEYFRAMES}</style>
+      
+      <AppBar 
+        position="sticky" 
+        sx={{ 
+          bgcolor: T.navy,
+          background: `linear-gradient(180deg, ${T.navy} 0%, ${T.navyMid} 100%)`,
+          borderBottom: `1px solid ${T.darkBorder}`,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* Grid overlay */}
+        <Box sx={BG_GRID} />
+        
+        <Container maxWidth="xl">
+          <Toolbar 
+            sx={{ 
+              justifyContent: "space-between", 
+              px: { xs: 0, sm: 2 },
+              minHeight: { xs: '64px', md: '72px' },
+              position: 'relative',
+              zIndex: 1,
+            }}
+          >
+            {/* Logo */}
+            <Box display="flex" alignItems="center" gap={2}>
               <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-                <img src={logo} alt="Logo" style={{ width: isMobile ? "100px" : "120px" }} />
+                <img 
+                  src={logo} 
+                  alt="Logo" 
+                  style={{ 
+                    width: isMobile ? "90px" : "120px",
+                    filter: 'brightness(1.2)',
+                  }} 
+                />
               </Link>
-            </Typography>
-          </Box>
-          
-          {isMobile ? (
-            <Box display="flex" alignItems="center">
-              <IconButton 
-                color="success" 
-                onClick={handleDownloadClick}
-                sx={{ mr: 1 }}
-              >
-                <DownloadIcon />
-              </IconButton>
-              
-              <IconButton onClick={toggleDrawer(true)}>
-                <MenuIcon />
-              </IconButton>
-              
-              <Drawer 
-                anchor="right" 
-                open={drawerOpen} 
-                onClose={toggleDrawer(false)}
-                sx={{
-                  '& .MuiDrawer-paper': {
-                    width: 280,
-                    boxSizing: 'border-box',
-                  },
-                }}
-              >
-                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    Menu
-                  </Typography>
+
+              {/* Desktop Navigation */}
+              {!isMobile && (
+                <Box display="flex" alignItems="center" gap={1} sx={{ ml: 3 }}>
+                  {mainNavItems.map((item, index) => {
+                    const isActive = isActiveRoute(item.to);
+                    const isDisabled = item.requiresVerify && !isVerify;
+                    
+                    return (
+                      <Tooltip key={index} title={isDisabled ? "Verificação necessária" : ""} arrow>
+                        <span>
+                          <Button
+                            onClick={() => handleNavigation(item.to, item.requiresAuth, item.requiresVerify)}
+                            sx={{
+                              color: isActive ? T.gold : T.white,
+                              fontFamily: '"Plus Jakarta Sans", sans-serif',
+                              fontWeight: 600,
+                              fontSize: '0.9rem',
+                              textTransform: 'none',
+                              px: 1.5,
+                              py: 0.8,
+                              borderRadius: '8px',
+                              position: 'relative',
+                              opacity: isDisabled ? 0.5 : 1,
+                              '&:hover': {
+                                bgcolor: 'rgba(200,144,58,0.08)',
+                                color: T.gold,
+                              },
+                              '&::after': isActive ? {
+                                content: '""',
+                                position: 'absolute',
+                                bottom: 0,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '20px',
+                                height: '2px',
+                                bgcolor: T.gold,
+                                borderRadius: '2px',
+                              } : {},
+                            }}
+                          >
+                            {item.label}
+                            {item.badge > 0 && (
+                              <Badge
+                                badgeContent={item.badge}
+                                color="error"
+                                sx={{ ml: 1 }}
+                                classes={{ badge: 'notification-badge' }}
+                              />
+                            )}
+                          </Button>
+                        </span>
+                      </Tooltip>
+                    );
+                  })}
                 </Box>
-                
-                <List sx={{ pt: 0 }}>
-                  {renderMobileMenuItems()}
-                  
-                  {/* Item de Download */}
-                  <ListItem
-                    button
-                    onClick={() => {
-                      handleDownloadClick();
-                      setDrawerOpen(false);
+              )}
+            </Box>
+
+            {/* Right side - User actions */}
+            <Box display="flex" alignItems="center" gap={1}>
+              {/* Notifications & Connections - Desktop */}
+              {!isMobile && user && isVerify && (
+                <>
+                  {notificationNavItems.map((item, index) => (
+                    <Tooltip key={index} title={item.label} arrow>
+                      <IconButton
+                        onClick={() => navigate(item.to)}
+                        sx={{
+                          color: isActiveRoute(item.to) ? T.gold : T.darkText,
+                          bgcolor: 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${T.darkBorder}`,
+                          borderRadius: '10px',
+                          width: 40,
+                          height: 40,
+                          position: 'relative',
+                          '&:hover': {
+                            bgcolor: 'rgba(200,144,58,0.15)',
+                            color: T.gold,
+                            borderColor: T.gold,
+                          },
+                        }}
+                      >
+                        <Badge
+                          badgeContent={item.badge}
+                          color="error"
+                          classes={{ badge: 'notification-badge' }}
+                        >
+                          {item.icon}
+                        </Badge>
+                      </IconButton>
+                    </Tooltip>
+                  ))}
+                </>
+              )}
+
+              {/* Profile / Login button */}
+              {user ? (
+                <>
+                  <Tooltip title="Perfil" arrow>
+                    <IconButton
+                      onClick={handleProfileMenuOpen}
+                      sx={{
+                        p: 0.5,
+                        border: `2px solid ${isVerify ? T.gold : T.darkBorder}`,
+                        borderRadius: '12px',
+                        transition: 'border-color 0.2s',
+                        '&:hover': {
+                          borderColor: T.gold,
+                        },
+                      }}
+                    >
+                      <Avatar
+                        src={user?.logoUrl || ""}
+                        alt={user?.nome || "Perfil"}
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          bgcolor: T.navyCard,
+                          color: T.gold,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {!user?.logoUrl && (user?.nome?.[0] || <AccountCircleIcon />)}
+                      </Avatar>
+                    </IconButton>
+                  </Tooltip>
+
+                  {/* Profile Menu */}
+                  <Menu
+                    anchorEl={profileMenuAnchor}
+                    open={Boolean(profileMenuAnchor)}
+                    onClose={handleProfileMenuClose}
+                    TransitionComponent={Fade}
+                    PaperProps={{
+                      sx: {
+                        bgcolor: T.navyCard,
+                        border: `1px solid ${T.darkBorder}`,
+                        borderRadius: '12px',
+                        mt: 1,
+                        minWidth: 200,
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+                      }
                     }}
                   >
-                    <ListItemIcon>
-                      <DownloadIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Baixar App" />
-                  </ListItem>
-                  
-                  {/* Painel Público */}
-                  {publicPanel && (
-                    <ListItem
-                      button
-                      onClick={() => handleMobileNavigation("/painel")}
+                    <MenuItem 
+                      onClick={() => { handleProfileMenuClose(); navigate("/app"); }}
+                      sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
                     >
                       <ListItemIcon>
-                        <DomainIcon />
+                        <DashboardIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText primary="Painel Público" />
-                    </ListItem>
-                  )}
-                  
-                  {/* Botão de Logout no Mobile */}
-                  {user && (
-                    <ListItem
-                      button
-                      onClick={() => {
-                        handleLogout();
-                        setDrawerOpen(false);
-                      }}
-                      sx={{
-                        color: 'error.main',
-                        '&:hover': {
-                          backgroundColor: 'error.light',
-                        }
-                      }}
+                      <ListItemText>Dashboard</ListItemText>
+                    </MenuItem>
+                    
+                    <MenuItem 
+                      onClick={() => { handleProfileMenuClose(); navigate(`/perfil/${user.id}`); }}
+                      sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
                     >
-                      <ListItemIcon sx={{ color: 'error.main' }}>
-                        <LogoutIcon />
+                      <ListItemIcon>
+                        <AccountCircleIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText primary="Sair" />
-                    </ListItem>
-                  )}
-                  
-                  {/* Informação de verificação */}
-                  {user && !isVerify && (
-                    <ListItem
-                      sx={{
-                        backgroundColor: 'warning.light',
-                        m: 1,
-                        borderRadius: 1,
-                        flexDirection: 'column',
-                        alignItems: 'flex-start'
-                      }}
+                      <ListItemText>Meu Perfil</ListItemText>
+                    </MenuItem>
+                    
+                    {!isVerify && (
+                      <MenuItem 
+                        disabled
+                        sx={{ color: T.darkMuted, opacity: 0.7 }}
+                      >
+                        <ListItemIcon>
+                          <WarningIcon sx={{ color: T.warning, fontSize: 20 }} />
+                        </ListItemIcon>
+                        <ListItemText secondary="Verificação pendente" />
+                      </MenuItem>
+                    )}
+                    
+                    <Box sx={{ borderTop: `1px solid ${T.darkBorder}`, my: 1 }} />
+                    
+                    <MenuItem 
+                      onClick={() => { handleProfileMenuClose(); handleLogout(); }}
+                      sx={{ color: T.error, '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' } }}
                     >
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'warning.dark' }}>
-                        Conta não verificada
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'warning.dark' }}>
-                        Acesso limitado a algumas funcionalidades
-                      </Typography>
-                    </ListItem>
-                  )}
-                </List>
-              </Drawer>
-            </Box>
-          ) : (
-            <Box display="flex" alignItems="center" gap={2}>
-              {renderNavItems()}
-              {publicPanel && (
+                      <ListItemIcon>
+                        <LogoutIcon sx={{ color: T.error, fontSize: 20 }} />
+                      </ListItemIcon>
+                      <ListItemText>Sair</ListItemText>
+                    </MenuItem>
+                  </Menu>
+                </>
+              ) : (
                 <Button
-                  onClick={() => navigate("/painel")}
+                  onClick={() => navigate("/auth")}
+                  variant="outlined"
                   sx={{
-                    "&:hover": { backgroundColor: "#1565c0" },
-                    padding: "6px 12px",
-                    fontWeight: "bold",
-                    minWidth: "40px",
+                    borderColor: T.darkBorder,
+                    color: T.darkText,
+                    fontFamily: '"Plus Jakarta Sans", sans-serif',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    px: 2.5,
+                    py: 0.8,
+                    '&:hover': {
+                      borderColor: T.gold,
+                      bgcolor: 'rgba(200,144,58,0.08)',
+                      color: T.gold,
+                    },
                   }}
                 >
-                  Painel
-                  <Dashboard />
+                  Entrar
                 </Button>
+              )}
+
+              {/* Mobile menu button */}
+              {isMobile && (
+                <IconButton
+                  onClick={toggleDrawer(true)}
+                  sx={{
+                    color: T.darkText,
+                    bgcolor: 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${T.darkBorder}`,
+                    borderRadius: '10px',
+                    ml: 1,
+                    '&:hover': {
+                      bgcolor: 'rgba(200,144,58,0.15)',
+                      color: T.gold,
+                    },
+                  }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              )}
+            </Box>
+          </Toolbar>
+        </Container>
+      </AppBar>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={toggleDrawer(false)}
+        PaperProps={{
+          sx: {
+            bgcolor: T.navyCard,
+            width: 300,
+            borderLeft: `1px solid ${T.darkBorder}`,
+          }
+        }}
+      >
+        <Box sx={{ 
+          p: 2, 
+          borderBottom: `1px solid ${T.darkBorder}`, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          background: `linear-gradient(90deg, ${T.navyCard} 0%, ${T.navy} 100%)`,
+        }}>
+          <Typography sx={{ 
+            fontFamily: '"Playfair Display", serif', 
+            fontWeight: 700, 
+            color: T.white 
+          }}>
+            Menu
+          </Typography>
+          <IconButton onClick={toggleDrawer(false)} sx={{ color: T.darkMuted }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        <List sx={{ pt: 0 }}>
+          {/* User info if logged in */}
+          {user && (
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: 'rgba(255,255,255,0.02)', 
+              mb: 1,
+              borderBottom: `1px solid ${T.darkBorder}`,
+            }}>
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <Avatar 
+                  src={user?.logoUrl} 
+                  sx={{ 
+                    width: 48, 
+                    height: 48, 
+                    border: `2px solid ${isVerify ? T.gold : T.darkBorder}`,
+                  }}
+                >
+                  {user?.nome?.[0]}
+                </Avatar>
+                <Box>
+                  <Typography sx={{ fontWeight: 600, color: T.white, fontSize: '0.95rem' }}>
+                    {user?.nome || "Usuário"}
+                  </Typography>
+                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
+                    {user?.email}
+                  </Typography>
+                </Box>
+              </Box>
+              {!isVerify && (
+                <Box sx={{ 
+                  mt: 1, 
+                  p: 1, 
+                  bgcolor: 'rgba(245,158,11,0.12)', 
+                  borderRadius: 1, 
+                  border: '1px solid rgba(245,158,11,0.25)' 
+                }}>
+                  <Typography sx={{ color: T.warning, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <WarningIcon sx={{ fontSize: 14 }} />
+                    Verificação pendente
+                  </Typography>
+                </Box>
               )}
             </Box>
           )}
-        </Toolbar>
-      </AppBar>
 
+          {/* Main nav items */}
+          {mainNavItems.map((item, index) => {
+            const isDisabled = item.requiresVerify && !isVerify;
+            const isActive = isActiveRoute(item.to);
+            
+            return (
+              <ListItem
+                button
+                key={index}
+                onClick={() => handleMobileNavigation(item.to, item.requiresAuth, item.requiresVerify)}
+                sx={{
+                  opacity: isDisabled ? 0.5 : 1,
+                  bgcolor: isActive ? 'rgba(200,144,58,0.12)' : 'transparent',
+                  borderLeft: isActive ? `3px solid ${T.gold}` : 'none',
+                  '&:hover': { bgcolor: 'rgba(200,144,58,0.08)' },
+                  py: 1.5,
+                }}
+              >
+                <ListItemIcon sx={{ 
+                  color: isActive ? T.gold : T.darkText,
+                  minWidth: 40,
+                }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.label}
+                  secondary={item.badge > 0 ? `${item.badge} pendente` : null}
+                  secondaryTypographyProps={{ color: T.gold }}
+                  sx={{ 
+                    color: T.white,
+                    '& .MuiListItemText-primary': { color: isActive ? T.gold : T.white }
+                  }}
+                />
+              </ListItem>
+            );
+          })}
+
+          <Divider sx={{ borderColor: T.darkBorder, my: 1 }} />
+
+          {/* Notification items */}
+          {notificationNavItems.map((item, index) => {
+            const isActive = isActiveRoute(item.to);
+            return (
+              <ListItem
+                button
+                key={index}
+                onClick={() => handleMobileNavigation(item.to, item.requiresAuth, item.requiresVerify)}
+                sx={{
+                  opacity: !user || !isVerify ? 0.5 : 1,
+                  bgcolor: isActive ? 'rgba(200,144,58,0.12)' : 'transparent',
+                  '&:hover': { bgcolor: 'rgba(200,144,58,0.08)' },
+                  py: 1.5,
+                }}
+              >
+                <ListItemIcon sx={{ 
+                  color: isActive ? T.gold : T.darkText,
+                  minWidth: 40,
+                }}>
+                  <Badge badgeContent={item.badge} color="error">
+                    {item.icon}
+                  </Badge>
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.label} 
+                  sx={{ 
+                    color: T.white,
+                    '& .MuiListItemText-primary': { color: isActive ? T.gold : T.white }
+                  }} 
+                />
+              </ListItem>
+            );
+          })}
+
+          <Divider sx={{ borderColor: T.darkBorder, my: 1 }} />
+
+          {/* Download item */}
+          <ListItem
+            button
+            onClick={() => {
+              handleDownloadClick();
+              setDrawerOpen(false);
+            }}
+            sx={{ py: 1.5 }}
+          >
+            <ListItemIcon sx={{ color: T.gold, minWidth: 40 }}>
+              <DownloadIcon />
+            </ListItemIcon>
+            <ListItemText primary="Baixar App" sx={{ color: T.white }} />
+          </ListItem>
+
+          {/* Logout */}
+          {user && (
+            <ListItem
+              button
+              onClick={() => {
+                handleLogout();
+                setDrawerOpen(false);
+              }}
+              sx={{ 
+                py: 1.5,
+                color: T.error,
+                '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' }
+              }}
+            >
+              <ListItemIcon sx={{ color: T.error, minWidth: 40 }}>
+                <LogoutIcon />
+              </ListItemIcon>
+              <ListItemText primary="Sair" sx={{ color: T.error }} />
+            </ListItem>
+          )}
+
+          {/* Login/Register for non-authenticated */}
+          {!user && (
+            <ListItem
+              button
+              onClick={() => {
+                navigate("/auth");
+                setDrawerOpen(false);
+              }}
+              sx={{ 
+                bgcolor: 'rgba(200,144,58,0.12)', 
+                mt: 2,
+                py: 1.5,
+                borderRadius: 1,
+              }}
+            >
+              <ListItemIcon sx={{ color: T.gold, minWidth: 40 }}>
+                <AccountCircleIcon />
+              </ListItemIcon>
+              <ListItemText primary="Entrar / Registrar" sx={{ color: T.gold }} />
+            </ListItem>
+          )}
+        </List>
+      </Drawer>
+
+      {/* Download Menu (Desktop) */}
+      <Menu
+        anchorEl={downloadAnchorEl}
+        open={Boolean(downloadAnchorEl)}
+        onClose={handleDownloadClose}
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            bgcolor: T.navyCard,
+            border: `1px solid ${T.darkBorder}`,
+            borderRadius: '12px',
+            mt: 1,
+            minWidth: 200,
+          }
+        }}
+      >
+        <MenuItem 
+          onClick={handleDownloadClose}
+          component="a"
+          href={apkDownloadUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          download="connectionmozambique.apk"
+          sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
+        >
+          <ListItemIcon>
+            <DownloadIcon sx={{ color: T.gold, fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText>Versão Android (APK)</ListItemText>
+        </MenuItem>
+        <MenuItem 
+          onClick={handleDownloadClose}
+          component="a"
+          href={shortApkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
+        >
+          <ListItemIcon>
+            <ShareIcon sx={{ color: T.gold, fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText>Link Alternativo</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Download Dialog (Mobile) */}
+      <Dialog
+        open={downloadDialogOpen}
+        onClose={handleDownloadDialogClose}
+        PaperProps={{
+          sx: {
+            bgcolor: T.navyCard,
+            border: `1px solid ${T.darkBorder}`,
+            borderRadius: '16px',
+            maxWidth: '90%',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          color: T.white, 
+          fontFamily: '"Playfair Display", serif', 
+          fontWeight: 700,
+          borderBottom: `1px solid ${T.darkBorder}`,
+        }}>
+          Baixar App
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <DialogContentText sx={{ color: T.darkTextSub }}>
+            <Typography variant="body1" gutterBottom sx={{ color: T.darkText }}>
+              Para instalar o app no seu dispositivo Android:
+            </Typography>
+            <Box component="ol" sx={{ pl: 2, mt: 1, color: T.darkTextSub }}>
+              <li>Clique em "Baixar Agora" para iniciar o download</li>
+              <li>Após o download, toque no arquivo APK para instalar</li>
+              <li>Permita a instalação de fontes desconhecidas se solicitado</li>
+              <li>Siga as instruções de instalação</li>
+            </Box>
+            <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: T.darkMuted }}>
+              Tamanho: ~15MB
+            </Typography>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ 
+          justifyContent: 'center', 
+          flexWrap: 'wrap', 
+          p: 3, 
+          gap: 1,
+          borderTop: `1px solid ${T.darkBorder}`,
+        }}>
+          <Button 
+            onClick={handleDirectDownload}
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            sx={{
+              bgcolor: T.gold,
+              color: T.navy,
+              '&:hover': { bgcolor: T.goldLight },
+              borderRadius: '8px',
+              px: 2,
+            }}
+          >
+            Baixar Agora
+          </Button>
+          <Button 
+            onClick={handleOpenInNewTab}
+            variant="outlined"
+            sx={{
+              borderColor: T.darkBorder,
+              color: T.darkText,
+              '&:hover': { borderColor: T.gold, color: T.gold },
+              borderRadius: '8px',
+            }}
+          >
+            Abrir em Nova Aba
+          </Button>
+          <Button 
+            onClick={handleShareApp}
+            variant="outlined"
+            sx={{
+              borderColor: T.darkBorder,
+              color: T.darkText,
+              '&:hover': { borderColor: T.gold, color: T.gold },
+              borderRadius: '8px',
+            }}
+          >
+            Compartilhar
+          </Button>
+          <Button 
+            onClick={handleDownloadDialogClose}
+            sx={{ color: T.darkMuted }}
+          >
+            Cancelar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Verification Alert */}
       {user && (
         <Snackbar
           open={showVerificationAlert}
@@ -547,77 +1001,75 @@ const HeaderDesk = ({ user }) => {
           <Alert 
             severity="warning" 
             onClose={() => setShowVerificationAlert(false)}
-            sx={{ width: '100%', alignItems: 'center' }}
+            icon={<WarningIcon />}
+            sx={{
+              bgcolor: T.navyCard,
+              color: T.white,
+              border: `1px solid ${T.warning}`,
+              borderRadius: '12px',
+              '& .MuiAlert-icon': { color: T.warning },
+            }}
           >
-            <Box>
-              <Typography variant="body1" fontWeight="bold">
-                Em processo de Verificação de conta
-              </Typography>
-              <Typography variant="body2">
-                Os dados da sua empresa estão a ser verificados. Assim que o processo for concluído, o acesso será concedido.
-                Você será notificado através do e-mail{' '}
-                <Link href={`mailto:${user.email}`} style={{ color: '#1976d2' }}>{user.email}</Link>.
-              </Typography>
-              <Typography variant="body2">
-                Para suporte use{' '}
-                <a href="tel:+258866656104" style={{ color: '#1976d2' }}>+258 86 665 6104</a> ou pelo e-mail{' '}
-                <a href="mailto:suporte@connectionmozambique.com" style={{ color: '#1976d2' }}>
-                  suporte@connectionmozambique.com
-                </a>.
-              </Typography>
-              
-              {/* BOTÃO DE LOGOUT ALTERNATIVO */}
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  startIcon={<LogoutIcon />}
-                  onClick={handleLogout}
-                  sx={{ mt: 1 }}
-                >
-                  Fazer Logout
-                </Button>
-              </Box>
+            <Typography variant="body1" fontWeight="bold" sx={{ color: T.warning }}>
+              Conta em verificação
+            </Typography>
+            <Typography variant="body2" sx={{ color: T.darkTextSub, mt: 0.5 }}>
+              Seus dados estão sendo verificados. Você receberá uma notificação quando o processo for concluído.
+            </Typography>
+            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                size="small"
+                startIcon={<LogoutIcon />}
+                onClick={handleLogout}
+                sx={{ color: T.error }}
+              >
+                Sair
+              </Button>
             </Box>
           </Alert>
         </Snackbar>
       )}
-      
+
+      {/* Verification Banner for Desktop */}
       {user && !isVerify && !isMobile && (
         <Box 
           sx={{
-            backgroundColor: 'warning.light',
+            bgcolor: 'rgba(245,158,11,0.12)',
+            borderBottom: `1px solid ${T.warning}`,
             p: 1,
             textAlign: 'center',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2
           }}>
-          <Typography variant="body2" sx={{ textAlign: 'center', color: 'warning.dark' }}>
-            Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
-          </Typography>
-          
-          {/* BOTÃO DE LOGOUT NA BARRA DE AVISO */}
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-            sx={{ 
-              color: 'error.main',
-              borderColor: 'error.main',
-              '&:hover': {
-                backgroundColor: 'error.light',
-                borderColor: 'error.dark'
-              }
-            }}
-          >
-            Sair
-          </Button>
+          <Container maxWidth="xl">
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              gap: 2,
+              flexWrap: 'wrap'
+            }}>
+              <Typography sx={{ color: T.warning, fontSize: '0.9rem' }}>
+                ⚠️ Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
+              </Typography>
+              
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<LogoutIcon />}
+                onClick={handleLogout}
+                sx={{ 
+                  color: T.error,
+                  borderColor: T.error,
+                  '&:hover': {
+                    backgroundColor: 'rgba(239,68,68,0.08)',
+                    borderColor: T.error
+                  }
+                }}
+              >
+                Sair
+              </Button>
+            </Box>
+          </Container>
         </Box>
       )}
     </>

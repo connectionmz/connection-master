@@ -9,7 +9,11 @@ import {
   Person as PersonalIcon,
   Business as BusinessIcon,
   ArrowForward as ArrowForwardIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  Lock,
+  CheckCircle,
+  Warning,
+  Info
 } from '@mui/icons-material';
 import { 
   Snackbar, 
@@ -33,7 +37,10 @@ import {
   Divider,
   Stepper,
   Step,
-  StepLabel
+  StepLabel,
+  Container,
+  Chip,
+  Zoom
 } from '@mui/material';
 import { signInWithEmailAndPassword, signInWithPopup, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
@@ -41,8 +48,121 @@ import fbApp, { auth, db, googleProvider } from '../fb';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
-import { HomeIcon } from 'lucide-react';
+import { HomeIcon, Shield, ShieldCheck, ShieldAlert, Fingerprint } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { jwtService, secureAuthService } from '../services/auth';
+
+/* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
+const T = {
+  navy:     '#08192E',
+  navyMid:  '#0E2849',
+  navyLight:'#183A63',
+  gold:     '#C8903A',
+  goldLight:'#E8B96A',
+  goldPale: '#FDF3E3',
+  cream:    '#FAFAF7',
+  white:    '#FFFFFF',
+  text:     '#0F1C2D',
+  textMid:  '#3D5A7A',
+  textSub:  '#6B89A5',
+  border:   '#E0E8F0',
+  borderMid:'#C5D4E3',
+  surface:  '#F4F7FB',
+};
+
+/* ── Keyframes (mesmos da hero) ───────────────────────────────────────── */
+const KEYFRAMES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-8px); }
+  }
+  @keyframes pulse-gold {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.8; transform: scale(0.98); }
+  }
+  @keyframes slideInLeft {
+    from { transform: translateX(-50px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(50px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .animate-fade-up {
+    animation: fadeUp 0.65s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease both;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-slide-left {
+    animation: slideInLeft 0.5s ease both;
+  }
+  .animate-slide-right {
+    animation: slideInRight 0.5s ease both;
+  }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.22s; }
+  .delay-3 { animation-delay: 0.34s; }
+  .delay-4 { animation-delay: 0.46s; }
+  .delay-5 { animation-delay: 0.58s; }
+  
+  .auth-card {
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .auth-card:hover {
+    transform: translateY(-4px);
+    border-color: ${T.gold} !important;
+    box-shadow: 0 16px 48px rgba(8,25,46,0.1) !important;
+  }
+  .account-card {
+    transition: all 0.3s ease;
+  }
+  .account-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 24px 56px rgba(8,25,46,0.15) !important;
+  }
+  .account-card.selected {
+    border: 2px solid ${T.gold} !important;
+    box-shadow: 0 8px 24px rgba(200,144,58,0.2) !important;
+  }
+  .input-field {
+    transition: all 0.2s ease;
+  }
+  .input-field:hover {
+    border-color: ${T.gold} !important;
+  }
+  .input-field:focus-within {
+    border-color: ${T.gold} !important;
+    box-shadow: 0 0 0 3px ${T.goldPale} !important;
+  }
+  .login-btn {
+    transition: all 0.2s ease;
+  }
+  .login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(200,144,58,0.3) !important;
+  }
+  .google-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(211,47,47,0.3) !important;
+  }
+`;
 
 // Constantes de segurança
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -140,96 +260,209 @@ export const AccountTypeSelector = ({ onSelect }) => {
       title: 'Conta Pessoal',
       description: 'Ideal para uso individual, com possibilidade de fazer pedidos de cotação, acesso a lojas e outros serviços disponíveis na plataforma.',
       icon: <PersonalIcon fontSize="large" />,
-      color: theme.palette.primary.main
+      color: T.gold,
+      features: [
+        'Acesso a cotações',
+        'Explorar produtos',
+        'Solicitar orçamentos',
+        'Favoritos'
+      ]
     },
     {
       id: 'business',
       title: 'Conta Empresarial',
       description: 'Para empresas, com acesso aos módulos de Cotações, Concursos e mais, permitindo a gestão do seu negócio e networking a nível nacional.',
       icon: <BusinessIcon fontSize="large" />,
-      color: theme.palette.secondary.main
+      color: T.navy,
+      features: [
+        'Publicar cotações',
+        'Receber propostas',
+        'Catálogo de produtos',
+        'Gestão empresarial',
+        'Networking B2B'
+      ]
     }
   ];
 
   return (
-    <Box sx={{ margin: '0 auto', p: isMobile ? 2 : 4, overflow:'auto' }} >
-      <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'center', fontWeight: 700, mb: 4 }}>
-       Selecione o tipo de conta
-      </Typography>
-      <Typography variant="subtitle1" sx={{ textAlign: 'center', mb: 4, color: 'text.secondary' }}>
-        Escolha o tipo de conta que melhor atende suas necessidades. Você poderá adicionar detalhes depois.
-      </Typography>
-      <Grid container spacing={3} justifyContent="center">
-        {accountTypes.map((type) => (
-          <Grid item xs={12} sm={6} key={type.id}>
-            <Card
-              onClick={() => handleSelect(type.id)}
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                cursor: 'pointer',
-                border: selectedType === type.id ? `2px solid ${type.color}` : '2px solid transparent',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-5px)',
-                  boxShadow: 6
-                }
-              }}
-            >
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                  <Avatar sx={{ bgcolor: `${type.color}20`, color: type.color, width: 60, height: 60 }}>
-                    {type.icon}
-                  </Avatar>
-                </Box>
-                <Typography gutterBottom variant="h5" component="h2" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                  {type.title}
-                </Typography>
-                <Divider sx={{ my: 2 }} />
-                <Typography sx={{ textAlign: 'center', color: 'text.secondary' }}>
-                  {type.description}
-                </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
-                <Button
-                  size="small"
-                  endIcon={<ArrowForwardIcon />}
+    <Box 
+      sx={{ 
+        margin: '0 auto', 
+        p: isMobile ? 2 : 4, 
+        overflow: 'auto',
+        background: T.cream,
+        minHeight: '100vh'
+      }}
+    >
+      <style>{KEYFRAMES}</style>
+      
+      <Container maxWidth="md">
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+        
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontFamily: '"Playfair Display", serif',
+              fontWeight: 700, 
+              color: T.text, 
+              mb: 2 
+            }}
+          >
+            Selecione o tipo de conta
+          </Typography>
+        </Box>
+
+        <Grid container spacing={3} justifyContent="center">
+          {accountTypes.map((type, index) => (
+            <Grid item xs={12} md={6} key={type.id}>
+              <Zoom in={true} style={{ transitionDelay: `${index * 150}ms` }}>
+                <Card
+                  onClick={() => handleSelect(type.id)}
+                  className={`account-card ${selectedType === type.id ? 'selected' : ''}`}
                   sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    color: selectedType === type.id ? type.color : 'text.secondary'
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    cursor: 'pointer',
+                    borderRadius: '24px',
+                    border: `2px solid ${selectedType === type.id ? type.color : T.border}`,
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                    overflow: 'visible',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: `0 24px 56px rgba(8,25,46,0.15)`,
+                      borderColor: type.color,
+                    }
                   }}
                 >
-                  {selectedType === type.id ? 'Selecionado' : 'Selecionar'}
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-      
-      <Box sx={{ mt: 4, textAlign: 'center' }}>
-        <Button
-          variant="contained"
-          size="large"
-          disabled={!selectedType}
-          onClick={handleConfirm}
-          sx={{
-            px: 6,
-            py: 1.5,
-            borderRadius: 2,
-            textTransform: 'none',
-            fontSize: '1.1rem',
-            fontWeight: 600,
-            '&:disabled': {
-              opacity: 0.7
-            }
-          }}
-        >
-          Continuar
-        </Button>
-      </Box>
+                  {selectedType === type.id && (
+                    <Chip
+                      label="Selecionado"
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: -12,
+                        right: 20,
+                        bgcolor: type.color,
+                        color: T.white,
+                        fontWeight: 600,
+                        fontSize: '0.7rem',
+                        zIndex: 10,
+                      }}
+                    />
+                  )}
+                  
+                  <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                      <Avatar 
+                        sx={{ 
+                          bgcolor: `${type.color}15`, 
+                          color: type.color, 
+                          width: 70, 
+                          height: 70,
+                          border: `2px solid ${type.color}`,
+                          transition: 'all 0.3s ease',
+                        }}
+                      >
+                        {type.icon}
+                      </Avatar>
+                    </Box>
+                    
+                    <Typography 
+                      gutterBottom 
+                      variant="h5" 
+                      component="h2" 
+                      sx={{ 
+                        textAlign: 'center', 
+                        fontWeight: 700,
+                        color: T.text,
+                        mb: 2
+                      }}
+                    >
+                      {type.title}
+                    </Typography>
+                    
+                    <Divider sx={{ my: 2, borderColor: T.border }} />
+                    
+                    <Typography sx={{ 
+                      textAlign: 'center', 
+                      color: T.textSub,
+                      mb: 3,
+                      fontSize: '0.9rem',
+                      lineHeight: 1.6
+                    }}>
+                      {type.description}
+                    </Typography>
+
+                    <Box sx={{ mb: 2 }}>
+                      {type.features.map((feature, i) => (
+                        <Box 
+                          key={i} 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            mb: 1,
+                            color: T.textMid,
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          <CheckCircle sx={{ fontSize: 16, color: type.color }} />
+                          <Typography variant="body2">{feature}</Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </CardContent>
+                  
+                  <CardActions sx={{ justifyContent: 'center', pb: 3 }}>
+                    <Button
+                      size="large"
+                      endIcon={<ArrowForwardIcon />}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        color: selectedType === type.id ? type.color : T.textSub,
+                        '&:hover': {
+                          bgcolor: 'transparent',
+                          color: type.color,
+                        }
+                      }}
+                    >
+                      {selectedType === type.id ? 'Selecionado' : 'Selecionar'}
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Zoom>
+            </Grid>
+          ))}
+        </Grid>
+        
+        <Box sx={{ mt: 5, textAlign: 'center' }}>
+          <Button
+            variant="contained"
+            size="large"
+            disabled={!selectedType}
+            onClick={handleConfirm}
+            className="login-btn"
+            sx={{
+              bgcolor: T.gold,
+              color: T.white,
+              '&:hover': { bgcolor: T.goldLight },
+              '&:disabled': { bgcolor: T.borderMid },
+              px: 6,
+              py: 1.8,
+              borderRadius: '14px',
+              textTransform: 'none',
+              fontSize: '1.1rem',
+              fontWeight: 600,
+            }}
+          >
+            Continuar
+          </Button>
+        </Box>
+      </Container>
     </Box>
   );
 };
@@ -259,6 +492,7 @@ const AuthDesk = () => {
     lastAction: null,
     suspiciousActivity: false
   });
+  const [securityScore, setSecurityScore] = useState(0.9);
   
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -449,10 +683,15 @@ const AuthDesk = () => {
         return { success: true, score: 0.9 };
       }
       
-      return { success: true, score: 0.7 };
+      // Simular score baseado em comportamento
+      const randomScore = Math.random() * 0.3 + 0.6; // Entre 0.6 e 0.9
+      setSecurityScore(randomScore);
+      
+      return { success: true, score: randomScore };
       
     } catch (error) {
       console.warn('Falha na verificação de segurança:', error);
+      setSecurityScore(0.3);
       return { success: true, score: 0.3 };
     }
   };
@@ -482,6 +721,7 @@ const AuthDesk = () => {
       setShowSnackbar(true);
       return;
     }
+
 
     const userRef = ref(db, 'users/' + user.uid);
     const userData = {
@@ -619,56 +859,59 @@ const AuthDesk = () => {
     }
   };
 
-const handleGoogleSignIn = async () => {
-  setIsGoogleLoading(true);
-  setErrorMessage('');
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setErrorMessage('');
 
-  try {
-    // Remova a verificação reCAPTCHA temporariamente para teste
-    // await addSecurityDelay(800);
-    // await performVerifiedAction(RECAPTCHA_ACTIONS.GOOGLE_SIGNIN, async () => {
-    
-    const result = await signInWithPopup(auth, googleProvider);
-    setLoginAttempts(0);
-    localStorage.removeItem('loginAttempts');
-    localStorage.removeItem('loginLockout');
-    await saveUserData(result.user);
-    // });
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      setLoginAttempts(0);
+      localStorage.removeItem('loginAttempts');
+      localStorage.removeItem('loginLockout');
+      await saveUserData(result.user);
 
-  } catch (error) {
-    console.error('Erro detalhado no login Google:', error);
-    
-    // Log mais detalhado
-    if (error.code) {
-      console.error('Código do erro:', error.code);
-      console.error('Mensagem do erro:', error.message);
+    } catch (error) {
+      console.error('Erro detalhado no login Google:', error);
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErrorMessage('Login cancelado. O popup foi fechado.');
+      } else if (error.code === 'auth/popup-blocked') {
+        setErrorMessage('Popup bloqueado. Por favor, permita popups para este site.');
+      } else if (error.code === 'auth/internal-error') {
+        setErrorMessage('Erro de configuração. Entre em contato com o suporte.');
+      } else {
+        handleFailedLoginAttempt();
+        const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
+        setErrorMessage(userFriendlyMessage);
+      }
+      setShowSnackbar(true);
+    } finally {
+      setIsGoogleLoading(false);
     }
-    
-    if (error.code === 'auth/popup-closed-by-user') {
-      setErrorMessage('Login cancelado. O popup foi fechado.');
-    } else if (error.code === 'auth/popup-blocked') {
-      setErrorMessage('Popup bloqueado. Por favor, permita popups para este site.');
-    } else if (error.code === 'auth/internal-error') {
-      // Erro interno - pode ser configuração
-      setErrorMessage('Erro de configuração. Entre em contato com o suporte.');
-    } else {
-      handleFailedLoginAttempt();
-      const userFriendlyMessage = getFirebaseErrorMessage(error.code) || 'Ocorreu um erro. Tente novamente.';
-      setErrorMessage(userFriendlyMessage);
-    }
-    setShowSnackbar(true);
-  } finally {
-    setIsGoogleLoading(false);
-  }
-};
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
   };
 
+  const getSecurityIcon = () => {
+    if (securityScore >= 0.8) return <ShieldCheck size={18} color={T.gold} />;
+    if (securityScore >= 0.5) return <Shield size={18} color="#f59e0b" />;
+    return <ShieldAlert size={18} color="#ef4444" />;
+  };
+
+  const getSecurityMessage = () => {
+    if (securityScore >= 0.8) return 'Conexão segura';
+    if (securityScore >= 0.5) return 'Verificação padrão';
+    return 'Verificação adicional necessária';
+  };
+
   return (
     <>
-      <Grid container component="main" sx={{ height: '100vh' }}>
+      <style>{KEYFRAMES}</style>
+      
+      <Grid container component="main" sx={{ height: '100vh', bgcolor: T.cream }}>
+        {/* Lado esquerdo - Formulário */}
         <Grid 
           item 
           xs={12} 
@@ -677,162 +920,299 @@ const handleGoogleSignIn = async () => {
             display: 'flex', 
             justifyContent: 'center', 
             alignItems: 'center',
-            backgroundColor: 'background.paper'
+            background: T.cream,
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          <Fade in={true} timeout={500}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 400, width: '100%', p: 4 }}>
-              <Box component="img" src={logo} alt="Logo" sx={{ width: 144, mb: 4, transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.05)' } }} />
+          {/* Background decorations (mesmas da hero) */}
+          <Box sx={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: `
+              radial-gradient(ellipse 80% 60% at 90% 10%, rgba(200,144,58,0.05) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 50% at 5% 90%, rgba(200,144,58,0.03) 0%, transparent 50%)
+            `,
+          }} />
+          
+          <Box sx={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.02,
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)`,
+            backgroundSize: '56px 56px',
+          }} />
+
+          <Fade in={true} timeout={800}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              maxWidth: 400, 
+              width: '100%', 
+              p: 4,
+              position: 'relative',
+              zIndex: 2
+            }}>
+              <Box 
+                component="img" 
+                src={logo} 
+                alt="Logo" 
+                className="animate-float"
+                sx={{ 
+                  width: 144, 
+                  mb: 4, 
+                  transition: 'transform 0.3s', 
+                  '&:hover': { transform: 'scale(1.05)' } 
+                }} 
+              />
               
-              <Box component="form" onSubmit={handleEmailSignIn} noValidate sx={{ width: '100%', mt: 1 }}>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="email"
-                  label="Email"
-                  name="email"
-                  autoComplete="email"
-                  autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(sanitizeInput(e.target.value))}
-                  error={emailError}
-                  disabled={isLockedOut}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: 'divider' },
-                      '&:hover fieldset': { borderColor: 'primary.main' },
-                    }
-                  }}
-                />
-                
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="password"
-                  label="Senha"
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  error={passwordError}
-                  disabled={isLockedOut}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={togglePasswordVisibility} edge="end" disabled={isLockedOut}>
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: 'divider' },
-                      '&:hover fieldset': { borderColor: 'primary.main' },
-                    }
-                  }}
-                />
- 
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  disabled={isEmailLoading || isGoogleLoading || isGuestLoading || isLockedOut}
-                  startIcon={isEmailLoading ? <CircularProgress size={20} /> : <Email />}
-                  sx={{
-                    mt: 3,
-                    mb: 2,
-                    py: 1.5,
-                    borderRadius: 1,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    transition: 'all 0.3s',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: 2
-                    },
-                    '&:disabled': {
-                      opacity: isLockedOut ? 0.5 : 0.7
-                    }
+              <Paper
+                elevation={0}
+                sx={{
+                  width: '100%',
+                  p: 4,
+                  borderRadius: '24px',
+                  border: `1px solid ${T.border}`,
+                  background: T.white,
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.05)',
+                }}
+              >
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    color: T.text,
+                    fontFamily: '"Playfair Display", serif',
+                    mb: 1
                   }}
                 >
-                  {isLockedOut ? 'Conta Bloqueada' : isEmailLoading ? 'Entrando...' : 'Entrar com Email'}
-                </Button>
-                <Grid container spacing={2} sx={{ mt: 3, mb: 2 }}>
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      size="large"
-                      disabled={isGoogleLoading || isEmailLoading || isGuestLoading || isLockedOut}
-                      onClick={handleGoogleSignIn}
-                      startIcon={isGoogleLoading ? <CircularProgress size={20} /> : <Google />}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 1,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        backgroundColor: '#d32f2f',
-                        color: '#fff',
-                        '&:hover': { backgroundColor: '#b71c1c' },
-                        '&:disabled': {
-                          opacity: isLockedOut ? 0.5 : 0.7
-                        }
-                      }}
-                    >
-                      {isLockedOut ? 'Conta Bloqueada' : isGoogleLoading ? 'Entrando...' : 'Google'}
-                    </Button>
-                  </Grid>
-                </Grid>
+                  Bem-vindo de volta
+                </Typography>
+                <Typography sx={{ color: T.textSub, mb: 3, fontSize: '0.9rem' }}>
+                  Entre com sua conta para acessar a plataforma
+                </Typography>
 
-                {/* Indicador de segurança 
-                <Box sx={{ 
-                  mt: 2, 
-                  p: 1, 
-                  borderRadius: 1,
-                  backgroundColor: securityChecks.suspiciousActivity ? 'warning.light' : 'success.light',
-                  border: 1,
-                  borderColor: securityChecks.suspiciousActivity ? 'warning.main' : 'success.main'
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SecurityIcon sx={{ 
-                      fontSize: 16, 
-                      mr: 1, 
-                      color: securityChecks.suspiciousActivity ? 'warning.main' : 'success.main' 
-                    }} />
-                    <Typography variant="caption" sx={{ color: 'text.primary' }}>
-                      {securityChecks.suspiciousActivity 
-                        ? '⚠️ Atividade verificada - Proteção reforçada' 
-                        : '✅ Proteção de segurança ativa'}
-                    </Typography>
+                <Box component="form" onSubmit={handleEmailSignIn} noValidate>
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="email"
+                    label="Email"
+                    name="email"
+                    autoComplete="email"
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(sanitizeInput(e.target.value))}
+                    error={emailError}
+                    disabled={isLockedOut}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Email sx={{ color: emailError ? '#ef4444' : T.gold, fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        transition: 'all 0.2s ease',
+                        '&:hover fieldset': {
+                          borderColor: T.gold,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: T.gold,
+                          borderWidth: '2px',
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: T.textSub,
+                        '&.Mui-focused': {
+                          color: T.gold,
+                        },
+                      },
+                    }}
+                  />
+                  
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    name="password"
+                    label="Senha"
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    error={passwordError}
+                    disabled={isLockedOut}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock sx={{ color: passwordError ? '#ef4444' : T.gold, fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton 
+                            onClick={togglePasswordVisibility} 
+                            edge="end" 
+                            disabled={isLockedOut}
+                            sx={{ color: T.gold }}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        transition: 'all 0.2s ease',
+                        '&:hover fieldset': {
+                          borderColor: T.gold,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: T.gold,
+                          borderWidth: '2px',
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: T.textSub,
+                        '&.Mui-focused': {
+                          color: T.gold,
+                        },
+                      },
+                    }}
+                  />
+  
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    disabled={isEmailLoading || isGoogleLoading || isGuestLoading || isLockedOut}
+                    startIcon={isEmailLoading ? <CircularProgress size={20} sx={{ color: T.white }} /> : <Email />}
+                    className="login-btn"
+                    sx={{
+                      mt: 3,
+                      mb: 2,
+                      py: 1.8,
+                      borderRadius: '14px',
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: T.gold,
+                      color: T.white,
+                      '&:hover': { bgcolor: T.goldLight },
+                      '&:disabled': {
+                        bgcolor: T.borderMid,
+                        opacity: isLockedOut ? 0.5 : 0.7
+                      }
+                    }}
+                  >
+                    {isLockedOut ? 'Conta Bloqueada' : isEmailLoading ? 'Entrando...' : 'Entrar com Email'}
+                  </Button>
+
+                  <Box sx={{ position: 'relative', my: 3 }}>
+                    <Divider sx={{ borderColor: T.border }}>
+                      <Chip 
+                        label="ou" 
+                        size="small"
+                        sx={{ 
+                          bgcolor: T.surface,
+                          color: T.textSub,
+                          fontSize: '0.7rem'
+                        }} 
+                      />
+                    </Divider>
                   </Box>
-                </Box>
-*/}
-                <Grid container justifyContent="space-between" sx={{ mt: 2 }}>
-                  <Grid item>
-                    <Link href="/forget-password" variant="body2" sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', textDecoration: 'none' } }}>
-                      Esqueceu a senha?
-                    </Link>
-                  </Grid>
-                  <Grid item>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Não tem conta?{' '}
-                      <Link href="/create" sx={{ fontWeight: 600, '&:hover': { textDecoration: 'none' } }}>
-                        Cadastre-se
+
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    disabled={isGoogleLoading || isEmailLoading || isGuestLoading || isLockedOut}
+                    onClick={handleGoogleSignIn}
+                    startIcon={isGoogleLoading ? <CircularProgress size={20} /> : <Google />}
+                    className="google-btn"
+                    sx={{
+                      py: 1.8,
+                      borderRadius: '14px',
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#d32f2f',
+                      color: T.white,
+                      '&:hover': { bgcolor: '#b71c1c' },
+                      '&:disabled': {
+                        bgcolor: T.borderMid,
+                        opacity: isLockedOut ? 0.5 : 0.7
+                      }
+                    }}
+                  >
+                    {isLockedOut ? 'Conta Bloqueada' : isGoogleLoading ? 'Entrando...' : 'Continuar com Google'}
+                  </Button>
+
+                  <Grid container justifyContent="space-between" sx={{ mt: 3 }}>
+                    <Grid item>
+                      <Link 
+                        href="/forget-password" 
+                        variant="body2" 
+                        sx={{ 
+                          color: T.textSub, 
+                          textDecoration: 'none',
+                          '&:hover': { color: T.gold } 
+                        }}
+                      >
+                        Esqueceu a senha?
                       </Link>
-                    </Typography>
+                    </Grid>
+                    <Grid item>
+                      <Typography variant="body2" sx={{ color: T.textSub }}>
+                        Não tem conta?{' '}
+                        <Link 
+                          href="/create" 
+                          sx={{ 
+                            fontWeight: 600,
+                            color: T.gold,
+                            textDecoration: 'none',
+                            '&:hover': { textDecoration: 'underline' }
+                          }}
+                        >
+                          Cadastre-se
+                        </Link>
+                      </Typography>
+                    </Grid>
                   </Grid>
-                </Grid>
-              </Box>
+                </Box>
+              </Paper>
+
               <Box sx={{ mt: 4, textAlign: 'center' }}>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: T.textSub }}>
                   Ao continuar, você concorda com nossos{' '}
-                  <Link href="/termos" sx={{ fontWeight: 600, '&:hover': { textDecoration: 'none' } }}>
-                    Termos e Políticas
+                  <Link 
+                    href="/termos" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: T.gold,
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}
+                  >
+                    Termos
+                  </Link>{' '}
+                  e{' '}
+                  <Link 
+                    href="/privacidade" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: T.gold,
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}
+                  >
+                    Políticas
                   </Link>
                 </Typography>
               </Box>
@@ -840,6 +1220,7 @@ const handleGoogleSignIn = async () => {
           </Fade>
         </Grid>
         
+        {/* Lado direito - Imagem */}
         {!isMobile && (
           <Grid 
             item 
@@ -856,11 +1237,57 @@ const handleGoogleSignIn = async () => {
                 right: 0,
                 bottom: 0,
                 left: 0,
-                backgroundColor: 'rgba(0,0,0,0.1)',
-                backdropFilter: 'blur(1px)'
+                background: `linear-gradient(135deg, ${T.navy}80 0%, ${T.navyLight}80 100%)`,
+                backdropFilter: 'blur(2px)'
+              },
+              '&:after': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                                  linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+                backgroundSize: '56px 56px',
+                opacity: 0.1,
               }
             }}
-          />
+          >
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: '10%',
+                left: '10%',
+                right: '10%',
+                color: T.white,
+                textAlign: 'center',
+                zIndex: 2,
+              }}
+            >
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontFamily: '"Playfair Display", serif',
+                  fontWeight: 700,
+                  mb: 2,
+                  textShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                }}
+              >
+              Connection Mozambique LDA
+              </Typography>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 400,
+                  opacity: 0.9,
+                  textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}
+              >
+                Conectando empresas e oportunidades em Moçambique
+              </Typography>
+            </Box>
+          </Grid>
         )}
         
         <Snackbar
@@ -869,7 +1296,16 @@ const handleGoogleSignIn = async () => {
           onClose={() => setShowSnackbar(false)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          <Alert severity="error" sx={{ width: '100%', boxShadow: 3 }} onClose={() => setShowSnackbar(false)}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              width: '100%', 
+              borderRadius: '12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+              '& .MuiAlert-icon': { color: '#ef4444' }
+            }} 
+            onClose={() => setShowSnackbar(false)}
+          >
             {errorMessage}
           </Alert>
         </Snackbar>
@@ -879,20 +1315,40 @@ const handleGoogleSignIn = async () => {
           autoHideDuration={4000}
           onClose={() => setSecurityChecks(prev => ({ ...prev, suspiciousActivity: false }))}
         >
-          <Alert severity="warning" variant="filled">
+          <Alert 
+            severity="warning" 
+            variant="filled"
+            sx={{ 
+              borderRadius: '12px',
+              bgcolor: T.gold,
+              color: T.white,
+              '& .MuiAlert-icon': { color: T.white }
+            }}
+          >
             Verificação de segurança adicional ativada
           </Alert>
         </Snackbar>
       </Grid>
+
+      {/* Dialog de seleção de tipo de conta */}
       <Dialog
         open={showAccountTypeDialog}
         onClose={() => setShowAccountTypeDialog(false)}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 2, p: 0, overflow: 'visible' } }}>
+        PaperProps={{ 
+          sx: { 
+            borderRadius: '24px', 
+            overflow: 'hidden',
+            background: 'transparent',
+            boxShadow: 'none'
+          } 
+        }}
+      >
         <AccountTypeSelector onSelect={handleAccountTypeSelect} />
       </Dialog>
     </>
   );
 };
+
 export default AuthDesk;

@@ -71,7 +71,6 @@ const BlogDetalheDesk = ({ user }) => {
 
         if (postSnapshot.exists()) {
           const postData = postSnapshot.val();
-          console.log(postData)
           setPost({
             id,
             ...postData,
@@ -93,7 +92,6 @@ const BlogDetalheDesk = ({ user }) => {
           setComments(commentsArray);
         }
       } catch (err) {
-        console.error('Erro ao buscar dados:', err);
         setError(true);
       } finally {
         setLoading(false);
@@ -171,7 +169,6 @@ const BlogDetalheDesk = ({ user }) => {
       setComment('');
       showSnackbar('Comentário adicionado com sucesso!', 'success');
     } catch (err) {
-      console.error('Erro ao enviar comentário:', err);
       showSnackbar('Erro ao enviar comentário', 'error');
     } finally {
       setSending(false);
@@ -210,7 +207,6 @@ const BlogDetalheDesk = ({ user }) => {
       setEditingCommentId(null);
       showSnackbar('Comentário atualizado!', 'success');
     } catch (err) {
-      console.error('Erro ao editar comentário:', err);
       showSnackbar('Erro ao editar comentário', 'error');
     }
   };
@@ -229,7 +225,6 @@ const BlogDetalheDesk = ({ user }) => {
       setComments(prev => prev.filter(c => c.id !== commentId));
       showSnackbar('Comentário excluído!', 'success');
     } catch (err) {
-      console.error('Erro ao eliminar comentário:', err);
       showSnackbar('Erro ao excluir comentário', 'error');
     }
   };
@@ -248,7 +243,6 @@ const BlogDetalheDesk = ({ user }) => {
         showSnackbar('Link copiado para a área de transferência!', 'info');
       }
     } catch (err) {
-      console.error('Erro ao compartilhar:', err);
     }
   };
 

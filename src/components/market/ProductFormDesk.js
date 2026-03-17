@@ -33,6 +33,8 @@ import {
   MenuItem,
   Switch,
   FormControlLabel,
+  Collapse,
+  Alert as MuiAlert,
 } from '@mui/material';
 import {
   Add,
@@ -51,6 +53,9 @@ import {
   Scale,
   Straighten,
   LocalShipping,
+  Warning,
+  ExpandMore,
+  ExpandLess,
 } from '@mui/icons-material';
 import {
   getStorage,
@@ -80,6 +85,11 @@ const ProductFormDesk = ({ user }) => {
   const [currentProductIndex, setCurrentProductIndex] = useState(null);
   const [openMobileDialog, setOpenMobileDialog] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showShippingTips, setShowShippingTips] = useState(false);
+
+  // Constantes de frete (as mesmas usadas no cálculo)
+  const BASE_SHIPPING_FEE = 100;
+  const SHIPPING_RATE_PER_KG = 50;
 
   const handleAddProduct = () => {
     setProducts((prev) => [
@@ -111,6 +121,15 @@ const ProductFormDesk = ({ user }) => {
   const handleProductChange = (index, field, value) => {
     const updatedProducts = [...products];
     updatedProducts[index][field] = value;
+    
+    // Se desativar o frete nacional, limpar os campos de dimensões
+    if (field === 'nationalShipping' && value === false) {
+      updatedProducts[index].weight = '';
+      updatedProducts[index].height = '';
+      updatedProducts[index].width = '';
+      updatedProducts[index].length = '';
+    }
+    
     setProducts(updatedProducts);
   };
 
@@ -145,6 +164,15 @@ const ProductFormDesk = ({ user }) => {
   const handleEditProductMobile = (index) => {
     setCurrentProductIndex(index);
     setOpenMobileDialog(true);
+  };
+
+  // Função para calcular exemplo de frete
+  const calculateShippingExample = (weight) => {
+    if (!weight || isNaN(parseFloat(weight)) || parseFloat(weight) <= 0) {
+      return null;
+    }
+    const calculatedShipping = BASE_SHIPPING_FEE + (parseFloat(weight) * SHIPPING_RATE_PER_KG);
+    return calculatedShipping;
   };
 
   const handleUploadImages = async (product) => {
@@ -303,6 +331,34 @@ const ProductFormDesk = ({ user }) => {
     setOpenMobileDialog(false);
   };
 
+  // Componente para exibir exemplo de cálculo de frete
+  const ShippingExample = ({ weight }) => {
+    const shippingCost = calculateShippingExample(weight);
+    
+    if (!shippingCost) return null;
+
+    return (
+      <MuiAlert 
+        severity="info" 
+        sx={{ mt: 1, mb: 2 }}
+        icon={<LocalShipping />}
+      >
+        <Typography variant="body2" fontWeight="bold">
+          Exemplo de Frete:
+        </Typography>
+        <Typography variant="body2">
+          • Peso: {parseFloat(weight).toFixed(2)} kg
+        </Typography>
+        <Typography variant="body2">
+          • Cálculo: {BASE_SHIPPING_FEE} MT (taxa base) + ({parseFloat(weight).toFixed(2)} kg × {SHIPPING_RATE_PER_KG} MT/kg)
+        </Typography>
+        <Typography variant="body2" fontWeight="bold">
+          • Frete estimado: {shippingCost.toFixed(2)} MT
+        </Typography>
+      </MuiAlert>
+    );
+  };
+
   // Componente para o sidebar de dicas (fixo em desktop)
   const TipsSidebar = () => (
     <Card
@@ -323,6 +379,43 @@ const ProductFormDesk = ({ user }) => {
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
         <HelpOutline sx={{ mr: 1, verticalAlign: 'middle' }} /> Dicas para Cadastro
       </Typography>
+      
+      <Box 
+        sx={{ 
+          mb: 2, 
+          p: 1, 
+          backgroundColor: 'info.light', 
+          borderRadius: 1,
+          cursor: 'pointer'
+        }}
+        onClick={() => setShowShippingTips(!showShippingTips)}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle2" fontWeight="bold" color="info.dark">
+            <LocalShipping sx={{ mr: 1, fontSize: 18 }} />
+            Informações sobre Frete
+          </Typography>
+          {showShippingTips ? <ExpandLess /> : <ExpandMore />}
+        </Box>
+        
+        <Collapse in={showShippingTips}>
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • <strong>Taxa Base:</strong> {BASE_SHIPPING_FEE} MT
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • <strong>Taxa por kg:</strong> {SHIPPING_RATE_PER_KG} MT/kg
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • <strong>Fórmula:</strong> {BASE_SHIPPING_FEE} MT + (peso × {SHIPPING_RATE_PER_KG} MT)
+            </Typography>
+            <Typography variant="body2">
+              • <strong>Exemplo:</strong> 2kg = {BASE_SHIPPING_FEE} + (2 × {SHIPPING_RATE_PER_KG}) = {BASE_SHIPPING_FEE + (2 * SHIPPING_RATE_PER_KG)} MT
+            </Typography>
+          </Box>
+        </Collapse>
+      </Box>
+
       <Typography variant="body2" sx={{ mb: 1.5, display: 'flex', alignItems: 'flex-start' }}>
         <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '4px' }} />
         Escolha entre <strong>Produto</strong> (ex: roupas, eletrônicos) ou <strong>Serviço</strong> (ex: consultoria).
@@ -365,6 +458,40 @@ const ProductFormDesk = ({ user }) => {
           >
             <HelpOutline sx={{ mr: 1 }} /> Dicas para Cadastro
           </Typography>
+          
+          <Box 
+            sx={{ 
+              mb: 2, 
+              p: 1, 
+              backgroundColor: 'info.light', 
+              borderRadius: 1,
+              cursor: 'pointer'
+            }}
+            onClick={() => setShowShippingTips(!showShippingTips)}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="subtitle2" fontWeight="bold" color="info.dark">
+                <LocalShipping sx={{ mr: 1, fontSize: 18 }} />
+                Informações sobre Frete
+              </Typography>
+              {showShippingTips ? <ExpandLess /> : <ExpandMore />}
+            </Box>
+            
+            <Collapse in={showShippingTips}>
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>Taxa Base:</strong> {BASE_SHIPPING_FEE} MT
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  • <strong>Taxa por kg:</strong> {SHIPPING_RATE_PER_KG} MT/kg
+                </Typography>
+                <Typography variant="body2">
+                  • <strong>Exemplo:</strong> 2kg = {BASE_SHIPPING_FEE + (2 * SHIPPING_RATE_PER_KG)} MT
+                </Typography>
+              </Box>
+            </Collapse>
+          </Box>
+
           <Typography variant="body2" sx={{ mb: 1.5, display: 'flex', alignItems: 'flex-start' }}>
             <Badge color="primary" variant="dot" sx={{ mr: 1, mt: '4px' }} />
             Escolha entre <strong>Produto</strong> (ex: roupas, eletrônicos) ou <strong>Serviço</strong> (ex: consultoria).
@@ -398,7 +525,7 @@ const ProductFormDesk = ({ user }) => {
                 {!isTablet && <TableCell sx={{ width: 350, fontWeight: 'bold', color: 'white' }}>Descrição</TableCell>}
                 <TableCell sx={{ width: 180, fontWeight: 'bold', color: 'white' }}>Preço (MZN) *</TableCell>
                 <TableCell sx={{ width: 150, fontWeight: 'bold', color: 'white' }}>Qtd/SKU</TableCell>
-                {!isTablet && <TableCell sx={{ width: 200, fontWeight: 'bold', color: 'white' }}>Frete Nacional</TableCell>}
+                {!isTablet && <TableCell sx={{ width: 250, fontWeight: 'bold', color: 'white' }}>Frete Nacional</TableCell>}
                 <TableCell sx={{ width: 80, fontWeight: 'bold', color: 'white' }}>Ações</TableCell>
               </TableRow>
             </TableHead>
@@ -578,7 +705,12 @@ const ProductFormDesk = ({ user }) => {
                                 color="primary"
                               />
                             }
-                            label="Habilitar Frete"
+                            label={
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <LocalShipping sx={{ mr: 1, fontSize: 18 }} />
+                                Frete Nacional
+                              </Box>
+                            }
                             sx={{ mb: 1 }}
                           />
                           {product.nationalShipping && (
@@ -591,12 +723,18 @@ const ProductFormDesk = ({ user }) => {
                                 onChange={(e) => handleProductChange(index, 'weight', e.target.value)}
                                 size="small"
                                 inputProps={{ min: 0, step: 0.01 }}
-                                InputProps={{ startAdornment: <Scale fontSize="small" sx={{ mr: 1 }} /> }}
+                                InputProps={{ 
+                                  startAdornment: <Scale fontSize="small" sx={{ mr: 1 }} />,
+                                  endAdornment: <InputAdornment position="end">kg</InputAdornment>
+                                }}
                                 sx={{ mb: 1 }}
                                 error={!!errors[`weight-${index}`]}
                                 helperText={errors[`weight-${index}`]}
                                 required
                               />
+                              {product.weight && (
+                                <ShippingExample weight={product.weight} />
+                              )}
                               <TextField
                                 fullWidth
                                 placeholder="Altura (cm) *"
@@ -605,7 +743,10 @@ const ProductFormDesk = ({ user }) => {
                                 onChange={(e) => handleProductChange(index, 'height', e.target.value)}
                                 size="small"
                                 inputProps={{ min: 0, step: 0.01 }}
-                                InputProps={{ startAdornment: <Straighten fontSize="small" sx={{ mr: 1 }} /> }}
+                                InputProps={{ 
+                                  startAdornment: <Straighten fontSize="small" sx={{ mr: 1 }} />,
+                                  endAdornment: <InputAdornment position="end">cm</InputAdornment>
+                                }}
                                 sx={{ mb: 1 }}
                                 error={!!errors[`height-${index}`]}
                                 helperText={errors[`height-${index}`]}
@@ -619,7 +760,10 @@ const ProductFormDesk = ({ user }) => {
                                 onChange={(e) => handleProductChange(index, 'width', e.target.value)}
                                 size="small"
                                 inputProps={{ min: 0, step: 0.01 }}
-                                InputProps={{ startAdornment: <Straighten fontSize="small" sx={{ mr: 1 }} /> }}
+                                InputProps={{ 
+                                  startAdornment: <Straighten fontSize="small" sx={{ mr: 1 }} />,
+                                  endAdornment: <InputAdornment position="end">cm</InputAdornment>
+                                }}
                                 sx={{ mb: 1 }}
                                 error={!!errors[`width-${index}`]}
                                 helperText={errors[`width-${index}`]}
@@ -633,7 +777,10 @@ const ProductFormDesk = ({ user }) => {
                                 onChange={(e) => handleProductChange(index, 'length', e.target.value)}
                                 size="small"
                                 inputProps={{ min: 0, step: 0.01 }}
-                                InputProps={{ startAdornment: <Straighten fontSize="small" sx={{ mr: 1 }} /> }}
+                                InputProps={{ 
+                                  startAdornment: <Straighten fontSize="small" sx={{ mr: 1 }} />,
+                                  endAdornment: <InputAdornment position="end">cm</InputAdornment>
+                                }}
                                 error={!!errors[`length-${index}`]}
                                 helperText={errors[`length-${index}`]}
                                 required
@@ -703,7 +850,7 @@ const ProductFormDesk = ({ user }) => {
     </Box>
   );
 
-  // Renderização para mobile
+  // Renderização para mobile (mantida similar com adições de frete)
   const renderMobileView = () => (
     <Box>
       <Button
@@ -766,6 +913,7 @@ const ProductFormDesk = ({ user }) => {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {product.price ? `MZN ${parseFloat(product.price).toFixed(2)}` : 'Preço pendente'}
+                    {product.nationalShipping && ' 🚚'}
                   </Typography>
                 </Box>
                 <Box>
@@ -805,6 +953,40 @@ const ProductFormDesk = ({ user }) => {
         >
           <HelpOutline sx={{ mr: 1 }} /> Dicas Rápidas
         </Typography>
+        
+        <Box 
+          sx={{ 
+            mb: 2, 
+            p: 1, 
+            backgroundColor: 'info.light', 
+            borderRadius: 1,
+            cursor: 'pointer'
+          }}
+          onClick={() => setShowShippingTips(!showShippingTips)}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="subtitle2" fontWeight="bold" color="info.dark">
+              <LocalShipping sx={{ mr: 1, fontSize: 16 }} />
+              Informações sobre Frete
+            </Typography>
+            {showShippingTips ? <ExpandLess /> : <ExpandMore />}
+          </Box>
+          
+          <Collapse in={showShippingTips}>
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                • Taxa Base: {BASE_SHIPPING_FEE} MT
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                • Taxa por kg: {SHIPPING_RATE_PER_KG} MT/kg
+              </Typography>
+              <Typography variant="body2">
+                • Exemplo: 2kg = {BASE_SHIPPING_FEE + (2 * SHIPPING_RATE_PER_KG)} MT
+              </Typography>
+            </Box>
+          </Collapse>
+        </Box>
+
         <Typography variant="body2" sx={{ mb: 1 }}>
           • Toque no item para editar detalhes
         </Typography>
@@ -957,10 +1139,16 @@ const ProductFormDesk = ({ user }) => {
                       onChange={(e) => handleProductChange(currentProductIndex, 'weight', e.target.value)}
                       sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">kg</InputAdornment>
+                      }}
                       error={!!errors[`weight-${currentProductIndex}`]}
                       helperText={errors[`weight-${currentProductIndex}`] || 'Ex: 0.5 para roupas leves'}
                       required
                     />
+                    {products[currentProductIndex].weight && (
+                      <ShippingExample weight={products[currentProductIndex].weight} />
+                    )}
                     <TextField
                       label="Altura (cm) *"
                       fullWidth
@@ -969,6 +1157,9 @@ const ProductFormDesk = ({ user }) => {
                       onChange={(e) => handleProductChange(currentProductIndex, 'height', e.target.value)}
                       sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">cm</InputAdornment>
+                      }}
                       error={!!errors[`height-${currentProductIndex}`]}
                       helperText={errors[`height-${currentProductIndex}`] || 'Ex: 30'}
                       required
@@ -981,6 +1172,9 @@ const ProductFormDesk = ({ user }) => {
                       onChange={(e) => handleProductChange(currentProductIndex, 'width', e.target.value)}
                       sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">cm</InputAdornment>
+                      }}
                       error={!!errors[`width-${currentProductIndex}`]}
                       helperText={errors[`width-${currentProductIndex}`] || 'Ex: 20'}
                       required
@@ -993,6 +1187,9 @@ const ProductFormDesk = ({ user }) => {
                       onChange={(e) => handleProductChange(currentProductIndex, 'length', e.target.value)}
                       sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">cm</InputAdornment>
+                      }}
                       error={!!errors[`length-${currentProductIndex}`]}
                       helperText={errors[`length-${currentProductIndex}`] || 'Ex: 5'}
                       required

@@ -17,7 +17,14 @@ import {
   ListItemIcon,
   ListItemText,
   Snackbar,
-  Alert
+  Alert,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Menu,
+  MenuItem
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
@@ -28,6 +35,7 @@ import FeedIcon from "@mui/icons-material/Feed";
 import PeopleIcon from "@mui/icons-material/People";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import DownloadIcon from "@mui/icons-material/Download";
 import logo from "../../img/bg2.png";
 import { db } from "../../fb";
 
@@ -38,12 +46,18 @@ const HeaderDeskSingular = ({ user }) => {
   const [pendingNotifications, setPendingNotifications] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
+  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
   const publicPanel = user?.publicPainel;
   const isMobile = useMediaQuery("(max-width:600px)");
   const isVerify = user?.subscriptions?.isverify === "true";
+
+  // URLs para download do APK
+  const apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e";
+  const shortApkUrl = "https://bit.ly/connectionmz-apk";
 
   // Protected routes configuration
   const protectedRoutes = [
@@ -53,6 +67,71 @@ const HeaderDeskSingular = ({ user }) => {
     "/inbox",
   ];
 
+  const handleDownloadClick = (event) => {
+    if (isMobile) {
+      // Em dispositivos móveis, abrir diálogo com instruções
+      setDownloadDialogOpen(true);
+    } else {
+      // Em desktop, manter o menu original
+      setDownloadAnchorEl(event.currentTarget);
+    }
+  };
+
+  const handleDownloadClose = () => {
+    setDownloadAnchorEl(null);
+  };
+
+  const handleDownloadDialogClose = () => {
+    setDownloadDialogOpen(false);
+  };
+
+  const handleDirectDownload = () => {
+    // Método mais confiável para download em mobile
+    const link = document.createElement('a');
+    link.href = apkDownloadUrl;
+    link.setAttribute('download', 'connectionmozambique.apk');
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setDownloadDialogOpen(false);
+  };
+
+  const handleOpenInNewTab = () => {
+    window.open(apkDownloadUrl, '_blank', 'noopener,noreferrer');
+    setDownloadDialogOpen(false);
+  };
+
+  const handleShareApp = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Connection Mozambique App',
+        text: 'Baixe o app Connection Mozambique para Android',
+        url: shortApkUrl,
+      })
+      .catch((error) => console.log('Erro ao compartilhar:', error));
+    } else {
+      // Fallback para copiar link
+      navigator.clipboard.writeText(shortApkUrl)
+        .then(() => {
+          alert('Link copiado para a área de transferência!');
+        })
+        .catch(() => {
+          // Fallback mais básico
+          const textArea = document.createElement('textarea');
+          textArea.value = shortApkUrl;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          alert('Link copiado para a área de transferência!');
+        });
+    }
+    setDownloadDialogOpen(false);
+  };
+
   const handleNavigation = (path) => {
     if (!user) return true;
     
@@ -61,6 +140,18 @@ const HeaderDeskSingular = ({ user }) => {
       return false;
     }
     return true;
+  };
+
+  const handleMobileNavigation = (path, e) => {
+    if (e) e.preventDefault();
+    
+    if (!handleNavigation(path)) {
+      setDrawerOpen(false);
+      return;
+    }
+    
+    navigate(path);
+    setDrawerOpen(false);
   };
 
   useEffect(() => {
@@ -169,7 +260,7 @@ const HeaderDeskSingular = ({ user }) => {
     {
       to: user ? "/meuperfil" : "/auth",
       icon: (
-        <Avatar src={user?.logoUrl || ""} alt="Perfil">
+        <Avatar src={user?.logoUrl || ""} alt="Perfil" sx={{ width: 32, height: 32 }}>
           {!user?.logoUrl && <AccountCircleIcon />}
         </Avatar>
       ),
@@ -226,8 +317,73 @@ const HeaderDeskSingular = ({ user }) => {
           </Link>
         );
       })}
+      
+      {/* Botão de Download para Desktop */}
+      <Button
+        variant="contained"
+        color="success"
+        startIcon={<DownloadIcon />}
+        onClick={handleDownloadClick}
+        sx={{
+          ml: 1,
+          backgroundColor: "#4caf50",
+          "&:hover": {
+            backgroundColor: "#388e3c",
+          },
+        }}
+      >
+        Baixar App
+      </Button>
+
+      {/* Menu de Download para Desktop */}
+      <Menu
+        anchorEl={downloadAnchorEl}
+        open={Boolean(downloadAnchorEl)}
+        onClose={handleDownloadClose}
+      >
+        <MenuItem 
+          onClick={handleDownloadClose}
+          component="a"
+          href={apkDownloadUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          download="connectionmozambique.apk"
+        >
+          Versão Android (APK)
+        </MenuItem>
+        <MenuItem 
+          onClick={handleDownloadClose}
+          component="a"
+          href={shortApkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Link Alternativo
+        </MenuItem>
+      </Menu>
     </Box>
   );
+
+  const renderMobileMenuItems = () => {
+    return navItems.map((item, index) => (
+      <ListItem
+        button
+        key={index}
+        component={Link}
+        to={item.to}
+        onClick={(e) => {
+          if (item.onClick) item.onClick(e);
+          setDrawerOpen(false);
+        }}
+        sx={{
+          backgroundColor: location.pathname === item.to ? "#e3f2fd" : "transparent",
+        }}
+      >
+        <ListItemIcon>{item.icon}</ListItemIcon>
+        <ListItemText primary={item.label} />
+      </ListItem>
+    ));
+  };
 
   return (
     <>
@@ -235,35 +391,76 @@ const HeaderDeskSingular = ({ user }) => {
         <Toolbar sx={{ justifyContent: "space-between", paddingX: isMobile ? 2 : 4 }}>
           <Box display="flex" alignItems="center" gap={2}>
             <Typography variant="h6" sx={{ fontWeight: "bold", color: "#333" }}>
-              <Link to="/" className="flex items-center space-x-2">
-                <img src={logo} alt="Logo" style={{ width: isMobile ? "30%" : "20%" }} />
+              <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                <img src={logo} alt="Logo" style={{ width: isMobile ? "100px" : "120px" }} />
               </Link>
             </Typography>
           </Box>
           
           {isMobile ? (
             <Box display="flex" alignItems="center">
+              {/* Botão de Download no Mobile */}
+              <IconButton 
+                color="success" 
+                onClick={handleDownloadClick}
+                sx={{ mr: 1 }}
+              >
+                <DownloadIcon />
+              </IconButton>
+              
               <IconButton onClick={toggleDrawer(true)}>
                 <MenuIcon />
               </IconButton>
               
-              <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
-                <List>
-                  {navItems.map((item, index) => (
+              <Drawer 
+                anchor="right" 
+                open={drawerOpen} 
+                onClose={toggleDrawer(false)}
+                sx={{
+                  '& .MuiDrawer-paper': {
+                    width: 280,
+                    boxSizing: 'border-box',
+                  },
+                }}
+              >
+                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    Menu
+                  </Typography>
+                </Box>
+                
+                <List sx={{ pt: 0 }}>
+                  {renderMobileMenuItems()}
+                  
+                  {/* Item de Download no Mobile */}
+                  <ListItem
+                    button
+                    onClick={() => {
+                      handleDownloadClick();
+                      setDrawerOpen(false);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <DownloadIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Baixar App" />
+                  </ListItem>
+                  
+                  {/* Painel Público */}
+                  {publicPanel && (
                     <ListItem
                       button
-                      key={index}
-                      component={Link}
-                      to={item.to}
-                      onClick={(e) => {
-                        if (item.onClick) item.onClick(e);
-                        toggleDrawer(false)();
+                      onClick={() => {
+                        navigate("/painel");
+                        setDrawerOpen(false);
                       }}
                     >
-                      <ListItemIcon>{item.icon}</ListItemIcon>
-                      <ListItemText primary={item.label} />
+                      <ListItemIcon>
+                        <DomainIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Painel Público" />
                     </ListItem>
-                  ))}
+                  )}
                 </List>
               </Drawer>
             </Box>
@@ -289,6 +486,60 @@ const HeaderDeskSingular = ({ user }) => {
         </Toolbar>
       </AppBar>
 
+      {/* Diálogo de Download para Mobile */}
+      <Dialog open={downloadDialogOpen} onClose={handleDownloadDialogClose}>
+        <DialogTitle>Baixar App Connection Mozambique</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <Typography variant="body1" gutterBottom>
+              Para instalar o app no seu dispositivo Android:
+            </Typography>
+            <Box component="ol" sx={{ pl: 2, mt: 1 }}>
+              <li>Clique em "Baixar Agora" para iniciar o download</li>
+              <li>Após o download, toque no arquivo APK para instalar</li>
+              <li>Permita a instalação de fontes desconhecidas se solicitado</li>
+              <li>Siga as instruções de instalação</li>
+            </Box>
+            <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic' }}>
+              Tamanho do arquivo: aproximadamente 15MB
+            </Typography>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Button 
+            onClick={handleDirectDownload}
+            variant="contained" 
+            color="success"
+            startIcon={<DownloadIcon />}
+            sx={{ m: 1 }}
+          >
+            Baixar Agora
+          </Button>
+          <Button 
+            onClick={handleOpenInNewTab}
+            variant="outlined"
+            sx={{ m: 1 }}
+          >
+            Abrir em Nova Aba
+          </Button>
+          <Button 
+            onClick={handleShareApp}
+            variant="outlined"
+            color="primary"
+            sx={{ m: 1 }}
+          >
+            Compartilhar Link
+          </Button>
+          <Button 
+            onClick={handleDownloadDialogClose}
+            color="inherit"
+            sx={{ m: 1 }}
+          >
+            Cancelar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {user && (
         <Snackbar
           open={showVerificationAlert}
@@ -308,12 +559,12 @@ const HeaderDeskSingular = ({ user }) => {
               <Typography variant="body2">
                 Os dados da sua empresa estão a ser verificados. Assim que o processo for concluído, o acesso será concedido.
                 Você será notificado através do e-mail{' '}
-                <Link href={`mailto:${user.email}`}>{user.email}</Link>.
+                <Link href={`mailto:${user.email}`} style={{ color: '#1976d2' }}>{user.email}</Link>.
               </Typography>
               <Typography variant="body2">
                 Para suporte use{' '}
-                <a href="tel:+258xxxxxxxxx">+258 xxxxxxxx</a> ou pelo e-mail{' '}
-                <a href="mailto:suporte@connectionmozambique.com">
+                <a href="tel:+258866656104" style={{ color: '#1976d2' }}>+258 86 665 6104</a> ou pelo e-mail{' '}
+                <a href="mailto:suporte@connectionmozambique.com" style={{ color: '#1976d2' }}>
                   suporte@connectionmozambique.com
                 </a>.
               </Typography>

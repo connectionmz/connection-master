@@ -283,7 +283,6 @@ const FaturacaoDesk = ({ user }) => {
   // Filter proformas
   const filteredProformas = proformas.filter((proforma) => {
     if (!proforma.cliente) {
-      console.warn("Undefined cliente in proforma:", proforma);
       return false;
     }
 

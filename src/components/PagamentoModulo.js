@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db } from '../fb';
+import { auth, db } from '../fb';
 import { ref, onValue } from 'firebase/database';
 import {
   Box,
@@ -17,8 +17,7 @@ import BackButton from './BackButton';
 import PagamentoAccordion from '../according/PagamentoAccordion';
 
 const PagamentoModulo = ({ user }) => {
-  const API_KEY = process.env.REACT_APP_API_KEY;
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
   
   const { moduleKey } = useParams();
   const [modules, setModules] = useState([]);
@@ -55,7 +54,6 @@ const PagamentoModulo = ({ user }) => {
       const foundModule = modules.find((mod) => mod.key === moduleKey);
       setCurrentModule(foundModule || null);
       
-      // Check for existing payment
       if (user?.id) {
         const paymentsRef = ref(db, 'payments');
         onValue(paymentsRef, (snapshot) => {
@@ -76,41 +74,71 @@ const PagamentoModulo = ({ user }) => {
     }
   }, [modules, moduleKey, isLoadingModules, user?.id]);
 
-  const validatePhoneNumber = (phone) => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('258') && cleaned.length === 12) {
-      const prefix = cleaned.substring(3, 5);
-      return ['82', '83', '84', '85', '86', '87', '88'].includes(prefix);
+  // Função simplificada para formatar o número de telefone
+  const handlePhoneNumberChange = (e) => {
+    const input = e.target.value;
+    
+    // Remove tudo que não é dígito
+    const digitsOnly = input.replace(/\D/g, '');
+    
+    // Limita a 9 dígitos (sem o prefixo 258)
+    const limitedDigits = digitsOnly.slice(0, 9);
+    
+    setPhoneNumber(limitedDigits);
+  };
+
+  // Função para formatar a exibição do número
+  const formatPhoneDisplay = (phone) => {
+    if (!phone) return '';
+    
+    if (phone.length <= 2) {
+      return phone;
+    } else if (phone.length <= 5) {
+      return `${phone.slice(0, 2)} ${phone.slice(2)}`;
+    } else if (phone.length <= 7) {
+      return `${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5)}`;
+    } else {
+      return `${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7)}`;
     }
-    return false;
+  };
+
+  // Validação do número de telefone
+  const validatePhoneNumber = (phone) => {
+    if (phone.length !== 9) return false;
+    
+    const prefix = phone.substring(0, 2);
+    return ['82', '83', '84', '85', '86', '87', '88'].includes(prefix);
+  };
+
+  // Função para obter o número completo (258 + número)
+  const getFullPhoneNumber = () => {
+    return `258${phoneNumber}`;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!user?.id) {
-      setError('Usuário não autenticado. Por favor, faça login novamente.');
-      return;
-    }
-
-    if (!phoneNumber || !validatePhoneNumber(phoneNumber)) {
-      setError('Por favor, insira um número de telefone moçambicano válido (formato: 2588XXXXXXXX).');
-      return;
-    }
-
-    // Verificar se já existe pagamento ativo
-    if (existingPayment?.status === 'pago') {
-      const now = Date.now();
-      if (existingPayment.subscription?.end > now) {
-        setError('Você já possui uma assinatura ativa para este módulo.');
-        return;
-      }
-    }
-
     setLoading(true);
     setError('');
 
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        setError('Usuário não autenticado. Faça login novamente.');
+        return;
+      }
+
+      let token;
+      try {
+        token = await user.getIdToken();
+      } catch (tokenError) {
+        if (tokenError.code === 'auth/requests-blocked') {
+          token = await user.getIdToken(false);
+        } else {
+          throw tokenError;
+        }
+      }
+
       const sanitizedReference = "Modulo" + currentModule.name
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -120,14 +148,13 @@ const PagamentoModulo = ({ user }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           amount: currentModule.price,
-          phoneNumber: phoneNumber,
+          phoneNumber: getFullPhoneNumber(),
           reference: sanitizedReference,
           moduleKey: moduleKey,
-          userId: user.id
         }),
       });
 
@@ -140,8 +167,14 @@ const PagamentoModulo = ({ user }) => {
       setPaymentSuccess(true);
       
     } catch (err) {
-      console.error('Erro ao processar pagamento:', err);
-      setError(err.message || 'Ocorreu um erro ao processar o pagamento. Tente novamente mais tarde.');
+      
+      if (err.message.includes('blocked') || err.code === 'auth/requests-blocked') {
+        setError('Problema de conexão com o serviço de autenticação. Tente novamente em alguns instantes.');
+      } else if (err.message.includes('não autenticado')) {
+        setError('Faça login novamente.');
+      } else {
+        setError('Erro ao processar pagamento.');
+      }
     } finally {
       setLoading(false);
     }
@@ -253,17 +286,23 @@ const PagamentoModulo = ({ user }) => {
               
               <TextField
                 label="Telefone M-Pesa"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                value={formatPhoneDisplay(phoneNumber)}
+                onChange={handlePhoneNumberChange}
                 fullWidth
                 margin="normal"
                 required
-                placeholder="258XXXXXXXXX"
-                helperText="Número de telefone registado no M-Pesa (formato 2588XXXXXXXX)"
+                placeholder="84 123 4567"
+                helperText={
+                  phoneNumber && !validatePhoneNumber(phoneNumber) 
+                    ? "Número inválido. Use um número Moçambicano começando com 82, 83, 84, etc." 
+                    : "Digite apenas os 9 dígitos do seu número (ex: 841234567)"
+                }
                 error={phoneNumber && !validatePhoneNumber(phoneNumber)}
+                inputProps={{
+                  maxLength: 13, // Permite espaço para formatação
+                }}
                 sx={{ mb: 3 }}
               />
-              
               {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   {error}

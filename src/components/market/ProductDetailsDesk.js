@@ -12,7 +12,6 @@ import {
   Alert,
   Card,
   CardMedia,
-  CardContent,
   Chip,
   Divider,
   Stack,
@@ -27,6 +26,9 @@ import {
   Badge,
   Snackbar,
   Tooltip,
+  Collapse,
+  Paper,
+  Grid,
 } from "@mui/material";
 import {
   Share as ShareIcon,
@@ -35,85 +37,159 @@ import {
   Verified as VerifiedIcon,
   Store as StoreIcon,
   VisibilityOff as VisibilityOffIcon,
-  Favorite,
-  FavoriteBorder,
   Payment as PaymentIcon,
   Inventory as InventoryIcon,
   Category as CategoryIcon,
   Scale as ScaleIcon,
-  Straighten as StraightenIcon,
+  Warning as WarningIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import BackButton from "../BackButton";
 import { formatPrice } from "../../utils/utils";
+
+const T = {
+  navy:        '#08192E',
+  navyMid:     '#0E2849',
+  navyLight:   '#183A63',
+  navyCard:    '#0D2240',
+  gold:        '#C8903A',
+  goldLight:   '#E8B96A',
+  white:       '#FFFFFF',
+  darkBorder:  'rgba(255,255,255,0.08)',
+  darkBorderMid:'rgba(255,255,255,0.14)',
+  darkText:    'rgba(255,255,255,0.88)',
+  darkTextSub: 'rgba(255,255,255,0.52)',
+  darkMuted:   'rgba(255,255,255,0.30)',
+  success:     '#10b981',
+  error:       '#ef4444',
+  warning:     '#f59e0b',
+};
+
+const KEYFRAMES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  @keyframes fadeUp { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+  .afu { animation:fadeUp .55s cubic-bezier(.22,1,.36,1) both; }
+`;
+
+const BG_GRID = {
+  position:'absolute', inset:0, pointerEvents:'none', opacity:0.02,
+  backgroundImage:`linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundSize:'56px 56px',
+};
 
 const ProductDetailsDesk = ({ user }) => {
   const { productId, store } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  
   const [product, setProduct] = useState(null);
   const [storeInfo, setStoreInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [views, setViews] = useState(0);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [favorite, setFavorite] = useState(false);
-  const IVA_PERCENTAGE = 0; // IVA is 0% as per original code
-  const SHIPPING_RATE_PER_KG = 50; // Example: 50 MT per kg for national shipping
-  const BASE_SHIPPING_FEE = 100; // Base fee for national shipping in MT
+  const [showShippingDetails, setShowShippingDetails] = useState(false);
+  
+  // Constantes de frete
+  const IVA_PERCENTAGE = 0;
+  const BASE_SHIPPING_FEE = 100;
+  const SHIPPING_RATE_PER_KG = 50;
+
+  // Estados para cálculo de frete
+  const [shippingCost, setShippingCost] = useState(0);
+  const [shippingCalculated, setShippingCalculated] = useState(false);
+  const [shippingError, setShippingError] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Fetch product details
         const productRef = ref(db, `stores/${store}/products/${productId}`);
         const productSnapshot = await get(productRef);
 
         if (productSnapshot.exists()) {
           const productData = productSnapshot.val();
-          // Default type to "product" if undefined or null
           productData.type = productData.type || "product";
           setProduct(productData);
-          setViews(productData.views || 0);
 
-          // Update view count
+          // Atualizar contador de visualizações
           await update(ref(db, `stores/${store}/products/${productId}`), {
             views: increment(1),
           });
 
-          // Fetch store/company information
+          // Buscar informações da loja
           const storeRef = ref(db, `stores/${store}`);
           const storeSnapshot = await get(storeRef);
           if (storeSnapshot.exists()) {
             setStoreInfo(storeSnapshot.val());
           }
 
-          // Check if product is favorited
-          if (user?.id) {
-            const favoriteRef = ref(db, `favorites/${user.id}/${productId}`);
-            const favoriteSnapshot = await get(favoriteRef);
-            setFavorite(favoriteSnapshot.exists());
+          // Calcular frete se necessário
+          if (productData.nationalShipping && productData.weight) {
+            calculateShipping(productData.weight, 1);
+          } else if (productData.nationalShipping && !productData.weight) {
+            setShippingError("Produto não possui peso definido");
+            setShippingCalculated(false);
           }
         } else {
           setProduct(null);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
-        setSnackbarMessage("Erro ao carregar dados do produto.");
-        setSnackbarSeverity("error");
-        setOpenSnackbar(true);
+        console.error("Erro ao carregar dados:", error);
+        showMessage("Erro ao carregar dados do produto", "error");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [productId, store, user?.id]);
+  }, [productId, store]);
+
+  const calculateShipping = (weight, qty = quantity) => {
+    try {
+      const productWeight = Number(weight);
+      const totalWeight = productWeight * qty;
+
+      if (isNaN(productWeight) || productWeight <= 0) {
+        setShippingError("Peso do produto inválido");
+        setShippingCalculated(false);
+        return;
+      }
+
+      if (totalWeight > 1000) {
+        setShippingError("Peso excede limite máximo (1000kg)");
+        setShippingCalculated(false);
+        return;
+      }
+
+      const calculatedShipping = BASE_SHIPPING_FEE + (totalWeight * SHIPPING_RATE_PER_KG);
+      
+      setShippingCost(calculatedShipping);
+      setShippingCalculated(true);
+      setShippingError("");
+    } catch (error) {
+      setShippingError("Erro ao calcular frete");
+      setShippingCalculated(false);
+    }
+  };
+
+  useEffect(() => {
+    if (product?.nationalShipping && product?.weight) {
+      calculateShipping(product.weight, quantity);
+    }
+  }, [quantity, product?.weight, product?.nationalShipping]);
+
+  const showMessage = (message, severity = "success") => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setOpenSnackbar(true);
+  };
 
   const handleOpenShareMenu = (event) => {
     event.preventDefault();
@@ -126,59 +202,22 @@ const ProductDetailsDesk = ({ user }) => {
 
   const shareOnPlatform = (platform) => {
     const productUrl = `${window.location.origin}/product/${productId}/store/${store}`;
-    let shareUrl = "";
-
-    switch (platform) {
-      case "whatsapp":
-        shareUrl = `https://wa.me/?text=Confira este produto: ${encodeURIComponent(product.name)} - ${productUrl}`;
-        break;
-      case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
-        break;
-      case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=Confira este produto: ${encodeURIComponent(product.name)}`;
-        break;
-      case "copy":
-        navigator.clipboard.writeText(productUrl);
-        setSnackbarMessage("Link copiado para a área de transferência!");
-        setSnackbarSeverity("success");
-        setOpenSnackbar(true);
-        handleCloseShareMenu();
-        return;
-      default:
-        return;
-    }
-
-    window.open(shareUrl, "_blank", "noopener,noreferrer");
-    handleCloseShareMenu();
-  };
-
-  const toggleFavorite = async () => {
-    if (!user) {
-      navigate("/auth");
+    
+    if (platform === "copy") {
+      navigator.clipboard.writeText(productUrl);
+      showMessage("Link copiado!");
+      handleCloseShareMenu();
       return;
     }
 
-    try {
-      const favoriteRef = ref(db, `favorites/${user.id}/${productId}`);
-      if (favorite) {
-        await remove(favoriteRef);
-        setFavorite(false);
-        setSnackbarMessage("Removido dos favoritos!");
-        setSnackbarSeverity("info");
-      } else {
-        await set(favoriteRef, { storeId: store, addedAt: Date.now() });
-        setFavorite(true);
-        setSnackbarMessage("Adicionado aos favoritos!");
-        setSnackbarSeverity("success");
-      }
-      setOpenSnackbar(true);
-    } catch (error) {
-      console.error("Erro ao gerenciar favorito:", error);
-      setSnackbarMessage("Erro ao gerenciar favoritos.");
-      setSnackbarSeverity("error");
-      setOpenSnackbar(true);
-    }
+    const shareUrls = {
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(product.name + ' - ' + productUrl)}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`,
+      twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(product.name)}`,
+    };
+
+    window.open(shareUrls[platform], "_blank", "noopener,noreferrer");
+    handleCloseShareMenu();
   };
 
   const addToCart = async () => {
@@ -187,17 +226,25 @@ const ProductDetailsDesk = ({ user }) => {
       return;
     }
 
+    if (product.nationalShipping && !shippingCalculated && !shippingError) {
+      showMessage("Aguarde o cálculo do frete", "warning");
+      return;
+    }
+
     try {
       const cartRef = ref(db, `cart/${user.id}/${productId}`);
       const cartItem = {
-        productId: productId,
+        productId,
         storeId: store,
         name: product.name,
         imageUrl: product.imageUrl,
         price: product.discountPrice || product.price,
-        storeName: storeInfo?.company?.nome || "Loja Desconhecida",
+        storeName: storeInfo?.company?.nome || "Loja",
         quantity: Number(quantity),
         addedAt: new Date().toISOString(),
+        weight: product.weight || 0,
+        nationalShipping: product.nationalShipping || false,
+        shippingCost: product.nationalShipping ? shippingCost : 0,
       };
 
       const snapshot = await get(cartRef);
@@ -209,19 +256,13 @@ const ProductDetailsDesk = ({ user }) => {
         await set(cartRef, cartItem);
       }
 
-      const productRef = ref(db, `stores/${store}/products/${productId}`);
-      await update(productRef, {
+      await update(ref(db, `stores/${store}/products/${productId}`), {
         cartAdds: increment(1),
       });
 
-      setSnackbarMessage(`${quantity} x ${product.name} adicionado ao carrinho!`);
-      setSnackbarSeverity("success");
-      setOpenSnackbar(true);
+      showMessage(`${quantity}x ${product.name} adicionado ao carrinho`);
     } catch (error) {
-      console.error("Erro ao adicionar ao carrinho:", error);
-      setSnackbarMessage("Erro ao adicionar ao carrinho");
-      setSnackbarSeverity("error");
-      setOpenSnackbar(true);
+      showMessage("Erro ao adicionar ao carrinho", "error");
     }
   };
 
@@ -231,33 +272,30 @@ const ProductDetailsDesk = ({ user }) => {
       return;
     }
 
-    const price = product.discountPrice || product.price;
-    const subtotal = price * Number(quantity);
-    const iva = (subtotal * IVA_PERCENTAGE) / 100;
-    let shippingCost = 0;
-
-    if ((product.type || "product") === "product" && product.nationalShipping && product.weight) {
-      shippingCost = BASE_SHIPPING_FEE + (Number(product.weight) * SHIPPING_RATE_PER_KG);
+    if (product.nationalShipping && !shippingCalculated && !shippingError) {
+      showMessage("Frete não disponível", "error");
+      return;
     }
 
-    const totalWithIva = subtotal + iva + shippingCost;
+    const price = product.discountPrice || product.price;
+    const subtotal = price * Number(quantity);
+    const calculatedShippingCost = product.nationalShipping ? shippingCost : 0;
+    const total = subtotal + calculatedShippingCost;
 
     navigate("/checkout", {
       state: {
         product: {
-          productId: productId,
+          productId,
           storeId: store,
           name: product.name,
-          price: price,
+          price,
           quantity: Number(quantity),
           imageUrl: product.imageUrl,
-          storeName: storeInfo?.company?.nome || "Loja Desconhecida",
-          shippingCost: (product.type || "product") === "product" ? shippingCost : 0,
-          subtotal: subtotal,
-          iva: iva,
-          total: totalWithIva,
+          storeName: storeInfo?.company?.nome || "Loja",
+          shippingCost: calculatedShippingCost,
+          subtotal,
+          total,
           weight: Number(product.weight) || 0,
-          dimensions: product.nationalShipping ? `${Number(product.height) || 0}x${Number(product.width) || 0}x${Number(product.length) || 0} cm` : null,
           nationalShipping: product.nationalShipping || false,
         },
       },
@@ -266,406 +304,426 @@ const ProductDetailsDesk = ({ user }) => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress />
+      <Box sx={{ minHeight: '100vh', bgcolor: T.navy, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress size={48} thickness={4} sx={{ color: T.gold }} />
       </Box>
     );
   }
 
   if (!product) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <Alert severity="error">Produto não encontrado.</Alert>
+      <Box sx={{ minHeight: '100vh', bgcolor: T.navy, display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
+        <Alert severity="error" sx={{ bgcolor: 'rgba(239,68,68,0.12)', color: T.white, border: '1px solid rgba(239,68,68,0.25)' }}>
+          Produto não encontrado
+        </Alert>
       </Box>
     );
   }
 
-  const productType = product.type || "product"; // Default to "product" if type is undefined
+  const productType = product.type || "product";
   const price = Number(product.discountPrice) || Number(product.price) || 0;
   const subtotal = price * Number(quantity);
-  const iva = (subtotal * IVA_PERCENTAGE) / 100;
-  const shippingCost =
-    productType === "product" && product.nationalShipping && product.weight
-      ? BASE_SHIPPING_FEE + (Number(product.weight) * SHIPPING_RATE_PER_KG)
-      : 0;
-  const totalWithIva = subtotal + iva + shippingCost;
+  const total = subtotal + (product.nationalShipping ? shippingCost : 0);
   const showPrices = storeInfo?.settings?.showPrices !== false;
+  const outOfStock = product.qtd !== null && product.qtd !== undefined && Number(product.qtd) === 0;
+  const isOwner = user?.id === storeInfo?.company?.id;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <BackButton sx={{ mb: 2 }} />
+    <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+      <style>{KEYFRAMES}</style>
+      
+      {/* Header */}
+      <Box sx={{ position: 'relative', background: `linear-gradient(160deg,${T.navy} 0%,${T.navyMid} 100%)`, borderBottom: `1px solid ${T.darkBorder}` }}>
+        <Box sx={BG_GRID} />
+        <Container maxWidth="lg" sx={{ py: 2 }}>
+          <BackButton sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }} />
+        </Container>
+      </Box>
 
-      <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={4}>
-        {/* Product Image Section */}
-        <Box sx={{ flex: 1, position: "relative" }}>
-          <Card sx={{ borderRadius: 2, overflow: "hidden", boxShadow: 3 }}>
-            <CardMedia
-              component="img"
-              height={isMobile ? 300 : 500}
-              image={product.imageUrl || "https://via.placeholder.com/500"}
-              alt={product.name}
-              sx={{ objectFit: "contain", backgroundColor: "#f5f5f5" }}
-            />
-          </Card>
-          <Box sx={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 1 }}>
-            {showPrices && product.discountPrice && (
-              <Chip
-                label={`-${Math.round(((Number(product.price) - Number(product.discountPrice)) / Number(product.price)) * 100)}%`}
-                color="error"
-                size="small"
-                sx={{ fontWeight: "bold" }}
-              />
-            )}
-            {product.isNew && (
-              <Chip
-                label="Novo"
-                color="success"
-                size="small"
-                sx={{ fontWeight: "bold" }}
-              />
-            )}
-          </Box>
-          <Box sx={{ position: "absolute", bottom: 16, right: 16, display: "flex", gap: 1 }}>
-            <Tooltip title={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}>
-              <IconButton
-                onClick={toggleFavorite}
-                sx={{
-                  backgroundColor: "rgba(255,255,255,0.8)",
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.9)" },
-                }}
-              >
-                {favorite ? <Favorite color="error" /> : <FavoriteBorder />}
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Compartilhar">
-              <IconButton
-                onClick={handleOpenShareMenu}
-                sx={{
-                  backgroundColor: "rgba(255,255,255,0.8)",
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.9)" },
-                }}
-              >
-                <ShareIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
+      <Container maxWidth="lg" sx={{ py: { xs: 3, md: 6 }, position: 'relative' }}>
+        <Box sx={BG_GRID} />
+        
+        <Grid container spacing={{ xs: 3, md: 6 }}>
+          {/* Imagem do produto */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ 
+              bgcolor: T.navyCard, 
+              border: `1px solid ${T.darkBorder}`,
+              borderRadius: 3,
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              {/* Badges */}
+              <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 2, display: 'flex', gap: 1 }}>
+                {showPrices && product.discountPrice && (
+                  <Chip
+                    label={`-${Math.round(((Number(product.price) - Number(product.discountPrice)) / Number(product.price)) * 100)}%`}
+                    sx={{ bgcolor: T.error, color: T.white, fontWeight: 700, borderRadius: 2 }}
+                  />
+                )}
+                {product.isNew && (
+                  <Chip label="NOVO" sx={{ bgcolor: T.success, color: T.white, fontWeight: 700, borderRadius: 2 }} />
+                )}
+              </Box>
 
-        {/* Product Details Section */}
-        <Box sx={{ flex: 1 }}>
-          <CardContent sx={{ p: 0 }}>
-            {/* Company Info */}
+              <CardMedia
+                component="img"
+                height={isMobile ? 300 : 500}
+                image={product.imageUrl || "https://via.placeholder.com/500"}
+                alt={product.name}
+                sx={{ objectFit: 'contain', bgcolor: T.navyCard, p: { xs: 2, md: 4 } }}
+              />
+
+              {/* Botão compartilhar */}
+              <Box sx={{ position: 'absolute', bottom: 16, right: 16, zIndex: 2 }}>
+                <Tooltip title="Compartilhar">
+                  <IconButton
+                    onClick={handleOpenShareMenu}
+                    sx={{ bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, '&:hover': { borderColor: T.gold } }}
+                  >
+                    <ShareIcon sx={{ color: T.darkText }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Detalhes do produto */}
+          <Grid item xs={12} md={6}>
+            {/* Informações da loja */}
             {storeInfo?.company && (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  mb: 2,
-                  p: 1.5,
-                  backgroundColor: "#f9f9f9",
-                  borderRadius: 1,
-                }}
-              >
+              <Paper sx={{ 
+                bgcolor: T.navyCard, 
+                border: `1px solid ${T.darkBorder}`,
+                borderRadius: 2,
+                p: 2,
+                mb: 3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}>
                 <Badge
                   overlap="circular"
-                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                  badgeContent={
-                    storeInfo.company.verified ? (
-                      <VerifiedIcon color="primary" fontSize="small" />
-                    ) : null
-                  }
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  badgeContent={storeInfo.company.verified ? (
+                    <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: T.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${T.navyCard}` }}>
+                      <VerifiedIcon sx={{ fontSize: 10, color: T.white }} />
+                    </Box>
+                  ) : null}
                 >
-                  <Avatar
-                    src={storeInfo.company.logo}
-                    alt={storeInfo.company.nome}
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      mr: 2,
-                      border: `1px solid ${theme.palette.divider}`,
-                    }}
-                  />
+                  <Avatar src={storeInfo.company.logo} sx={{ width: 48, height: 48, border: `2px solid ${T.gold}` }}>
+                    {storeInfo.company.nome?.[0]}
+                  </Avatar>
                 </Badge>
-                <Link to={`/perfil/${storeInfo.company.id}`} style={{ textDecoration: "none", cursor: "pointer" }}>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight="bold" color="primary">
+
+                <Box sx={{ flex: 1 }}>
+                  <Link to={`/perfil/${storeInfo.company.id}`} style={{ textDecoration: 'none' }}>
+                    <Typography sx={{ fontWeight: 700, color: T.gold, '&:hover': { color: T.goldLight } }}>
                       {storeInfo.company.nome}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {storeInfo.company.provincia}
-                    </Typography>
-                  </Box>
-                </Link>
+                  </Link>
+                  <Typography variant="body2" sx={{ color: T.darkTextSub }}>
+                    {storeInfo.company.provincia}
+                  </Typography>
+                </Box>
+
                 <Button
                   component={Link}
                   to={`/loja/${store}`}
                   variant="outlined"
                   size="small"
                   startIcon={<StoreIcon />}
-                  sx={{ ml: "auto" }}
+                  sx={{ borderColor: T.darkBorder, color: T.darkText, '&:hover': { borderColor: T.gold, color: T.gold } }}
                 >
                   Ver Loja
                 </Button>
-              </Box>
+              </Paper>
             )}
-            <Typography variant={isMobile ? "h5" : "h4"} gutterBottom fontWeight="bold">
+
+            {/* Título */}
+            <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 800, color: T.white, mb: 2 }}>
               {product.name}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: "wrap", gap: 1 }}>
+
+            {/* Tags */}
+            <Stack direction="row" spacing={1} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
               <Chip
-                icon={<CategoryIcon />}
-                label={`Categoria: ${product.category || "Sem categoria"}`}
+                icon={<CategoryIcon sx={{ fontSize: 14 }} />}
+                label={product.category || "Sem categoria"}
                 size="small"
+                sx={{ bgcolor: 'rgba(200,144,58,0.12)', border: `1px solid rgba(200,144,58,0.25)`, color: T.goldLight }}
               />
               {product.sku && (
-                <Chip icon={<InventoryIcon />} label={`SKU: ${product.sku}`} size="small" />
+                <Chip
+                  icon={<InventoryIcon sx={{ fontSize: 14 }} />}
+                  label={`SKU: ${product.sku}`}
+                  size="small"
+                  sx={{ bgcolor: 'rgba(255,255,255,0.06)', border: `1px solid ${T.darkBorder}`, color: T.darkText }}
+                />
               )}
               <Chip
                 label={productType === "product" ? "Produto" : "Serviço"}
                 size="small"
-                color="primary"
-                variant="outlined"
+                sx={{ 
+                  bgcolor: productType === "product" ? 'rgba(200,144,58,0.12)' : 'rgba(16,185,129,0.12)',
+                  border: `1px solid ${productType === "product" ? 'rgba(200,144,58,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                  color: productType === "product" ? T.goldLight : T.success
+                }}
               />
-              {productType === "product" && product.qtd !== null && product.qtd !== undefined && (
-                <Chip icon={<InventoryIcon />} label={`Estoque: ${product.qtd}`} size="small" />
-              )}
-              {productType === "product" && product.nationalShipping && (
-                <Tooltip
-                  title={`Peso: ${Number(product.weight) || 0}kg | Dimensões: ${Number(product.height) || 0}x${Number(product.width) || 0}x${Number(product.length) || 0}cm`}
-                >
-                  <Chip
-                    icon={<LocalShippingIcon />}
-                    label="Envio Nacional"
-                    size="small"
-                    color="success"
-                    variant="outlined"
-                  />
-                </Tooltip>
+              {productType === "product" && product.qtd !== undefined && (
+                <Chip
+                  icon={<InventoryIcon sx={{ fontSize: 14 }} />}
+                  label={`Stock: ${product.qtd}`}
+                  size="small"
+                  sx={{ 
+                    bgcolor: Number(product.qtd) > 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                    border: `1px solid ${Number(product.qtd) > 0 ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                    color: Number(product.qtd) > 0 ? T.success : T.error
+                  }}
+                />
               )}
             </Stack>
-            <Typography variant="body1" color="text.secondary" paragraph>
+
+            {/* Descrição */}
+            <Typography sx={{ color: T.darkTextSub, lineHeight: 1.6, mb: 3 }}>
               {product.description || "Nenhuma descrição fornecida."}
             </Typography>
-            <Divider sx={{ my: 2 }} />
+
+            <Divider sx={{ my: 3, borderColor: T.darkBorder }} />
+
+            {/* Preço */}
             <Box sx={{ mb: 3 }}>
               {showPrices ? (
                 product.discountPrice ? (
-                  <>
-                    <Typography variant={isMobile ? "h5" : "h4"} color="error" fontWeight="bold">
-                      {formatPrice(Number(product.discountPrice))} MT
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{ textDecoration: "line-through", color: "text.secondary" }}
-                    >
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      <Typography variant={isMobile ? "h4" : "h3"} sx={{ fontWeight: 800, color: T.error }}>
+                        {formatPrice(Number(product.discountPrice))} MT
+                      </Typography>
+                      <Chip
+                        label={`-${Math.round(((Number(product.price) - Number(product.discountPrice)) / Number(product.price)) * 100)}%`}
+                        sx={{ bgcolor: 'rgba(239,68,68,0.18)', border: '1px solid rgba(239,68,68,0.3)', color: T.error, fontWeight: 700 }}
+                      />
+                    </Box>
+                    <Typography sx={{ color: T.darkMuted, textDecoration: 'line-through' }}>
                       {formatPrice(Number(product.price))} MT
                     </Typography>
-                  </>
+                  </Box>
                 ) : (
-                  <Typography variant={isMobile ? "h5" : "h4"} color="primary" fontWeight="bold">
+                  <Typography variant={isMobile ? "h4" : "h3"} sx={{ fontWeight: 800, color: T.gold }}>
                     {formatPrice(Number(product.price) || 0)} MT
                   </Typography>
                 )
               ) : (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <VisibilityOffIcon color="disabled" />
-                  <Typography variant="h6" color="text.secondary">
-                    Preço sob consulta
-                  </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VisibilityOffIcon sx={{ color: T.darkMuted }} />
+                  <Typography sx={{ color: T.darkMuted }}>Preço sob consulta</Typography>
                 </Box>
               )}
             </Box>
+
             {showPrices && productType === "product" && (
               <>
+                {/* Quantidade */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" gutterBottom>
+                  <Typography sx={{ fontWeight: 600, color: T.white, mb: 1, fontSize: '0.9rem' }}>
                     Quantidade:
                   </Typography>
                   <TextField
                     type="number"
                     value={quantity}
                     onChange={(e) => {
-                      const value = e.target.value;
-                      if (
-                        value === "" ||
-                        (Number(value) >= 1 && Number(value) <= Number(product.qtd || Infinity))
-                      ) {
-                        setQuantity(value);
+                      const val = e.target.value;
+                      if (val === "" || (Number(val) >= 1 && Number(val) <= Number(product.qtd || Infinity))) {
+                        setQuantity(val);
                       }
                     }}
                     onBlur={(e) => {
                       let val = parseInt(e.target.value);
                       if (isNaN(val) || val < 1) val = 1;
-                      if (product.qtd !== null && product.qtd !== undefined && val > Number(product.qtd)) val = Number(product.qtd);
+                      if (product.qtd && val > Number(product.qtd)) val = Number(product.qtd);
                       setQuantity(val);
                     }}
-                    inputProps={{
-                      min: 1,
-                      max: Number(product.qtd) || Infinity,
-                      "aria-label": `Quantidade (disponível: ${product.qtd || "Ilimitado"})`,
-                    }}
+                    inputProps={{ min: 1, max: Number(product.qtd) || Infinity }}
                     size="small"
-                    sx={{ width: "100px", mr: 2 }}
-                    error={product.qtd !== null && product.qtd !== undefined && quantity > Number(product.qtd)}
-                    helperText={
-                      product.qtd === null || product.qtd === undefined
-                        ? ""
-                        : Number(product.qtd) === 0
-                        ? "Sem stock disponível"
-                        : quantity > Number(product.qtd)
-                        ? `Quantidade máxima: ${product.qtd}`
-                        : ""
-                    }
-                    disabled={product.qtd !== null && product.qtd !== undefined && Number(product.qtd) === 0}
+                    sx={{ 
+                      width: '120px',
+                      '& .MuiOutlinedInput-root': { 
+                        bgcolor: 'rgba(255,255,255,0.06)', 
+                        color: T.white,
+                        '& fieldset': { borderColor: T.darkBorder },
+                        '&:hover fieldset': { borderColor: T.gold }
+                      }
+                    }}
+                    disabled={outOfStock}
                   />
                 </Box>
-                <Box
-                  sx={{
-                    backgroundColor: "#f5f5f5",
-                    p: 2,
-                    borderRadius: 1,
-                    mb: 3,
-                  }}
-                >
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                    Resumo do Pedido
-                  </Typography>
-                  <Stack spacing={1}>
-                    <Box display="flex" justifyContent="space-between">
-                      <Typography variant="body2">Subtotal ({quantity} itens):</Typography>
-                      <Typography variant="body2">{formatPrice(subtotal)} MT</Typography>
+
+                {/* Frete */}
+                {product.nationalShipping && (
+                  <Paper sx={{ bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2, mb: 3, overflow: 'hidden' }}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', p: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}
+                      onClick={() => setShowShippingDetails(!showShippingDetails)}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocalShippingIcon sx={{ color: T.gold }} />
+                        <Typography sx={{ fontWeight: 600, color: T.white }}>Frete Nacional</Typography>
+                      </Box>
+                      {showShippingDetails ? <ExpandLessIcon sx={{ color: T.darkMuted }} /> : <ExpandMoreIcon sx={{ color: T.darkMuted }} />}
                     </Box>
-                    {productType === "product" && product.nationalShipping && (
+
+                    <Collapse in={showShippingDetails}>
+                      <Box sx={{ p: 2, borderTop: `1px solid ${T.darkBorder}` }}>
+                        {shippingError ? (
+                          <Alert severity="warning" icon={<WarningIcon />} sx={{ bgcolor: 'rgba(245,158,11,0.12)', color: T.warning, border: '1px solid rgba(245,158,11,0.25)' }}>
+                            {shippingError}
+                          </Alert>
+                        ) : shippingCalculated ? (
+                          <>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: T.darkTextSub }}>
+                              <Typography>Peso total:</Typography>
+                              <Typography sx={{ color: T.white, fontWeight: 600 }}>{(Number(product.weight) * quantity).toFixed(2)} kg</Typography>
+                            </Box>
+                            <Divider sx={{ borderColor: T.darkBorder, my: 2 }} />
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Typography sx={{ fontWeight: 600, color: T.white }}>Valor do frete:</Typography>
+                              <Typography sx={{ fontWeight: 700, color: T.gold, fontSize: '1.1rem' }}>
+                                {formatPrice(shippingCost)} MT
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" sx={{ color: T.darkMuted, display: 'block', mt: 1 }}>
+                              Taxa base: {formatPrice(BASE_SHIPPING_FEE)} MT + {SHIPPING_RATE_PER_KG} MT/kg
+                            </Typography>
+                          </>
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <CircularProgress size={20} sx={{ color: T.gold }} />
+                            <Typography sx={{ color: T.darkText }}>Calculando frete...</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Collapse>
+                  </Paper>
+                )}
+
+                {/* Resumo */}
+                <Paper sx={{ bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2, p: 2, mb: 3 }}>
+                  <Typography sx={{ fontWeight: 700, color: T.white, mb: 2 }}>Resumo</Typography>
+                  <Stack spacing={1.5}>
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography sx={{ color: T.darkTextSub }}>Subtotal ({quantity} {quantity === 1 ? 'item' : 'itens'}):</Typography>
+                      <Typography sx={{ color: T.white, fontWeight: 600 }}>{formatPrice(subtotal)} MT</Typography>
+                    </Box>
+                    {product.nationalShipping && shippingCalculated && (
                       <Box display="flex" justifyContent="space-between">
-                        <Typography variant="body2">Frete:</Typography>
-                        <Typography variant="body2">{formatPrice(shippingCost)} MT</Typography>
+                        <Typography sx={{ color: T.darkTextSub }}>Frete:</Typography>
+                        <Typography sx={{ color: T.white, fontWeight: 600 }}>{formatPrice(shippingCost)} MT</Typography>
                       </Box>
                     )}
-                    <Divider />
+                    <Divider sx={{ borderColor: T.darkBorder }} />
                     <Box display="flex" justifyContent="space-between">
-                      <Typography variant="body1" fontWeight="bold">Total:</Typography>
-                      <Typography variant="body1" fontWeight="bold" color="primary">
-                        {formatPrice(totalWithIva)} MT
-                      </Typography>
+                      <Typography sx={{ fontWeight: 700, color: T.white }}>Total:</Typography>
+                      <Typography sx={{ fontWeight: 800, color: T.gold, fontSize: '1.2rem' }}>{formatPrice(total)} MT</Typography>
                     </Box>
                   </Stack>
-                </Box>
+                </Paper>
+
+                {/* Botões de ação */}
+                {!isOwner ? (
+                  <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<ShoppingCartIcon />}
+                      onClick={addToCart}
+                      disabled={outOfStock || (product.nationalShipping && !shippingCalculated && !shippingError)}
+                      sx={{ 
+                        bgcolor: 'rgba(200,144,58,0.18)', 
+                        color: T.gold, 
+                        border: `1px solid rgba(200,144,58,0.25)`,
+                        py: 1.2,
+                        '&:hover': { bgcolor: 'rgba(200,144,58,0.28)' },
+                        '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.06)', color: T.darkMuted, borderColor: T.darkBorder }
+                      }}
+                    >
+                      {outOfStock ? "Sem Stock" : (product.nationalShipping && !shippingCalculated ? "Calculando..." : "Carrinho")}
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<PaymentIcon />}
+                      onClick={handlePayment}
+                      disabled={outOfStock || (product.nationalShipping && !shippingCalculated && !shippingError)}
+                      sx={{ 
+                        bgcolor: T.gold, 
+                        color: T.navy, 
+                        py: 1.2,
+                        '&:hover': { bgcolor: T.goldLight },
+                        '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.06)', color: T.darkMuted, borderColor: T.darkBorder }
+                      }}
+                    >
+                      {outOfStock ? "Indisponível" : (product.nationalShipping && !shippingCalculated ? "Frete indisponível" : "Pagar")}
+                    </Button>
+                  </Box>
+                ) : (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<StoreIcon />}
+                    onClick={() => navigate(`/loja/${store}`)}
+                    sx={{ bgcolor: 'rgba(200,144,58,0.18)', color: T.gold, border: `1px solid rgba(200,144,58,0.25)`, py: 1.5 }}
+                  >
+                    Ver na Loja
+                  </Button>
+                )}
               </>
             )}
-            <Box sx={{ display: "flex", gap: 2 }}>
-              {showPrices && productType === "product" ? (
-                <>
-                  {user?.id !== storeInfo?.company?.id && (
-                    <>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<ShoppingCartIcon />}
-                        onClick={addToCart}
-                        sx={{ flex: 1 }}
-                        disabled={product.qtd !== null && product.qtd !== undefined && Number(product.qtd) === 0}
-                      >
-                        Adicionar ao Carrinho
-                      </Button>
-                      <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<PaymentIcon />}
-                        onClick={handlePayment}
-                        sx={{ flex: 1 }}
-                        disabled={product.qtd !== null && product.qtd !== undefined && Number(product.qtd) === 0}
-                      >
-                        Pagar Agora
-                      </Button>
-                    </>
-                  )}
-                </>
-              ) : (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<StoreIcon />}
-                  onClick={() => navigate(`/loja/${store}`)}
-                  sx={{ flex: 1 }}
-                >
-                  Contactar Loja
-                </Button>
-              )}
-            </Box>
-          </CardContent>
-        </Box>
-      </Box>
 
-      <Menu
-        anchorEl={shareAnchorEl}
-        open={Boolean(shareAnchorEl)}
-        onClose={handleCloseShareMenu}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-      >
-        <MenuItem onClick={() => shareOnPlatform("whatsapp")}>
-          <ListItemIcon>
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/124/124034.png"
-              alt="WhatsApp"
-              width={24}
-              height={24}
-            />
-          </ListItemIcon>
-          <ListItemText>WhatsApp</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform("facebook")}>
-          <ListItemIcon>
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/124/124010.png"
-              alt="Facebook"
-              width={24}
-              height={24}
-            />
-          </ListItemIcon>
-          <ListItemText>Facebook</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform("twitter")}>
-          <ListItemIcon>
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/124/124021.png"
-              alt="Twitter"
-              width={24}
-              height={24}
-            />
-          </ListItemIcon>
-          <ListItemText>Twitter</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => shareOnPlatform("copy")}>
-          <ListItemIcon>
-            <ShareIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Copiar link</ListItemText>
-        </MenuItem>
-      </Menu>
+            {(!showPrices || productType === "service") && (
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<StoreIcon />}
+                onClick={() => navigate(`/loja/${store}`)}
+                sx={{ bgcolor: 'rgba(200,144,58,0.18)', color: T.gold, border: `1px solid rgba(200,144,58,0.25)`, py: 1.5 }}
+              >
+                Contactar Loja
+              </Button>
+            )}
+          </Grid>
+        </Grid>
 
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={6000}
-        onClose={() => setOpenSnackbar(false)}
-        anchorOrigin={{ vertical: isMobile ? "bottom" : "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={() => setOpenSnackbar(false)}
-          severity={snackbarSeverity}
-          sx={{ width: "100%" }}
-          variant="filled"
+        {/* Menu de compartilhamento */}
+        <Menu
+          anchorEl={shareAnchorEl}
+          open={Boolean(shareAnchorEl)}
+          onClose={handleCloseShareMenu}
+          PaperProps={{ sx: { bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2 } }}
         >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Container>
+          {[
+            { key: 'whatsapp', label: 'WhatsApp', src: 'https://cdn-icons-png.flaticon.com/512/124/124034.png' },
+            { key: 'facebook', label: 'Facebook', src: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' },
+            { key: 'twitter', label: 'Twitter', src: 'https://cdn-icons-png.flaticon.com/512/124/124021.png' },
+          ].map((s) => (
+            <MenuItem key={s.key} onClick={() => shareOnPlatform(s.key)} sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}>
+              <ListItemIcon><Box component="img" src={s.src} alt={s.label} sx={{ width: 20, height: 20 }} /></ListItemIcon>
+              <ListItemText>{s.label}</ListItemText>
+            </MenuItem>
+          ))}
+          <MenuItem onClick={() => shareOnPlatform('copy')} sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}>
+            <ListItemIcon><ShareIcon sx={{ fontSize: 18, color: T.gold }} /></ListItemIcon>
+            <ListItemText>Copiar link</ListItemText>
+          </MenuItem>
+        </Menu>
+        {/* Snackbar */}
+        <Snackbar open={openSnackbar} autoHideDuration={4000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: isMobile ? 'bottom' : 'top', horizontal: 'center' }}>
+          <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} variant="filled" sx={{ borderRadius: 2 }}>
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </Box>
   );
 };
 

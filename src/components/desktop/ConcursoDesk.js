@@ -434,10 +434,10 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
             backgroundColor: '#ef6c00',
           },
         }}>
-        Ativar Módulo Mercado
+        Ativar Módulo Alerta
       </Button>
     }>
-   O módulo <strong>SMS</strong> está inativo. Ative-o agora para acessar todos os recursos!
+   O módulo <strong>Alerta</strong> está inativo. Ative-o agora para acessar todos os recursos!
   </Alert>
 )}
                     {/* Concursos tabs and list for users with active module */}

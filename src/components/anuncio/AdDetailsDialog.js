@@ -88,7 +88,6 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
     setAdStats(prev => ({ ...prev, loadingStats: true }));
     
     try {
-      console.log('Fetching ad stats for ad ID:', adId);
 
       // Buscar métricas do anúncio específico
       const metricsRef = ref(db, `anuncios_metrics/${adId}`);
@@ -96,7 +95,6 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
       const result = await new Promise((resolve) => {
         onValue(metricsRef, async (snapshot) => {
           const metricsData = snapshot.val();
-          console.log('Raw metrics data:', metricsData);
 
           let totalClicks = metricsData?.total_cliques || 0;
           const companiesStats = {};
@@ -196,8 +194,7 @@ const AdDetailsDialog = ({ open, onClose, ad }) => {
       // Classificar empresas por interesse
       const companiesWithInterest = classifyCompaniesByInterest(companiesArray);
 
-      console.log('Companies with clicks:', companiesArray);
-      console.log('High interest companies:', companiesWithInterest.filter(c => c.clicks >= 3));
+  
 
       setAdStats({
         clicks: totalClicks,

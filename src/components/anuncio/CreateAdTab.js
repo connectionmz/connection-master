@@ -386,7 +386,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
                 <CardContent>
                   {hasSMSModule && (
                     <Alert severity="info" sx={{ mb: 3 }}>
-                      Como você tem o módulo SMS ativo, este anúncio será criado sem custos adicionais.
+                      Por possui o módulo anúnciar ativo, este anúncio será criado sem custos adicionais.
                     </Alert>
                   )}
 
@@ -541,7 +541,7 @@ const CreateAdTab = ({ user, onAdCreated }) => {
 
                   {hasSMSModule && (
                     <Alert severity="success" sx={{ mb: 2 }}>
-                      <strong>Módulo SMS ativo:</strong> Sem custos adicionais
+                      <strong>Módulo Anúncio ativo:</strong> Sem custos adicionais
                     </Alert>
                   )}
 

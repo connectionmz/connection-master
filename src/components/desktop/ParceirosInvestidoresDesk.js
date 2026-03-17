@@ -188,7 +188,6 @@ const ParceirosInvestidoresDesk = () => {
         
         if (snapshot.exists()) {
           const allCompanies = Object.values(snapshot.val());
-          console.log(allCompanies)
           
           setCompanies({
             parceiros: allCompanies.filter(c => c.tipo === 'Parceiro'),
@@ -197,7 +196,6 @@ const ParceirosInvestidoresDesk = () => {
           });
         }
       } catch (error) {
-        console.error('Erro ao buscar dados:', error);
       } finally {
         setLoading(false);
       }

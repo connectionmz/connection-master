@@ -131,7 +131,6 @@ const AuthCreateDesk = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState({
     email: false,
     password: false
@@ -144,7 +143,6 @@ const AuthCreateDesk = () => {
   const [securityChecklist, setSecurityChecklist] = useState({
     emailValid: false,
     passwordStrong: false,
-    termsAccepted: false,
     captchaVerified: false
   });
 
@@ -194,10 +192,9 @@ const AuthCreateDesk = () => {
     setSecurityChecklist({
       emailValid: SecurityUtils.validateEmail(formData.email),
       passwordStrong: SecurityUtils.calculatePasswordStrength(formData.password) >= SECURITY_CONFIG.MIN_PASSWORD_STRENGTH,
-      termsAccepted: termsAccepted,
       captchaVerified: false
     });
-  }, [formData, termsAccepted]);
+  }, [formData]);
 
   const handleFailedCreationAttempt = () => {
     const newAttempts = creationAttempts + 1;
@@ -364,11 +361,6 @@ const AuthCreateDesk = () => {
       setErrorMessage('Senha muito fraca. Use letras maiúsculas, minúsculas, números e caracteres especiais.');
     }
     
-    if (!termsAccepted) {
-      hasError = true;
-      setErrorMessage('Você deve aceitar os Termos de Uso e a Política de Privacidade.');
-    }
-    
     setErrors(newErrors);
     return !hasError;
   };
@@ -419,7 +411,6 @@ const AuthCreateDesk = () => {
         
         setSuccessMessage('Conta criada com sucesso!');
         setFormData({ email: '', password: '' });
-        setTermsAccepted(false);
         
         setShowSecurityDialog(false);
       });
@@ -437,7 +428,7 @@ const AuthCreateDesk = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, termsAccepted, saveUserData, isLockedOut, lastSubmitTime, lockoutUntil]);
+  }, [formData, saveUserData, isLockedOut, lastSubmitTime, lockoutUntil]);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -472,11 +463,6 @@ const AuthCreateDesk = () => {
               <Box component="li" color={securityChecklist.passwordStrong ? 'success.main' : 'text.secondary'}>
                 <Typography variant="body2">
                   Senha forte: {securityChecklist.passwordStrong ? '✓' : '...'}
-                </Typography>
-              </Box>
-              <Box component="li" color={securityChecklist.termsAccepted ? 'success.main' : 'text.secondary'}>
-                <Typography variant="body2">
-                  Termos aceitos: {securityChecklist.termsAccepted ? '✓' : '...'}
                 </Typography>
               </Box>
               <Box component="li" color={securityChecklist.captchaVerified ? 'success.main' : 'text.secondary'}>
@@ -661,36 +647,6 @@ const AuthCreateDesk = () => {
               />
 
               <PasswordStrengthIndicator />
-              
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={termsAccepted}
-                    onChange={() => setTermsAccepted(!termsAccepted)}
-                    name="terms"
-                    color="primary"
-                    disabled={isLockedOut}
-                    sx={{
-                      '&.Mui-checked': {
-                        color: 'primary.main',
-                      }
-                    }}
-                  />
-                }
-                label={
-                  <Typography variant="body2">
-                    Eu concordo com os{' '}
-                    <Link href="/termos" sx={{ fontWeight: 600 }}>
-                      Termos de Uso
-                    </Link>{' '}
-                    e{' '}
-                    <Link href="/politica" sx={{ fontWeight: 600 }}>
-                      Política de Privacidade
-                    </Link>
-                  </Typography>
-                }
-                sx={{ mb: 2 }}
-              />
               
               <Button
                 type="submit"

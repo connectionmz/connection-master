@@ -94,6 +94,8 @@ import Eventos from '../desktop/Eventos';
 import Checkout from '../checkout/Checkout';
 import VerEvento from '../desktop/VerEvento';
 import SelectAccountType from '../SelectAccountType';
+import Home from '../Home';
+import Dashboard from '../Dashboard';
 
 const theme = createTheme({
   palette: {
@@ -298,7 +300,6 @@ const DesktopRoutes = ({ user }) => {
       setHasFeedback(true);
       handleCloseFeedbackModal();
     } catch (error) {
-      console.error('Erro ao salvar feedback:', error);
       alert('Erro ao enviar feedback. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -312,7 +313,7 @@ const DesktopRoutes = ({ user }) => {
   return (
     <ThemeProvider theme={theme}>
       <ActiveModulesProvider userId={user?.id}>
-        <Box sx={{ minHeight: '100vh', backgroundColor: '#F1F1F1', display: 'flex', flexDirection: 'column' }}>
+        <Box>
           {!isFullScreenRoute && (
             <>
               {!user ? (
@@ -323,17 +324,16 @@ const DesktopRoutes = ({ user }) => {
                 <HeaderDesk user={user} />
               )}
             </>
-          )}
-          
-          <Box component="main" sx={{ flex: 1, width: '100%', maxWidth: isFullScreenRoute ? '100%' : isMobile ? '100%' : '1200px', margin: '0 auto', padding: isFullScreenRoute ? '0' : isMobile ? '8px' : '24px', boxSizing: 'border-box', pb: 4 }}>
+          )}        
+          <Box >
             <Routes>
               {/* Rotas públicas */}
-              <Route path="/" element={<DashboardComponent user={user} />} />
+              <Route path="/" element={<Dashboard user={user} />} />
+              <Route path="/explorar" element={<ExploreDesk user={user} />} />
               <Route path="/feed" element={<FeedDesk user={user} />} />
               <Route path="/verEvento/:id" element={<VerEvento user={user} />} />
               <Route path="/teste" element={<Teste user={user} />} />
-              <Route path="/perfil/:id" element={<CompanyProfileDesk user={user} />} />
-              <Route path="/empresas" element={<ExploreDesk user={user} />} />
+              <Route path="/empresa/:id" element={<CompanyProfileDesk user={user} />} />
               <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
               <Route path="/sobre" element={<Sobre />} />
               <Route path="/noticias" element={<NoticiadosDesk />} />
