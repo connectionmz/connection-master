@@ -177,17 +177,17 @@ const FooterDesk = () => {
   const contactInfo = [
     { icon: <LocationOn />, text: "Av. 24 de Julho, 123 - Maputo, Moçambique", link: null },
     { icon: <Phone />, text: "+258 21 123 456", link: "tel:+25821123456" },
-    { icon: <Email />, text: "geral@bizmoz.co.mz", link: "mailto:geral@bizmoz.co.mz" },
+    { icon: <Email />, text: "admin@connectionmozambique.com", link: "mailto:admin@connectionmozambique.co.mz" },
     { icon: <Clock />, text: "Seg - Sex: 8:00 - 17:00", link: null },
   ];
 
   const socialLinks = [
-    { icon: <Facebook />, url: "https://facebook.com/bizmoz", label: "Facebook", color: "#1877F2" },
-    { icon: <Instagram />, url: "https://instagram.com/bizmoz", label: "Instagram", color: "#E4405F" },
-    { icon: <LinkedIn />, url: "https://linkedin.com/company/bizmoz", label: "LinkedIn", color: "#0A66C2" },
-    { icon: <X />, url: "https://x.com/bizmoz", label: "X (Twitter)", color: "#000000" },
+    { icon: <Facebook />, url: "https://facebook.com/connectionmozambique", label: "Facebook", color: "#1877F2" },
+    { icon: <Instagram />, url: "https://instagram.com/connectionmozambique", label: "Instagram", color: "#E4405F" },
+    { icon: <LinkedIn />, url: "https://linkedin.com/company/connectionmozambique", label: "LinkedIn", color: "#0A66C2" },
+    { icon: <X />, url: "https://x.com/connectionmozambique", label: "X (Twitter)", color: "#000000" },
     { icon: <WhatsApp />, url: "https://wa.me/25821123456", label: "WhatsApp", color: "#25D366" },
-    { icon: <Language />, url: "https://bizmoz.co.mz", label: "Website", color: T.gold },
+    { icon: <Language />, url: "https://connectionmozambique.co.mz", label: "Website", color: T.gold },
   ];
 
   const certificates = [
@@ -345,17 +345,8 @@ const FooterDesk = () => {
                   gap: 1
                 }}
               >
-                <Box component="span" sx={{ color: T.gold }}>Biz</Box>Moz
-                <Chip
-                  label="Beta"
-                  size="small"
-                  sx={{
-                    bgcolor: T.gold,
-                    color: T.white,
-                    fontSize: '0.6rem',
-                    height: 20
-                  }}
-                />
+                <Box component="span" sx={{ color: T.gold }}>Connection Mozambique</Box>
+                
               </Typography>
               
               <Typography sx={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, mb: 3 }}>
@@ -560,8 +551,8 @@ const FooterDesk = () => {
         >
           <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
             <small>
-              © {new Date().getFullYear()} BizMoz - Plataforma Empresarial de Moçambique. 
-              Todos os direitos reservados. Desenvolvido com ❤️ em Maputo.
+              © {new Date().getFullYear()} Connection Mozambique, LDA - Plataforma Empresarial de Moçambique. 
+              Todos os direitos reservados.
             </small>
           </Typography>
 
