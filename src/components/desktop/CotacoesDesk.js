@@ -29,6 +29,9 @@ import {
     Badge,
     Fade,
     Grid,
+    Menu,
+    MenuItem,
+    ListItemIcon,
 } from '@mui/material';
 import { 
     Delete, 
@@ -45,10 +48,18 @@ import {
     VisibilityOff,
     Warning,
     Close,
+    Reply,
+    Phone,
+    Email,
+    WhatsApp,
+    MoreVert,
+    Receipt,
+    Person,
+    Store
 } from '@mui/icons-material';
-import { ref, onValue, update, remove, set, get } from 'firebase/database';
+import { ref, onValue, update, remove, set, get, query, orderByChild, equalTo } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../../fb';
+import { db, auth } from '../../fb';
 import EditarCotacao from './EditarCotacao'; 
 import { useActiveModules } from '../../context/ActiveModulesContext';
 
@@ -105,6 +116,21 @@ const KEYFRAMES = `
     .cotacao-card.unread {
         border-left: 3px solid ${T.gold};
     }
+    .quote-card {
+        background: ${T.navyCard};
+        border: 1px solid ${T.darkBorder};
+        border-radius: 16px;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 12px;
+    }
+    .quote-card:hover {
+        transform: translateY(-2px);
+        border-color: ${T.gold} !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2) !important;
+    }
+    .quote-card.unread {
+        border-left: 3px solid ${T.gold};
+    }
 `;
 
 const BG_GRID = {
@@ -115,13 +141,18 @@ const BG_GRID = {
 
 const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
+    const [quotesReceived, setQuotesReceived] = useState([]); // Cotações recebidas da loja
     const [activeTab, setActiveTab] = useState('recentes');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [isPaying, setIsPaying] = useState(false);   
     const [loading, setLoading] = useState(true);
     const [clickedCotacoes, setClickedCotacoes] = useState({});
+    const [clickedQuotes, setClickedQuotes] = useState({});
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [selectedCotacao, setSelectedCotacao] = useState(null);
+    const [selectedQuote, setSelectedQuote] = useState(null);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedQuoteForMenu, setSelectedQuoteForMenu] = useState(null);
     
     const { activeModules, isLoading: modulesLoading } = useActiveModules();
     const navigate = useNavigate();
@@ -130,6 +161,35 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     const isModuleActive = activeModules?.moduloSMS || !user;
 
+    // Buscar cotações recebidas (solicitações de clientes)
+    useEffect(() => {
+        if (!isModuleActive || !user?.id) return;
+
+        const quotesRef = ref(db, `quotes/${user.id}`);
+        const unsubscribeQuotes = onValue(quotesRef, (snapshot) => {
+            const quotesData = snapshot.val();
+
+            if (quotesData) {
+                const quotesArray = Object.entries(quotesData).map(([id, quote]) => ({
+                    id,
+                    ...quote,
+                    type: 'received_quote',
+                    isClicked: clickedQuotes[id] || false
+                }));
+                
+                // Ordenar por data mais recente
+                setQuotesReceived(quotesArray.sort((a, b) => 
+                    new Date(b.createdAt) - new Date(a.createdAt)
+                ));
+            } else {
+                setQuotesReceived([]);
+            }
+        });
+        
+        return () => unsubscribeQuotes();
+    }, [user?.id, isModuleActive, clickedQuotes]);
+
+    // Buscar cotações publicadas (normais)
     useEffect(() => {
         if (!isModuleActive || !user?.id) return;
 
@@ -150,14 +210,16 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                 id,
                                 ...cotacao,
                                 status: 'Expirada',
-                                isClicked: prevClickedCotacoes[id] || false
+                                isClicked: prevClickedCotacoes[id] || false,
+                                type: 'published_quote'
                             };
                         }
                         
                         return {
                             id,
                             ...cotacao,
-                            isClicked: prevClickedCotacoes[id] || false
+                            isClicked: prevClickedCotacoes[id] || false,
+                            type: 'published_quote'
                         };
                     });
                     
@@ -199,6 +261,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         return () => unsubscribeCotacoes();
     }, [user?.id, user?.provincia, user?.sector, activeTab, isModuleActive]);
 
+    // Carregar status de clique para cotações normais
     useEffect(() => {
         if (!isModuleActive || !user?.id) return;
 
@@ -225,6 +288,35 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         };
 
         loadClickedStatus();
+    }, [user?.id, isModuleActive]);
+
+    // Carregar status de clique para cotações recebidas
+    useEffect(() => {
+        if (!isModuleActive || !user?.id) return;
+
+        const loadClickedQuotesStatus = async () => {
+            try {
+                const quotesRef = ref(db, `quotes/${user.id}`);
+                onValue(quotesRef, (snapshot) => {
+                    const quotesData = snapshot.val();
+                    const clickedStatus = {};
+
+                    if (quotesData) {
+                        Object.entries(quotesData).forEach(([quoteId, quote]) => {
+                            if (quote.viewed) {
+                                clickedStatus[quoteId] = true;
+                            }
+                        });
+                    }
+
+                    setClickedQuotes(clickedStatus);
+                });
+            } catch (error) {
+                console.error('Error loading clicked quotes status:', error);
+            }
+        };
+
+        loadClickedQuotesStatus();
     }, [user?.id, isModuleActive]);
 
     const isDateValid = (dateString) => {
@@ -274,36 +366,110 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         }
     };
 
-    const filteredCotacoes = () => {
+    // Marcar cotação recebida como visualizada
+    const markQuoteAsViewed = async (quoteId) => {
+        if (user && isModuleActive && !clickedQuotes[quoteId]) {
+            try {
+                await update(ref(db, `quotes/${user.id}/${quoteId}`), {
+                    viewed: true,
+                    viewedAt: new Date().toISOString()
+                });
+                setClickedQuotes(prev => ({
+                    ...prev,
+                    [quoteId]: true
+                }));
+            } catch (error) {
+                console.error('Error marking quote as viewed:', error);
+            }
+        }
+    };
+
+    const handleQuoteClick = (quote) => {
+        markQuoteAsViewed(quote.id);
+        setSelectedQuote(quote);
+        // Opcional: abrir modal com detalhes ou navegar para página de detalhes
+        // navigate(`/cotacao-recebida/${quote.id}`);
+    };
+
+    const handleQuoteResponse = (quote, type) => {
+        setSelectedQuoteForMenu(quote);
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setSelectedQuoteForMenu(null);
+    };
+
+    const handleContactCustomer = (type, quote) => {
+        const customerContact = quote.customerContact;
+        const customerEmail = quote.customerEmail;
+        
+        if (type === 'whatsapp' && customerContact) {
+            const message = `Olá! Recebi sua solicitação de cotação para ${quote.productName} através da Connection Mozambique. Gostaria de responder à sua solicitação.`;
+            const whatsappUrl = `https://wa.me/${customerContact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        } else if (type === 'phone' && customerContact) {
+            window.location.href = `tel:${customerContact}`;
+        } else if (type === 'email' && customerEmail) {
+            const subject = `Resposta à sua cotação - ${quote.productName}`;
+            const body = `Olá! Recebi sua solicitação de cotação para ${quote.productName}. Gostaria de responder à sua solicitação.`;
+            window.location.href = `mailto:${customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
+        
+        handleMenuClose();
+    };
+
+    const getFilteredItems = () => {
         const now = new Date();
+        const userCotacoes = cotacoes.filter(c => 
+            c.company?.id === user?.id || 
+            c.userId === user?.id || 
+            c.createdBy === user?.id
+        );
+        
         switch (activeTab) {
             case 'recentes':
-                return cotacoes.filter(
-                    (cotacao) => new Date(cotacao.datalimite) >= now && 
-                                cotacao.status !== 'Fechada' &&
-                                cotacao.status !== 'Expirada' &&
-                                cotacao.company?.id !== user?.id 
-                );
+                return {
+                    published: cotacoes.filter(
+                        (cotacao) => new Date(cotacao.datalimite) >= now && 
+                                    cotacao.status !== 'Fechada' &&
+                                    cotacao.status !== 'Expirada' &&
+                                    cotacao.company?.id !== user?.id 
+                    ),
+                    received: quotesReceived.filter(quote => quote.status === 'pending')
+                };
             case 'expiradas':
-                return cotacoes.filter(
-                    (cotacao) => (new Date(cotacao.datalimite) < now || 
-                                 cotacao.status === 'Expirada') && 
-                                cotacao.status !== 'Fechada'
-                );
+                return {
+                    published: cotacoes.filter(
+                        (cotacao) => (new Date(cotacao.datalimite) < now || 
+                                     cotacao.status === 'Expirada') && 
+                                    cotacao.status !== 'Fechada'
+                    ),
+                    received: quotesReceived.filter(quote => quote.status === 'expired')
+                };
             case 'fechada':
-                return cotacoes.filter(
-                    (cotacao) => cotacao.status === 'Fechada'
-                );
+                return {
+                    published: cotacoes.filter(
+                        (cotacao) => cotacao.status === 'Fechada'
+                    ),
+                    received: quotesReceived.filter(quote => quote.status === 'answered')
+                };
             case 'minhas':
-                return user 
-                    ? cotacoes.filter(cotacao => 
-                        cotacao.company?.id === user.id || 
-                        cotacao.userId === user.id ||
-                        cotacao.createdBy === user.id
-                      )
-                    : [];
+                return {
+                    published: userCotacoes,
+                    received: []
+                };
+            case 'recebidas':
+                return {
+                    published: [],
+                    received: quotesReceived
+                };
             default:
-                return cotacoes;
+                return {
+                    published: cotacoes,
+                    received: quotesReceived
+                };
         }
     };
 
@@ -345,6 +511,18 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         return 'Ativa';
     };
 
+    const getQuoteStatusColor = (quote) => {
+        if (quote.status === 'answered') return T.success;
+        if (quote.status === 'expired') return T.error;
+        return T.gold;
+    };
+
+    const getQuoteStatusLabel = (quote) => {
+        if (quote.status === 'answered') return 'Respondida';
+        if (quote.status === 'expired') return 'Expirada';
+        return 'Pendente';
+    };
+
     const renderCotacoes = () => {
         if (loading) {
             return (
@@ -354,8 +532,19 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             );
         }
     
-        const cotacoesFiltradas = filteredCotacoes();
-        if (cotacoesFiltradas.length === 0) {
+        const { published, received } = getFilteredItems();
+        const totalItems = published.length + received.length;
+        
+        if (totalItems === 0) {
+            let message = '';
+            if (activeTab === 'recebidas') {
+                message = 'Nenhuma solicitação de cotação recebida';
+            } else if (activeTab === 'minhas') {
+                message = 'Você ainda não publicou nenhuma cotação';
+            } else {
+                message = 'Não há cotações disponíveis no momento';
+            }
+            
             return (
                 <Paper sx={{ 
                     p: 6, 
@@ -368,190 +557,430 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         <Warning sx={{ fontSize: 48, color: T.darkMuted }} />
                     </Box>
                     <Typography sx={{ color: T.darkText, fontSize: '1.1rem', mb: 1 }}>
-                        Nenhum pedido de cotação disponível
+                        {message}
                     </Typography>
-                    <Typography sx={{ color: T.darkTextSub, fontSize: '0.9rem' }}>
-                        {activeTab === 'minhas' ? 'Você ainda não publicou nenhuma cotação' : 'Não há cotações disponíveis no momento'}
-                    </Typography>
+                    {activeTab === 'recebidas' && (
+                        <Typography sx={{ color: T.darkTextSub, fontSize: '0.9rem' }}>
+                            Quando clientes solicitarem cotações através da sua loja, elas aparecerão aqui.
+                        </Typography>
+                    )}
                 </Paper>
             );
         }
     
         return (
             <Box className="fade-up">
-                {cotacoesFiltradas.map((cotacao, index) => (
-                    <Card 
-                        key={cotacao.id} 
-                        className={`cotacao-card ${!clickedCotacoes[cotacao.id] && user ? 'unread' : ''}`}
-                        sx={{ 
-                            animation: `fadeUp 0.5s ease ${index * 0.05}s both`,
-                        }}
-                    >
-                        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                            <Grid container spacing={2}>
-                                {/* Left side - Company Info */}
-                                <Grid item xs={12} sm={8} md={9}>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                                        <Avatar 
-                                            src={cotacao.company?.logoUrl} 
-                                            sx={{ 
-                                                width: 56, 
-                                                height: 56, 
-                                                border: `2px solid ${T.gold}`,
-                                                bgcolor: T.navy,
-                                            }}
-                                        >
-                                            {cotacao.company?.nome?.charAt(0)}
-                                        </Avatar>
-                                        
-                                        <Box sx={{ flex: 1 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-                                                <Typography 
-                                                    variant="h6" 
+                {/* Cotações Recebidas (da loja) */}
+                {received.length > 0 && (
+                    <Box sx={{ mb: 4 }}>
+                        <Typography 
+                            variant="h6" 
+                            sx={{ 
+                                color: T.gold, 
+                                mb: 2, 
+                                fontFamily: '"Playfair Display", serif',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1
+                            }}
+                        >
+                            <Receipt sx={{ fontSize: 24 }} /> Solicitações Recebidas ({received.length})
+                        </Typography>
+                        
+                        {received.map((quote, index) => (
+                            <Card 
+                                key={quote.id} 
+                                className={`quote-card ${!clickedQuotes[quote.id] ? 'unread' : ''}`}
+                                sx={{ 
+                                    animation: `fadeUp 0.5s ease ${index * 0.05}s both`,
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => handleQuoteClick(quote)}
+                            >
+                                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12} sm={8} md={9}>
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                                                <Avatar 
                                                     sx={{ 
-                                                        fontFamily: '"Playfair Display", serif',
-                                                        fontWeight: 700,
-                                                        color: T.white,
-                                                        fontSize: { xs: '1rem', sm: '1.1rem' }
+                                                        width: 56, 
+                                                        height: 56, 
+                                                        border: `2px solid ${T.gold}`,
+                                                        bgcolor: T.navy,
                                                     }}
                                                 >
-                                                    {cotacao.title}
-                                                </Typography>
-                                                <Chip
-                                                    label={getStatusLabel(cotacao)}
+                                                    <Person sx={{ fontSize: 28 }} />
+                                                </Avatar>
+                                                
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                                                        <Typography 
+                                                            variant="h6" 
+                                                            sx={{ 
+                                                                fontFamily: '"Playfair Display", serif',
+                                                                fontWeight: 700,
+                                                                color: T.white,
+                                                                fontSize: { xs: '1rem', sm: '1.1rem' }
+                                                            }}
+                                                        >
+                                                            {quote.productName}
+                                                        </Typography>
+                                                        <Chip
+                                                            label={getQuoteStatusLabel(quote)}
+                                                            size="small"
+                                                            sx={{
+                                                                bgcolor: `${getQuoteStatusColor(quote)}20`,
+                                                                color: getQuoteStatusColor(quote),
+                                                                border: `1px solid ${getQuoteStatusColor(quote)}40`,
+                                                                fontWeight: 600,
+                                                                fontSize: '0.7rem',
+                                                            }}
+                                                        />
+                                                        {!clickedQuotes[quote.id] && (
+                                                            <Badge 
+                                                                variant="dot" 
+                                                                color="error"
+                                                                sx={{ '& .MuiBadge-dot': { bgcolor: T.gold } }}
+                                                            />
+                                                        )}
+                                                    </Box>
+
+                                                    <Typography sx={{ color: T.darkTextSub, mb: 2, fontSize: '0.9rem' }}>
+                                                        Cliente: {quote.customerName || 'Anônimo'}
+                                                        {quote.customerContact && ` • ${quote.customerContact}`}
+                                                        {quote.customerEmail && ` • ${quote.customerEmail}`}
+                                                    </Typography>
+
+                                                    <Grid container spacing={2} sx={{ mb: 1 }}>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <Category sx={{ color: T.gold, fontSize: 16 }} />
+                                                                <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
+                                                                    Tipo: <strong style={{ color: T.white }}>{quote.productType === 'product' ? 'Produto' : 'Serviço'}</strong>
+                                                                </Typography>
+                                                            </Box>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <Receipt sx={{ color: T.gold, fontSize: 16 }} />
+                                                                <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
+                                                                    Quantidade: <strong style={{ color: T.white }}>{quote.quantity}</strong>
+                                                                </Typography>
+                                                            </Box>
+                                                        </Grid>
+                                                    </Grid>
+
+                                                    {quote.message && (
+                                                        <Typography sx={{ 
+                                                            color: T.darkTextSub, 
+                                                            fontSize: '0.85rem', 
+                                                            mb: 1,
+                                                            bgcolor: 'rgba(255,255,255,0.05)',
+                                                            p: 1,
+                                                            borderRadius: 1,
+                                                            borderLeft: `3px solid ${T.gold}`
+                                                        }}>
+                                                            "{quote.message}"
+                                                        </Typography>
+                                                    )}
+
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            <CalendarToday sx={{ color: T.darkMuted, fontSize: 14 }} />
+                                                            <Typography sx={{ color: T.darkMuted, fontSize: '0.75rem' }}>
+                                                                Recebido: {new Date(quote.createdAt).toLocaleDateString('pt-PT')}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            <AccessTime sx={{ color: T.gold, fontSize: 14 }} />
+                                                            <Typography sx={{ color: T.gold, fontSize: '0.75rem', fontWeight: 600 }}>
+                                                                Preferência: {quote.contactPreference === 'whatsapp' ? 'WhatsApp' : 'Email'}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+
+                                        <Grid item xs={12} sm={4} md={3}>
+                                            <Box sx={{ 
+                                                display: 'flex', 
+                                                flexDirection: { xs: 'row', sm: 'column' }, 
+                                                justifyContent: 'flex-end',
+                                                alignItems: { xs: 'center', sm: 'flex-end' },
+                                                gap: 1,
+                                                height: '100%',
+                                            }}>
+                                                <IconButton
                                                     size="small"
-                                                    sx={{
-                                                        bgcolor: `${getStatusColor(cotacao)}20`,
-                                                        color: getStatusColor(cotacao),
-                                                        border: `1px solid ${getStatusColor(cotacao)}40`,
-                                                        fontWeight: 600,
-                                                        fontSize: '0.7rem',
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedQuoteForMenu(quote);
+                                                        setAnchorEl(e.currentTarget);
                                                     }}
-                                                />
-                                                {!clickedCotacoes[cotacao.id] && user && (
-                                                    <Badge 
-                                                        variant="dot" 
-                                                        color="error"
-                                                        sx={{ '& .MuiBadge-dot': { bgcolor: T.gold } }}
-                                                    />
+                                                    sx={{ 
+                                                        color: T.gold,
+                                                        border: `1px solid ${T.darkBorder}`,
+                                                        '&:hover': { borderColor: T.gold }
+                                                    }}
+                                                >
+                                                    <MoreVert />
+                                                </IconButton>
+                                            </Box>
+                                        </Grid>
+                                    </Grid>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </Box>
+                )}
+
+                {/* Cotações Publicadas */}
+                {published.length > 0 && (
+                    <Box>
+                        {activeTab !== 'recebidas' && (
+                            <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                    color: T.gold, 
+                                    mb: 2, 
+                                    fontFamily: '"Playfair Display", serif',
+                                    fontWeight: 700,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }}
+                            >
+                                <Store sx={{ fontSize: 24 }} /> Cotações Disponíveis ({published.length})
+                            </Typography>
+                        )}
+                        
+                        {published.map((cotacao, index) => (
+                            <Card 
+                                key={cotacao.id} 
+                                className={`cotacao-card ${!clickedCotacoes[cotacao.id] && user ? 'unread' : ''}`}
+                                sx={{ 
+                                    animation: `fadeUp 0.5s ease ${index * 0.05}s both`,
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => handleCotacaoClick(cotacao.id)}
+                            >
+                                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12} sm={8} md={9}>
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                                                <Avatar 
+                                                    src={cotacao.company?.logoUrl} 
+                                                    sx={{ 
+                                                        width: 56, 
+                                                        height: 56, 
+                                                        border: `2px solid ${T.gold}`,
+                                                        bgcolor: T.navy,
+                                                    }}
+                                                >
+                                                    {cotacao.company?.nome?.charAt(0)}
+                                                </Avatar>
+                                                
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                                                        <Typography 
+                                                            variant="h6" 
+                                                            sx={{ 
+                                                                fontFamily: '"Playfair Display", serif',
+                                                                fontWeight: 700,
+                                                                color: T.white,
+                                                                fontSize: { xs: '1rem', sm: '1.1rem' }
+                                                            }}
+                                                        >
+                                                            {cotacao.title}
+                                                        </Typography>
+                                                        <Chip
+                                                            label={getStatusLabel(cotacao)}
+                                                            size="small"
+                                                            sx={{
+                                                                bgcolor: `${getStatusColor(cotacao)}20`,
+                                                                color: getStatusColor(cotacao),
+                                                                border: `1px solid ${getStatusColor(cotacao)}40`,
+                                                                fontWeight: 600,
+                                                                fontSize: '0.7rem',
+                                                            }}
+                                                        />
+                                                        {!clickedCotacoes[cotacao.id] && user && (
+                                                            <Badge 
+                                                                variant="dot" 
+                                                                color="error"
+                                                                sx={{ '& .MuiBadge-dot': { bgcolor: T.gold } }}
+                                                            />
+                                                        )}
+                                                    </Box>
+
+                                                    <Typography sx={{ color: T.darkTextSub, mb: 2, fontSize: '0.9rem' }}>
+                                                        {cotacao.company?.nome || 'Anônimo'}
+                                                    </Typography>
+
+                                                    <Grid container spacing={2} sx={{ mb: 1 }}>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <Category sx={{ color: T.gold, fontSize: 16 }} />
+                                                                <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
+                                                                    Sector: <strong style={{ color: T.white }}>{cotacao.sector || cotacao.company?.sector}</strong>
+                                                                </Typography>
+                                                            </Box>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <LocationOn sx={{ color: T.gold, fontSize: 16 }} />
+                                                                <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
+                                                                    Província: <strong style={{ color: T.white }}>{cotacao.company?.provincia}</strong>
+                                                                </Typography>
+                                                            </Box>
+                                                        </Grid>
+                                                    </Grid>
+
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            <CalendarToday sx={{ color: T.darkMuted, fontSize: 14 }} />
+                                                            <Typography sx={{ color: T.darkMuted, fontSize: '0.75rem' }}>
+                                                                Publicado: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            <AccessTime sx={{ color: isDateValid(cotacao.datalimite) ? T.gold : T.error, fontSize: 14 }} />
+                                                            <Typography sx={{ color: isDateValid(cotacao.datalimite) ? T.gold : T.error, fontSize: '0.75rem', fontWeight: 600 }}>
+                                                                Limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+
+                                        <Grid item xs={12} sm={4} md={3}>
+                                            <Box sx={{ 
+                                                display: 'flex', 
+                                                flexDirection: { xs: 'row', sm: 'column' }, 
+                                                justifyContent: 'flex-end',
+                                                alignItems: { xs: 'center', sm: 'flex-end' },
+                                                gap: 1,
+                                                height: '100%',
+                                            }}>
+                                                <Button
+                                                    variant="contained"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCotacaoClick(cotacao.id);
+                                                    }}
+                                                    sx={{
+                                                        bgcolor: T.gold,
+                                                        color: T.navy,
+                                                        '&:hover': { bgcolor: T.goldLight },
+                                                        borderRadius: '8px',
+                                                        px: 3,
+                                                        minWidth: 120,
+                                                    }}
+                                                >
+                                                    Ver detalhes
+                                                </Button>
+                                                
+                                                {user && isModuleActive && (
+                                                    (cotacao?.company?.id === user.id || 
+                                                     cotacao?.userId === user.id || 
+                                                     cotacao?.createdBy === user.id) && (
+                                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                                            <Tooltip title="Editar cotação" arrow>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleEditClick(cotacao);
+                                                                    }}
+                                                                    sx={{ 
+                                                                        color: T.gold,
+                                                                        border: `1px solid ${T.darkBorder}`,
+                                                                        '&:hover': { borderColor: T.gold }
+                                                                    }}
+                                                                >
+                                                                    <Edit fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            <Tooltip title="Excluir cotação" arrow>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        deleteCotacao(cotacao.id);
+                                                                    }}
+                                                                    sx={{ 
+                                                                        color: T.error,
+                                                                        border: `1px solid ${T.darkBorder}`,
+                                                                        '&:hover': { borderColor: T.error }
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        </Box>
+                                                    )
                                                 )}
                                             </Box>
-
-                                            <Typography sx={{ color: T.darkTextSub, mb: 2, fontSize: '0.9rem' }}>
-                                                {cotacao.company?.nome || 'Anônimo'}
-                                            </Typography>
-
-                                            <Grid container spacing={2} sx={{ mb: 1 }}>
-                                                <Grid item xs={12} sm={6}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Category sx={{ color: T.gold, fontSize: 16 }} />
-                                                        <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
-                                                            Sector: <strong style={{ color: T.white }}>{cotacao.sector || cotacao.company?.sector}</strong>
-                                                        </Typography>
-                                                    </Box>
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <LocationOn sx={{ color: T.gold, fontSize: 16 }} />
-                                                        <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
-                                                            Província: <strong style={{ color: T.white }}>{cotacao.company?.provincia}</strong>
-                                                        </Typography>
-                                                    </Box>
-                                                </Grid>
-                                            </Grid>
-
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <CalendarToday sx={{ color: T.darkMuted, fontSize: 14 }} />
-                                                    <Typography sx={{ color: T.darkMuted, fontSize: '0.75rem' }}>
-                                                        Publicado: {new Date(cotacao.timestamp).toLocaleDateString('pt-PT')}
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <AccessTime sx={{ color: isDateValid(cotacao.datalimite) ? T.gold : T.error, fontSize: 14 }} />
-                                                    <Typography sx={{ color: isDateValid(cotacao.datalimite) ? T.gold : T.error, fontSize: '0.75rem', fontWeight: 600 }}>
-                                                        Limite: {new Date(cotacao.datalimite).toLocaleDateString('pt-PT')}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                        </Box>
-                                    </Box>
-                                </Grid>
-
-                                {/* Right side - Actions */}
-                                <Grid item xs={12} sm={4} md={3}>
-                                    <Box sx={{ 
-                                        display: 'flex', 
-                                        flexDirection: { xs: 'row', sm: 'column' }, 
-                                        justifyContent: 'flex-end',
-                                        alignItems: { xs: 'center', sm: 'flex-end' },
-                                        gap: 1,
-                                        height: '100%',
-                                    }}>
-                                        <Button
-                                            variant="contained"
-                                            onClick={() => handleCotacaoClick(cotacao.id)}
-                                            sx={{
-                                                bgcolor: T.gold,
-                                                color: T.navy,
-                                                '&:hover': { bgcolor: T.goldLight },
-                                                borderRadius: '8px',
-                                                px: 3,
-                                                minWidth: 120,
-                                            }}
-                                        >
-                                            Ver detalhes
-                                        </Button>
-                                        
-                                        {user && isModuleActive && (
-                                            (cotacao?.company?.id === user.id || 
-                                             cotacao?.userId === user.id || 
-                                             cotacao?.createdBy === user.id) && (
-                                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                                    <Tooltip title="Editar cotação" arrow>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEditClick(cotacao);
-                                                            }}
-                                                            sx={{ 
-                                                                color: T.gold,
-                                                                border: `1px solid ${T.darkBorder}`,
-                                                                '&:hover': { borderColor: T.gold }
-                                                            }}
-                                                        >
-                                                            <Edit fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Excluir cotação" arrow>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                deleteCotacao(cotacao.id);
-                                                            }}
-                                                            sx={{ 
-                                                                color: T.error,
-                                                                border: `1px solid ${T.darkBorder}`,
-                                                                '&:hover': { borderColor: T.error }
-                                                            }}
-                                                        >
-                                                            <Delete fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Box>
-                                            )
-                                        )}
-                                    </Box>
-                                </Grid>
-                            </Grid>
-                        </CardContent>
-                    </Card>
-                ))}
+                                        </Grid>
+                                    </Grid>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </Box>
+                )}
             </Box>
         );
     };
+
+    // Menu de ações para cotações recebidas
+    const actionMenu = (
+        <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            PaperProps={{
+                sx: {
+                    bgcolor: T.navyCard,
+                    border: `1px solid ${T.darkBorder}`,
+                    borderRadius: '12px',
+                    mt: 1,
+                }
+            }}
+        >
+            {selectedQuoteForMenu?.customerContact && (
+                <>
+                    <MenuItem onClick={() => handleContactCustomer('whatsapp', selectedQuoteForMenu)}>
+                        <ListItemIcon>
+                            <WhatsApp sx={{ color: '#25D366' }} />
+                        </ListItemIcon>
+                        <ListItemText primary="Responder via WhatsApp" />
+                    </MenuItem>
+                    <MenuItem onClick={() => handleContactCustomer('phone', selectedQuoteForMenu)}>
+                        <ListItemIcon>
+                            <Phone sx={{ color: T.gold }} />
+                        </ListItemIcon>
+                        <ListItemText primary="Ligar para Cliente" />
+                    </MenuItem>
+                </>
+            )}
+            {selectedQuoteForMenu?.customerEmail && (
+                <MenuItem onClick={() => handleContactCustomer('email', selectedQuoteForMenu)}>
+                    <ListItemIcon>
+                        <Email sx={{ color: '#EA4335' }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Responder por Email" />
+                </MenuItem>
+            )}
+            {(!selectedQuoteForMenu?.customerContact && !selectedQuoteForMenu?.customerEmail) && (
+                <MenuItem disabled>
+                    <ListItemText primary="Nenhum contacto disponível" />
+                </MenuItem>
+            )}
+        </Menu>
+    );
 
     if (modulesLoading) {
         return (
@@ -698,6 +1127,14 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                     }
                                     iconPosition="start"
                                 />
+                                <Tab 
+                                    value="recebidas" 
+                                    label="Recebidas" 
+                                    icon={<Receipt sx={{ fontSize: 18 }} />} 
+                                    iconPosition="start"
+                                    badgeContent={quotesReceived.filter(q => !clickedQuotes[q.id]).length}
+                                    sx={{ position: 'relative' }}
+                                />
                             </Tabs>
                         </Paper>
 
@@ -761,6 +1198,9 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     </DialogContent>
                 </Dialog>
             )}
+
+            {/* Action Menu for Received Quotes */}
+            {actionMenu}
 
             {/* Snackbar */}
             <Snackbar

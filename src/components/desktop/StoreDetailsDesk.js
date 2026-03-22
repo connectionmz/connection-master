@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ref, get } from 'firebase/database';
-import { db } from '../../fb';
+import { ref, get, push, set, update } from 'firebase/database';
+import { auth, db } from '../../fb';
 import ProductGridDesk from './ProductGridDesk';
 import { 
   Box, 
@@ -46,7 +46,8 @@ import {
   InputLabel,
   Select,
   InputAdornment,
-  FormHelperText
+  FormHelperText,
+  Autocomplete
 } from '@mui/material';
 import { 
   Store, 
@@ -86,7 +87,10 @@ import {
   LinkedIn,
   RequestQuote,
   Close,
-  Send
+  Send,
+  Search,
+  Inventory,
+  Category
 } from '@mui/icons-material';
 import BackButton from '../BackButton';
 
@@ -184,7 +188,7 @@ function TabPanel(props) {
   );
 }
 
-const StoreDetailDesk = () => {
+const StoreDetailDesk = ({user}) => {
     const { storeId } = useParams();
     const navigate = useNavigate();
     const [store, setStore] = useState(null);
@@ -194,9 +198,14 @@ const StoreDetailDesk = () => {
     const [isFavorite, setIsFavorite] = useState(false);
     const [showBackToTop, setShowBackToTop] = useState(false);
     const [openQuoteDialog, setOpenQuoteDialog] = useState(false);
+    const [productOptions, setProductOptions] = useState([]);
     const [quoteForm, setQuoteForm] = useState({
+        productId: '',
         productName: '',
+        productType: '',
         quantity: 1,
+        customerEmail: user.email || '',
+        customerContact: user.contacto || '',
         message: '',
         contactPreference: 'whatsapp'
     });
@@ -218,8 +227,19 @@ const StoreDetailDesk = () => {
 
                 if (storeSnapshot.exists()) {
                     const storeData = storeSnapshot.val();
+                    const productsData = productsSnapshot.exists() ? productsSnapshot.val() : {};
 
-                    console.log("Dados da loja:", storeData);
+                    // Preparar opções de produtos para o Autocomplete
+                    const options = Object.entries(productsData).map(([id, product]) => ({
+                        id: id,
+                        name: product.name || 'Produto sem nome',
+                        type: product.type || 'product',
+                        price: product.price || 0,
+                        category: product.category || '',
+                        description: product.description || ''
+                    }));
+
+                    setProductOptions(options);
 
                     setStore({
                         id: storeId,
@@ -236,7 +256,7 @@ const StoreDetailDesk = () => {
                         website: storeData.socialMedia?.website || storeData.social?.website || '',
                         verified: storeData.verified || false,
                         totalReviews: 128,
-                        products: productsSnapshot.exists() ? productsSnapshot.val() : {},
+                        products: productsData,
                         social: storeData.socialMedia || storeData.social || {},
                         businessHours: storeData.businessHours || {
                             monday: { open: '08:00', close: '17:00', closed: false },
@@ -373,72 +393,136 @@ const StoreDetailDesk = () => {
     const handleCloseQuoteDialog = () => {
         setOpenQuoteDialog(false);
         setQuoteForm({
+            productId: '',
             productName: '',
+            productType: '',
             quantity: 1,
+            customerEmail: '',
+            customerContact: '',
             message: '',
             contactPreference: 'whatsapp'
         });
     };
 
-    // Enviar cotação
-    const handleSubmitQuote = async () => {
-        if (!quoteForm.productName.trim()) {
-            setQuoteError('Por favor, informe o produto/serviço desejado');
-            return;
-        }
-
-        setQuoteSubmitting(true);
-        setQuoteError('');
-
-        try {
-            // Aqui você pode implementar a lógica para salvar a cotação no Firebase
-            // Exemplo:
-            // const quoteRef = push(ref(db, `quotes/${storeId}`));
-            // await set(quoteRef, {
-            //     storeId,
-            //     storeName: store.name,
-            //     ...quoteForm,
-            //     createdAt: new Date().toISOString(),
-            //     status: 'pending'
-            // });
-
-            // Simular envio
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Preparar mensagem para WhatsApp
-            const message = `*Pedido de Cotação - ${store.name}*\n\n` +
-                `*Produto/Serviço:* ${quoteForm.productName}\n` +
-                `*Quantidade:* ${quoteForm.quantity}\n` +
-                `*Mensagem:* ${quoteForm.message || 'Nenhuma mensagem adicional'}\n\n` +
-                `Enviado via BizMoz`;
-
-            const whatsappNumber = store.contacto?.replace(/\D/g, '');
-            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-
-            if (quoteForm.contactPreference === 'whatsapp' && whatsappNumber) {
-                window.open(whatsappUrl, '_blank');
-            } else if (quoteForm.contactPreference === 'email' && store.email) {
-                const emailSubject = `Pedido de Cotação - ${quoteForm.productName}`;
-                const emailBody = `Olá ${store.name},\n\nGostaria de solicitar uma cotação para:\n\n` +
-                    `Produto/Serviço: ${quoteForm.productName}\n` +
-                    `Quantidade: ${quoteForm.quantity}\n\n` +
-                    `Mensagem: ${quoteForm.message || 'Aguardando proposta'}\n\n` +
-                    `Atenciosamente.`;
-                window.location.href = `mailto:${store.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-            } else {
-                // Fallback para WhatsApp
-                window.open(whatsappUrl, '_blank');
-            }
-
-            handleCloseQuoteDialog();
-        } catch (error) {
-            console.error('Erro ao enviar cotação:', error);
-            setQuoteError('Erro ao enviar cotação. Tente novamente.');
-        } finally {
-            setQuoteSubmitting(false);
+    // Handler para seleção de produto
+    const handleProductSelect = (event, newValue) => {
+        if (newValue) {
+            setQuoteForm(prev => ({
+                ...prev,
+                productId: newValue.id,
+                productName: newValue.name,
+                productType: newValue.type
+            }));
+        } else {
+            setQuoteForm(prev => ({
+                ...prev,
+                productId: '',
+                productName: '',
+                productType: ''
+            }));
         }
     };
 
+    // Handler para produto personalizado (digitar manualmente)
+    const handleCustomProduct = (event) => {
+        setQuoteForm(prev => ({
+            ...prev,
+            productId: 'custom',
+            productName: event.target.value,
+            productType: 'custom'
+        }));
+    };
+
+// Enviar cotação
+const handleSubmitQuote = async () => {
+    if (!quoteForm.productName.trim()) {
+        setQuoteError('Por favor, selecione ou informe o produto/serviço desejado');
+        return;
+    }
+
+    setQuoteSubmitting(true);
+    setQuoteError('');
+
+    try {
+        // Obter o usuário atual (se estiver logado)
+        const currentUser = auth.currentUser;
+        
+        // Gerar ID único para a cotação
+        const quoteId = push(ref(db, 'quotes')).key;
+        
+        // Preparar dados da cotação para salvar no Firebase
+        const quoteData = {
+            id: quoteId,
+            storeId: storeId,
+            storeName: store.name,
+            storeContact: store.contacto,
+            storeEmail: store.email,
+            
+            // Dados do cliente
+            customerId: currentUser?.uid || null,
+            customerName: currentUser?.displayName || null,
+            customerEmail: quoteForm.customerEmail || currentUser?.email || null,
+            customerContact: quoteForm.customerContact || null,
+            
+            // Dados da cotação
+            productId: quoteForm.productId || null,
+            productName: quoteForm.productName,
+            productType: quoteForm.productType,
+            quantity: quoteForm.quantity,
+            message: quoteForm.message || '',
+            contactPreference: quoteForm.contactPreference,
+            
+            // Status e datas
+            status: 'pending', // pending, answered, rejected, expired
+            viewed: false,
+            responded: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            
+            source: 'store_page',
+            userAgent: navigator.userAgent,
+            ipAddress: await getClientIP(), 
+        };
+        
+        // Salvar cotação no Firebase
+        await set(ref(db, `quotes/${storeId}/${quoteId}`), quoteData);
+
+        if (currentUser?.uid) {
+            await set(ref(db, `user_quotes/${currentUser.uid}/${quoteId}`), {
+                ...quoteData,
+                storeId: storeId,
+                storeName: store.name,
+                createdAt: new Date().toISOString()
+            });
+
+        }
+
+        // Exibir mensagem de sucesso
+        setQuoteError('');
+        handleCloseQuoteDialog();
+        
+        // Mostrar feedback de sucesso
+        alert(`Cotação #${quoteId} enviada com sucesso!\n\nA loja ${store.name} entrará em contato em breve.`);
+        
+    } catch (error) {
+        console.error('Erro ao enviar cotação:', error);
+        setQuoteError('Erro ao enviar cotação. Tente novamente.');
+    } finally {
+        setQuoteSubmitting(false);
+    }
+};
+
+// Função auxiliar para obter IP do cliente (opcional)
+const getClientIP = async () => {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        console.error('Erro ao obter IP:', error);
+        return null;
+    }
+};
     const formatTime = (time) => {
         if (!time) return '--:--';
         return time;
@@ -739,7 +823,7 @@ const StoreDetailDesk = () => {
                 </Paper>
             </Container>
 
-            {/* Conteúdo Principal */}
+            {/* Conteúdo Principal - mantido igual ao original */}
             <Container maxWidth="lg" sx={{ mt: 2, pb: 6 }}>
                 <TabPanel value={activeTab} index={0}>
                     <ProductGridDesk 
@@ -794,10 +878,7 @@ const StoreDetailDesk = () => {
                                     border: `1px solid ${T.border}`,
                                     background: T.white,
                                 }}
-                            >
-                             
-                              
-                            </Paper>
+                            />
                         </Grid>
                     </Grid>
                 </TabPanel>
@@ -1268,7 +1349,7 @@ const StoreDetailDesk = () => {
                 </TabPanel>
             </Container>
 
-            {/* Modal de Pedido de Cotação */}
+            {/* Modal de Pedido de Cotação com Autocomplete */}
             <Dialog
                 open={openQuoteDialog}
                 onClose={handleCloseQuoteDialog}
@@ -1312,13 +1393,117 @@ const StoreDetailDesk = () => {
                         </Alert>
                     )}
 
+                    {productOptions.length > 0 ? (
+                        <Autocomplete
+                            options={productOptions}
+                            getOptionLabel={(option) => `${option.name}${option.category ? ` (${option.category})` : ''} - ${option.type === 'product' ? 'Produto' : 'Serviço'}`}
+                            onChange={handleProductSelect}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Selecione um produto/serviço"
+                                    placeholder="Digite para buscar..."
+                                    variant="outlined"
+                                    fullWidth
+                                    required
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        startAdornment: (
+                                            <>
+                                                <InputAdornment position="start">
+                                                    <Search sx={{ color: T.gold }} />
+                                                </InputAdornment>
+                                                {params.InputProps.startAdornment}
+                                            </>
+                                        ),
+                                    }}
+                                    sx={{
+                                        mb: 2,
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: '12px',
+                                            '&:hover fieldset': { borderColor: T.gold },
+                                            '&.Mui-focused fieldset': { borderColor: T.gold },
+                                        },
+                                    }}
+                                />
+                            )}
+                            renderOption={(props, option) => (
+                                <li {...props}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+                                        {option.type === 'product' ? (
+                                            <Inventory sx={{ color: T.gold, fontSize: 20 }} />
+                                        ) : (
+                                            <Category sx={{ color: T.gold, fontSize: 20 }} />
+                                        )}
+                                        <Box>
+                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                                {option.name}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                                                <Chip
+                                                    label={option.type === 'product' ? 'Produto' : 'Serviço'}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: option.type === 'product' ? T.goldPale : T.surface,
+                                                        color: option.type === 'product' ? T.gold : T.textMid,
+                                                        fontSize: '0.7rem',
+                                                    }}
+                                                />
+                                                {option.category && (
+                                                    <Chip
+                                                        label={option.category}
+                                                        size="small"
+                                                        sx={{ bgcolor: T.surface, color: T.textMid, fontSize: '0.7rem' }}
+                                                    />
+                                                )}
+                                                {option.price > 0 && (
+                                                    <Chip
+                                                        label={`${option.price.toFixed(2)} MT`}
+                                                        size="small"
+                                                        sx={{ bgcolor: T.goldPale, color: T.gold, fontSize: '0.7rem' }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                </li>
+                            )}
+                        />
+                    ) : (
+                        <TextField
+                            fullWidth
+                            label="Produto/Serviço Desejado *"
+                            value={quoteForm.productName}
+                            onChange={handleCustomProduct}
+                            sx={{ mb: 3 }}
+                            required
+                            placeholder="Digite o produto ou serviço que deseja"
+                            InputLabelProps={{ sx: { color: T.textSub } }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Search sx={{ color: T.gold }} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: '12px',
+                                    '&:hover fieldset': { borderColor: T.gold },
+                                    '&.Mui-focused fieldset': { borderColor: T.gold },
+                                },
+                            }}
+                        />
+                    )}
+
                     <TextField
                         fullWidth
-                        label="Produto/Serviço Desejado *"
-                        value={quoteForm.productName}
-                        onChange={(e) => setQuoteForm(prev => ({ ...prev, productName: e.target.value }))}
+                        label="Quantidade"
+                        type="number"
+                        value={quoteForm.quantity}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
                         sx={{ mb: 3 }}
-                        required
+                        InputProps={{ inputProps: { min: 1 } }}
                         InputLabelProps={{ sx: { color: T.textSub } }}
                         sx={{
                             '& .MuiOutlinedInput-root': {
@@ -1331,12 +1516,43 @@ const StoreDetailDesk = () => {
 
                     <TextField
                         fullWidth
-                        label="Quantidade"
-                        type="number"
-                        value={quoteForm.quantity}
-                        onChange={(e) => setQuoteForm(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
+                        label="Seu Email (opcional)"
+                        type="email"
+                        value={quoteForm.customerEmail}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, customerEmail: e.target.value }))}
                         sx={{ mb: 3 }}
-                        InputProps={{ inputProps: { min: 1 } }}
+                        placeholder="exemplo@email.com"
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Email sx={{ color: T.gold, fontSize: 20 }} />
+                                </InputAdornment>
+                            ),
+                        }}
+                        InputLabelProps={{ sx: { color: T.textSub } }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                                '&:hover fieldset': { borderColor: T.gold },
+                                '&.Mui-focused fieldset': { borderColor: T.gold },
+                            },
+                        }}
+                    />
+
+                    <TextField
+                        fullWidth
+                        label="Seu Contacto (opcional)"
+                        value={quoteForm.customerContact}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, customerContact: e.target.value }))}
+                        sx={{ mb: 3 }}
+                        placeholder="+258 84 123 4567"
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Phone sx={{ color: T.gold, fontSize: 20 }} />
+                                </InputAdornment>
+                            ),
+                        }}
                         InputLabelProps={{ sx: { color: T.textSub } }}
                         sx={{
                             '& .MuiOutlinedInput-root': {

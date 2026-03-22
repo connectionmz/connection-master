@@ -142,6 +142,7 @@ const ProductDetailsDesk = ({ user }) => {
           const storeSnapshot = await get(storeRef);
           if (storeSnapshot.exists()) {
             setStoreInfo(storeSnapshot.val());
+
           }
 
           // Calcular frete se necessário
@@ -793,7 +794,7 @@ const ProductDetailsDesk = ({ user }) => {
 
           <DialogContent sx={{ pt: 3 }}>
             <List sx={{ width: '100%' }}>
-              {storeInfo?.company?.contacto && (
+              {storeInfo?.contact?.phone && (
                 <ListItem 
                   component="div"
                   sx={{ 
@@ -802,23 +803,21 @@ const ProductDetailsDesk = ({ user }) => {
                     borderRadius: 2,
                     border: `1px solid ${T.darkBorder}`,
                     '&:hover': { borderColor: T.gold }
-                  }}
-                >
-                  <ListItemButton onClick={() => handleContactAction('phone', storeInfo.company.contacto)}>
+                  }}>
+                  <ListItemButton onClick={() => handleContactAction('phone', storeInfo.contact.phone)}>
                     <ListItemIcon>
                       <PhoneIcon sx={{ color: T.gold }} />
                     </ListItemIcon>
                     <ListItemText 
                       primary="Telefone"
-                      secondary={storeInfo.company.contacto}
+                      secondary={storeInfo.contact.phone}
                       primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
                       secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
                     />
                   </ListItemButton>
                 </ListItem>
               )}
-
-              {storeInfo?.company?.whatsapp && (
+              {storeInfo?.contact?.whatsapp && (
                 <ListItem 
                   component="div"
                   sx={{ 
@@ -829,13 +828,13 @@ const ProductDetailsDesk = ({ user }) => {
                     '&:hover': { borderColor: T.gold }
                   }}
                 >
-                  <ListItemButton onClick={() => handleContactAction('whatsapp', storeInfo.company.whatsapp)}>
+                  <ListItemButton onClick={() => handleContactAction('whatsapp', storeInfo.contact.whatsapp)}>
                     <ListItemIcon>
                       <WhatsAppIcon sx={{ color: '#25D366' }} />
                     </ListItemIcon>
                     <ListItemText 
                       primary="WhatsApp"
-                      secondary={storeInfo.company.whatsapp}
+                      secondary={storeInfo.contact.whatsapp}
                       primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
                       secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
                     />
@@ -843,7 +842,7 @@ const ProductDetailsDesk = ({ user }) => {
                 </ListItem>
               )}
 
-              {storeInfo?.company?.email && (
+              {storeInfo?.contact?.email && (
                 <ListItem 
                   component="div"
                   sx={{ 
@@ -854,13 +853,13 @@ const ProductDetailsDesk = ({ user }) => {
                     '&:hover': { borderColor: T.gold }
                   }}
                 >
-                  <ListItemButton onClick={() => handleContactAction('email', storeInfo.company.email)}>
+                  <ListItemButton onClick={() => handleContactAction('email', storeInfo.contact.email)}>
                     <ListItemIcon>
                       <EmailIcon sx={{ color: '#EA4335' }} />
                     </ListItemIcon>
                     <ListItemText 
                       primary="Email"
-                      secondary={storeInfo.company.email}
+                      secondary={storeInfo.contact.email}
                       primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
                       secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
                     />
