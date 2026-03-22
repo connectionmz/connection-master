@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, off } from "firebase/database";
 import {
   AppBar,
   Box,
@@ -103,6 +103,10 @@ const HeaderDesk = ({ user }) => {
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
   
+  // Refs para controlar os listeners
+  const listenersRef = useRef([]);
+  const isMountedRef = useRef(true);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const publicPanel = user?.publicPainel;
@@ -113,18 +117,207 @@ const HeaderDesk = ({ user }) => {
   const apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e";
   const shortApkUrl = "https://bit.ly/connectionmz-apk";
 
-  const protectedRoutes = [
-    "/explorar",
-    "/lojas",
-    "/concursos", 
-    "/cotacoes",
-    "/feed",
-    "/inbox",
-    "/conexoes",
-    "/app"
-  ];
+  // Memoizar as funções de callback para evitar recriação
+  const handlePendingConnections = useCallback((snapshot) => {
+    if (!isMountedRef.current) return;
+    if (snapshot.exists()) {
+      const pendingCount = Object.values(snapshot.val()).filter(
+        (connection) => connection.status === "pending"
+      ).length;
+      setPendingConnections(pendingCount);
+    } else {
+      setPendingConnections(0);
+    }
+  }, []);
 
-  // Menu items estruturados
+  const handlePendingQuotes = useCallback((snapshot) => {
+    if (!isMountedRef.current || !user?.sector) return;
+    if (snapshot.exists()) {
+      const quotes = Object.values(snapshot.val());
+      const pendingCount = quotes.filter((quote) => {
+        return (
+          quote.sector === user.sector &&
+          !(quote.views && quote.views[user.id]) &&
+          quote.company?.id !== user.id
+        );
+      }).length;
+      setPendingQuotes(pendingCount);
+    } else {
+      setPendingQuotes(0);
+    }
+  }, [user?.sector, user?.id]);
+
+  const handlePendingNotifications = useCallback((snapshot) => {
+    if (!isMountedRef.current) return;
+    if (snapshot.exists()) {
+      const notifications = Object.values(snapshot.val());
+      const pendingCount = notifications.filter(
+        (notification) => notification.status === "unread"
+      ).length;
+      setPendingNotifications(pendingCount);
+    } else {
+      setPendingNotifications(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    // Limpar listeners anteriores
+    listenersRef.current.forEach(({ ref, listener }) => {
+      off(ref, 'value', listener);
+    });
+    listenersRef.current = [];
+
+    if (user?.id) {
+      const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
+      const targetUserQuotesRef = ref(db, `cotacoes/`);
+      const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`);
+
+      // Configurar novos listeners
+      onValue(targetUserConnectionRef, handlePendingConnections);
+      onValue(targetUserQuotesRef, handlePendingQuotes);
+      onValue(targetUserNotificationsRef, handlePendingNotifications);
+
+      // Armazenar referências para limpeza
+      listenersRef.current = [
+        { ref: targetUserConnectionRef, listener: handlePendingConnections },
+        { ref: targetUserQuotesRef, listener: handlePendingQuotes },
+        { ref: targetUserNotificationsRef, listener: handlePendingNotifications },
+      ];
+    }
+
+    return () => {
+      isMountedRef.current = false;
+      // Limpar todos os listeners
+      listenersRef.current.forEach(({ ref, listener }) => {
+        off(ref, 'value', listener);
+      });
+      listenersRef.current = [];
+    };
+  }, [user?.id, user?.sector, handlePendingConnections, handlePendingQuotes, handlePendingNotifications]);
+
+  const toggleDrawer = useCallback((open) => (event) => {
+    if (event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
+      return;
+    }
+    setDrawerOpen(open);
+  }, []);
+
+  const handleDownloadClick = useCallback((event) => {
+    if (isMobile) {
+      setDownloadDialogOpen(true);
+    } else {
+      setDownloadAnchorEl(event.currentTarget);
+    }
+  }, [isMobile]);
+
+  const handleDownloadClose = useCallback(() => {
+    setDownloadAnchorEl(null);
+  }, []);
+
+  const handleDownloadDialogClose = useCallback(() => {
+    setDownloadDialogOpen(false);
+  }, []);
+
+  const handleDirectDownload = useCallback(() => {
+    const link = document.createElement('a');
+    link.href = apkDownloadUrl;
+    link.setAttribute('download', 'connectionmozambique.apk');
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setDownloadDialogOpen(false);
+  }, [apkDownloadUrl]);
+
+  const handleOpenInNewTab = useCallback(() => {
+    window.open(apkDownloadUrl, '_blank', 'noopener,noreferrer');
+    setDownloadDialogOpen(false);
+  }, [apkDownloadUrl]);
+
+  const handleShareApp = useCallback(() => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Connection Mozambique App',
+        text: 'Baixe o app Connection Mozambique para Android',
+        url: shortApkUrl,
+      }).catch((error) => console.log('Erro ao compartilhar:', error));
+    } else {
+      navigator.clipboard.writeText(shortApkUrl)
+        .then(() => alert('Link copiado!'))
+        .catch(() => {
+          const textArea = document.createElement('textarea');
+          textArea.value = shortApkUrl;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          alert('Link copiado!');
+        });
+    }
+    setDownloadDialogOpen(false);
+  }, [shortApkUrl]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await signOut(auth);
+      navigate("/");
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  }, [navigate]);
+
+  const handleNavigation = useCallback((path, requiresAuth, requiresVerify) => {
+    if (requiresAuth && !user) {
+      navigate("/auth");
+      return false;
+    }
+    
+    if (requiresVerify && !isVerify) {
+      setShowVerificationAlert(true);
+      return false;
+    }
+    
+    navigate(path);
+    return true;
+  }, [user, isVerify, navigate]);
+
+  const handleMobileNavigation = useCallback((path, requiresAuth, requiresVerify) => {
+    if (requiresAuth && !user) {
+      navigate("/auth");
+      setDrawerOpen(false);
+      return;
+    }
+    
+    if (requiresVerify && !isVerify) {
+      setShowVerificationAlert(true);
+      setDrawerOpen(false);
+      return;
+    }
+    
+    navigate(path);
+    setDrawerOpen(false);
+  }, [user, isVerify, navigate]);
+
+  const handleProfileMenuOpen = useCallback((event) => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    setProfileMenuAnchor(event.currentTarget);
+  }, [user, navigate]);
+
+  const handleProfileMenuClose = useCallback(() => {
+    setProfileMenuAnchor(null);
+  }, []);
+
+  const isActiveRoute = useCallback((path) => {
+    return location.pathname === path;
+  }, [location.pathname]);
+
+  // Menu items estruturados (fora do componente para evitar recriação)
   const mainNavItems = [
     {
       to: "/explorar",
@@ -175,195 +368,6 @@ const HeaderDesk = ({ user }) => {
       requiresVerify: true,
     },
   ];
-
-  const handleDownloadClick = (event) => {
-    if (isMobile) {
-      setDownloadDialogOpen(true);
-    } else {
-      setDownloadAnchorEl(event.currentTarget);
-    }
-  };
-
-  const handleDownloadClose = () => {
-    setDownloadAnchorEl(null);
-  };
-
-  const handleDownloadDialogClose = () => {
-    setDownloadDialogOpen(false);
-  };
-
-  const handleDirectDownload = () => {
-    const link = document.createElement('a');
-    link.href = apkDownloadUrl;
-    link.setAttribute('download', 'connectionmozambique.apk');
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setDownloadDialogOpen(false);
-  };
-
-  const handleOpenInNewTab = () => {
-    window.open(apkDownloadUrl, '_blank', 'noopener,noreferrer');
-    setDownloadDialogOpen(false);
-  };
-
-  const handleShareApp = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Connection Mozambique App',
-        text: 'Baixe o app Connection Mozambique para Android',
-        url: shortApkUrl,
-      }).catch((error) => console.log('Erro ao compartilhar:', error));
-    } else {
-      navigator.clipboard.writeText(shortApkUrl)
-        .then(() => alert('Link copiado!'))
-        .catch(() => {
-          const textArea = document.createElement('textarea');
-          textArea.value = shortApkUrl;
-          document.body.appendChild(textArea);
-          textArea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textArea);
-          alert('Link copiado!');
-        });
-    }
-    setDownloadDialogOpen(false);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate("/");
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-    }
-  };
-
-  const handleNavigation = (path, requiresAuth, requiresVerify) => {
-    if (requiresAuth && !user) {
-      navigate("/auth");
-      return false;
-    }
-    
-    if (requiresVerify && !isVerify) {
-      setShowVerificationAlert(true);
-      return false;
-    }
-    
-    navigate(path);
-    return true;
-  };
-
-  const handleMobileNavigation = (path, requiresAuth, requiresVerify) => {
-    if (requiresAuth && !user) {
-      navigate("/auth");
-      setDrawerOpen(false);
-      return;
-    }
-    
-    if (requiresVerify && !isVerify) {
-      setShowVerificationAlert(true);
-      setDrawerOpen(false);
-      return;
-    }
-    
-    navigate(path);
-    setDrawerOpen(false);
-  };
-
-  const handleProfileMenuOpen = (event) => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-    setProfileMenuAnchor(event.currentTarget);
-  };
-
-  const handleProfileMenuClose = () => {
-    setProfileMenuAnchor(null);
-  };
-
-  useEffect(() => {
-    if (user?.id) {
-      const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
-      const targetUserQuotesRef = ref(db, `cotacoes/`);
-      const targetUserContestsRef = ref(db, `concursos/`);
-      const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`);
-
-      const unsubscribeConnections = onValue(targetUserConnectionRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const pendingCount = Object.values(snapshot.val()).filter(
-            (connection) => connection.status === "pending"
-          ).length;
-          setPendingConnections(pendingCount);
-        } else {
-          setPendingConnections(0);
-        }
-      });
-
-      const unsubscribeQuotes = onValue(targetUserQuotesRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const quotes = Object.values(snapshot.val());
-          const pendingCount = quotes.filter((quote) => {
-            return (
-              quote.sector === user.sector &&
-              !(quote.views && quote.views[user.id]) &&
-              quote.company.id !== user.id
-            );
-          }).length;
-          setPendingQuotes(pendingCount);
-        } else {
-          setPendingQuotes(0);
-        }
-      });
-
-      const unsubscribeContests = onValue(targetUserContestsRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const pendingCount = Object.values(snapshot.val()).filter(
-            (contest) => contest.status === "Aberta" && 
-            user.sector === contest.setor &&
-              !(contest.views && contest.views[user.id]) &&
-              contest.company.id !== user.id
-          ).length;
-          setPendingContests(pendingCount);
-        } else {
-          setPendingContests(0);
-        }
-      });
-
-      const unsubscribeNotifications = onValue(targetUserNotificationsRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const notifications = Object.values(snapshot.val());
-          const pendingCount = notifications.filter(
-            (notification) => notification.status === "unread"
-          ).length;
-          setPendingNotifications(pendingCount);
-        } else {
-          setPendingNotifications(0);
-        }
-      });
-
-      return () => {
-        unsubscribeConnections();
-        unsubscribeQuotes();
-        unsubscribeContests();
-        unsubscribeNotifications();
-      };
-    }
-  }, [user?.id, user?.sector]);
-
-  const toggleDrawer = (open) => (event) => {
-    if (event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
-      return;
-    }
-    setDrawerOpen(open);
-  };
-
-  const isActiveRoute = (path) => {
-    return location.pathname === path;
-  };
 
   return (
     <>
@@ -549,17 +553,17 @@ const HeaderDesk = ({ user }) => {
                     }}
                   >
                     <MenuItem 
-                      onClick={() => { handleProfileMenuClose(); navigate("/app"); }}
+                        onClick={() => { handleProfileMenuClose(); navigate(`/app`); }}
                       sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
                     >
                       <ListItemIcon>
                         <DashboardIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText>Dashboard</ListItemText>
+                      <ListItemText>Configurações</ListItemText>
                     </MenuItem>
                     
                     <MenuItem 
-                      onClick={() => { handleProfileMenuClose(); navigate(`/perfil/${user.id}`); }}
+                      onClick={() => { handleProfileMenuClose(); navigate(`/perfil`); }}
                       sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
                     >
                       <ListItemIcon>

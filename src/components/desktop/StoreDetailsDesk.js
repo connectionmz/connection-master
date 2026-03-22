@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ref, get } from 'firebase/database';
 import { db } from '../../fb';
 import ProductGridDesk from './ProductGridDesk';
@@ -36,7 +36,17 @@ import {
   Skeleton,
   Alert,
   Tooltip,
-  Badge
+  Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  InputAdornment,
+  FormHelperText
 } from '@mui/material';
 import { 
   Store, 
@@ -73,7 +83,10 @@ import {
   Map,
   CreditCard,
   Telegram,
-  LinkedIn
+  LinkedIn,
+  RequestQuote,
+  Close,
+  Send
 } from '@mui/icons-material';
 import BackButton from '../BackButton';
 
@@ -113,10 +126,6 @@ const KEYFRAMES = `
   @keyframes pulse-gold {
     0%, 100% { opacity: 1; transform: scale(1); }
     50%       { opacity: 0.8; transform: scale(0.98); }
-  }
-  @keyframes shimmer {
-    0%   { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
   }
   .animate-fade-up {
     animation: fadeUp 0.65s cubic-bezier(0.22,1,0.36,1) both;
@@ -177,12 +186,22 @@ function TabPanel(props) {
 
 const StoreDetailDesk = () => {
     const { storeId } = useParams();
+    const navigate = useNavigate();
     const [store, setStore] = useState(null);
     const [loading, setLoading] = useState(true);
     const [shareAnchorEl, setShareAnchorEl] = useState(null);
     const [activeTab, setActiveTab] = useState(0);
     const [isFavorite, setIsFavorite] = useState(false);
     const [showBackToTop, setShowBackToTop] = useState(false);
+    const [openQuoteDialog, setOpenQuoteDialog] = useState(false);
+    const [quoteForm, setQuoteForm] = useState({
+        productName: '',
+        quantity: 1,
+        message: '',
+        contactPreference: 'whatsapp'
+    });
+    const [quoteSubmitting, setQuoteSubmitting] = useState(false);
+    const [quoteError, setQuoteError] = useState('');
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -191,42 +210,49 @@ const StoreDetailDesk = () => {
         const fetchStoreDetails = async () => {
             try {
                 setLoading(true);
-                const storeRef = ref(db, `company/${storeId}`);
-                const storeSnapshot = await get(storeRef);
+                const storeRef = ref(db, `stores/${storeId}`);
+                const productsRef = ref(db, `stores/${storeId}/products`);
                 
+                const storeSnapshot = await get(storeRef);
+                const productsSnapshot = await get(productsRef);
+
                 if (storeSnapshot.exists()) {
                     const storeData = storeSnapshot.val();
+
+                    console.log("Dados da loja:", storeData);
+
                     setStore({
                         id: storeId,
-                        name: storeData.nome || 'Loja sem nome',
-                        description: storeData.bio || storeData.descricao || '',
-                        logo: storeData.logoUrl || '',
+                        name: storeData.name || storeData.nome || 'Loja sem nome',
+                        description: storeData.description || storeData.bio || '',
+                        logo: storeData.company?.logo || storeData.logoUrl || '',
                         coverUrl: storeData.coverUrl || '',
                         sector: storeData.sector || '',
-                        provincia: storeData.provincia || '',
-                        distrito: storeData.distrito || '',
-                        endereco: storeData.endereco || '',
-                        contacto: storeData.contacto || '',
-                        email: storeData.email || '',
-                        website: storeData.social?.website || '',
+                        provincia: storeData.location?.province || storeData.company?.provincia || storeData.provincia || '',
+                        distrito: storeData.company?.distrito || storeData.distrito || '',
+                        endereco: storeData.location?.address || storeData.endereco || '',
+                        contacto: storeData.contact?.phone || storeData.contacto || '',
+                        email: storeData.contact?.email || storeData.email || '',
+                        website: storeData.socialMedia?.website || storeData.social?.website || '',
                         verified: storeData.verified || false,
                         totalReviews: 128,
-                        products: storeData.products || {},
-                        social: storeData.social || {},
+                        products: productsSnapshot.exists() ? productsSnapshot.val() : {},
+                        social: storeData.socialMedia || storeData.social || {},
                         businessHours: storeData.businessHours || {
-                            segunda: { open: '08:00', close: '17:00', closed: false },
-                            terca: { open: '08:00', close: '17:00', closed: false },
-                            quarta: { open: '08:00', close: '17:00', closed: false },
-                            quinta: { open: '08:00', close: '17:00', closed: false },
-                            sexta: { open: '08:00', close: '17:00', closed: false },
-                            sabado: { open: '09:00', close: '13:00', closed: false },
-                            domingo: { closed: true }
+                            monday: { open: '08:00', close: '17:00', closed: false },
+                            tuesday: { open: '08:00', close: '17:00', closed: false },
+                            wednesday: { open: '08:00', close: '17:00', closed: false },
+                            thursday: { open: '08:00', close: '17:00', closed: false },
+                            friday: { open: '08:00', close: '17:00', closed: false },
+                            saturday: { open: '09:00', close: '13:00', closed: false },
+                            sunday: { closed: true }
                         },
                         policies: storeData.policies || {
-                            delivery: 'Entrega disponível para toda a cidade. Consulte o prazo no momento da compra.',
+                            delivery: 'Entrega disponível para toda a região. Consulte o prazo no momento da compra.',
                             returns: 'Devoluções aceitas em até 7 dias após o recebimento, com produto em perfeito estado.',
                             payments: 'Aceitamos dinheiro, transferência bancária e cartões.'
-                        }
+                        },
+                        createdAt: storeData.createdAt
                     });
                 } else {
                     setStore(null);
@@ -264,7 +290,6 @@ const StoreDetailDesk = () => {
 
     const toggleFavorite = () => {
         setIsFavorite(!isFavorite);
-        // Salvar no localStorage
         const favorites = JSON.parse(localStorage.getItem('storeFavorites') || '[]');
         if (!isFavorite) {
             favorites.push(storeId);
@@ -275,7 +300,6 @@ const StoreDetailDesk = () => {
         localStorage.setItem('storeFavorites', JSON.stringify(favorites));
     };
 
-    // Carregar favoritos do localStorage
     useEffect(() => {
         const favorites = JSON.parse(localStorage.getItem('storeFavorites') || '[]');
         setIsFavorite(favorites.includes(storeId));
@@ -339,18 +363,92 @@ const StoreDetailDesk = () => {
         }
     };
 
-    // Função para formatar horário
+    // Abrir modal de cotação
+    const handleOpenQuoteDialog = () => {
+        setOpenQuoteDialog(true);
+        setQuoteError('');
+    };
+
+    // Fechar modal de cotação
+    const handleCloseQuoteDialog = () => {
+        setOpenQuoteDialog(false);
+        setQuoteForm({
+            productName: '',
+            quantity: 1,
+            message: '',
+            contactPreference: 'whatsapp'
+        });
+    };
+
+    // Enviar cotação
+    const handleSubmitQuote = async () => {
+        if (!quoteForm.productName.trim()) {
+            setQuoteError('Por favor, informe o produto/serviço desejado');
+            return;
+        }
+
+        setQuoteSubmitting(true);
+        setQuoteError('');
+
+        try {
+            // Aqui você pode implementar a lógica para salvar a cotação no Firebase
+            // Exemplo:
+            // const quoteRef = push(ref(db, `quotes/${storeId}`));
+            // await set(quoteRef, {
+            //     storeId,
+            //     storeName: store.name,
+            //     ...quoteForm,
+            //     createdAt: new Date().toISOString(),
+            //     status: 'pending'
+            // });
+
+            // Simular envio
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Preparar mensagem para WhatsApp
+            const message = `*Pedido de Cotação - ${store.name}*\n\n` +
+                `*Produto/Serviço:* ${quoteForm.productName}\n` +
+                `*Quantidade:* ${quoteForm.quantity}\n` +
+                `*Mensagem:* ${quoteForm.message || 'Nenhuma mensagem adicional'}\n\n` +
+                `Enviado via BizMoz`;
+
+            const whatsappNumber = store.contacto?.replace(/\D/g, '');
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+
+            if (quoteForm.contactPreference === 'whatsapp' && whatsappNumber) {
+                window.open(whatsappUrl, '_blank');
+            } else if (quoteForm.contactPreference === 'email' && store.email) {
+                const emailSubject = `Pedido de Cotação - ${quoteForm.productName}`;
+                const emailBody = `Olá ${store.name},\n\nGostaria de solicitar uma cotação para:\n\n` +
+                    `Produto/Serviço: ${quoteForm.productName}\n` +
+                    `Quantidade: ${quoteForm.quantity}\n\n` +
+                    `Mensagem: ${quoteForm.message || 'Aguardando proposta'}\n\n` +
+                    `Atenciosamente.`;
+                window.location.href = `mailto:${store.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+            } else {
+                // Fallback para WhatsApp
+                window.open(whatsappUrl, '_blank');
+            }
+
+            handleCloseQuoteDialog();
+        } catch (error) {
+            console.error('Erro ao enviar cotação:', error);
+            setQuoteError('Erro ao enviar cotação. Tente novamente.');
+        } finally {
+            setQuoteSubmitting(false);
+        }
+    };
+
     const formatTime = (time) => {
         if (!time) return '--:--';
         return time;
     };
 
-    // Verificar se a loja está aberta agora
     const isStoreOpen = () => {
         if (!store?.businessHours) return null;
         
         const now = new Date();
-        const days = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const currentDay = days[now.getDay()];
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
@@ -549,14 +647,28 @@ const StoreDetailDesk = () => {
                                             }}
                                         />
                                     </Box>
-                               
                                 </Box>
                             </Box>
                         </Grid>
                         
                         <Grid item xs={12} md={4}>
                             <Stack spacing={2}>
-                               
+                                <Button 
+                                    variant="contained"
+                                    startIcon={<RequestQuote />}
+                                    onClick={handleOpenQuoteDialog}
+                                    sx={{
+                                        bgcolor: T.gold,
+                                        color: T.white,
+                                        '&:hover': { bgcolor: T.goldLight },
+                                        borderRadius: '12px',
+                                        py: 1.5,
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    Pedir Cotação
+                                </Button>
                                 <Button 
                                     variant="outlined" 
                                     startIcon={<Share />}
@@ -670,24 +782,6 @@ const StoreDetailDesk = () => {
                                 
                                 <Divider sx={{ my: 3 }} />
                                 
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={6}>
-                                        <Card variant="outlined" sx={{ p: 2, borderColor: T.border }}>
-                                            <Typography variant="h6" sx={{ color: T.gold, mb: 1 }}>Entrega Padrão</Typography>
-                                            <Typography variant="body2" sx={{ color: T.textSub }}>
-                                                2-5 dias úteis • Grátis para compras acima de 2500 MZN
-                                            </Typography>
-                                        </Card>
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <Card variant="outlined" sx={{ p: 2, borderColor: T.border }}>
-                                            <Typography variant="h6" sx={{ color: T.gold, mb: 1 }}>Entrega Expressa</Typography>
-                                            <Typography variant="body2" sx={{ color: T.textSub }}>
-                                                1-2 dias úteis • 250 MZN
-                                            </Typography>
-                                        </Card>
-                                    </Grid>
-                                </Grid>
                             </Paper>
                         </Grid>
                         
@@ -701,29 +795,8 @@ const StoreDetailDesk = () => {
                                     background: T.white,
                                 }}
                             >
-                                <Typography variant="h6" sx={{ fontWeight: 600, color: T.text, mb: 2 }}>
-                                    Informações Adicionais
-                                </Typography>
-                                <Stack spacing={2}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <CheckCircle sx={{ fontSize: 20, color: T.gold }} />
-                                        <Typography variant="body2" sx={{ color: T.textMid }}>
-                                            Entrega garantida
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <CheckCircle sx={{ fontSize: 20, color: T.gold }} />
-                                        <Typography variant="body2" sx={{ color: T.textMid }}>
-                                            Rastreamento disponível
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <CheckCircle sx={{ fontSize: 20, color: T.gold }} />
-                                        <Typography variant="body2" sx={{ color: T.textMid }}>
-                                            Embalagem segura
-                                        </Typography>
-                                    </Box>
-                                </Stack>
+                             
+                              
                             </Paper>
                         </Grid>
                     </Grid>
@@ -760,26 +833,7 @@ const StoreDetailDesk = () => {
                         
                         <Divider sx={{ my: 3 }} />
                         
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} md={4}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <Typography variant="h4" sx={{ color: T.gold }}>7</Typography>
-                                    <Typography variant="body2" sx={{ color: T.textSub }}>Dias para devolução</Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <Typography variant="h4" sx={{ color: T.gold }}>100%</Typography>
-                                    <Typography variant="body2" sx={{ color: T.textSub }}>Reembolso garantido</Typography>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <Typography variant="h4" sx={{ color: T.gold }}>24h</Typography>
-                                    <Typography variant="body2" sx={{ color: T.textSub }}>Resposta</Typography>
-                                </Box>
-                            </Grid>
-                        </Grid>
+                       
                     </Paper>
                 </TabPanel>
 
@@ -859,7 +913,6 @@ const StoreDetailDesk = () => {
                                             {store.createdAt ? new Date(store.createdAt).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }) : 'Não informado'}
                                         </Typography>
                                     </Box>
-                                    <Divider />
                                 </Stack>
                             </Paper>
                         </Grid>
@@ -895,18 +948,17 @@ const StoreDetailDesk = () => {
                             <Grid container spacing={2}>
                                 {Object.entries(store.businessHours).map(([day, schedule]) => {
                                     const dayNames = {
-                                        segunda: 'Segunda-feira',
-                                        terca: 'Terça-feira',
-                                        quarta: 'Quarta-feira',
-                                        quinta: 'Quinta-feira',
-                                        sexta: 'Sexta-feira',
-                                        sabado: 'Sábado',
-                                        domingo: 'Domingo'
+                                        monday: 'Segunda-feira',
+                                        tuesday: 'Terça-feira',
+                                        wednesday: 'Quarta-feira',
+                                        thursday: 'Quinta-feira',
+                                        friday: 'Sexta-feira',
+                                        saturday: 'Sábado',
+                                        sunday: 'Domingo'
                                     };
                                     
-                                    // Verificar se é o dia atual
                                     const now = new Date();
-                                    const days = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+                                    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
                                     const currentDay = days[now.getDay()];
                                     const isToday = day === currentDay;
                                     
@@ -957,7 +1009,7 @@ const StoreDetailDesk = () => {
                                                     >
                                                         {schedule.closed 
                                                             ? 'Fechado' 
-                                                            : `${schedule.open} - ${schedule.close}`
+                                                            : `${schedule.open || '--:--'} - ${schedule.close || '--:--'}`
                                                         }
                                                     </Typography>
                                                 </Box>
@@ -1119,7 +1171,7 @@ const StoreDetailDesk = () => {
                                             fullWidth
                                             variant="outlined"
                                             startIcon={<Facebook />}
-                                            href={store.social.facebook}
+                                            href={store.social.facebook.startsWith('http') ? store.social.facebook : `https://${store.social.facebook}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             sx={{
@@ -1143,7 +1195,7 @@ const StoreDetailDesk = () => {
                                             fullWidth
                                             variant="outlined"
                                             startIcon={<Instagram />}
-                                            href={store.social.instagram}
+                                            href={store.social.instagram.startsWith('http') ? store.social.instagram : `https://${store.social.instagram}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             sx={{
@@ -1167,7 +1219,7 @@ const StoreDetailDesk = () => {
                                             fullWidth
                                             variant="outlined"
                                             startIcon={<Twitter />}
-                                            href={store.social.twitter}
+                                            href={store.social.twitter.startsWith('http') ? store.social.twitter : `https://${store.social.twitter}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             sx={{
@@ -1191,7 +1243,7 @@ const StoreDetailDesk = () => {
                                             fullWidth
                                             variant="outlined"
                                             startIcon={<Language />}
-                                            href={store.website}
+                                            href={store.website.startsWith('http') ? store.website : `https://${store.website}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             sx={{
@@ -1215,6 +1267,171 @@ const StoreDetailDesk = () => {
                     </Grid>
                 </TabPanel>
             </Container>
+
+            {/* Modal de Pedido de Cotação */}
+            <Dialog
+                open={openQuoteDialog}
+                onClose={handleCloseQuoteDialog}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: '24px',
+                        border: `1px solid ${T.border}`,
+                        background: T.white,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)`,
+                        color: T.white,
+                        borderRadius: '24px 24px 0 0',
+                    }}
+                >
+                    <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <RequestQuote sx={{ color: T.gold }} /> Pedir Cotação
+                    </Typography>
+                    <IconButton onClick={handleCloseQuoteDialog} sx={{ color: T.white }}>
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                
+                <DialogContent sx={{ pt: 3 }}>
+                    <Typography variant="body2" sx={{ color: T.textSub, mb: 3 }}>
+                        Envie sua solicitação de cotação para <strong>{store.name}</strong>. 
+                        A loja entrará em contato com você em breve.
+                    </Typography>
+
+                    {quoteError && (
+                        <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }}>
+                            {quoteError}
+                        </Alert>
+                    )}
+
+                    <TextField
+                        fullWidth
+                        label="Produto/Serviço Desejado *"
+                        value={quoteForm.productName}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, productName: e.target.value }))}
+                        sx={{ mb: 3 }}
+                        required
+                        InputLabelProps={{ sx: { color: T.textSub } }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                                '&:hover fieldset': { borderColor: T.gold },
+                                '&.Mui-focused fieldset': { borderColor: T.gold },
+                            },
+                        }}
+                    />
+
+                    <TextField
+                        fullWidth
+                        label="Quantidade"
+                        type="number"
+                        value={quoteForm.quantity}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
+                        sx={{ mb: 3 }}
+                        InputProps={{ inputProps: { min: 1 } }}
+                        InputLabelProps={{ sx: { color: T.textSub } }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                                '&:hover fieldset': { borderColor: T.gold },
+                                '&.Mui-focused fieldset': { borderColor: T.gold },
+                            },
+                        }}
+                    />
+
+                    <TextField
+                        fullWidth
+                        label="Mensagem (opcional)"
+                        multiline
+                        rows={4}
+                        value={quoteForm.message}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, message: e.target.value }))}
+                        placeholder="Descreva suas necessidades, especificações ou dúvidas..."
+                        sx={{ mb: 3 }}
+                        InputLabelProps={{ sx: { color: T.textSub } }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                                '&:hover fieldset': { borderColor: T.gold },
+                                '&.Mui-focused fieldset': { borderColor: T.gold },
+                            },
+                        }}
+                    />
+
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                        <InputLabel sx={{ color: T.textSub }}>Preferência de Contacto</InputLabel>
+                        <Select
+                            value={quoteForm.contactPreference}
+                            onChange={(e) => setQuoteForm(prev => ({ ...prev, contactPreference: e.target.value }))}
+                            label="Preferência de Contacto"
+                            sx={{
+                                borderRadius: '12px',
+                                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: T.gold },
+                            }}
+                        >
+                            <MenuItem value="whatsapp">
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <WhatsApp sx={{ color: '#25D366', fontSize: 20 }} />
+                                    WhatsApp
+                                </Box>
+                            </MenuItem>
+                            <MenuItem value="email">
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Email sx={{ color: '#EA4335', fontSize: 20 }} />
+                                    Email
+                                </Box>
+                            </MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    <Typography variant="caption" sx={{ color: T.textSub, display: 'block', mt: 1 }}>
+                        A sua solicitação será enviada diretamente para a loja. 
+                        {quoteForm.contactPreference === 'whatsapp' && ' Você será redirecionado ao WhatsApp.'}
+                        {quoteForm.contactPreference === 'email' && ' Você será redirecionado ao seu cliente de email.'}
+                    </Typography>
+                </DialogContent>
+
+                <DialogActions sx={{ p: 3, borderTop: `1px solid ${T.border}` }}>
+                    <Button
+                        onClick={handleCloseQuoteDialog}
+                        variant="outlined"
+                        sx={{
+                            borderColor: T.borderMid,
+                            color: T.textSub,
+                            '&:hover': { borderColor: T.gold, color: T.gold },
+                            borderRadius: '10px',
+                            textTransform: 'none',
+                            px: 3,
+                        }}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={handleSubmitQuote}
+                        variant="contained"
+                        disabled={quoteSubmitting || !quoteForm.productName.trim()}
+                        startIcon={quoteSubmitting ? <CircularProgress size={20} /> : <Send />}
+                        sx={{
+                            bgcolor: T.gold,
+                            color: T.white,
+                            '&:hover': { bgcolor: T.goldLight },
+                            borderRadius: '10px',
+                            textTransform: 'none',
+                            px: 3,
+                        }}
+                    >
+                        {quoteSubmitting ? 'Enviando...' : 'Enviar Cotação'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Botão Flutuante de Partilha para Mobile */}
             {isMobile && (

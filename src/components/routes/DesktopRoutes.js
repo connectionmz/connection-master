@@ -186,6 +186,16 @@ const ProtectedRoute = ({ user, children, requiredModule }) => {
   return children;
 };
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 const DesktopRoutes = ({ user }) => {
 
   const [language, setLanguage] = useState('pt')
@@ -313,6 +323,7 @@ const DesktopRoutes = ({ user }) => {
   return (
     <ThemeProvider theme={theme}>
       <ActiveModulesProvider userId={user?.id}>
+           <ScrollToTop />
         <Box>
           {!isFullScreenRoute && (
             <>

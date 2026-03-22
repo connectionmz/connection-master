@@ -5,103 +5,101 @@ import {
   CardContent,
   Typography,
   Box,
-  IconButton,
-  useTheme,
-  Tooltip
+  useTheme
 } from '@mui/material';
 import { 
-  Receipt as ReceiptIcon,
   Store as StoreIcon,
   AdsClick as AdIcon,
-  Sms as SmsIcon,
-  Phone as PhoneIcon,
-  Poll as PollIcon,
   LocalShipping as TruckIcon,
-  Star as StarIcon,
-  ShowChart as ChartIcon,
-  Person as PersonIcon,
-  Email,
-  Event
+  Event as EventIcon
 } from '@mui/icons-material';
-import { SquareActivity } from 'lucide-react';
 
 export const allModules = [
-  { name: 'Proforma', link: '/faturacao', icon: <ReceiptIcon fontSize="large" />, key: 'moduloProforma' },
-  { name: 'Market', link: '/market', icon: <StoreIcon fontSize="large" />, key: 'moduloMarket' },
-  { name: 'Anunciar', link: '/anunciar', icon: <AdIcon fontSize="large" />, key: 'moduloAnunciar', alwaysEnabled: true },
-  { name: 'Alerta', link: '/sms', icon: <Email   fontSize="large" />, key: 'moduloSMS' },
-  { name: 'Eventos', link: '/evento', icon: <Event   fontSize="large" />, key: 'moduloEventos' },
-  { name: 'Call Center', link: '/callcenter', icon: <PhoneIcon fontSize="large" />, key: 'moduloCallCenter', alwaysEnabled: true },
-  { name: 'Procurement', link: '/procurement', icon: <TruckIcon fontSize="large" />, key: 'moduloProcurement', alwaysEnabled: true },
-  { name: 'Recrutamento', link: '/recrutamento', icon: <PersonIcon fontSize="large" />, key: 'moduloRecrutamento', alwaysEnabled: true },
-
-  {/*  { name: 'Inquerito', link: '/inquerito', icon: <SquareActivity fontSize="large" />, key: 'moduloInquerito', alwaysEnabled: true }
-*/}
+  { 
+    name: 'Empresas & Serviços', 
+    link: '/market', 
+    icon: <StoreIcon fontSize="large" />, 
+    description: 'Explore empresas e serviços disponíveis'
+  },
+  { 
+    name: 'Pedir Cotações', 
+    link: '/procurement', 
+    icon: <TruckIcon fontSize="large" />, 
+    description: 'Solicite propostas de empresas'
+  },
+  { 
+    name: 'Anunciar', 
+    link: '/anunciar', 
+    icon: <AdIcon fontSize="large" />, 
+    description: 'Promova a sua empresa ou serviços'
+  },
+  { 
+    name: 'Eventos', 
+    link: '/evento', 
+    icon: <EventIcon fontSize="large" />, 
+    description: 'Descubra eventos empresariais'
+  }
 ];
 
-const ModuleGrid = ({ activeModules }) => {
+const ModuleGrid = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  const handleAcquireModule = (module) => {
-    navigate(`/pagamento-modulo/${module.key}`);
-  };
-
-  const handleModuleClick = (module) => {
-    if (module.alwaysEnabled || activeModules[module.key]) {
-      navigate(module.link);
-    } else {
-      handleAcquireModule(module);
-    }
-  };
   return (
     <Box sx={{ mt: 4 }}>
-      <Typography variant="h6" component="h2" sx={{ fontWeight: 'medium', mb: 2 }}>
-        Módulos Disponíveis
+      <Typography 
+        variant="h5" 
+        sx={{ fontWeight: 600, mb: 3, textAlign: 'center' }}
+      >
+        O que deseja fazer?
       </Typography>
-      <Grid container spacing={3}>
+
+      <Grid container spacing={3} justifyContent="center">
         {allModules.map((module) => (
-          <Grid item xs={6} sm={4} md={3} lg={2} xl={2} key={module.name}>
-            <Tooltip 
-              title={module?.alwaysEnabled || activeModules[module.key] ? '' : 'Clique para adquirir este módulo'}
-              arrow>
-              <Card
-                onClick={() => handleModuleClick(module)}
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  p: 2,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease-in-out',
-                  opacity: module.alwaysEnabled || activeModules[module.key] ? 1 : 0.6,
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: theme.shadows[6],
-                    backgroundColor: module.alwaysEnabled || activeModules[module.key] 
-                      ? theme.palette.action.hover 
-                      : theme.palette.action.selected
-                  }
-                }}>
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Box
-                    sx={{
-                      backgroundColor: theme.palette.grey[100],
-                      borderRadius: 1,
-                      p: 2,
-                      mb: 1,
-                      display: 'inline-flex'
-                    }}>
-                    {module.icon}
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {module.name}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Tooltip>
+          <Grid item xs={12} sm={6} md={3} key={module.name}>
+            <Card
+              onClick={() => navigate(module.link)}
+              sx={{
+                height: '100%',
+                p: 3,
+                cursor: 'pointer',
+                borderRadius: 3,
+                textAlign: 'center',
+                transition: 'all 0.25s ease',
+                border: '1px solid #eee',
+                '&:hover': {
+                  transform: 'translateY(-6px)',
+                  boxShadow: theme.shadows[6],
+                  borderColor: theme.palette.primary.main
+                }
+              }}
+            >
+              <CardContent>
+                <Box
+                  sx={{
+                    mb: 2,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: theme.palette.grey[100],
+                    borderRadius: '12px',
+                    width: 64,
+                    height: 64,
+                    margin: '0 auto'
+                  }}
+                >
+                  {module.icon}
+                </Box>
+
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                  {module.name}
+                </Typography>
+
+                <Typography variant="body2" color="text.secondary">
+                  {module.description}
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
         ))}
       </Grid>

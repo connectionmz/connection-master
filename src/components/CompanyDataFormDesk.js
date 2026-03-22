@@ -773,31 +773,7 @@ const CompanyDataFormDesk = () => {
               icon={<Business sx={{ color: T.gold }} />}
             />
 
-            {companyData.nome && slug && (
-              <Paper
-                sx={{
-                  p: 2,
-                  mt: 1,
-                  mb: 2,
-                  bgcolor: T.goldPale,
-                  borderRadius: '12px',
-                  border: `1px solid ${T.gold}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}
-              >
-                <Lock sx={{ color: T.gold, fontSize: 20 }} />
-                <Box>
-                  <Typography variant="caption" sx={{ color: T.gold, fontWeight: 600 }}>
-                    Link publico do Perfil
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.9rem', color: T.text, fontFamily: 'monospace' }}>
-                    {isGeneratingSlug ? '...' : `connectionmozambique.com/empresa/${slug}`}
-                  </Typography>
-                </Box>
-              </Paper>
-            )}
+    
 
             <StyledTextField
               label="Sigla"

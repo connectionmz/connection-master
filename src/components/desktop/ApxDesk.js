@@ -501,6 +501,7 @@ const ApxDesk = ({ user }) => {
             }}>
               <Dashboard sx={{ color: T.gold }} /> Módulos Disponíveis
             </Typography>
+            <ModuleGrid activeModules={activeModules} />
           </Box>
         </Card>
 
@@ -574,99 +575,6 @@ const ApxDesk = ({ user }) => {
                 </Box>
               </Grid>
             </Grid>
-          </Box>
-        </Card>
-
-        {/* Profile Card */}
-        <Card 
-          component={Link} 
-          to="/perfil"
-          className="profile-card animate-fade-up delay-6"
-          sx={{ 
-            display: 'flex',
-            alignItems: 'center',
-            p: 3,
-            textDecoration: 'none',
-            borderRadius: '20px',
-            border: `1px solid ${T.border}`,
-            background: T.white,
-            transition: 'all 0.25s ease',
-            position: 'relative',
-            overflow: 'hidden',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              borderColor: T.gold,
-              boxShadow: '0 20px 40px rgba(8,25,46,0.08)',
-            },
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 3,
-              background: `linear-gradient(90deg, ${T.gold} 0%, transparent 100%)`,
-              opacity: 0,
-              transition: 'opacity 0.25s',
-            },
-            '&:hover::before': {
-              opacity: 1,
-            }
-          }}
-        >
-          <Avatar 
-            src={userData.logoUrl} 
-            alt={userData.nome}
-            sx={{ 
-              width: 80, 
-              height: 80, 
-              mr: 3,
-              border: `3px solid ${T.gold}`,
-              boxShadow: '0 8px 16px rgba(200,144,58,0.2)'
-            }} 
-          />
-          <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Typography variant="h5" sx={{ 
-                fontWeight: 700, 
-                color: T.text,
-                fontFamily: '"Playfair Display", serif',
-              }}>
-                {userData.nome || "Usuário"}
-              </Typography>
-              <Edit sx={{ fontSize: 18, color: T.gold, opacity: 0.7 }} />
-            </Box>
-            
-            <Typography variant="body2" sx={{ color: T.textSub, mb: 1 }}>
-              {userData.sector || "Setor não definido"} · {userData.email || "Email não definido"}
-            </Typography>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Typography variant="body2" sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                color: T.gold,
-              }}>
-                <LocationOn fontSize="small" sx={{ mr: 0.5 }} />
-                {provinceTemp || "Localização não definida"}
-              </Typography>
-              
-              <Typography variant="body2" sx={{ color: T.textSub }}>
-                • {userData.telefone || "Telefone não definido"}
-              </Typography>
-              
-              <Chip
-                label="Ver perfil completo"
-                size="small"
-                sx={{
-                  bgcolor: T.goldPale,
-                  color: T.gold,
-                  fontWeight: 600,
-                  fontSize: '0.7rem',
-                  '&:hover': { bgcolor: T.goldLight, color: T.white }
-                }}
-              />
-            </Box>
           </Box>
         </Card>
 

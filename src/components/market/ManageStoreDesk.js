@@ -47,6 +47,14 @@ import {
   FormControl,
   Select,
   InputLabel,
+  Container,
+  Fade,
+  Zoom,
+  Avatar,
+  Badge,
+  Stack,
+  LinearProgress,
+  CardActions
 } from '@mui/material';
 import {
   Search,
@@ -72,12 +80,107 @@ import {
   Scale,
   Straighten,
   LocalShipping,
+  Storefront,
+  Inventory,
+  AttachMoney,
+  Verified,
+  ArrowBack,
+  Save,
+  Business,
+  Info,
+  Schedule,
+  Payment,
+  ShoppingCart,
+  Description
 } from '@mui/icons-material';
 import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import { formatPrice } from '../../utils/utils';
 import { NumericFormat } from 'react-number-format';
+import { Star } from 'lucide-react';
 
-// Componente para abas nas configurações
+/* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
+const T = {
+  navy:     '#08192E',
+  navyMid:  '#0E2849',
+  navyLight:'#183A63',
+  gold:     '#C8903A',
+  goldLight:'#E8B96A',
+  goldPale: '#FDF3E3',
+  cream:    '#FAFAF7',
+  white:    '#FFFFFF',
+  text:     '#0F1C2D',
+  textMid:  '#3D5A7A',
+  textSub:  '#6B89A5',
+  border:   '#E0E8F0',
+  borderMid:'#C5D4E3',
+  surface:  '#F4F7FB',
+  success:  '#10b981',
+  error:    '#ef4444',
+  warning:  '#f59e0b',
+};
+
+/* ── Keyframes (mesmos da hero) ───────────────────────────────────────── */
+const KEYFRAMES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-8px); }
+  }
+  @keyframes pulse-gold {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.8; transform: scale(0.98); }
+  }
+  .animate-fade-up {
+    animation: fadeUp 0.65s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease both;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.22s; }
+  .delay-3 { animation-delay: 0.34s; }
+  .delay-4 { animation-delay: 0.46s; }
+  
+  .manage-card {
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .manage-card:hover {
+    transform: translateY(-2px);
+    border-color: ${T.gold} !important;
+    box-shadow: 0 16px 48px rgba(8,25,46,0.1) !important;
+  }
+  .product-card {
+    transition: all 0.3s ease;
+  }
+  .product-card:hover {
+    transform: translateY(-4px);
+    border-color: ${T.gold} !important;
+    box-shadow: 0 20px 40px rgba(8,25,46,0.12) !important;
+  }
+  .stats-card {
+    transition: all 0.2s ease;
+  }
+  .stats-card:hover {
+    background: ${T.goldPale};
+    border-color: ${T.gold} !important;
+  }
+  .tab-indicator {
+    background: ${T.gold} !important;
+    height: 3px !important;
+  }
+`;
+
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
 
@@ -94,7 +197,7 @@ function TabPanel(props) {
   );
 }
 
-const ManageStoreDesk = ({ storeId }) => {
+const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -189,6 +292,22 @@ const ManageStoreDesk = ({ storeId }) => {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [settingsTab, setSettingsTab] = useState(0);
   const [errors, setErrors] = useState({});
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalSales: 0,
+    totalViews: 0,
+    averageRating: 0,
+  });
+
+  // Estatísticas simuladas
+  useEffect(() => {
+    setStats({
+      totalProducts: products.length,
+      totalSales: Math.floor(products.length * 23.5),
+      totalViews: products.reduce((acc, [, p]) => acc + (p.views || 0), 0),
+      averageRating: 4.7,
+    });
+  }, [products]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -197,31 +316,31 @@ const ManageStoreDesk = ({ storeId }) => {
 
         const productsRef = ref(db, `stores/${storeId}/products`);
         const productsSnapshot = await get(productsRef);
-        setProducts(productsSnapshot.exists() ? Object.entries(productsSnapshot.val()) : []);
+        const productsData = productsSnapshot.exists() ? Object.entries(productsSnapshot.val()) : [];
+        setProducts(productsData);
 
-        const storeRef = ref(db, `stores/${storeId}`);
-        const storeSnapshot = await get(storeRef);
-        if (storeSnapshot.exists()) {
-          const data = storeSnapshot.val();
-          setStoreData({
-            name: data.name || '',
-            description: data.description || '',
-            logo: data.company?.logo || '',
-            settings: data.settings || { showPrices: true },
-            contact: data.contact || { phone: '', email: '', whatsapp: '' },
-            location: data.location || {
+        // Se initialStoreData foi passado, use ele, senão busque do banco
+        if (initialStoreData) {
+          setStoreData(prev => ({
+            ...prev,
+            name: initialStoreData.name || '',
+            description: initialStoreData.description || '',
+            logo: initialStoreData.company?.logo || '',
+            settings: initialStoreData.settings || { showPrices: true },
+            contact: initialStoreData.contact || { phone: '', email: '', whatsapp: '' },
+            location: initialStoreData.location || {
               address: '',
               city: '',
               province: '',
               coordinates: { lat: '', lng: '' },
             },
-            socialMedia: data.socialMedia || {
+            socialMedia: initialStoreData.socialMedia || {
               facebook: '',
               instagram: '',
               twitter: '',
               website: '',
             },
-            businessHours: data.businessHours || {
+            businessHours: initialStoreData.businessHours || {
               monday: { open: '', close: '', closed: false },
               tuesday: { open: '', close: '', closed: false },
               wednesday: { open: '', close: '', closed: false },
@@ -230,12 +349,51 @@ const ManageStoreDesk = ({ storeId }) => {
               saturday: { open: '', close: '', closed: false },
               sunday: { open: '', close: '', closed: false },
             },
-            policies: data.policies || {
+            policies: initialStoreData.policies || {
               delivery: '',
               returns: '',
               payments: '',
             },
-          });
+          }));
+        } else {
+          const storeRef = ref(db, `stores/${storeId}`);
+          const storeSnapshot = await get(storeRef);
+          if (storeSnapshot.exists()) {
+            const data = storeSnapshot.val();
+            setStoreData({
+              name: data.name || '',
+              description: data.description || '',
+              logo: data.company?.logo || '',
+              settings: data.settings || { showPrices: true },
+              contact: data.contact || { phone: '', email: '', whatsapp: '' },
+              location: data.location || {
+                address: '',
+                city: '',
+                province: '',
+                coordinates: { lat: '', lng: '' },
+              },
+              socialMedia: data.socialMedia || {
+                facebook: '',
+                instagram: '',
+                twitter: '',
+                website: '',
+              },
+              businessHours: data.businessHours || {
+                monday: { open: '', close: '', closed: false },
+                tuesday: { open: '', close: '', closed: false },
+                wednesday: { open: '', close: '', closed: false },
+                thursday: { open: '', close: '', closed: false },
+                friday: { open: '', close: '', closed: false },
+                saturday: { open: '', close: '', closed: false },
+                sunday: { open: '', close: '', closed: false },
+              },
+              policies: data.policies || {
+                delivery: '',
+                returns: '',
+                payments: '',
+              },
+            });
+          }
         }
       } catch (error) {
         showFeedback('Erro ao carregar dados. Tente novamente.', 'error');
@@ -246,7 +404,7 @@ const ManageStoreDesk = ({ storeId }) => {
     };
 
     fetchInitialData();
-  }, [storeId]);
+  }, [storeId, initialStoreData]);
 
   // Feedback helper
   const showFeedback = (message, severity = 'success') => {
@@ -607,7 +765,14 @@ const ManageStoreDesk = ({ storeId }) => {
             )
             .map(([key, product]) => (
               <Grid item xs={12} key={key}>
-                <Card>
+                <Card
+                  className="product-card"
+                  sx={{
+                    borderRadius: '16px',
+                    border: `1px solid ${T.border}`,
+                    overflow: 'hidden',
+                  }}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
@@ -623,33 +788,41 @@ const ManageStoreDesk = ({ storeId }) => {
                             sx={{
                               width: 80,
                               height: 80,
-                              bgcolor: 'grey.100',
+                              bgcolor: T.surface,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               borderRadius: 1,
                             }}
                           >
-                            <Image color="disabled" />
+                            <Image sx={{ color: T.textSub }} />
                           </Box>
                         )}
                         <Box sx={{ flex: 1 }}>
-                          <Typography variant="subtitle1" fontWeight="bold">
+                          <Typography variant="subtitle1" fontWeight="bold" sx={{ color: T.text }}>
                             {product?.name || 'Sem nome'}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" sx={{ color: T.gold, fontWeight: 600 }}>
                             {storeData.settings.showPrices
-                              ? `${formatPrice(product?.price) || '0.00'} MZN`
-                              : '--'}
+                              ? `${formatPrice(product?.price) || '0.00'} MT`
+                              : 'Preço sob consulta'}
                           </Typography>
-                          <Typography variant="body2">
-                            {product?.category || 'Sem categoria'}
-                          </Typography>
+                          <Chip
+                            label={product?.category || 'Sem categoria'}
+                            size="small"
+                            sx={{
+                              mt: 1,
+                              bgcolor: T.goldPale,
+                              color: T.gold,
+                              fontSize: '0.7rem',
+                            }}
+                          />
                         </Box>
                       </Box>
                       <IconButton
                         onClick={(e) => handleMenuOpen(e, key)}
                         aria-label="Ações do produto"
+                        sx={{ color: T.gold }}
                       >
                         <MoreVert />
                       </IconButton>
@@ -662,32 +835,42 @@ const ManageStoreDesk = ({ storeId }) => {
       );
     } else {
       return (
-        <TableContainer component={Paper} sx={{ mt: 3, boxShadow: 2, borderRadius: 2 }}>
+        <TableContainer
+          component={Paper}
+          sx={{
+            mt: 3,
+            borderRadius: '16px',
+            border: `1px solid ${T.border}`,
+            overflow: 'hidden',
+          }}
+        >
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'primary.light', '& th': { color: 'white' } }}>
-                <TableCell sx={{ width: 100 }}>Imagem</TableCell>
-                <TableCell sx={{ width: 300 }}>
+              <TableRow sx={{ bgcolor: T.surface }}>
+                <TableCell sx={{ width: 100, color: T.text, fontWeight: 600 }}>Imagem</TableCell>
+                <TableCell sx={{ width: 300, color: T.text, fontWeight: 600 }}>
                   <TableSortLabel
                     active={sorting.orderBy === 'name'}
                     direction={sorting.order}
                     onClick={() => handleRequestSort('name')}
+                    sx={{ color: T.text, '&.Mui-active': { color: T.gold } }}
                   >
                     Nome
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={{ width: 180 }}>
+                <TableCell sx={{ width: 180, color: T.text, fontWeight: 600 }}>
                   <TableSortLabel
                     active={sorting.orderBy === 'price'}
                     direction={sorting.order}
                     onClick={() => handleRequestSort('price')}
+                    sx={{ color: T.text, '&.Mui-active': { color: T.gold } }}
                   >
                     Preço
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={{ width: 200 }}>Categoria</TableCell>
-                {!isTablet && <TableCell sx={{ width: 350 }}>Descrição</TableCell>}
-                <TableCell sx={{ width: 150 }}>Ações</TableCell>
+                <TableCell sx={{ width: 200, color: T.text, fontWeight: 600 }}>Categoria</TableCell>
+                {!isTablet && <TableCell sx={{ width: 350, color: T.text, fontWeight: 600 }}>Descrição</TableCell>}
+                <TableCell sx={{ width: 150, color: T.text, fontWeight: 600 }}>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -699,7 +882,7 @@ const ManageStoreDesk = ({ storeId }) => {
                 .map(([key, product]) => (
                   <TableRow key={key} hover>
                     <TableCell>
-                      <Link to={`/produto/${key}`} style={{ textDecoration: 'none' }}>
+                      <Link to={`/produto/${key}/loja/${storeId}`} style={{ textDecoration: 'none' }}>
                         {product?.imageUrl ? (
                           <img
                             src={product.imageUrl}
@@ -707,58 +890,80 @@ const ManageStoreDesk = ({ storeId }) => {
                             style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }}
                           />
                         ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            Sem imagem
-                          </Typography>
+                          <Box
+                            sx={{
+                              width: 60,
+                              height: 60,
+                              bgcolor: T.surface,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 1,
+                            }}
+                          >
+                            <Image sx={{ color: T.textSub, fontSize: 24 }} />
+                          </Box>
                         )}
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Link to={`/produto/${key}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {product?.name || 'Sem nome'}
+                      <Link
+                        to={`/produto/${key}/loja/${storeId}`}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                        <Typography sx={{ fontWeight: 500, color: T.text }}>
+                          {product?.name || 'Sem nome'}
+                        </Typography>
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {storeData.settings.showPrices
-                        ? `${formatPrice(product?.price) || '0.00'} MZN`
-                        : '--'}
+                      <Typography sx={{ fontWeight: 600, color: T.gold }}>
+                        {storeData.settings.showPrices
+                          ? `${formatPrice(product?.price) || '0.00'} MT`
+                          : '--'}
+                      </Typography>
                     </TableCell>
-                    <TableCell>{product?.category || 'Sem categoria'}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={product?.category || 'Sem categoria'}
+                        size="small"
+                        sx={{ bgcolor: T.goldPale, color: T.gold }}
+                      />
+                    </TableCell>
                     {!isTablet && (
                       <TableCell>
-                        {product?.description?.length > 50
-                          ? `${product.description.substring(0, 50)}...`
-                          : product?.description || 'Sem descrição'}
+                        <Typography variant="body2" sx={{ color: T.textSub }}>
+                          {product?.description?.length > 50
+                            ? `${product.description.substring(0, 50)}...`
+                            : product?.description || 'Sem descrição'}
+                        </Typography>
                       </TableCell>
                     )}
                     <TableCell>
                       <Tooltip title="Ver produto">
                         <IconButton
-                          color="info"
                           component={Link}
                           to={`/produto/${key}/loja/${storeId}`}
-                          aria-label="Ver produto"
+                          sx={{ color: T.gold }}
                         >
                           <Visibility />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Editar produto">
                         <IconButton
-                          color="primary"
                           onClick={() => handleEditProduct(key, product)}
-                          aria-label="Editar produto"
+                          sx={{ color: T.gold }}
                         >
                           <Edit />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Remover produto">
                         <IconButton
-                          color="error"
                           onClick={() => {
                             setSelectedProductId(key);
                             toggleModal('deleteConfirm', true);
                           }}
-                          aria-label="Remover produto"
+                          sx={{ color: T.error }}
                         >
                           <Delete />
                         </IconButton>
@@ -774,118 +979,278 @@ const ManageStoreDesk = ({ storeId }) => {
   };
 
   return (
-    <Box sx={{ p: isMobile ? 2 : 4, bgcolor: 'white', maxWidth: 1400, mx: 'auto' }}>
-      <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ mb: 3, fontWeight: 'bold', color: 'primary.main' }}>
-        Gerir Loja
-      </Typography>
+    <Box
+      sx={{
+        backgroundColor: T.cream,
+        minHeight: '100vh',
+        fontFamily: '"Plus Jakarta Sans", sans-serif',
+        py: 4
+      }}
+    >
+      <style>{KEYFRAMES}</style>
 
-      {/* Barra de pesquisa e ações */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: 'space-between',
-          alignItems: isMobile ? 'stretch' : 'center',
-          gap: isMobile ? 2 : 0,
-          mb: 3,
-        }}
-      >
-        <TextField
-          placeholder="Pesquisar produto..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-          }}
-          fullWidth
-          size={isMobile ? 'small' : 'medium'}
+      <Container maxWidth="lg">
+        {/* Header com design da hero */}
+        <Paper
+          className="animate-fade-up"
           sx={{
-            maxWidth: isMobile ? '100%' : '400px',
-            order: isMobile ? 1 : 0,
-          }}
-        />
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            order: isMobile ? 0 : 1,
+            background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)`,
+            borderRadius: '24px',
+            p: { xs: 3, md: 4 },
+            mb: 4,
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          <Button
-            variant="contained"
-            color="primary"
-            component={Link}
-            to={`/addProduct`}
-            size={isMobile ? 'small' : 'medium'}
-            startIcon={<Add />}
-            sx={{
-              whiteSpace: 'nowrap',
-              order: isMobile ? 0 : 1,
-            }}
-          >
-            {isMobile ? 'Adicionar' : 'Adicionar Produto'}
-          </Button>
-          <IconButton
-            color="primary"
-            onClick={() => {
-              toggleModal('settings', true);
-              setSettingsTab(0);
-            }}
-            size={isMobile ? 'small' : 'medium'}
-            sx={{
-              order: isMobile ? 1 : 0,
-              ml: isMobile ? 0 : 2,
-            }}
-          >
-            <Settings fontSize={isMobile ? 'small' : 'medium'} />
-          </IconButton>
-        </Box>
-      </Box>
+          {/* Background decorations */}
+          <Box sx={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: `
+              radial-gradient(ellipse 80% 60% at 90% 10%, rgba(200,144,58,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 50% at 5% 90%, rgba(200,144,58,0.07) 0%, transparent 50%)
+            `,
+          }} />
+          <Box sx={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.035,
+            backgroundImage: `linear-gradient(rgba(255,255,255,1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)`,
+            backgroundSize: '56px 56px',
+          }} />
 
-      {/* Tabela/Lista de produtos */}
-      {loading.products ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <>
-          {renderProducts()}
-          <TablePagination
-            rowsPerPageOptions={isMobile ? [3, 5, 10] : [5, 10, 25]}
-            component="div"
-            count={filteredProducts.length}
-            rowsPerPage={pagination.rowsPerPage}
-            page={pagination.page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage={isMobile ? 'Itens:' : 'Itens por página:'}
+          <Box sx={{ position: 'relative', zIndex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Avatar
+                sx={{
+                  width: 64,
+                  height: 64,
+                  bgcolor: T.gold,
+                  color: T.white,
+                  border: `2px solid ${T.white}`,
+                }}
+              >
+                <Storefront sx={{ fontSize: 32 }} />
+              </Avatar>
+              <Box>
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 800,
+                    color: T.white,
+                    fontFamily: '"Playfair Display", serif',
+                  }}
+                >
+                  {storeData.name || 'Minha Loja'}
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  Gerencie seus produtos e configurações
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Stats Cards */}
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={4} md={3}>
+                <Paper
+                  className="stats-card"
+                  sx={{
+                    p: 2,
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid rgba(255,255,255,0.1)`,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Inventory sx={{ color: T.gold, fontSize: 24, mb: 1 }} />
+                  <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: T.white }}>
+                    {stats.totalProducts}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>
+                    Produtos
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={6} md={3}>
+                <Paper
+                  className="stats-card"
+                  sx={{
+                    p: 2,
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid rgba(255,255,255,0.1)`,
+                    textAlign: 'center',
+                  }}
+                >
+                  <ShoppingCart sx={{ color: T.gold, fontSize: 24, mb: 1 }} />
+                  <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: T.white }}>
+                    {stats.totalSales}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>
+                    Vendas
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={6} md={3}>
+                <Paper
+                  className="stats-card"
+                  sx={{
+                    p: 2,
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid rgba(255,255,255,0.1)`,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Visibility sx={{ color: T.gold, fontSize: 24, mb: 1 }} />
+                  <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: T.white }}>
+                    {stats.totalViews}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>
+                    Visualizações
+                  </Typography>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+        </Paper>
+
+        {/* Barra de pesquisa e ações */}
+        <Paper
+          className="animate-fade-up delay-1"
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: '16px',
+            border: `1px solid ${T.border}`,
+            background: T.white,
+          }}
+        >
+          <Box
             sx={{
-              mt: 2,
-              '& .MuiTablePagination-toolbar': {
-                paddingLeft: isMobile ? 0 : undefined,
-              },
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'space-between',
+              alignItems: isMobile ? 'stretch' : 'center',
+              gap: isMobile ? 2 : 0,
             }}
-          />
-        </>
-      )}
+          >
+            <TextField
+              placeholder="Pesquisar produto..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: T.gold }} />
+                  </InputAdornment>
+                ),
+              }}
+              fullWidth
+              size={isMobile ? 'small' : 'medium'}
+              sx={{
+                maxWidth: isMobile ? '100%' : '400px',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  '&:hover fieldset': { borderColor: T.gold },
+                  '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                },
+              }}
+            />
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+              }}
+            >
+              <Button
+                variant="contained"
+                component={Link}
+                to={`/addProduct`}
+                size={isMobile ? 'small' : 'medium'}
+                startIcon={<Add />}
+                sx={{
+                  bgcolor: T.gold,
+                  color: T.white,
+                  '&:hover': { bgcolor: T.goldLight },
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                }}
+              >
+                {isMobile ? 'Adicionar' : 'Adicionar Produto'}
+              </Button>
+              <IconButton
+                onClick={() => {
+                  toggleModal('settings', true);
+                  setSettingsTab(0);
+                }}
+                size={isMobile ? 'small' : 'medium'}
+                sx={{
+                  bgcolor: T.surface,
+                  color: T.gold,
+                  '&:hover': { bgcolor: T.goldPale },
+                  borderRadius: '10px',
+                }}
+              >
+                <Settings />
+              </IconButton>
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* Tabela/Lista de produtos */}
+        {loading.products ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress sx={{ color: T.gold }} />
+          </Box>
+        ) : (
+          <>
+            {renderProducts()}
+            <TablePagination
+              rowsPerPageOptions={isMobile ? [3, 5, 10] : [5, 10, 25]}
+              component="div"
+              count={filteredProducts.length}
+              rowsPerPage={pagination.rowsPerPage}
+              page={pagination.page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage={isMobile ? 'Itens:' : 'Itens por página:'}
+              sx={{
+                mt: 2,
+                '& .MuiTablePagination-toolbar': {
+                  paddingLeft: isMobile ? 0 : undefined,
+                },
+                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                  color: T.textSub,
+                },
+              }}
+            />
+          </>
+        )}
+      </Container>
 
       {/* Menu de ações para mobile */}
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        <MenuItem
-          onClick={() => {
-            const product = products.find(([id]) => id === selectedProductId)?.[1];
-            if (product) handleEditProduct(selectedProductId, product);
-          }}
-        >
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            border: `1px solid ${T.border}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+          }
+        }}
+      >
+        <MenuItem onClick={() => {
+          const product = products.find(([id]) => id === selectedProductId)?.[1];
+          if (product) handleEditProduct(selectedProductId, product);
+        }}>
           <ListItemIcon>
-            <Edit fontSize="small" />
+            <Edit sx={{ color: T.gold, fontSize: 20 }} />
           </ListItemIcon>
-          <Typography variant="inherit">Editar</Typography>
+          <Typography variant="inherit" sx={{ color: T.text }}>Editar</Typography>
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -894,11 +1259,9 @@ const ManageStoreDesk = ({ storeId }) => {
           }}
         >
           <ListItemIcon>
-            <Delete fontSize="small" color="error" />
+            <Delete sx={{ color: T.error, fontSize: 20 }} />
           </ListItemIcon>
-          <Typography variant="inherit" color="error">
-            Remover
-          </Typography>
+          <Typography variant="inherit" sx={{ color: T.error }}>Remover</Typography>
         </MenuItem>
       </Menu>
 
@@ -909,26 +1272,50 @@ const ManageStoreDesk = ({ storeId }) => {
         fullWidth
         maxWidth="md"
         fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            overflow: 'hidden',
+          }
+        }}
       >
         <DialogTitle
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            bgcolor: 'primary.main',
-            color: 'white',
-            position: 'sticky',
-            top: 0,
-            zIndex: 1,
+            background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)`,
+            color: T.white,
           }}
         >
-          <Typography variant="h6">Configurações da Loja</Typography>
-          <IconButton onClick={() => toggleModal('settings', false)} sx={{ color: 'white' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Configurações da Loja</Typography>
+          <IconButton onClick={() => toggleModal('settings', false)} sx={{ color: T.white }}>
             <Close />
           </IconButton>
         </DialogTitle>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={settingsTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+        <Box sx={{ borderBottom: `1px solid ${T.border}`, bgcolor: T.surface }}>
+          <Tabs
+            value={settingsTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            TabIndicatorProps={{
+              sx: {
+                background: T.gold,
+                height: 3,
+              }
+            }}
+            sx={{
+              '& .MuiTab-root': {
+                color: T.textSub,
+                textTransform: 'none',
+                fontWeight: 600,
+                '&.Mui-selected': {
+                  color: T.gold,
+                },
+              },
+            }}
+          >
             <Tab label="Informações Básicas" />
             <Tab label="Contacto" />
             <Tab label="Localização" />
@@ -937,7 +1324,7 @@ const ManageStoreDesk = ({ storeId }) => {
             <Tab label="Políticas" />
           </Tabs>
         </Box>
-        <DialogContent dividers sx={{ pt: 3, maxHeight: '60vh', overflow: 'auto' }}>
+        <DialogContent dividers sx={{ pt: 3, maxHeight: '60vh', overflow: 'auto', bgcolor: T.white }}>
           {/* Aba 1: Informações Básicas */}
           <TabPanel value={settingsTab} index={0}>
             <Grid container spacing={3}>
@@ -947,10 +1334,24 @@ const ManageStoreDesk = ({ storeId }) => {
                   label="Nome da Loja"
                   value={storeData.name}
                   onChange={(e) => setStoreData((prev) => ({ ...prev, name: e.target.value }))}
-                  sx={{ mb: 3, minWidth: isMobile ? '100%' : 300 }}
+                  sx={{ mb: 3 }}
                   error={!!errors['storeName']}
                   helperText={errors['storeName'] || ''}
                   size={isMobile ? 'small' : 'medium'}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Storefront sx={{ color: T.gold }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
                 <TextField
                   fullWidth
@@ -959,11 +1360,25 @@ const ManageStoreDesk = ({ storeId }) => {
                   onChange={(e) => setStoreData((prev) => ({ ...prev, description: e.target.value }))}
                   multiline
                   rows={isMobile ? 3 : 4}
-                  sx={{ mb: 3, minWidth: isMobile ? '100%' : 330 }}
+                  sx={{ mb: 3 }}
                   size={isMobile ? 'small' : 'medium'}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Description sx={{ color: T.gold }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="body1">Exibir Preços</Typography>
+                  <Typography variant="body1" sx={{ color: T.text }}>Exibir Preços</Typography>
                   <Switch
                     checked={storeData.settings.showPrices}
                     onChange={(e) =>
@@ -972,14 +1387,19 @@ const ManageStoreDesk = ({ storeId }) => {
                         settings: { ...prev.settings, showPrices: e.target.checked },
                       }))
                     }
-                    color="primary"
+                    sx={{
+                      '& .MuiSwitch-switchBase.Mui-checked': {
+                        color: T.gold,
+                      },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                        backgroundColor: T.gold,
+                      },
+                    }}
                   />
                 </Box>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography variant="body1" sx={{ mb: 1 }}>
-                  Logo da Loja
-                </Typography>
+                <Typography variant="body1" sx={{ mb: 1, color: T.text }}>Logo da Loja</Typography>
                 <input
                   type="file"
                   accept="image/*"
@@ -988,7 +1408,13 @@ const ManageStoreDesk = ({ storeId }) => {
                   id="logo-upload"
                 />
                 <label htmlFor="logo-upload">
-                  <Button variant="contained" component="span" fullWidth sx={{ mb: 2 }} size={isMobile ? 'small' : 'medium'}>
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    fullWidth
+                    sx={{ mb: 2, borderColor: T.borderMid, color: T.gold }}
+                    size={isMobile ? 'small' : 'medium'}
+                  >
                     Alterar Logo
                   </Button>
                 </label>
@@ -997,13 +1423,13 @@ const ManageStoreDesk = ({ storeId }) => {
                     sx={{
                       width: '100%',
                       height: isMobile ? 150 : 200,
-                      border: '1px dashed',
-                      borderColor: 'divider',
-                      borderRadius: 1,
+                      border: `1px dashed ${T.borderMid}`,
+                      borderRadius: 2,
                       overflow: 'hidden',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      bgcolor: T.surface,
                     }}
                   >
                     <img
@@ -1037,12 +1463,19 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Phone fontSize="small" />
+                        <Phone sx={{ color: T.gold }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1059,12 +1492,19 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <WhatsApp fontSize="small" />
+                        <WhatsApp sx={{ color: '#25D366' }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -1082,12 +1522,19 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Email fontSize="small" />
+                        <Email sx={{ color: '#EA4335' }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
             </Grid>
@@ -1109,12 +1556,19 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <LocationOn fontSize="small" />
+                        <LocationOn sx={{ color: T.gold }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1128,8 +1582,37 @@ const ManageStoreDesk = ({ storeId }) => {
                       location: { ...prev.location, city: e.target.value },
                     }))
                   }
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Província"
+                  value={storeData.location.province}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      location: { ...prev.location, province: e.target.value },
+                    }))
+                  }
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
             </Grid>
@@ -1151,12 +1634,19 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Language fontSize="small" />
+                        <Language sx={{ color: '#4285F4' }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1173,12 +1663,19 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Facebook fontSize="small" />
+                        <Facebook sx={{ color: '#1877F2' }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1195,12 +1692,19 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Instagram fontSize="small" />
+                        <Instagram sx={{ color: '#E4405F' }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -1217,19 +1721,26 @@ const ManageStoreDesk = ({ storeId }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Twitter fontSize="small" />
+                        <Twitter sx={{ color: '#1DA1F2' }} />
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
             </Grid>
           </TabPanel>
           {/* Aba 5: Horário de Funcionamento */}
           <TabPanel value={settingsTab} index={4}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ color: T.textSub, mb: 2 }}>
               Defina o horário de funcionamento da sua loja. Deixe em branco se não aplicável.
             </Typography>
             {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
@@ -1243,25 +1754,36 @@ const ManageStoreDesk = ({ storeId }) => {
                 sunday: 'Domingo',
               };
               return (
-                <Accordion key={day} sx={{ mb: 1 }}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
+                <Accordion key={day} sx={{ mb: 1, borderRadius: '12px', border: `1px solid ${T.border}` }}>
+                  <AccordionSummary expandIcon={<ExpandMore sx={{ color: T.gold }} />}>
                     <FormControlLabel
                       control={
                         <Switch
                           checked={!storeData.businessHours[day].closed}
                           onChange={() => handleDayClosedToggle(day)}
                           onClick={(e) => e.stopPropagation()}
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: T.gold,
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              backgroundColor: T.gold,
+                            },
+                          }}
                         />
                       }
-                      label={dayNames[day]}
+                      label={
+                        <Typography sx={{ color: T.text, fontWeight: 500 }}>
+                          {dayNames[day]}
+                        </Typography>
+                      }
                       sx={{ mr: 2 }}
                     />
                     {!storeData.businessHours[day].closed && (
                       <Chip
                         size="small"
                         label={`${storeData.businessHours[day].open || '--:--'} - ${storeData.businessHours[day].close || '--:--'}`}
-                        color="primary"
-                        variant="outlined"
+                        sx={{ bgcolor: T.goldPale, color: T.gold }}
                       />
                     )}
                   </AccordionSummary>
@@ -1276,6 +1798,13 @@ const ManageStoreDesk = ({ storeId }) => {
                           onChange={(e) => handleBusinessHoursChange(day, 'open', e.target.value)}
                           disabled={storeData.businessHours[day].closed}
                           size={isMobile ? 'small' : 'medium'}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              '&:hover fieldset': { borderColor: T.gold },
+                            },
+                          }}
                         />
                       </Grid>
                       <Grid item xs={6}>
@@ -1287,6 +1816,13 @@ const ManageStoreDesk = ({ storeId }) => {
                           onChange={(e) => handleBusinessHoursChange(day, 'close', e.target.value)}
                           disabled={storeData.businessHours[day].closed}
                           size={isMobile ? 'small' : 'medium'}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              '&:hover fieldset': { borderColor: T.gold },
+                            },
+                          }}
                         />
                       </Grid>
                     </Grid>
@@ -1311,8 +1847,15 @@ const ManageStoreDesk = ({ storeId }) => {
                   }
                   multiline
                   rows={3}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -1328,19 +1871,57 @@ const ManageStoreDesk = ({ storeId }) => {
                   }
                   multiline
                   rows={3}
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Política de Pagamentos"
+                  value={storeData.policies.payments}
+                  onChange={(e) =>
+                    setStoreData((prev) => ({
+                      ...prev,
+                      policies: { ...prev.policies, payments: e.target.value },
+                    }))
+                  }
+                  multiline
+                  rows={3}
+                  sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               </Grid>
             </Grid>
           </TabPanel>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, bgcolor: T.white, borderTop: `1px solid ${T.border}` }}>
           <Button
             variant="outlined"
             onClick={() => toggleModal('settings', false)}
             disabled={loading.store}
             size={isMobile ? 'small' : 'medium'}
+            sx={{
+              borderColor: T.borderMid,
+              color: T.textSub,
+              '&:hover': { borderColor: T.gold, color: T.gold },
+              borderRadius: '10px',
+              textTransform: 'none',
+            }}
           >
             Cancelar
           </Button>
@@ -1349,8 +1930,17 @@ const ManageStoreDesk = ({ storeId }) => {
             onClick={handleStoreUpdate}
             disabled={!storeData.name.trim() || loading.store}
             size={isMobile ? 'small' : 'medium'}
+            startIcon={loading.store ? <CircularProgress size={20} /> : <Save />}
+            sx={{
+              bgcolor: T.gold,
+              color: T.white,
+              '&:hover': { bgcolor: T.goldLight },
+              borderRadius: '10px',
+              textTransform: 'none',
+              px: 3,
+            }}
           >
-            {loading.store ? <CircularProgress size={24} /> : 'Salvar'}
+            {loading.store ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1361,30 +1951,36 @@ const ManageStoreDesk = ({ storeId }) => {
         onClose={() => !loading.productUpdate && toggleModal('editProduct', false)}
         fullWidth
         maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            overflow: 'hidden',
+          }
+        }}
       >
         <DialogTitle
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            bgcolor: 'primary.main',
-            color: 'white',
+            background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)`,
+            color: T.white,
           }}
         >
-          <Typography variant="h6">Editar Produto</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Editar Produto</Typography>
           <IconButton
             onClick={() => !loading.productUpdate && toggleModal('editProduct', false)}
-            sx={{ color: 'white' }}
+            sx={{ color: T.white }}
             disabled={loading.productUpdate}
           >
             <Close />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers sx={{ pt: 3 }}>
+        <DialogContent dividers sx={{ pt: 3, bgcolor: T.white }}>
           <Grid container spacing={2}>
             {/* Seção de Upload de Imagem */}
             <Grid item xs={12} md={4}>
-              <Typography variant="subtitle1" gutterBottom>
+              <Typography variant="subtitle1" gutterBottom sx={{ color: T.text, fontWeight: 600 }}>
                 Imagem do Produto
               </Typography>
               <Box
@@ -1401,10 +1997,10 @@ const ManageStoreDesk = ({ storeId }) => {
                       width: '100%',
                       height: isMobile ? 150 : 200,
                       position: 'relative',
-                      border: '1px dashed',
-                      borderColor: 'divider',
-                      borderRadius: 1,
+                      border: `1px dashed ${T.borderMid}`,
+                      borderRadius: 2,
                       overflow: 'hidden',
+                      bgcolor: T.surface,
                     }}
                   >
                     <img
@@ -1424,7 +2020,7 @@ const ManageStoreDesk = ({ storeId }) => {
                         top: 4,
                         right: 4,
                         backgroundColor: 'rgba(0,0,0,0.5)',
-                        color: 'white',
+                        color: T.white,
                         '&:hover': {
                           backgroundColor: 'rgba(0,0,0,0.7)',
                         },
@@ -1449,6 +2045,13 @@ const ManageStoreDesk = ({ storeId }) => {
                       fullWidth
                       startIcon={<Image />}
                       disabled={loading.imageUpload}
+                      sx={{
+                        borderColor: T.borderMid,
+                        color: T.gold,
+                        '&:hover': { borderColor: T.gold },
+                        borderRadius: '10px',
+                        textTransform: 'none',
+                      }}
                     >
                       {productData.imageUrl ? 'Alterar Imagem' : 'Adicionar Imagem'}
                     </Button>
@@ -1461,6 +2064,13 @@ const ManageStoreDesk = ({ storeId }) => {
                       fullWidth
                       startIcon={<Delete />}
                       disabled={loading.imageUpload}
+                      sx={{
+                        borderColor: T.borderMid,
+                        color: T.error,
+                        '&:hover': { borderColor: T.error },
+                        borderRadius: '10px',
+                        textTransform: 'none',
+                      }}
                     >
                       Remover Imagem
                     </Button>
@@ -1471,11 +2081,16 @@ const ManageStoreDesk = ({ storeId }) => {
             {/* Campos do Produto */}
             <Grid item xs={12} md={8}>
               <FormControl fullWidth sx={{ mb: 2 }} error={!!errors['type']}>
-                <InputLabel>Tipo *</InputLabel>
+                <InputLabel sx={{ color: T.textSub }}>Tipo *</InputLabel>
                 <Select
                   value={productData.type}
                   label="Tipo"
                   onChange={(e) => setProductData((prev) => ({ ...prev, type: e.target.value }))}
+                  sx={{
+                    borderRadius: '12px',
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: T.gold },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: T.gold },
+                  }}
                 >
                   <MenuItem value="product">Produto</MenuItem>
                   <MenuItem value="service">Serviço</MenuItem>
@@ -1486,11 +2101,25 @@ const ManageStoreDesk = ({ storeId }) => {
                 value={productData.name}
                 onChange={(e) => setProductData((prev) => ({ ...prev, name: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                sx={{ mb: 2 }}
                 error={!!errors['name']}
                 helperText={errors['name'] || 'Ex: Camiseta Branca ou Consultoria de Marketing'}
                 size={isMobile ? 'small' : 'medium'}
                 required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Inventory sx={{ color: T.gold }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    '&:hover fieldset': { borderColor: T.gold },
+                    '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                  },
+                }}
               />
               <NumericFormat
                 value={productData.price}
@@ -1503,23 +2132,44 @@ const ManageStoreDesk = ({ storeId }) => {
                 customInput={TextField}
                 fullWidth
                 label="Preço (MZN) *"
-                sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                sx={{ mb: 2 }}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
+                  startAdornment: <InputAdornment position="start"><AttachMoney sx={{ color: T.gold }} /></InputAdornment>,
                 }}
                 error={!!errors['price']}
                 helperText={errors['price'] || 'Ex: 1234,56'}
                 size={isMobile ? 'small' : 'medium'}
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    '&:hover fieldset': { borderColor: T.gold },
+                    '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                  },
+                }}
               />
               <TextField
                 label="Categoria"
                 value={productData.category}
                 onChange={(e) => setProductData((prev) => ({ ...prev, category: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                sx={{ mb: 2 }}
                 helperText="Ex: Roupas, Eletrônicos, Serviços"
                 size={isMobile ? 'small' : 'medium'}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Category sx={{ color: T.gold }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    '&:hover fieldset': { borderColor: T.gold },
+                    '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                  },
+                }}
               />
               <TextField
                 label="Descrição"
@@ -1528,9 +2178,16 @@ const ManageStoreDesk = ({ storeId }) => {
                 multiline
                 rows={isMobile ? 3 : 4}
                 fullWidth
-                sx={{ mb: 2, minWidth: isMobile ? '100%' : 330 }}
+                sx={{ mb: 2 }}
                 helperText="Detalhes atrativos para o cliente"
                 size={isMobile ? 'small' : 'medium'}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    '&:hover fieldset': { borderColor: T.gold },
+                    '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                  },
+                }}
               />
               {productData.type === 'product' ? (
                 <>
@@ -1541,25 +2198,46 @@ const ManageStoreDesk = ({ storeId }) => {
                     customInput={TextField}
                     fullWidth
                     label="Quantidade *"
-                    sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                    sx={{ mb: 2 }}
                     error={!!errors['qtd']}
                     helperText={errors['qtd'] || 'Estoque disponível'}
                     size={isMobile ? 'small' : 'medium'}
                     required
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Inventory sx={{ color: T.gold }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        '&:hover fieldset': { borderColor: T.gold },
+                        '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                      },
+                    }}
                   />
                   <TextField
                     label="SKU"
                     value={productData.sku}
                     onChange={(e) => setProductData((prev) => ({ ...prev, sku: e.target.value }))}
                     fullWidth
-                    sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                    sx={{ mb: 2 }}
                     helperText="Código interno (ex: CAM-BRANCO-M)"
                     size={isMobile ? 'small' : 'medium'}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        '&:hover fieldset': { borderColor: T.gold },
+                        '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                      },
+                    }}
                   />
-                  <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ my: 2, borderColor: T.border }} />
                   <Typography
                     variant="subtitle2"
-                    sx={{ mb: 2, display: 'flex', alignItems: 'center', color: 'primary.main' }}
+                    sx={{ mb: 2, display: 'flex', alignItems: 'center', color: T.gold }}
                   >
                     <LocalShipping sx={{ mr: 1 }} /> Frete Nacional
                   </Typography>
@@ -1568,87 +2246,130 @@ const ManageStoreDesk = ({ storeId }) => {
                       <Switch
                         checked={productData.nationalShipping}
                         onChange={(e) => setProductData((prev) => ({ ...prev, nationalShipping: e.target.checked }))}
-                        color="primary"
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: T.gold,
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: T.gold,
+                          },
+                        }}
                       />
                     }
                     label="Habilitar frete para todo Moçambique"
                     sx={{ mb: 2 }}
                   />
                   {productData.nationalShipping && (
-                    <>
-                      <NumericFormat
-                        value={productData.weight}
-                        allowNegative={false}
-                        decimalScale={2}
-                        fixedDecimalScale
-                        onValueChange={(values) => setProductData((prev) => ({ ...prev, weight: values.value }))}
-                        customInput={TextField}
-                        fullWidth
-                        label="Peso (kg) *"
-                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start"><Scale fontSize="small" /></InputAdornment>,
-                        }}
-                        error={!!errors['weight']}
-                        helperText={errors['weight'] || 'Ex: 0,50 para roupas leves'}
-                        size={isMobile ? 'small' : 'medium'}
-                        required
-                      />
-                      <NumericFormat
-                        value={productData.height}
-                        allowNegative={false}
-                        decimalScale={2}
-                        fixedDecimalScale
-                        onValueChange={(values) => setProductData((prev) => ({ ...prev, height: values.value }))}
-                        customInput={TextField}
-                        fullWidth
-                        label="Altura (cm) *"
-                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start"><Straighten fontSize="small" /></InputAdornment>,
-                        }}
-                        error={!!errors['height']}
-                        helperText={errors['height'] || 'Ex: 30,00'}
-                        size={isMobile ? 'small' : 'medium'}
-                        required
-                      />
-                      <NumericFormat
-                        value={productData.width}
-                        allowNegative={false}
-                        decimalScale={2}
-                        fixedDecimalScale
-                        onValueChange={(values) => setProductData((prev) => ({ ...prev, width: values.value }))}
-                        customInput={TextField}
-                        fullWidth
-                        label="Largura (cm) *"
-                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start"><Straighten fontSize="small" /></InputAdornment>,
-                        }}
-                        error={!!errors['width']}
-                        helperText={errors['width'] || 'Ex: 20,00'}
-                        size={isMobile ? 'small' : 'medium'}
-                        required
-                      />
-                      <NumericFormat
-                        value={productData.length}
-                        allowNegative={false}
-                        decimalScale={2}
-                        fixedDecimalScale
-                        onValueChange={(values) => setProductData((prev) => ({ ...prev, length: values.value }))}
-                        customInput={TextField}
-                        fullWidth
-                        label="Comprimento (cm) *"
-                        sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start"><Straighten fontSize="small" /></InputAdornment>,
-                        }}
-                        error={!!errors['length']}
-                        helperText={errors['length'] || 'Ex: 5,00'}
-                        size={isMobile ? 'small' : 'medium'}
-                        required
-                      />
-                    </>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <NumericFormat
+                          value={productData.weight}
+                          allowNegative={false}
+                          decimalScale={2}
+                          fixedDecimalScale
+                          onValueChange={(values) => setProductData((prev) => ({ ...prev, weight: values.value }))}
+                          customInput={TextField}
+                          fullWidth
+                          label="Peso (kg) *"
+                          sx={{ mb: 2 }}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start"><Scale sx={{ color: T.gold }} /></InputAdornment>,
+                          }}
+                          error={!!errors['weight']}
+                          helperText={errors['weight'] || 'Ex: 0,50 para roupas leves'}
+                          size={isMobile ? 'small' : 'medium'}
+                          required
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              '&:hover fieldset': { borderColor: T.gold },
+                              '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <NumericFormat
+                          value={productData.height}
+                          allowNegative={false}
+                          decimalScale={2}
+                          fixedDecimalScale
+                          onValueChange={(values) => setProductData((prev) => ({ ...prev, height: values.value }))}
+                          customInput={TextField}
+                          fullWidth
+                          label="Altura (cm) *"
+                          sx={{ mb: 2 }}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start"><Straighten sx={{ color: T.gold }} /></InputAdornment>,
+                          }}
+                          error={!!errors['height']}
+                          helperText={errors['height'] || 'Ex: 30,00'}
+                          size={isMobile ? 'small' : 'medium'}
+                          required
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              '&:hover fieldset': { borderColor: T.gold },
+                              '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <NumericFormat
+                          value={productData.width}
+                          allowNegative={false}
+                          decimalScale={2}
+                          fixedDecimalScale
+                          onValueChange={(values) => setProductData((prev) => ({ ...prev, width: values.value }))}
+                          customInput={TextField}
+                          fullWidth
+                          label="Largura (cm) *"
+                          sx={{ mb: 2 }}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start"><Straighten sx={{ color: T.gold }} /></InputAdornment>,
+                          }}
+                          error={!!errors['width']}
+                          helperText={errors['width'] || 'Ex: 20,00'}
+                          size={isMobile ? 'small' : 'medium'}
+                          required
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              '&:hover fieldset': { borderColor: T.gold },
+                              '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <NumericFormat
+                          value={productData.length}
+                          allowNegative={false}
+                          decimalScale={2}
+                          fixedDecimalScale
+                          onValueChange={(values) => setProductData((prev) => ({ ...prev, length: values.value }))}
+                          customInput={TextField}
+                          fullWidth
+                          label="Comprimento (cm) *"
+                          sx={{ mb: 2 }}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start"><Straighten sx={{ color: T.gold }} /></InputAdornment>,
+                          }}
+                          error={!!errors['length']}
+                          helperText={errors['length'] || 'Ex: 5,00'}
+                          size={isMobile ? 'small' : 'medium'}
+                          required
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              '&:hover fieldset': { borderColor: T.gold },
+                              '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                            },
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
                   )}
                 </>
               ) : (
@@ -1657,20 +2378,34 @@ const ManageStoreDesk = ({ storeId }) => {
                   value={productData.sku}
                   onChange={(e) => setProductData((prev) => ({ ...prev, sku: e.target.value }))}
                   fullWidth
-                  sx={{ mb: 2, minWidth: isMobile ? '100%' : 280 }}
+                  sx={{ mb: 2 }}
                   helperText="Código opcional para serviços"
                   size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      '&:hover fieldset': { borderColor: T.gold },
+                      '&.Mui-focused fieldset': { borderColor: T.gold, borderWidth: '2px' },
+                    },
+                  }}
                 />
               )}
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, bgcolor: T.white, borderTop: `1px solid ${T.border}` }}>
           <Button
             variant="outlined"
             onClick={() => toggleModal('editProduct', false)}
             disabled={loading.productUpdate}
             size={isMobile ? 'small' : 'medium'}
+            sx={{
+              borderColor: T.borderMid,
+              color: T.textSub,
+              '&:hover': { borderColor: T.gold, color: T.gold },
+              borderRadius: '10px',
+              textTransform: 'none',
+            }}
           >
             Cancelar
           </Button>
@@ -1679,8 +2414,17 @@ const ManageStoreDesk = ({ storeId }) => {
             onClick={handleUpdateProduct}
             disabled={Object.keys(errors).length > 0 || loading.productUpdate}
             size={isMobile ? 'small' : 'medium'}
+            startIcon={loading.productUpdate ? <CircularProgress size={20} /> : <Save />}
+            sx={{
+              bgcolor: T.gold,
+              color: T.white,
+              '&:hover': { bgcolor: T.goldLight },
+              borderRadius: '10px',
+              textTransform: 'none',
+              px: 3,
+            }}
           >
-            {loading.productUpdate ? <CircularProgress size={24} /> : 'Salvar Alterações'}
+            {loading.productUpdate ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1691,16 +2435,33 @@ const ManageStoreDesk = ({ storeId }) => {
         onClose={() => toggleModal('deleteConfirm', false)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            border: `1px solid ${T.border}`,
+          }
+        }}
       >
-        <DialogTitle>Confirmar Exclusão</DialogTitle>
+        <DialogTitle sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700, color: T.text }}>
+          Confirmar Exclusão
+        </DialogTitle>
         <DialogContent>
-          <Typography>Tem certeza que deseja remover este produto?</Typography>
+          <Typography sx={{ color: T.textSub }}>
+            Tem certeza que deseja remover este produto? Esta ação não pode ser desfeita.
+          </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 3 }}>
           <Button
             onClick={() => toggleModal('deleteConfirm', false)}
             variant="outlined"
             size={isMobile ? 'small' : 'medium'}
+            sx={{
+              borderColor: T.borderMid,
+              color: T.textSub,
+              '&:hover': { borderColor: T.gold, color: T.gold },
+              borderRadius: '10px',
+              textTransform: 'none',
+            }}
           >
             Cancelar
           </Button>
@@ -1710,8 +2471,14 @@ const ManageStoreDesk = ({ storeId }) => {
               toggleModal('deleteConfirm', false);
             }}
             variant="contained"
-            color="error"
-            size={isMobile ? 'small' : 'medium'}
+            sx={{
+              bgcolor: T.error,
+              color: T.white,
+              '&:hover': { bgcolor: '#dc2626' },
+              borderRadius: '10px',
+              textTransform: 'none',
+              px: 3,
+            }}
           >
             Remover
           </Button>
@@ -1731,7 +2498,11 @@ const ManageStoreDesk = ({ storeId }) => {
         <Alert
           onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
           severity={feedback.severity}
-          sx={{ width: '100%' }}
+          sx={{
+            width: '100%',
+            borderRadius: '12px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+          }}
           variant="filled"
         >
           {feedback.message}

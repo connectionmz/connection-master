@@ -297,21 +297,6 @@ export const AccountTypeSelector = ({ onSelect }) => {
       <style>{KEYFRAMES}</style>
       
       <Container maxWidth="md">
-        <Box sx={{ textAlign: 'center', mb: 4 }}>
-        
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            sx={{ 
-              fontFamily: '"Playfair Display", serif',
-              fontWeight: 700, 
-              color: T.text, 
-              mb: 2 
-            }}
-          >
-            Selecione o tipo de conta
-          </Typography>
-        </Box>
 
         <Grid container spacing={3} justifyContent="center">
           {accountTypes.map((type, index) => (

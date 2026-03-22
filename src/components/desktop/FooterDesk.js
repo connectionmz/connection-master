@@ -192,8 +192,6 @@ const FooterDesk = () => {
 
   const certificates = [
     "Empresa Verificada",
-    "Selos de Qualidade",
-    "Parceiro Oficial"
   ];
 
   return (

@@ -135,8 +135,7 @@ const sanitizeFirebasePath = (str) => {
   return str.replace(/[.#$\[\] ,;'"]/g, '_');
 };
 
-// Exemplo de uso:
-// "Ntheko Quality Multiserviços, Lda." -> "Ntheko_Quality_Multiserviços__Lda_"
+
 
 const CompanyProfile = ({ user }) => {
   const { id } = useParams();

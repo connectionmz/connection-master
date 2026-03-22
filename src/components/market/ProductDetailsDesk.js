@@ -29,6 +29,13 @@ import {
   Collapse,
   Paper,
   Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemButton,
 } from "@mui/material";
 import {
   Share as ShareIcon,
@@ -45,6 +52,12 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   ArrowBack as ArrowBackIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  WhatsApp as WhatsAppIcon,
+  Language as LanguageIcon,
+  Close as CloseIcon,
+  ContactSupport as ContactIcon,
 } from "@mui/icons-material";
 import BackButton from "../BackButton";
 import { formatPrice } from "../../utils/utils";
@@ -94,6 +107,7 @@ const ProductDetailsDesk = ({ user }) => {
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [showShippingDetails, setShowShippingDetails] = useState(false);
+  const [openContactModal, setOpenContactModal] = useState(false);
   
   // Constantes de frete
   const IVA_PERCENTAGE = 0;
@@ -302,6 +316,33 @@ const ProductDetailsDesk = ({ user }) => {
     });
   };
 
+  const handleOpenContactModal = () => {
+    setOpenContactModal(true);
+  };
+
+  const handleCloseContactModal = () => {
+    setOpenContactModal(false);
+  };
+
+  const handleContactAction = (type, value) => {
+    switch(type) {
+      case 'phone':
+        window.location.href = `tel:${value}`;
+        break;
+      case 'whatsapp':
+        window.open(`https://wa.me/${value.replace(/\D/g, '')}`, '_blank');
+        break;
+      case 'email':
+        window.location.href = `mailto:${value}`;
+        break;
+      case 'website':
+        window.open(value, '_blank');
+        break;
+      default:
+        break;
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: T.navy, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -417,7 +458,7 @@ const ProductDetailsDesk = ({ user }) => {
                 </Badge>
 
                 <Box sx={{ flex: 1 }}>
-                  <Link to={`/perfil/${storeInfo.company.id}`} style={{ textDecoration: 'none' }}>
+                  <Link to={`/empresa/${storeInfo.company.slug}`} style={{ textDecoration: 'none' }}>
                     <Typography sx={{ fontWeight: 700, color: T.gold, '&:hover': { color: T.goldLight } }}>
                       {storeInfo.company.nome}
                     </Typography>
@@ -684,8 +725,8 @@ const ProductDetailsDesk = ({ user }) => {
               <Button
                 fullWidth
                 variant="contained"
-                startIcon={<StoreIcon />}
-                onClick={() => navigate(`/loja/${store}`)}
+                startIcon={<ContactIcon />}
+                onClick={handleOpenContactModal}
                 sx={{ bgcolor: 'rgba(200,144,58,0.18)', color: T.gold, border: `1px solid rgba(200,144,58,0.25)`, py: 1.5 }}
               >
                 Contactar Loja
@@ -716,6 +757,180 @@ const ProductDetailsDesk = ({ user }) => {
             <ListItemText>Copiar link</ListItemText>
           </MenuItem>
         </Menu>
+
+        {/* Modal de Contato */}
+        <Dialog
+          open={openContactModal}
+          onClose={handleCloseContactModal}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              bgcolor: T.navyCard,
+              border: `1px solid ${T.darkBorder}`,
+              borderRadius: 3,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            }
+          }}
+        >
+          <DialogTitle sx={{ 
+            borderBottom: `1px solid ${T.darkBorder}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            pb: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ContactIcon sx={{ color: T.gold }} />
+              <Typography sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700, color: T.white }}>
+                Contactar {storeInfo?.company?.nome || "Loja"}
+              </Typography>
+            </Box>
+            <IconButton onClick={handleCloseContactModal} sx={{ color: T.darkMuted, '&:hover': { color: T.white } }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent sx={{ pt: 3 }}>
+            <List sx={{ width: '100%' }}>
+              {storeInfo?.company?.contacto && (
+                <ListItem 
+                  component="div"
+                  sx={{ 
+                    mb: 1,
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    borderRadius: 2,
+                    border: `1px solid ${T.darkBorder}`,
+                    '&:hover': { borderColor: T.gold }
+                  }}
+                >
+                  <ListItemButton onClick={() => handleContactAction('phone', storeInfo.company.contacto)}>
+                    <ListItemIcon>
+                      <PhoneIcon sx={{ color: T.gold }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Telefone"
+                      secondary={storeInfo.company.contacto}
+                      primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
+                      secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              )}
+
+              {storeInfo?.company?.whatsapp && (
+                <ListItem 
+                  component="div"
+                  sx={{ 
+                    mb: 1,
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    borderRadius: 2,
+                    border: `1px solid ${T.darkBorder}`,
+                    '&:hover': { borderColor: T.gold }
+                  }}
+                >
+                  <ListItemButton onClick={() => handleContactAction('whatsapp', storeInfo.company.whatsapp)}>
+                    <ListItemIcon>
+                      <WhatsAppIcon sx={{ color: '#25D366' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="WhatsApp"
+                      secondary={storeInfo.company.whatsapp}
+                      primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
+                      secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              )}
+
+              {storeInfo?.company?.email && (
+                <ListItem 
+                  component="div"
+                  sx={{ 
+                    mb: 1,
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    borderRadius: 2,
+                    border: `1px solid ${T.darkBorder}`,
+                    '&:hover': { borderColor: T.gold }
+                  }}
+                >
+                  <ListItemButton onClick={() => handleContactAction('email', storeInfo.company.email)}>
+                    <ListItemIcon>
+                      <EmailIcon sx={{ color: '#EA4335' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Email"
+                      secondary={storeInfo.company.email}
+                      primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
+                      secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              )}
+
+              {storeInfo?.company?.website && (
+                <ListItem 
+                  component="div"
+                  sx={{ 
+                    mb: 1,
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    borderRadius: 2,
+                    border: `1px solid ${T.darkBorder}`,
+                    '&:hover': { borderColor: T.gold }
+                  }}
+                >
+                  <ListItemButton onClick={() => handleContactAction('website', storeInfo.company.website)}>
+                    <ListItemIcon>
+                      <LanguageIcon sx={{ color: '#4285F4' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Website"
+                      secondary={storeInfo.company.website.replace(/^https?:\/\//, '')}
+                      primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
+                      secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              )}
+
+              {storeInfo?.company?.endereco && (
+                <ListItem 
+                  component="div"
+                  sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    borderRadius: 2,
+                    border: `1px solid ${T.darkBorder}`,
+                  }}
+                >
+                  <ListItemButton onClick={() => {
+                    const query = encodeURIComponent(storeInfo.company.endereco);
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+                  }}>
+                    <ListItemIcon>
+                      <LocationOnIcon sx={{ color: T.gold }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Endereço"
+                      secondary={storeInfo.company.endereco}
+                      primaryTypographyProps={{ sx: { color: T.darkTextSub, fontSize: '0.8rem' } }}
+                      secondaryTypographyProps={{ sx: { color: T.white, fontWeight: 600 } }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              )}
+            </List>
+          </DialogContent>
+
+          <DialogActions sx={{ borderTop: `1px solid ${T.darkBorder}`, p: 2 }}>
+            <Button 
+              onClick={handleCloseContactModal}
+              sx={{ color: T.darkTextSub, '&:hover': { color: T.white } }}
+            >
+              Fechar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Snackbar */}
         <Snackbar open={openSnackbar} autoHideDuration={4000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: isMobile ? 'bottom' : 'top', horizontal: 'center' }}>
           <Alert onClose={() => setOpenSnackbar(false)} severity={snackbarSeverity} variant="filled" sx={{ borderRadius: 2 }}>
