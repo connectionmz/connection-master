@@ -134,6 +134,7 @@ const sendEmail = async (to, emailMessage) => {
 };
 
 const sendEmailCotacaoDireta = async (to, emailMessage) => {
+  console.log('📧 Enviando email de cotação direta para:', to);
   if (!to) {
     console.error('❌ Email de destino não informado');
     return false;
