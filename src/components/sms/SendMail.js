@@ -135,9 +135,23 @@ const sendEmail = async (to, emailMessage) => {
 
 const sendEmailCotacaoDireta = async (to, emailMessage) => {
   console.log('📧 Enviando email de cotação direta para:', to);
+  
+  // Validate required fields
   if (!to) {
     console.error('❌ Email de destino não informado');
     return false;
+  }
+  
+  // Validate emailMessage structure
+  if (!emailMessage || typeof emailMessage !== 'object') {
+    console.error('❌ emailMessage não é um objeto válido');
+    return false;
+  }
+  
+  // Ensure link is properly formatted
+  const link = emailMessage.link || '';
+  if (!link) {
+    console.warn('⚠️ Link não informado no email');
   }
 
   const textContent = `
@@ -153,13 +167,14 @@ ${emailMessage.message || "Sem mensagem adicional"}
 Responder rapidamente aumenta suas chances de fechar o negócio.
 
 👉 Responda agora:
-${emailMessage.link || 'Link não disponível'}
+${link}
 
 Seja rápido — outros fornecedores podem ser contactados.
 
 —
 Connection Mozambique
 `;
+  
   const emailData = {
     to,
     subject: "📩 Novo pedido de cotação para sua empresa",

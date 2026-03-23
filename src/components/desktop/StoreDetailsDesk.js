@@ -529,15 +529,14 @@ const StoreDetailDesk = ({ user }) => {
                 ipAddress: await getClientIP(),
             };
             
-            // Salvar cotação no Firebase
             await set(ref(db, `quotes/${storeId}/${quoteId}`), quoteData);
-            
+
             await sendEmailCotacaoDireta(store.email, {
                 title: 'Novo Pedido de Cotação Disponível',
                 cliente: currentUser?.displayName || 'Cliente',
                 message: quoteForm.message,
-                link: `${window.location.origin}/cotacoes}`
-            });
+                link: `${window.location.origin}/cotacoes`  // Fixed: removed extra }
+            })      
 
             if (currentUser?.uid) {
                 await set(ref(db, `user_quotes/${currentUser.uid}/${quoteId}`), {
