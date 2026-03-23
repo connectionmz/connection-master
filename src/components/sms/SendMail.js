@@ -30,76 +30,35 @@ const getAuthToken = async () => {
   }
 };
 
+// Função no frontend
 const sendEmailWithAuth = async (emailData) => {
-  try {
-    console.log('📧 Preparando envio de email para:', emailData.to);
-    
-    const token = await getAuthToken();
-    
-    // Validar dados antes de enviar
-    if (!emailData.to || !emailData.subject || !emailData.text) {
-      console.error('❌ Dados incompletos:', { 
-        hasTo: !!emailData.to, 
-        hasSubject: !!emailData.subject, 
-        hasText: !!emailData.text 
-      });
-      throw new Error('Dados do email incompletos');
-    }
-
-    // Validar formato do email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailData.to)) {
-      console.error('❌ Email inválido:', emailData.to);
-      throw new Error('Email de destino inválido');
-    }
-
-    console.log('🔄 Enviando requisição para o servidor...');
-    
-    const response = await axios.post(
-      'https://mohvi-sendmail.vercel.app/send-email', 
-      emailData, 
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        timeout: 10000 // 10 segundos de timeout
-      }
-    );
-    
-    console.log('✅ Email enviado com sucesso:', response.data);
-    return true;
-    
-  } catch (error) {
-    console.error('❌ Erro detalhado ao enviar email:', error);
-    
-    if (error.response) {
-      // O servidor respondeu com um status de erro
-      console.error('Status do servidor:', error.response.status);
-      console.error('Dados do erro:', error.response.data);
-      
-      if (error.response.status === 401) {
-        console.error('🔐 Token inválido ou expirado. Faça login novamente.');
-      } else if (error.response.status === 403) {
-        console.error('🚫 Acesso negado. Verifique suas permissões.');
-      } else if (error.response.status === 400) {
-        console.error('📝 Requisição mal formatada. Verifique os dados enviados.');
-      } else if (error.response.status === 429) {
-        console.error('⏰ Muitas tentativas. Aguarde alguns minutos.');
-      }
-      
-    } else if (error.request) {
-      // A requisição foi feita mas não houve resposta
-      console.error('🌐 Servidor não respondeu. Verifique se o servidor está online.');
-      console.error('URL:', error.config?.url);
-      
-    } else {
-      // Algo aconteceu na configuração da requisição
-      console.error('❌ Erro na configuração:', error.message);
-    }
-    
-    return false;
+  const user = firebase.auth().currentUser;
+  if (!user) {
+    throw new Error('Usuário não autenticado');
   }
+  
+  const token = await user.getIdToken();
+  
+  const response = await fetch('https://seu-backend.com/send-email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      to: emailData.to,
+      subject: emailData.subject,
+      text: emailData.text,    // Texto plano (fallback)
+      html: emailData.html     // HTML completo (prioritário)
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message);
+  }
+  
+  return await response.json();
 };
 
 const sendEmail = async (to, emailMessage) => {
@@ -135,25 +94,14 @@ const sendEmail = async (to, emailMessage) => {
 
 const sendEmailCotacaoDireta = async (to, emailMessage) => {
   console.log('📧 Enviando email de cotação direta para:', to);
-  
-  // Validate required fields
   if (!to) {
     console.error('❌ Email de destino não informado');
     return false;
   }
-  
-  // Validate emailMessage structure
-  if (!emailMessage || typeof emailMessage !== 'object') {
-    console.error('❌ emailMessage não é um objeto válido');
-    return false;
-  }
-  
-  // Ensure link is properly formatted
-  const link = emailMessage.link || '';
-  if (!link) {
-    console.warn('⚠️ Link não informado no email');
-  }
 
+  const link = emailMessage.link || '';
+  
+  // Versão em texto plano (fallback)
   const textContent = `
 Você recebeu um novo pedido de cotação diretamente na sua loja.
 
@@ -166,19 +114,58 @@ ${emailMessage.message || "Sem mensagem adicional"}
 ⚡ Este cliente está interessado nos seus serviços/produtos.
 Responder rapidamente aumenta suas chances de fechar o negócio.
 
-👉 Responda agora:
-${link}
+👉 Responda agora: ${link}
 
 Seja rápido — outros fornecedores podem ser contactados.
 
 —
 Connection Mozambique
 `;
-  
+
+  // Versão em HTML com link clicável
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">📩 Novo pedido de cotação para sua empresa</h2>
+      
+      <p>Olá,</p>
+      
+      <p>Você recebeu um novo pedido de cotação diretamente na sua loja.</p>
+      
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">📌 Detalhes do pedido:</h3>
+        <p><strong>${emailMessage.title || 'Produto/Serviço não especificado'}</strong></p>
+        
+        <h3>💬 Mensagem do cliente:</h3>
+        <p>${emailMessage.message || "Sem mensagem adicional"}</p>
+      </div>
+      
+      <p>⚡ <strong>Este cliente está interessado nos seus serviços/produtos.</strong><br>
+      Responder rapidamente aumenta suas chances de fechar o negócio.</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${link}" 
+           style="background-color: #007bff; 
+                  color: white; 
+                  padding: 12px 24px; 
+                  text-decoration: none; 
+                  border-radius: 5px; 
+                  display: inline-block;">
+          👉 Responder Agora
+        </a>
+      </div>
+      
+      <p style="font-size: 12px; color: #999;">Seja rápido — outros fornecedores podem ser contactados.</p>
+      
+      <hr>
+      <p style="font-size: 12px; color: #999;">— Connection Mozambique</p>
+    </div>
+  `;
+
   const emailData = {
     to,
     subject: "📩 Novo pedido de cotação para sua empresa",
     text: textContent,
+    html: htmlContent,
   };
 
   return await sendEmailWithAuth(emailData);
