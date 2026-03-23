@@ -10,7 +10,6 @@ const getAuthToken = async () => {
   try {
     // Forçar refresh do token
     const token = await user.getIdToken(true);
-    console.log('✅ Token obtido com sucesso');
     return token;
   } catch (tokenError) {
     console.error('❌ Erro ao obter token:', tokenError);
@@ -19,7 +18,6 @@ const getAuthToken = async () => {
       // Tentar obter token sem forçar refresh
       try {
         const token = await user.getIdToken(false);
-        console.log('✅ Token obtido (sem refresh)');
         return token;
       } catch (fallbackError) {
         console.error('❌ Falha no fallback:', fallbackError);
@@ -43,7 +41,6 @@ const sendEmailWithAuth = async (emailData) => {
     // Usar a função getAuthToken para obter o token
     const token = await getAuthToken();
     
-    console.log('📧 Enviando email para:', emailData.to);
     
     // Usar axios em vez de fetch para consistência
     const response = await axios.post(
@@ -62,7 +59,6 @@ const sendEmailWithAuth = async (emailData) => {
       }
     );
     
-    console.log('✅ Email enviado com sucesso:', response.data);
     return response.data;
     
   } catch (error) {
@@ -117,7 +113,6 @@ const sendEmail = async (to, emailMessage) => {
 };
 
 const sendEmailCotacaoDireta = async (to, emailMessage) => {
-  console.log('📧 Enviando email de cotação direta para:', to);
   if (!to) {
     console.error('❌ Email de destino não informado');
     return false;
@@ -130,12 +125,12 @@ const sendEmailCotacaoDireta = async (to, emailMessage) => {
 Você recebeu um novo pedido de cotação diretamente na sua loja.
 
 📌 Detalhes do pedido:
-• ${emailMessage.title || 'Produto/Serviço não especificado'}
+• ${emailMessage.cliente || 'Produto/Serviço não especificado'}
 
 💬 Mensagem do cliente:
 ${emailMessage.message || "Sem mensagem adicional"}
 
-⚡ Este cliente está interessado nos seus serviços/produtos.
+⚡ Este client está interessado nos seus serviços/produtos.
 Responder rapidamente aumenta suas chances de fechar o negócio.
 
 👉 Responda agora: ${link}
@@ -269,7 +264,6 @@ const sendEmailInquerito = async (to, emailMessage) => {
 const testEmailService = async () => {
   try {
     const response = await axios.get('https://mohvi-sendmail.vercel.app/health');
-    console.log('✅ Servidor de email online:', response.data);
     return true;
   } catch (error) {
     console.error('❌ Servidor de email offline:', error.message);

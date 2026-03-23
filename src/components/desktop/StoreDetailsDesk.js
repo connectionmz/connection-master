@@ -532,7 +532,6 @@ const StoreDetailDesk = ({ user }) => {
                 ipAddress: await getClientIP(),
             };
 
-            console.log('📋 Dados da cotação a serem enviados:', quoteData);
             
             await set(ref(db, `quotes/${storeId}/${quoteId}`), quoteData);
 
