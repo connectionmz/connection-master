@@ -30,37 +30,61 @@ const getAuthToken = async () => {
   }
 };
 
-// Função no frontend
+// Função corrigida - usando o auth importado
 const sendEmailWithAuth = async (emailData) => {
-  const user = firebase.auth().currentUser;
-  if (!user) {
-    throw new Error('Usuário não autenticado');
+  try {
+    // Usar o auth importado, não firebase.auth()
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error('Usuário não autenticado. Faça login novamente.');
+    }
+    
+    // Usar a função getAuthToken para obter o token
+    const token = await getAuthToken();
+    
+    console.log('📧 Enviando email para:', emailData.to);
+    
+    // Usar axios em vez de fetch para consistência
+    const response = await axios.post(
+      'https://mohvi-sendmail.vercel.app/send-email',
+      {
+        to: emailData.to,
+        subject: emailData.subject,
+        text: emailData.text,
+        html: emailData.html
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    console.log('✅ Email enviado com sucesso:', response.data);
+    return response.data;
+    
+  } catch (error) {
+    console.error('❌ Erro ao enviar email:', error);
+    
+    // Tratamento de erros mais detalhado
+    if (error.response) {
+      // O servidor respondeu com um status de erro
+      console.error('Resposta do servidor:', error.response.data);
+      throw new Error(error.response.data.message || 'Erro no servidor');
+    } else if (error.request) {
+      // A requisição foi feita mas não houve resposta
+      console.error('Sem resposta do servidor');
+      throw new Error('Servidor de email não responde. Tente novamente mais tarde.');
+    } else {
+      // Algo aconteceu na configuração da requisição
+      throw error;
+    }
   }
-  
-  const token = await user.getIdToken();
-  
-  const response = await fetch('https://seu-backend.com/send-email', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      to: emailData.to,
-      subject: emailData.subject,
-      text: emailData.text,    // Texto plano (fallback)
-      html: emailData.html     // HTML completo (prioritário)
-    })
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message);
-  }
-  
-  return await response.json();
 };
 
+// O resto do seu código permanece igual
 const sendEmail = async (to, emailMessage) => {
   // Validar dados
   if (!to) {
