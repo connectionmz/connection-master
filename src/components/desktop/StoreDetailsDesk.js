@@ -239,13 +239,16 @@ const StoreDetailDesk = ({ user }) => {
             try {
                 setLoading(true);
                 const storeRef = ref(db, `stores/${storeId}`);
+                 const companyRef = ref(db, `company/${storeId}`);
                 const productsRef = ref(db, `stores/${storeId}/products`);
                 
                 const storeSnapshot = await get(storeRef);
+                const companySnapshot = await get(companyRef);
                 const productsSnapshot = await get(productsRef);
 
                 if (storeSnapshot.exists()) {
                     const storeData = storeSnapshot.val();
+                    const companyData = companySnapshot.exists() ? companySnapshot.val() : {};
                     const productsData = productsSnapshot.exists() ? productsSnapshot.val() : {};
 
                     // Preparar opções de produtos para o Autocomplete
@@ -270,8 +273,8 @@ const StoreDetailDesk = ({ user }) => {
                         provincia: storeData.location?.province || storeData.company?.provincia || storeData.provincia || '',
                         distrito: storeData.company?.distrito || storeData.distrito || '',
                         endereco: storeData.location?.address || storeData.endereco || '',
-                        contacto: storeData.contact?.phone || storeData.contacto || '',
-                        email: storeData.contact?.email || storeData.email || '',
+                        contacto: storeData.contact?.phone || companyData.contacto || '',
+                        email: storeData.contact?.email || companyData.email || '',
                         website: storeData.socialMedia?.website || storeData.social?.website || '',
                         verified: storeData.verified || false,
                         totalReviews: 128,
