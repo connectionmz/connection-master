@@ -32,6 +32,10 @@ import {
     Menu,
     MenuItem,
     ListItemIcon,
+    Collapse,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
 } from '@mui/material';
 import { 
     Delete, 
@@ -55,15 +59,19 @@ import {
     MoreVert,
     Receipt,
     Person,
-    Store
+    Store,
+    ExpandMore,
+    ExpandLess,
+    Inventory,
+    Description
 } from '@mui/icons-material';
-import { ref, onValue, update, remove, set, get, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, onValue, update, remove, set, get } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../fb';
 import EditarCotacao from './EditarCotacao'; 
 import { useActiveModules } from '../../context/ActiveModulesContext';
 
-/* ── Design tokens — consistente com StoresDesk ─────────────────────── */
+/* ── Design tokens ───────────────────────────────────────────────────── */
 const T = {
     navy:        '#08192E',
     navyMid:     '#0E2849',
@@ -94,27 +102,8 @@ const KEYFRAMES = `
         from { opacity:0; transform:translateY(20px); }
         to   { opacity:1; transform:translateY(0); }
     }
-    @keyframes pulse {
-        0%,100% { opacity:1; transform:scale(1); }
-        50% { opacity:.6; transform:scale(1.05); }
-    }
     .fade-up {
         animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-    .cotacao-card {
-        background: ${T.navyCard};
-        border: 1px solid ${T.darkBorder};
-        border-radius: 16px;
-        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-        margin-bottom: 12px;
-    }
-    .cotacao-card:hover {
-        transform: translateY(-2px);
-        border-color: ${T.gold} !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.2) !important;
-    }
-    .cotacao-card.unread {
-        border-left: 3px solid ${T.gold};
     }
     .quote-card {
         background: ${T.navyCard};
@@ -141,10 +130,9 @@ const BG_GRID = {
 
 const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [cotacoes, setCotacoes] = useState([]);
-    const [quotesReceived, setQuotesReceived] = useState([]); // Cotações recebidas da loja
+    const [quotesReceived, setQuotesReceived] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    const [isPaying, setIsPaying] = useState(false);   
     const [loading, setLoading] = useState(true);
     const [clickedCotacoes, setClickedCotacoes] = useState({});
     const [clickedQuotes, setClickedQuotes] = useState({});
@@ -153,6 +141,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [selectedQuote, setSelectedQuote] = useState(null);
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedQuoteForMenu, setSelectedQuoteForMenu] = useState(null);
+    const [expandedQuote, setExpandedQuote] = useState(null);
     
     const { activeModules, isLoading: modulesLoading } = useActiveModules();
     const navigate = useNavigate();
@@ -168,7 +157,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         const quotesRef = ref(db, `quotes/${user.id}`);
         const unsubscribeQuotes = onValue(quotesRef, (snapshot) => {
             const quotesData = snapshot.val();
-
+            
             if (quotesData) {
                 const quotesArray = Object.entries(quotesData).map(([id, quote]) => ({
                     id,
@@ -177,7 +166,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     isClicked: clickedQuotes[id] || false
                 }));
                 
-                // Ordenar por data mais recente
                 setQuotesReceived(quotesArray.sort((a, b) => 
                     new Date(b.createdAt) - new Date(a.createdAt)
                 ));
@@ -260,35 +248,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         
         return () => unsubscribeCotacoes();
     }, [user?.id, user?.provincia, user?.sector, activeTab, isModuleActive]);
-
-    // Carregar status de clique para cotações normais
-    useEffect(() => {
-        if (!isModuleActive || !user?.id) return;
-
-        const loadClickedStatus = async () => {
-            try {
-                const clicksRef = ref(db, 'cotacoes');
-                onValue(clicksRef, (snapshot) => {
-                    const cotacoesData = snapshot.val();
-                    const clickedStatus = {};
-
-                    if (cotacoesData) {
-                        Object.entries(cotacoesData).forEach(([cotacaoId, cotacao]) => {
-                            if (cotacao.clicks && cotacao.clicks[user.id]) {
-                                clickedStatus[cotacaoId] = true;
-                            }
-                        });
-                    }
-
-                    setClickedCotacoes(clickedStatus);
-                });
-            } catch (error) {
-                console.error('Error loading clicked status:', error);
-            }
-        };
-
-        loadClickedStatus();
-    }, [user?.id, isModuleActive]);
 
     // Carregar status de clique para cotações recebidas
     useEffect(() => {
@@ -387,11 +346,12 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const handleQuoteClick = (quote) => {
         markQuoteAsViewed(quote.id);
         setSelectedQuote(quote);
-        // Opcional: abrir modal com detalhes ou navegar para página de detalhes
-        // navigate(`/cotacao-recebida/${quote.id}`);
+        // Alternar expansão do item
+        setExpandedQuote(expandedQuote === quote.id ? null : quote.id);
     };
 
-    const handleQuoteResponse = (quote, type) => {
+    const handleQuoteResponse = (event, quote) => {
+        event.stopPropagation();
         setSelectedQuoteForMenu(quote);
         setAnchorEl(event.currentTarget);
     };
@@ -406,14 +366,23 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         const customerEmail = quote.customerEmail;
         
         if (type === 'whatsapp' && customerContact) {
-            const message = `Olá! Recebi sua solicitação de cotação para ${quote.productName} através da Connection Mozambique. Gostaria de responder à sua solicitação.`;
-            const whatsappUrl = `https://wa.me/${customerContact.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+            const message = `Olá! Recebi sua solicitação de cotação através da BizMoz.\n\n`;
+            const itemsList = quote.items.map((item, idx) => 
+                `${idx + 1}. ${item.productName} - Quantidade: ${item.quantity}${item.specifications ? ` (${item.specifications})` : ''}`
+            ).join('\n');
+            
+            const fullMessage = `${message}**Itens solicitados:**\n${itemsList}\n\nComo posso ajudar?`;
+            const whatsappUrl = `https://wa.me/${customerContact.replace(/\D/g, '')}?text=${encodeURIComponent(fullMessage)}`;
             window.open(whatsappUrl, '_blank');
         } else if (type === 'phone' && customerContact) {
             window.location.href = `tel:${customerContact}`;
         } else if (type === 'email' && customerEmail) {
-            const subject = `Resposta à sua cotação - ${quote.productName}`;
-            const body = `Olá! Recebi sua solicitação de cotação para ${quote.productName}. Gostaria de responder à sua solicitação.`;
+            const subject = `Resposta à sua cotação - ${quote.storeName}`;
+            const itemsList = quote.items.map((item, idx) => 
+                `${idx + 1}. ${item.productName} - Quantidade: ${item.quantity}${item.specifications ? ` (${item.specifications})` : ''}`
+            ).join('\n');
+            
+            const body = `Olá,\n\nRecebi sua solicitação de cotação através da BizMoz.\n\n**Itens solicitados:**\n${itemsList}\n\nAguardo seu contato para mais detalhes.\n\nAtenciosamente.`;
             window.location.href = `mailto:${customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
         
@@ -594,13 +563,13 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                 className={`quote-card ${!clickedQuotes[quote.id] ? 'unread' : ''}`}
                                 sx={{ 
                                     animation: `fadeUp 0.5s ease ${index * 0.05}s both`,
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    overflow: 'visible',
                                 }}
-                                onClick={() => handleQuoteClick(quote)}
                             >
                                 <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                     <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={8} md={9}>
+                                        <Grid item xs={12} sm={9}>
                                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                                                 <Avatar 
                                                     sx={{ 
@@ -624,7 +593,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                                                 fontSize: { xs: '1rem', sm: '1.1rem' }
                                                             }}
                                                         >
-                                                            {quote.productName}
+                                                            Cotação de {quote.customerName || 'Cliente Anônimo'}
                                                         </Typography>
                                                         <Chip
                                                             label={getQuoteStatusLabel(quote)}
@@ -647,45 +616,75 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                                     </Box>
 
                                                     <Typography sx={{ color: T.darkTextSub, mb: 2, fontSize: '0.9rem' }}>
-                                                        Cliente: {quote.customerName || 'Anônimo'}
-                                                        {quote.customerContact && ` • ${quote.customerContact}`}
-                                                        {quote.customerEmail && ` • ${quote.customerEmail}`}
+                                                        {quote.customerContact && `📞 ${quote.customerContact}`}
+                                                        {quote.customerContact && quote.customerEmail && ' • '}
+                                                        {quote.customerEmail && `✉️ ${quote.customerEmail}`}
                                                     </Typography>
 
-                                                    <Grid container spacing={2} sx={{ mb: 1 }}>
-                                                        <Grid item xs={12} sm={6}>
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                <Category sx={{ color: T.gold, fontSize: 16 }} />
-                                                                <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
-                                                                    Tipo: <strong style={{ color: T.white }}>{quote.productType === 'product' ? 'Produto' : 'Serviço'}</strong>
-                                                                </Typography>
-                                                            </Box>
-                                                        </Grid>
-                                                        <Grid item xs={12} sm={6}>
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                <Receipt sx={{ color: T.gold, fontSize: 16 }} />
-                                                                <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>
-                                                                    Quantidade: <strong style={{ color: T.white }}>{quote.quantity}</strong>
-                                                                </Typography>
-                                                            </Box>
-                                                        </Grid>
-                                                    </Grid>
+                                                    {/* Resumo dos itens */}
+                                                    <Box 
+                                                        sx={{ 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            gap: 1, 
+                                                            mb: 1,
+                                                            cursor: 'pointer',
+                                                            color: T.gold,
+                                                        }}
+                                                        onClick={() => handleQuoteClick(quote)}
+                                                    >
+                                                        <Inventory sx={{ fontSize: 18 }} />
+                                                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                                                            {quote.totalItems} {quote.totalItems === 1 ? 'item solicitado' : 'itens solicitados'}
+                                                        </Typography>
+                                                        {expandedQuote === quote.id ? <ExpandLess /> : <ExpandMore />}
+                                                    </Box>
+
+                                                    {/* Lista de itens (expansível) */}
+                                                    <Collapse in={expandedQuote === quote.id}>
+                                                        <Box sx={{ mt: 2, pl: 2, borderLeft: `2px solid ${T.gold}` }}>
+                                                            {quote.items?.map((item, idx) => (
+                                                                <Box key={idx} sx={{ mb: 2 }}>
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                                        {item.productType === 'product' ? (
+                                                                            <Inventory sx={{ color: T.gold, fontSize: 16 }} />
+                                                                        ) : (
+                                                                            <Description sx={{ color: T.gold, fontSize: 16 }} />
+                                                                        )}
+                                                                        <Typography sx={{ color: T.white, fontWeight: 600, fontSize: '0.9rem' }}>
+                                                                            {item.productName}
+                                                                        </Typography>
+                                                                    </Box>
+                                                                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', pl: 3 }}>
+                                                                        <Typography sx={{ color: T.darkTextSub, fontSize: '0.75rem' }}>
+                                                                            Quantidade: <strong style={{ color: T.white }}>{item.quantity}</strong>
+                                                                        </Typography>
+                                                                        {item.specifications && (
+                                                                            <Typography sx={{ color: T.darkTextSub, fontSize: '0.75rem' }}>
+                                                                                Especificações: {item.specifications}
+                                                                            </Typography>
+                                                                        )}
+                                                                    </Box>
+                                                                </Box>
+                                                            ))}
+                                                        </Box>
+                                                    </Collapse>
 
                                                     {quote.message && (
                                                         <Typography sx={{ 
                                                             color: T.darkTextSub, 
                                                             fontSize: '0.85rem', 
-                                                            mb: 1,
+                                                            mt: 2,
                                                             bgcolor: 'rgba(255,255,255,0.05)',
                                                             p: 1,
                                                             borderRadius: 1,
                                                             borderLeft: `3px solid ${T.gold}`
                                                         }}>
-                                                            "{quote.message}"
+                                                            💬 "{quote.message}"
                                                         </Typography>
                                                     )}
 
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mt: 2 }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                             <CalendarToday sx={{ color: T.darkMuted, fontSize: 14 }} />
                                                             <Typography sx={{ color: T.darkMuted, fontSize: '0.75rem' }}>
@@ -703,7 +702,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                             </Box>
                                         </Grid>
 
-                                        <Grid item xs={12} sm={4} md={3}>
+                                        <Grid item xs={12} sm={3}>
                                             <Box sx={{ 
                                                 display: 'flex', 
                                                 flexDirection: { xs: 'row', sm: 'column' }, 
@@ -714,11 +713,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                             }}>
                                                 <IconButton
                                                     size="small"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedQuoteForMenu(quote);
-                                                        setAnchorEl(e.currentTarget);
-                                                    }}
+                                                    onClick={(e) => handleQuoteResponse(e, quote)}
                                                     sx={{ 
                                                         color: T.gold,
                                                         border: `1px solid ${T.darkBorder}`,
@@ -759,7 +754,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         {published.map((cotacao, index) => (
                             <Card 
                                 key={cotacao.id} 
-                                className={`cotacao-card ${!clickedCotacoes[cotacao.id] && user ? 'unread' : ''}`}
+                                className={`quote-card ${!clickedCotacoes[cotacao.id] && user ? 'unread' : ''}`}
                                 sx={{ 
                                     animation: `fadeUp 0.5s ease ${index * 0.05}s both`,
                                     cursor: 'pointer'
@@ -768,7 +763,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                             >
                                 <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                                     <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={8} md={9}>
+                                        <Grid item xs={12} sm={9}>
                                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                                                 <Avatar 
                                                     src={cotacao.company?.logoUrl} 
@@ -856,7 +851,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                             </Box>
                                         </Grid>
 
-                                        <Grid item xs={12} sm={4} md={3}>
+                                        <Grid item xs={12} sm={3}>
                                             <Box sx={{ 
                                                 display: 'flex', 
                                                 flexDirection: { xs: 'row', sm: 'column' }, 
@@ -1132,7 +1127,6 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                     label="Recebidas" 
                                     icon={<Receipt sx={{ fontSize: 18 }} />} 
                                     iconPosition="start"
-                                    badgeContent={quotesReceived.filter(q => !clickedQuotes[q.id]).length}
                                     sx={{ position: 'relative' }}
                                 />
                             </Tabs>

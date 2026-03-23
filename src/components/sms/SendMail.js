@@ -64,6 +64,36 @@ const sendEmail = async (to, emailMessage) => {
   return await sendEmailWithAuth(emailData);
 };
 
+const sendEmailCotacaoDireta = async (to, emailMessage) => {
+  const textContent = `
+Você recebeu um novo pedido de cotação diretamente na sua loja.
+
+📌 Detalhes do cliente:
+• Pedido: ${emailMessage.title}
+
+💬 Mensagem do cliente:
+${emailMessage.message || "Sem mensagem adicional"}
+
+⚡ Este cliente está interessado nos seus serviços/produtos.
+Responder rapidamente aumenta suas chances de fechar o negócio.
+
+👉 Responda agora:
+${emailMessage.link}
+
+Seja rápido — outros fornecedores podem ser contactados.
+
+—
+Connection Mozambique
+`;
+  const emailData = {
+    to,
+    subject: "📩 Novo pedido de cotação para sua empresa",
+    text: textContent,
+  };
+
+  return await sendEmailWithAuth(emailData);
+};
+
 const sendEmailConcurso = async (to, emailMessage) => {
   const textContent = `
   Um novo concurso foi publicado para o seu setor.
@@ -118,4 +148,4 @@ const sendEmailInquerito = async (to, emailMessage) => {
   return await sendEmailWithAuth(emailData);
 };
 
-export { sendEmail, SendMailProforma, sendEmailConcurso, sendEmailInquerito };
+export { sendEmail, SendMailProforma, sendEmailConcurso, sendEmailInquerito, sendEmailCotacaoDireta };
