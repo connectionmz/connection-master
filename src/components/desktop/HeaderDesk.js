@@ -45,6 +45,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import CloseIcon from "@mui/icons-material/Close";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import WarningIcon from "@mui/icons-material/Warning";
+import PersonIcon from "@mui/icons-material/Person";
 import logo from "../../img/bg2.png";
 import { db, auth } from "../../fb";
 import { signOut } from "firebase/auth";
@@ -88,7 +89,7 @@ const KEYFRAMES = `
 
 const BG_GRID = {
   position:'absolute', inset:0, pointerEvents:'none', opacity:0.02,
-  backgroundImage:`linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundImage:`linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg, rgba(255,255,255,1) 1px,transparent 1px)`,
   backgroundSize:'56px 56px',
 };
 
@@ -369,6 +370,27 @@ const HeaderDesk = ({ user }) => {
     },
   ];
 
+  // Itens para o menu mobile (adicionei módulos e perfil)
+  const mobileMenuItems = [
+    ...mainNavItems,
+    ...notificationNavItems,
+    { type: "divider" },
+    {
+      to: "/app",
+      icon: <DashboardIcon />,
+      label: "Módulos",
+      requiresAuth: true,
+      requiresVerify: true,
+    },
+    {
+      to: "/perfil",
+      icon: <PersonIcon />,
+      label: "Meu Perfil",
+      requiresAuth: true,
+      requiresVerify: false,
+    },
+  ];
+
   return (
     <>
       <style>{KEYFRAMES}</style>
@@ -553,13 +575,13 @@ const HeaderDesk = ({ user }) => {
                     }}
                   >
                     <MenuItem 
-                        onClick={() => { handleProfileMenuClose(); navigate(`/app`); }}
+                      onClick={() => { handleProfileMenuClose(); navigate(`/app`); }}
                       sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
                     >
                       <ListItemIcon>
                         <DashboardIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText>Modulos</ListItemText>
+                      <ListItemText>Módulos</ListItemText>
                     </MenuItem>
                     
                     <MenuItem 
@@ -644,7 +666,7 @@ const HeaderDesk = ({ user }) => {
         </Container>
       </AppBar>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer - CORRIGIDO com links para Módulos e Perfil */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -723,10 +745,17 @@ const HeaderDesk = ({ user }) => {
             </Box>
           )}
 
-          {/* Main nav items */}
-          {mainNavItems.map((item, index) => {
+          {/* Menu items para mobile - INCLUINDO MÓDULOS E PERFIL */}
+          {mobileMenuItems.map((item, index) => {
+            if (item.type === "divider") {
+              return <Divider key={index} sx={{ borderColor: T.darkBorder, my: 1 }} />;
+            }
+            
             const isDisabled = item.requiresVerify && !isVerify;
             const isActive = isActiveRoute(item.to);
+            
+            // Verificar se deve mostrar o item (requer autenticação e o usuário não está logado)
+            if (item.requiresAuth && !user) return null;
             
             return (
               <ListItem
@@ -760,81 +789,31 @@ const HeaderDesk = ({ user }) => {
             );
           })}
 
-          <Divider sx={{ borderColor: T.darkBorder, my: 1 }} />
-
-          {/* Notification items */}
-          {notificationNavItems.map((item, index) => {
-            const isActive = isActiveRoute(item.to);
-            return (
+          {/* Logout para mobile */}
+          {user && (
+            <>
+              <Divider sx={{ borderColor: T.darkBorder, my: 1 }} />
               <ListItem
                 button
-                key={index}
-                onClick={() => handleMobileNavigation(item.to, item.requiresAuth, item.requiresVerify)}
-                sx={{
-                  opacity: !user || !isVerify ? 0.5 : 1,
-                  bgcolor: isActive ? 'rgba(200,144,58,0.12)' : 'transparent',
-                  '&:hover': { bgcolor: 'rgba(200,144,58,0.08)' },
+                onClick={() => {
+                  handleLogout();
+                  setDrawerOpen(false);
+                }}
+                sx={{ 
                   py: 1.5,
+                  color: T.error,
+                  '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' }
                 }}
               >
-                <ListItemIcon sx={{ 
-                  color: isActive ? T.gold : T.darkText,
-                  minWidth: 40,
-                }}>
-                  <Badge badgeContent={item.badge} color="error">
-                    {item.icon}
-                  </Badge>
+                <ListItemIcon sx={{ color: T.error, minWidth: 40 }}>
+                  <LogoutIcon />
                 </ListItemIcon>
-                <ListItemText 
-                  primary={item.label} 
-                  sx={{ 
-                    color: T.white,
-                    '& .MuiListItemText-primary': { color: isActive ? T.gold : T.white }
-                  }} 
-                />
+                <ListItemText primary="Sair" sx={{ color: T.error }} />
               </ListItem>
-            );
-          })}
-
-          <Divider sx={{ borderColor: T.darkBorder, my: 1 }} />
-
-          {/* Download item */}
-          <ListItem
-            button
-            onClick={() => {
-              handleDownloadClick();
-              setDrawerOpen(false);
-            }}
-            sx={{ py: 1.5 }}
-          >
-            <ListItemIcon sx={{ color: T.gold, minWidth: 40 }}>
-              <DownloadIcon />
-            </ListItemIcon>
-            <ListItemText primary="Baixar App" sx={{ color: T.white }} />
-          </ListItem>
-
-          {/* Logout */}
-          {user && (
-            <ListItem
-              button
-              onClick={() => {
-                handleLogout();
-                setDrawerOpen(false);
-              }}
-              sx={{ 
-                py: 1.5,
-                color: T.error,
-                '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' }
-              }}
-            >
-              <ListItemIcon sx={{ color: T.error, minWidth: 40 }}>
-                <LogoutIcon />
-              </ListItemIcon>
-              <ListItemText primary="Sair" sx={{ color: T.error }} />
-            </ListItem>
+            </>
           )}
 
-          {/* Login/Register for non-authenticated */}
+          {/* Login/Register para mobile (usuário não autenticado) */}
           {!user && (
             <ListItem
               button
@@ -903,93 +882,56 @@ const HeaderDesk = ({ user }) => {
         </MenuItem>
       </Menu>
 
-      {/* Download Dialog (Mobile) */}
+      {/* Download Dialog para mobile */}
       <Dialog
         open={downloadDialogOpen}
         onClose={handleDownloadDialogClose}
         PaperProps={{
           sx: {
             bgcolor: T.navyCard,
-            border: `1px solid ${T.darkBorder}`,
             borderRadius: '16px',
-            maxWidth: '90%',
+            border: `1px solid ${T.darkBorder}`,
           }
         }}
       >
-        <DialogTitle sx={{ 
-          color: T.white, 
-          fontFamily: '"Playfair Display", serif', 
-          fontWeight: 700,
-          borderBottom: `1px solid ${T.darkBorder}`,
-        }}>
-          Baixar App
+        <DialogTitle sx={{ color: T.white, fontFamily: '"Playfair Display", serif' }}>
+          Baixar App Connection Mozambique
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <DialogContentText sx={{ color: T.darkTextSub }}>
-            <Typography variant="body1" gutterBottom sx={{ color: T.darkText }}>
-              Para instalar o app no seu dispositivo Android:
-            </Typography>
-            <Box component="ol" sx={{ pl: 2, mt: 1, color: T.darkTextSub }}>
-              <li>Clique em "Baixar Agora" para iniciar o download</li>
-              <li>Após o download, toque no arquivo APK para instalar</li>
-              <li>Permita a instalação de fontes desconhecidas se solicitado</li>
-              <li>Siga as instruções de instalação</li>
-            </Box>
-            <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: T.darkMuted }}>
-              Tamanho: ~15MB
-            </Typography>
+        <DialogContent>
+          <DialogContentText sx={{ color: T.darkTextSub, mb: 2 }}>
+            Escolha uma opção para baixar o aplicativo:
           </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ 
-          justifyContent: 'center', 
-          flexWrap: 'wrap', 
-          p: 3, 
-          gap: 1,
-          borderTop: `1px solid ${T.darkBorder}`,
-        }}>
-          <Button 
-            onClick={handleDirectDownload}
+          <Button
+            fullWidth
             variant="contained"
             startIcon={<DownloadIcon />}
+            onClick={handleDirectDownload}
             sx={{
+              mb: 2,
               bgcolor: T.gold,
               color: T.navy,
               '&:hover': { bgcolor: T.goldLight },
-              borderRadius: '8px',
-              px: 2,
             }}
           >
-            Baixar Agora
+            Baixar APK Diretamente
           </Button>
-          <Button 
-            onClick={handleOpenInNewTab}
+          <Button
+            fullWidth
             variant="outlined"
-            sx={{
-              borderColor: T.darkBorder,
-              color: T.darkText,
-              '&:hover': { borderColor: T.gold, color: T.gold },
-              borderRadius: '8px',
-            }}
-          >
-            Abrir em Nova Aba
-          </Button>
-          <Button 
+            startIcon={<ShareIcon />}
             onClick={handleShareApp}
-            variant="outlined"
             sx={{
               borderColor: T.darkBorder,
               color: T.darkText,
               '&:hover': { borderColor: T.gold, color: T.gold },
-              borderRadius: '8px',
             }}
           >
-            Compartilhar
+            Compartilhar Link
           </Button>
-          <Button 
-            onClick={handleDownloadDialogClose}
-            sx={{ color: T.darkMuted }}
-          >
-            Cancelar
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDownloadDialogClose} sx={{ color: T.darkMuted }}>
+            Fechar
           </Button>
         </DialogActions>
       </Dialog>

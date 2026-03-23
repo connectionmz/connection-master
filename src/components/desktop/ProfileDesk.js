@@ -614,52 +614,8 @@ const ProfileDesk = ({ userI }) => {
         return (
           <Fade in={true}>
             <Box>
-              {/* Stats Cards */}
-              <Grid container spacing={3} sx={{ mb: 4 }}>
-                {[
-                  { icon: <Eye />, label: 'Visualizações', value: stats.visualizacoes, color: T.navy },
-                  { icon: <Users />, label: 'Seguidores', value: stats.seguidores, color: T.gold },
-                  { icon: <Award />, label: 'Avaliação', value: `${stats.avaliacao} ★`, color: '#059669' },
-                  { icon: <Clock />, label: 'Publicações', value: stats.publicacoes, color: '#7C3AED' },
-                ].map((stat, index) => (
-                  <Grid item xs={6} md={3} key={index}>
-                    <Paper
-                      className="stat-card"
-                      sx={{
-                        p: 2,
-                        borderRadius: '16px',
-                        border: `1px solid ${T.border}`,
-                        background: T.white,
-                        textAlign: 'center',
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '10px',
-                          bgcolor: `${stat.color}10`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          mx: 'auto',
-                          mb: 1,
-                          color: stat.color,
-                        }}
-                      >
-                        {React.cloneElement(stat.icon, { size: 20 })}
-                      </Box>
-                      <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: T.text }}>
-                        {stat.value}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.75rem', color: T.textSub }}>
-                        {stat.label}
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
-
+             {/* Stats Cards */}
+    
               {/* Seção de Informações Básicas */}
               <Paper
                 className="profile-card animate-fade-up delay-1"
