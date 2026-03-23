@@ -502,8 +502,8 @@ const StoreDetailDesk = ({ user }) => {
                 id: quoteId,
                 storeId: storeId,
                 storeName: store.name,
-                storeContact: storeData.contact?.contacto,
-                storeEmail: storeData.contact?.email,
+                storeContact: store.contact?.contacto,
+                storeEmail: store.contact?.email,
                 
                 // Dados do cliente
                 customerId: currentUser?.uid || null,
@@ -533,7 +533,7 @@ const StoreDetailDesk = ({ user }) => {
             
             await set(ref(db, `quotes/${storeId}/${quoteId}`), quoteData);
 
-            await sendEmailCotacaoDireta(storeData.contact?.email, {
+            await sendEmailCotacaoDireta(store.contact?.email, {
                 title: 'Novo Pedido de Cotação Disponível',
                 cliente: currentUser?.displayName || 'Cliente',
                 message: quoteForm.message,
