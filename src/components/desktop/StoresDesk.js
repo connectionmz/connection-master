@@ -617,7 +617,7 @@ const StoresDesk = ({ user }) => {
   };
 
   return (
-    <Box sx={{ backgroundColor:T.navy, minHeight:'100vh', fontFamily:'"Plus Jakarta Sans", sans-serif' }}>
+    <Box sx={{ minHeight:'100vh', fontFamily:'"Plus Jakarta Sans", sans-serif' }}>
       <style>{KEYFRAMES}</style>
       
       {/* Header Section */}

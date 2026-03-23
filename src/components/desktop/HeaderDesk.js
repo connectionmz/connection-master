@@ -559,7 +559,7 @@ const HeaderDesk = ({ user }) => {
                       <ListItemIcon>
                         <DashboardIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText>Configurações</ListItemText>
+                      <ListItemText>Modulos</ListItemText>
                     </MenuItem>
                     
                     <MenuItem 

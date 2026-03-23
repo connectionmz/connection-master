@@ -175,10 +175,10 @@ const FooterDesk = () => {
   ];
 
   const contactInfo = [
-    { icon: <LocationOn />, text: "Av. 24 de Julho, 123 - Maputo, Moçambique", link: null },
-    { icon: <Phone />, text: "+258 21 123 456", link: "tel:+25821123456" },
+    { icon: <LocationOn />, text: "Av. 25 de Setembro, Pemba, Cabo Delgado", link: null },
+    { icon: <Phone />, text: "+258 86 655 6104", link: "tel:+258866556104" },
     { icon: <Email />, text: "admin@connectionmozambique.com", link: "mailto:admin@connectionmozambique.co.mz" },
-    { icon: <Clock />, text: "Seg - Sex: 8:00 - 17:00", link: null },
+    { icon: <Clock />, text: "Seg - Sab: 8:00 - 17:00", link: null },
   ];
 
   const socialLinks = [

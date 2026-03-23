@@ -16,29 +16,17 @@ import {
 
 export const allModules = [
   { 
-    name: 'Empresas & Serviços', 
+    name: 'Produtos & Servicos', 
     link: '/market', 
     icon: <StoreIcon fontSize="large" />, 
-    description: 'Explore empresas e serviços disponíveis'
+    description: 'Cadastre seus produtos & servicos'
   },
   { 
-    name: 'Pedir Cotações', 
-    link: '/procurement', 
+    name: 'Alerta', 
+    link: '/sms', 
     icon: <TruckIcon fontSize="large" />, 
-    description: 'Solicite propostas de empresas'
+    description: 'Receba solicitacoes e pedidos de cotacao'
   },
-  { 
-    name: 'Anunciar', 
-    link: '/anunciar', 
-    icon: <AdIcon fontSize="large" />, 
-    description: 'Promova a sua empresa ou serviços'
-  },
-  { 
-    name: 'Eventos', 
-    link: '/evento', 
-    icon: <EventIcon fontSize="large" />, 
-    description: 'Descubra eventos empresariais'
-  }
 ];
 
 const ModuleGrid = () => {
@@ -47,13 +35,6 @@ const ModuleGrid = () => {
 
   return (
     <Box sx={{ mt: 4 }}>
-      <Typography 
-        variant="h5" 
-        sx={{ fontWeight: 600, mb: 3, textAlign: 'center' }}
-      >
-        O que deseja fazer?
-      </Typography>
-
       <Grid container spacing={3} justifyContent="center">
         {allModules.map((module) => (
           <Grid item xs={12} sm={6} md={3} key={module.name}>

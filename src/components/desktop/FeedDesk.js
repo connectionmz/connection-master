@@ -236,10 +236,10 @@ const FeedDesk = ({ user }) => {
 
   return (
     <Box sx={{ 
-      backgroundColor: T.navy, 
       minHeight: 'calc(100vh - 64px)',
       fontFamily: '"Plus Jakarta Sans", sans-serif',
-      position: 'relative',
+      position: 'relative',      backgroundColor: T.navy, 
+
     }}>
       <style>{KEYFRAMES}</style>
       
@@ -272,22 +272,6 @@ const FeedDesk = ({ user }) => {
               justifyContent: 'center',
             }}>
               <FeedIcon sx={{ color: T.gold, fontSize: 28 }} />
-            </Box>
-            <Box>
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontFamily: '"Playfair Display", serif',
-                  fontWeight: 800,
-                  color: T.white,
-                  fontSize: { xs: '1.5rem', sm: '2rem' }
-                }}
-              >
-                Feed de Notícias
-              </Typography>
-              <Typography sx={{ color: T.darkTextSub, mt: 0.5 }}>
-                Acompanhe as últimas atualizações das empresas
-              </Typography>
             </Box>
           </Box>
 

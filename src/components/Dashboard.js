@@ -241,11 +241,12 @@ const STATS = [
     : "Cabo Delgado";
 
   return (
-    <Box>
-      <Container>
+  <Box sx={{ 
+      fontFamily: '"Plus Jakarta Sans", sans-serif',
+    }}>    
+        <Container>
          <Box
                 sx={{
-                  position: 'relative',
                   background: `linear-gradient(160deg, ${T.navy} 0%, ${T.navyMid} 55%, ${T.navyLight} 100%)`,
                   pt: { xs: 7, md: 11 },
                   pb: { xs: 8, md: 12 },
