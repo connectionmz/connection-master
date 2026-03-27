@@ -248,6 +248,7 @@ const StoreDetailDesk = ({ user }) => {
 
                 if (storeSnapshot.exists()) {
                     const storeData = storeSnapshot.val();
+
                     const companyData = companySnapshot.exists() ? companySnapshot.val() : {};
                     const productsData = productsSnapshot.exists() ? productsSnapshot.val() : {};
 
@@ -531,7 +532,6 @@ const StoreDetailDesk = ({ user }) => {
                 userAgent: navigator.userAgent,
                 ipAddress: await getClientIP(),
             };
-
             
             await set(ref(db, `quotes/${storeId}/${quoteId}`), quoteData);
 
