@@ -6,31 +6,27 @@ import {
   Container, Typography, Box, TextField, Button,
   CircularProgress, Alert, Paper, Chip, Divider,
   Stack, useMediaQuery, IconButton, Avatar, useTheme,
-  Menu, MenuItem, ListItemIcon, ListItemText, Badge,
-  Snackbar, Tooltip, Collapse, Grid, Dialog, DialogTitle,
+  Badge, Snackbar, Tooltip, Grid, Dialog, DialogTitle,
   DialogContent, DialogActions, List, ListItem, ListItemButton,
 } from "@mui/material";
 import {
-  Share        as ShareIcon,
-  Verified     as VerifiedIcon,
-  Store        as StoreIcon,
+  Share as ShareIcon,
+  Verified as VerifiedIcon,
+  Store as StoreIcon,
   VisibilityOff as VisibilityOffIcon,
-  Inventory    as InventoryIcon,
-  ExpandMore   as ExpandMoreIcon,
-  ExpandLess   as ExpandLessIcon,
-  Phone        as PhoneIcon,
-  Email        as EmailIcon,
-  WhatsApp     as WhatsAppIcon,
-  Language     as LanguageIcon,
-  Close        as CloseIcon,
-  LocationOn   as LocationOnIcon,
+  Inventory as InventoryIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  WhatsApp as WhatsAppIcon,
+  Language as LanguageIcon,
+  Close as CloseIcon,
+  LocationOn as LocationOnIcon,
   ContactSupport as ContactIcon,
-  LocalShipping  as LocalShippingIcon,
-  Warning        as WarningIcon,
-  X,
 } from "@mui/icons-material";
 import BackButton from "../BackButton";
 import { formatPrice } from "../../utils/utils";
+import ProductShareMenu from "../ProductShareMenu";
+import ProductMetaTags from "../ProductMetaTags";
 
 /* ── Design tokens ──────────────────────────────────────────────────────── */
 const T = {
@@ -72,12 +68,6 @@ const calcDiscountPct = (orig, disc) =>
     ? Math.round(((Number(orig) - Number(disc)) / Number(orig)) * 100)
     : 0;
 
-/**
- * Resolve o número WhatsApp da loja a partir da estrutura real:
- *   store.contact.whatsapp  → preferido
- *   store.contact.phone     → fallback
- *   store.company.contacto  → campo legado
- */
 const resolveStorePhone = (storeInfo) => {
   const raw =
     storeInfo?.contact?.whatsapp ||
@@ -90,7 +80,6 @@ const resolveStorePhone = (storeInfo) => {
   return digits.startsWith('258') ? digits : `258${digits}`;
 };
 
-// FIXED: Added store parameter to the function
 const buildQuoteUrl = (productId, storeId, storePhone, productName, productPrice, quantity = 1) => {
   const url = `${window.location.origin}/product/${productId}/store/${storeId}`;
   const msg = encodeURIComponent(
@@ -189,25 +178,69 @@ const ProductDetailsDesk = ({ user }) => {
     }
   }, [quantity, product?.weight, product?.nationalShipping, calcShipping]);
 
-  /* ── Share ─────────────────────────────────────────────────────── */
-  const shareOnPlatform = useCallback((platform) => {
+  /* ── Enhanced Share functionality with proper preview ─────────────────── */
+  const shareOnPlatform = useCallback(async (platform) => {
     const url = `${window.location.origin}/product/${productId}/store/${store}`;
+    const productName = product?.name || 'Produto';
+    const storeName = storeInfo?.company?.nome || 'Loja';
+    
     if (platform === 'copy') {
-      navigator.clipboard.writeText(url);
-      showSnack('Link copiado!');
-      setShareAnchorEl(null); return;
+      try {
+        // Copy just the URL - meta tags will handle the preview when pasted
+        await navigator.clipboard.writeText(url);
+        showSnack('Link copiado! O preview aparecerá automaticamente quando colado');
+      } catch (err) {
+        await navigator.clipboard.writeText(url);
+        showSnack('Link copiado!');
+      }
+      return;
     }
-    const map = {
-      whatsapp: `https://wa.me/?text=${encodeURIComponent((product?.name || '') + ' - ' + url)}`,
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-      twitter:  `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(product?.name || '')}`,
-    };
-    window.open(map[platform], '_blank', 'noopener,noreferrer');
-    setShareAnchorEl(null);
-  }, [product, productId, store, showSnack]);
+    
+    if (platform === 'whatsapp') {
+      // Send only the URL - WhatsApp will generate preview using OG tags
+      const message = encodeURIComponent(
+        `${productName} - ${storeName}\n\nConfira este produto incrível!\n\n${url}`
+      );
+      window.open(`https://wa.me/?text=${message}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
+    if (platform === 'facebook') {
+      const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
+    if (platform === 'twitter') {
+      const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`${productName} - Confira na loja ${storeName}!`)}`;
+      window.open(twitterUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
+    if (platform === 'native') {
+      const shareData = {
+        title: productName,
+        text: `Confira "${productName}" na loja ${storeName}!`,
+        url: url,
+      };
+      
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+          showSnack('Partilhado com sucesso!');
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            showSnack('Erro ao partilhar', 'error');
+          }
+        }
+      } else {
+        await navigator.clipboard.writeText(url);
+        showSnack('Link copiado!');
+      }
+    }
+  }, [product, storeInfo, productId, store, showSnack]);
 
   /* ── Quote via WhatsApp ────────────────────────────────────────── */
-  // FIXED: Pass all required parameters to buildQuoteUrl
   const handleQuote = useCallback(() => {
     if (!user) { 
       navigate('/auth'); 
@@ -262,7 +295,6 @@ const ProductDetailsDesk = ({ user }) => {
   const discPct     = calcDiscountPct(product.price, product.discountPrice);
   const storePhone  = resolveStorePhone(storeInfo);
 
-
   /* ── Shared contact item style ─────────────────────────────────── */
   const contactItemSx = {
     mb:1, bgcolor:'rgba(255,255,255,0.02)', borderRadius:2,
@@ -272,6 +304,14 @@ const ProductDetailsDesk = ({ user }) => {
   return (
     <Box sx={{ backgroundColor:T.navy, minHeight:'100vh', fontFamily:'"Plus Jakarta Sans", sans-serif' }}>
       <style>{KEYFRAMES}</style>
+      
+      {/* Meta Tags for Social Sharing */}
+      <ProductMetaTags 
+        product={product}
+        storeInfo={storeInfo}
+        productId={productId}
+        store={store}
+      />
 
       {/* Header */}
       <Box sx={{ position:'relative', background:`linear-gradient(160deg,${T.navy} 0%,${T.navyMid} 100%)`,
@@ -572,7 +612,7 @@ const ProductDetailsDesk = ({ user }) => {
                   fontSize:'0.95rem', 
                   textTransform:'none', 
                   borderRadius:'12px',
-                  mb: 2, // Add margin bottom for spacing
+                  mb: 2,
                   '&:hover':{ bgcolor:'rgba(37,211,102,0.25)' } 
                 }}>
                 Pedir Cotação
@@ -603,33 +643,14 @@ const ProductDetailsDesk = ({ user }) => {
           </Grid>
         </Grid>
 
-        {/* ── Share menu ───────────────────────────────────────────── */}
-        <Menu anchorEl={shareAnchorEl} open={Boolean(shareAnchorEl)}
+        {/* Enhanced Share Menu */}
+        <ProductShareMenu
+          anchorEl={shareAnchorEl}
           onClose={() => setShareAnchorEl(null)}
-          PaperProps={{ sx:{ bgcolor:T.navyCard, border:`1px solid ${T.darkBorder}`, borderRadius:2 } }}>
-          {[
-            { key:'whatsapp', label:'WhatsApp', src:'https://cdn-icons-png.flaticon.com/512/124/124034.png' },
-            { key:'facebook', label:'Facebook', src:'https://cdn-icons-png.flaticon.com/512/124/124010.png' },
-            { key:'twitter',  label:'Twitter',  src:'https://cdn-icons-png.flaticon.com/512/124/124021.png' },
-          ].map(s => (
-            <MenuItem key={s.key} onClick={() => shareOnPlatform(s.key)}
-              sx={{ color:T.darkText, '&:hover':{ bgcolor:'rgba(255,255,255,0.06)' } }}>
-              <ListItemIcon>
-                <Box component="img" src={s.src} alt={s.label} sx={{ width:20, height:20 }} />
-              </ListItemIcon>
-              <ListItemText primaryTypographyProps={{ fontFamily:'"Plus Jakarta Sans", sans-serif' }}>
-                {s.label}
-              </ListItemText>
-            </MenuItem>
-          ))}
-          <MenuItem onClick={() => shareOnPlatform('copy')}
-            sx={{ color:T.darkText, '&:hover':{ bgcolor:'rgba(255,255,255,0.06)' } }}>
-            <ListItemIcon><ShareIcon sx={{ fontSize:18, color:T.gold }} /></ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontFamily:'"Plus Jakarta Sans", sans-serif' }}>
-              Copiar link
-            </ListItemText>
-          </MenuItem>
-        </Menu>
+          onShare={shareOnPlatform}
+          product={product}
+          storeInfo={storeInfo}
+        />
 
         {/* ── Contact modal ────────────────────────────────────────── */}
         <Dialog open={openContactModal} onClose={() => setOpenContactModal(false)}
