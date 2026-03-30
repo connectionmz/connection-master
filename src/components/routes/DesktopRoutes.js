@@ -240,81 +240,7 @@ const DesktopRoutes = ({ user }) => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (user?.id) {
-      const feedbackRef = ref(db, `feedback/${user.id}`);
-      onValue(feedbackRef, (snapshot) => {
-        setHasFeedback(snapshot.exists());
-      });
 
-      if(user.referer && !user.isComplete){
-        setShowReferrerModal(true); 
-      }
-    }
-  }, [user]);
-
-  const handleOpenFeedbackModal = () => {
-    setShowFeedbackModal(true);
-  };
-
-  const handleCloseFeedbackModal = () => {
-    setShowFeedbackModal(false);
-    setFeedbackForm({ nome: '', email: '', contacto: '', feedback: '' });
-  };
-
-  const handleFeedbackChange = (e) => {
-    const { name, value } = e.target;
-    setFeedbackForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleFeedbackEditorChange = (value) => {
-    setFeedbackForm(prev => ({ ...prev, feedback: value }));
-  };
-
-  const handleSubmitFeedback = async () => {
-    if (!feedbackForm.feedback.trim()) {
-      alert('Por favor, insira seu feedback.');
-      return;
-    }
-
-    if (!user && (!feedbackForm.nome.trim() || !feedbackForm.email.trim())) {
-      alert('Por favor, preencha seu nome e email.');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const feedbackData = user ? {
-        nome: user.displayName || 'Usuário Anônimo',
-        email: user.email || 'anonimo@exemplo.com',
-        userId: user.id,
-        feedback: feedbackForm.feedback,
-        timestamp: new Date().toISOString(),
-      } : {
-        nome: feedbackForm.nome,
-        email: feedbackForm.email,
-        contacto: feedbackForm.contacto || '',
-        feedback: feedbackForm.feedback,
-        timestamp: new Date().toISOString(),
-      };
-
-      const feedbackRef = user 
-        ? ref(db, `feedback/${user.id}`) 
-        : ref(db, 'feedback/anonymousFeedbacks');
-
-      const newFeedbackRef = push(feedbackRef);
-      await set(newFeedbackRef, feedbackData); 
-
-      alert('Feedback enviado com sucesso!');
-      setHasFeedback(true);
-      handleCloseFeedbackModal();
-    } catch (error) {
-      alert('Erro ao enviar feedback. Tente novamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleCloseReferrerModal = () => {
     setShowReferrerModal(false);
@@ -422,41 +348,7 @@ const DesktopRoutes = ({ user }) => {
           </Box>
           
           {!isFullScreenRoute && <FooterDesk sx={{ flexShrink: 0, marginTop: 'auto' }} />}
-          
-          <Fab color="primary" aria-label="feedback" sx={{ position: 'fixed', bottom: isMobile ? 16 : 24, right: isMobile ? 16 : 24, zIndex: 1000, width: isMobile ? 40 : 56, height: isMobile ? 40 : 56, animation: !hasFeedback ? 'pulse 2s infinite' : 'none' }} onClick={handleOpenFeedbackModal}>
-            <FeedbackIcon />
-          </Fab>
-
-          {showFeedbackModal && (
-            <Box sx={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#fff', padding: '24px', borderRadius: '8px', boxShadow: 3, zIndex: 1001, width: isMobile ? '90%' : '500px', maxHeight: '90vh', overflowY: 'auto' }}>
-              <IconButton aria-label="fechar" onClick={handleCloseFeedbackModal} sx={{ position: 'absolute', right: '8px', top: '8px', color: 'text.secondary' }}>
-                <Close />
-              </IconButton>
-              <Typography variant="h6" sx={{ mb: 2 }}>Enviar Feedback</Typography>
-              {!user && (
-                <>
-                  <TextField label="Seu nome" fullWidth name="nome" value={feedbackForm.nome} onChange={handleFeedbackChange} sx={{ mb: 2 }} required />
-                  <TextField label="Seu email" fullWidth name="email" type="email" value={feedbackForm.email} onChange={handleFeedbackChange} sx={{ mb: 2 }} required />
-                  <TextField label="Seu contacto (opcional)" fullWidth name="contacto" value={feedbackForm.contacto} onChange={handleFeedbackChange} sx={{ mb: 2 }} />
-                </>
-              )}
-              <Typography variant="body2" sx={{ mb: 1 }}>Seu feedback:</Typography>
-              <Box sx={{ mb: 2 }}>
-                <ReactQuill value={feedbackForm.feedback} onChange={handleFeedbackEditorChange} modules={{ toolbar: [['bold', 'italic', 'underline', 'strike'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link'], ['clean']] }} formats={['bold', 'italic', 'underline', 'strike', 'list', 'bullet', 'link']} style={{ height: '200px', marginBottom: '40px' }} />
-              </Box>
-              <Button variant="contained" color="primary" fullWidth onClick={handleSubmitFeedback} disabled={isLoading}>
-                {isLoading ? 'Enviando...' : 'Enviar Feedback'}
-              </Button>
-            </Box>
-          )}
-
-          {showReferrerModal && (
-            <Modal open={showReferrerModal} onClose={handleCloseReferrerModal}>
-              <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: '#fff', padding: '24px', borderRadius: '8px', boxShadow: 3, width: isMobile ? '90%' : '80%' }}>
-                <CompanyUpdateDesk/>
-              </Box>
-            </Modal>
-          )}
+      
         </Box>
       </ActiveModulesProvider>
     </ThemeProvider>

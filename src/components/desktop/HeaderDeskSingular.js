@@ -93,6 +93,9 @@ const BG_GRID = {
 };
 
 const HeaderDeskSingular = ({ user }) => {
+  const [pendingConnections, setPendingConnections] = useState(0);
+  const [pendingQuotes, setPendingQuotes] = useState(0);
+  const [pendingNotifications, setPendingNotifications] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
@@ -115,7 +118,64 @@ const HeaderDeskSingular = ({ user }) => {
     "/feed",
     "/inbox",
     "/app",
+    "/conexoes",
   ];
+
+  // Buscar dados em tempo real
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Conexões pendentes
+    const connectionsRef = ref(db, `connections/${user.id}/`);
+    const unsubscribeConnections = onValue(connectionsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const pendingCount = Object.values(snapshot.val()).filter(
+          (connection) => connection.status === "pending"
+        ).length;
+        setPendingConnections(pendingCount);
+      } else {
+        setPendingConnections(0);
+      }
+    });
+
+    // Cotações pendentes
+    const quotesRef = ref(db, `cotacoes/`);
+    const unsubscribeQuotes = onValue(quotesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const quotes = Object.values(snapshot.val());
+        const pendingCount = quotes.filter((quote) => {
+          return (
+            quote.sector === user.sector &&
+            !(quote.views && quote.views[user.id]) &&
+            quote.company?.id !== user.id
+          );
+        }).length;
+        setPendingQuotes(pendingCount);
+      } else {
+        setPendingQuotes(0);
+      }
+    });
+
+    // Notificações pendentes
+    const notificationsRef = ref(db, `notifications/${user.id}/`);
+    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const notifications = Object.values(snapshot.val());
+        const pendingCount = notifications.filter(
+          (notification) => notification.status === "unread"
+        ).length;
+        setPendingNotifications(pendingCount);
+      } else {
+        setPendingNotifications(0);
+      }
+    });
+
+    return () => {
+      unsubscribeConnections();
+      unsubscribeQuotes();
+      unsubscribeNotifications();
+    };
+  }, [user?.id, user?.sector]);
 
   const handleDownloadClose = () => {
     setDownloadAnchorEl(null);
@@ -215,8 +275,7 @@ const HeaderDeskSingular = ({ user }) => {
     return location.pathname === path;
   };
 
-
-
+  // Itens de navegação principal
   const mainNavItems = [
     { 
       to: "/empresas", 
@@ -241,19 +300,22 @@ const HeaderDeskSingular = ({ user }) => {
     },
   ];
 
-
+  // Itens de notificação e conexões
+  const notificationNavItems = [
+    {
+      to: "/inbox",
+      icon: <NotificationsIcon />,
+      label: "Notificações",
+      badge: pendingNotifications,
+      requiresAuth: true,
+      requiresVerify: true,
+    },
+  ];
 
   // Itens do menu mobile (incluindo módulos e perfil)
   const mobileMenuItems = [
     ...mainNavItems,
     { type: "divider" },
-    {
-      to: "/app",
-      icon: <DashboardIcon />,
-      label: "Módulos",
-      requiresAuth: true,
-      requiresVerify: true,
-    },
     {
       to: "/perfil",
       icon: <PersonIcon />,
@@ -312,6 +374,39 @@ const HeaderDeskSingular = ({ user }) => {
     </Box>
   );
 
+  const renderNotificationIcons = () => (
+    <Box display="flex" alignItems="center" gap={1}>
+      {notificationNavItems.map((item, index) => (
+        <Tooltip key={index} title={item.label} arrow>
+          <IconButton
+            onClick={() => navigate(item.to)}
+            sx={{
+              color: isActiveRoute(item.to) ? T.gold : T.darkText,
+              bgcolor: 'rgba(255,255,255,0.06)',
+              border: `1px solid ${T.darkBorder}`,
+              borderRadius: '10px',
+              width: 40,
+              height: 40,
+              '&:hover': {
+                bgcolor: 'rgba(200,144,58,0.15)',
+                color: T.gold,
+                borderColor: T.gold,
+              },
+            }}
+          >
+            <Badge
+              badgeContent={item.badge}
+              color="error"
+              classes={{ badge: 'notification-badge' }}
+            >
+              {item.icon}
+            </Badge>
+          </IconButton>
+        </Tooltip>
+      ))}
+    </Box>
+  );
+
   const toggleDrawer = (open) => (event) => {
     if (event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
       return;
@@ -365,38 +460,7 @@ const HeaderDeskSingular = ({ user }) => {
             {/* Right side - User actions */}
             <Box display="flex" alignItems="center" gap={1}>
               {/* Notifications & Connections - Desktop */}
-              {!isMobile && user && isVerify && (
-                <>
-                  {notificationNavItems.map((item, index) => (
-                    <Tooltip key={index} title={item.label} arrow>
-                      <IconButton
-                        onClick={() => navigate(item.to)}
-                        sx={{
-                          color: isActiveRoute(item.to) ? T.gold : T.darkText,
-                          bgcolor: 'rgba(255,255,255,0.06)',
-                          border: `1px solid ${T.darkBorder}`,
-                          borderRadius: '10px',
-                          width: 40,
-                          height: 40,
-                          '&:hover': {
-                            bgcolor: 'rgba(200,144,58,0.15)',
-                            color: T.gold,
-                            borderColor: T.gold,
-                          },
-                        }}
-                      >
-                        <Badge
-                          badgeContent={item.badge}
-                          color="error"
-                          classes={{ badge: 'notification-badge' }}
-                        >
-                          {item.icon}
-                        </Badge>
-                      </IconButton>
-                    </Tooltip>
-                  ))}
-                </>
-              )}
+              {!isMobile && user && isVerify && renderNotificationIcons()}
 
               {/* Profile / Login button */}
               {user ? (
@@ -539,7 +603,7 @@ const HeaderDeskSingular = ({ user }) => {
         </Container>
       </AppBar>
 
-      {/* Mobile Drawer - CORRIGIDO com links para Módulos e Perfil */}
+      {/* Mobile Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -618,7 +682,7 @@ const HeaderDeskSingular = ({ user }) => {
             </Box>
           )}
 
-          {/* Menu items para mobile - INCLUINDO MÓDULOS E PERFIL */}
+          {/* Menu items para mobile */}
           {mobileMenuItems.map((item, index) => {
             if (item.type === "divider") {
               return <Divider key={index} sx={{ borderColor: T.darkBorder, my: 1 }} />;
