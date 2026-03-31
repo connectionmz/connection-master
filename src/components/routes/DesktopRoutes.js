@@ -96,6 +96,7 @@ import VerEvento from '../desktop/VerEvento';
 import SelectAccountType from '../SelectAccountType';
 import Home from '../Home';
 import Dashboard from '../Dashboard';
+import SearchResultsPage from '../SearchResultsPage';
 
 const theme = createTheme({
   palette: {
@@ -296,6 +297,7 @@ const DesktopRoutes = ({ user }) => {
               <Route path="/change-password" element={<ChangePassword user={user} />} />
               <Route path="/email-verification" element={<EmailVerification />} />
               <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
+              <Route path="/search" element={<SearchResultsPage />} />
 
               {/* Rotas protegidas */}
               {renderProtectedRoute("/addProduct", <ProductFormDesk user={user} />, "moduloMarket")}
