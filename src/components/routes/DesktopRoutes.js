@@ -1,28 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import DashboardComponent from '../Dashboard';
 import CotacoesDesk from '../desktop/CotacoesDesk';
 import HeaderDesk from '../desktop/HeaderDesk';
-import { Box, Button, createTheme, Fab, IconButton, Menu, MenuItem, TextField, ThemeProvider, Typography, useMediaQuery, Modal, Snackbar, Alert, CircularProgress } from '@mui/material';
-import FeedbackIcon from '@mui/icons-material/Feedback';
+import { Box, Button, createTheme, ThemeProvider, Typography, useMediaQuery, CircularProgress } from '@mui/material';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
 import ApxDesk from '../desktop/ApxDesk';
-import FaturacaoDesk from '../desktop/FaturacaoDesk';
 import MarketDesk from '../desktop/MarketDesk';
 import ProductFormDesk from '../market/ProductFormDesk';
-import AnunciarDesk from '../desktop/AnunciarDesk';
-import SmsDesk from '../sms/SmsDesk';
-import CallCenterModuleDesk from '../desktop/CallCenterModuleDesk';
-import InqueritosModuleDesk from '../desktop/InqueritosModuleDesk';
-import LogisticaModuleDesk from '../desktop/LogisticaModuleDesk';
-import InboxDesk from '../desktop/InboxDesk';
 import StoresDesk from '../desktop/StoresDesk';
 import StoreDetailDesk from '../desktop/StoreDetailsDesk';
-import ConnectionsSearchDesk from '../desktop/ConnectionsSearchDesk';
 import FooterDesk from '../desktop/FooterDesk';
-import ProposalDesk from '../desktop/ProposalDesk';
 import ProductDetailsDesk from '../market/ProductDetailsDesk';
 import Sobre from '../Sobre';
 import EmailVerification from '../EmailVerification';
@@ -30,73 +19,34 @@ import CompanyVerificationNotice from '../CompanyVerificationNotice';
 import AuthDesk from '../AuthDesk';
 import ProfileDesk from '../desktop/ProfileDesk';
 import EditProfileDesk from '../desktop/EditProfileDesk';
-import FeedDesk from '../desktop/FeedDesk';
 import CotacoesPDF from '../pdf/CotacoesPDF';
-import NoticiadosDesk from '../desktop/NoticiadosDesk';
-import NoticiaDetalheDesk from '../desktop/NoticiaDetalheDesk';
-import ParceirosInvestidoresDesk from '../desktop/ParceirosInvestidoresDesk';
-import ConcursoDesk from '../desktop/ConcursoDesk';
-import ConnectionsDesk from '../desktop/ConnectionsDesk';
-import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import TermsAndPrivacy from '../modal/TermsAndPrivacy';
-import BlogDetalheDesk from '../desktop/BlogDetalheDesk';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
-import Blogs from '../desktop/Blogs';
-import { onValue, push, ref, set, update } from 'firebase/database';
-import { db } from '../../fb';
 import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
 import Terms from '../Termos';
 import Politicas from '../desktop/Politicas';
-import { Close } from '@mui/icons-material';
-import CompanyUpdateDesk from '../CompanyUpdateDesk';
-import ReceiptsPage from '../desktop/ReceiptsPage';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import CompanyDataFormDesk from '../CompanyDataFormDesk';
 import AuthCreateDesk from '../AuthCreateDesk';
-import RecrutamentoDesk from '../desktop/RecrutamentoDesk';
-import ListaInqueritos from '../desktop/ListaInqueritos';
 import ProdutoPage from '../market/ProdutoPage';
 import MinhaPropostaDesk from '../desktop/MinhaPropostaDesk';
 import DetalhesPropostaDesk from '../desktop/DetalhesPropostaDesk';
 import CotacaoDetalhesDesk from '../desktop/CotacaoDetalhesDesk';
 import PropostasDesk from '../desktop/PropostasDesk';
 import EnviarPropostaDesk from '../desktop/EnviarPropostaDesk';
-import EditarFaturaDesk from '../desktop/EditarFaturaDesk';
-import AnalyticsDesk from '../desktop/AnalyticsDesk';
-import PublicarConcursoDesk from '../desktop/PublicarConcursoDesk';
-import ConcursoDetalhesDesk from '../desktop/ConcursoDetalhesDesk';
-import ContactForm from '../desktop/Mailer';
-import CreditCardCheckoutDesk from '../checkout/CreditCardCheckoutDesk';
-import SurveyPageDesk from '../desktop/SurveyPageDesk';
-import DestacarModule from '../desktop/DestacarModule';
-import SendMail from '../sms/SendMail';
-import PortalDesk from '../desktop/PortalDesk';
-import ListaDeServicosDesk from '../desktop/ListaDeServicosDesk';
-import PostInputDesk from '../desktop/PostInputDesk';
 import PagamentoModulo from '../PagamentoModulo';
-import CriarProformaDesk from '../desktop/CriarProformaDesk';
-import FaturaDesk from '../desktop/FaturaDesk';
-import VerificationAccountModal from '../modal/VerificationAccountModal';
-import VerFaturaDesk from '../desktop/VerFaturaDesk';
 import { allModules } from '../ModuleGrid';
-import EditalConcursoPDF from '../pdf/EditalConcursoPDF';
 import UserDataFormDesk from '../UserDataFormDesk';
 import HeaderDeskSingular from '../desktop/HeaderDeskSingular';
 import ProfileDeskSingular from '../desktop/ProfileDeskSingular';
-import ApxDeskSingular from '../desktop/ApxDeskSingular';
 import EditProfileDeskSingular from '../desktop/EditProfileDeskSingular';
-import Teste from '../Teste';
 import { ActiveModulesProvider, useActiveModules } from '../../context/ActiveModulesContext';
 import GuestRoute from './GuestRoute';
-import Eventos from '../desktop/Eventos';
 import Checkout from '../checkout/Checkout';
-import VerEvento from '../desktop/VerEvento';
 import SelectAccountType from '../SelectAccountType';
-import Home from '../Home';
 import Dashboard from '../Dashboard';
 import SearchResultsPage from '../SearchResultsPage';
+import ListaDeServicosDesk from '../desktop/ListaDeServicosDesk';
 
 const theme = createTheme({
   palette: {
@@ -110,80 +60,142 @@ const theme = createTheme({
   },
 })
 
-// Lista de rotas protegidas simplificada (removida duplicação)
-const protectedRoutes = [
-  '/cotacoes', '/cotacao', '/proposta', '/enviar-proposta', '/propostas', '/minha_proposta',
-  '/cotacaoPdf', '/concursos', '/concurso', '/faturacao', '/proforma', '/edit-proforma',
-  '/faturas', '/checkout', '/pagamento-modulo', '/post', '/anunciar', '/sms', '/callcenter',
-  '/procurement', '/inquerito', '/destacar', '/analises', '/recrutamento', '/addProduct',
-  '/conexoes', '/inbox', '/perfil', '/editar-perfil', '/painel', '/app', '/meuperfil',
-  '/editar-meuperfil', '/evento', '/market'
-];
+// Lista de rotas protegidas com seus módulos requeridos
+const protectedRoutesWithModules = {
+  '/addProduct': 'moduloMarket',
+  '/market': 'moduloMarket',
+  '/cotacao': 'moduloSMS',
+  '/cotacaoPdf': 'moduloSMS',
+  '/cotacao/': 'moduloSMS',
+  '/enviar-proposta': 'moduloSMS',
+  '/propostas': 'moduloSMS',
+  '/minha_proposta': 'moduloSMS',
+  '/callcenter': 'moduloCallCenter',
+  '/anunciar': 'moduloAnunciar',
+  '/procurement': 'moduloProcurement',
+  '/inqueritos': 'moduloInquerito',
+  '/analises': 'moduloAnalises',
+  '/proforma': 'moduloProforma',
+};
 
-// Padrões dinâmicos simplificados
+// Padrões dinâmicos com módulos requeridos
 const dynamicProtectedPatterns = [
-  /^\/proposta\/.+/,
-  /^\/cotacao\/.+/,
-  /^\/concurso\/.+/,
-  /^\/proforma\/.+/,
-  /^\/faturas\/.+/,
-  /^\/inquerito\/.+/,
-  /^\/perfil\/.+/,
-  /^\/produto\/.+/,
-  /^\/loja\/.+/,
-  /^\/product\/.+/,
-  /^\/verproforma\/.+/,
-  /^\/concursoPdf\/.+/,
-  /^\/categoria\/.+/,
-  /^\/pagamento-modulo\/.+/,
-  /^\/minha_proposta\/.+/
+  { pattern: /^\/cotacao\/.+/, module: 'moduloSMS' },
+  { pattern: /^\/cotacaoPdf\/.+/, module: 'moduloSMS' },
+  { pattern: /^\/minha_proposta\/.+/, module: 'moduloSMS' },
+  { pattern: /^\/enviar-proposta\/.+/, module: 'moduloSMS' },
+  { pattern: /^\/propostas\/.+/, module: 'moduloSMS' },
+  { pattern: /^\/pagamento-modulo\/.+/, module: null }, // Não requer módulo
 ];
 
-// Componente ProtectedRoute movido para fora do DesktopRoutes
+// Componente ProtectedRoute
 const ProtectedRoute = ({ user, children, requiredModule }) => {
   const { activeModules, isLoading: modulesLoading } = useActiveModules();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
+
+
+  // Função para verificar se um módulo está ativo
+  const isModuleActive = (moduleKey) => {
+    if (!activeModules) return false;
+    
+    const module = activeModules[moduleKey];
+    if (!module) return false;
+    
+    // Verifica se o status é "active"
+    if (module.status !== "active") return false;
+    
+    // Verifica se não expirou
+    if (module.expiresAt) {
+      const now = new Date();
+      const expiryDate = new Date(module.expiresAt);
+      if (expiryDate <= now) return false;
+    }
+    
+    return true;
+  };
+
   if (modulesLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
         <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Verificando acesso ao módulo...</Typography>
       </Box>
     );
   }
 
-  // Função para verificar se uma rota está protegida
-  const isRouteProtected = (pathname) => {
-    return protectedRoutes.some(route => pathname.startsWith(route)) ||
-           dynamicProtectedPatterns.some(pattern => pattern.test(pathname));
+  // Verificar se a rota atual requer um módulo específico
+  const getRequiredModule = (pathname) => {
+    // Verificar rotas exatas
+    for (const [route, module] of Object.entries(protectedRoutesWithModules)) {
+      if (pathname === route || pathname.startsWith(route + '/')) {
+        return module;
+      }
+    }
+
+    // Verificar padrões dinâmicos
+    for (const { pattern, module } of dynamicProtectedPatterns) {
+      if (pattern.test(pathname)) {
+        return module;
+      }
+    }
+
+    return null;
   };
 
-  const isProtected = isRouteProtected(location.pathname);
+  const moduleRequired = requiredModule || getRequiredModule(location.pathname);
 
-  // Caso 2: Módulo requerido não está ativo
-  if (requiredModule && !activeModules[requiredModule]) {
-    const module = allModules.find(m => m.key === requiredModule);
+  // Se não requer módulo, permite acesso
+  if (!moduleRequired) {
+    return children;
+  }
+
+  // Verificar se o módulo está ativo
+  const moduleActive = isModuleActive(moduleRequired);
+  const moduleInfo = allModules.find(m => m.key === moduleRequired);
+
+  if (!moduleActive) {
     return (
-      <Box sx={{ p: 4, textAlign: 'center', maxWidth: 500, margin: 'auto', mt: 8 }}>
+      <Box 
+        sx={{ 
+          p: 4, 
+          textAlign: 'center', 
+          maxWidth: 500, 
+          margin: 'auto', 
+          mt: 8,
+          bgcolor: '#FFF3E0',
+          borderRadius: 2,
+          border: '1px solid #FFB74D'
+        }}
+      >
         <Typography variant="h4" gutterBottom color="error.main">
-          Módulo não disponível
+          Acesso Bloqueado
         </Typography>
-        <Typography variant="body1" sx={{ mb: 3 }}>
-          Você não tem acesso ao módulo <strong>{module?.name || requiredModule}</strong>.
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          O módulo <strong>{moduleInfo?.name || moduleRequired}</strong> não está ativo para sua empresa.
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate(`/pagamento-modulo/${requiredModule}`)}
-        >
-          Ativar Módulo
-        </Button>
+        <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
+          Por favor, adquira uma assinatura para acessar esta funcionalidade.
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate('/app')}
+          >
+            Ver Módulos Disponíveis
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => navigate(`/pagamento-modulo/${moduleRequired}`)}
+          >
+            Adquirir Módulo
+          </Button>
+        </Box>
       </Box>
     );
   }
-
-
   return children;
 };
 
@@ -198,25 +210,11 @@ const ScrollToTop = () => {
 };
 
 const DesktopRoutes = ({ user }) => {
-
-  const [language, setLanguage] = useState('pt')
-  const [anchorEl, setAnchorEl] = useState(null)
   const [showTerms, setShowTerms] = useState(false)
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [hasFeedback, setHasFeedback] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showReferrerModal, setShowReferrerModal] = useState(false)
-  const [feedbackForm, setFeedbackForm] = useState({
-    nome: '',
-    email: '',
-    contacto: '',
-    feedback: ''
-  });
-
   const navigate = useNavigate();
   const currentLocation = useLocation();
   const isMobile = useMediaQuery('(max-width:600px)');
-  
+
   const fullScreenRoutes = [
     '/auth', '/email-verification', '/create', '/setup', '/setupUser', '/forget-password',
   ];
@@ -224,13 +222,13 @@ const DesktopRoutes = ({ user }) => {
   const isFullScreenRoute = fullScreenRoutes.includes(currentLocation.pathname);
 
   const renderProtectedRoute = (path, element, requiredModule = null) => (
-    <Route 
-      path={path} 
+    <Route
+      path={path}
       element={
         <ProtectedRoute user={user} requiredModule={requiredModule}>
           {element}
         </ProtectedRoute>
-      } 
+      }
     />
   );
 
@@ -241,16 +239,10 @@ const DesktopRoutes = ({ user }) => {
     }
   }, [user]);
 
-
-
-  const handleCloseReferrerModal = () => {
-    setShowReferrerModal(false);
-  };
-  
   return (
     <ThemeProvider theme={theme}>
       <ActiveModulesProvider userId={user?.id}>
-           <ScrollToTop />
+        <ScrollToTop />
         <Box>
           {!isFullScreenRoute && (
             <>
@@ -262,30 +254,19 @@ const DesktopRoutes = ({ user }) => {
                 <HeaderDesk user={user} />
               )}
             </>
-          )}        
-          <Box >
+          )}
+          <Box>
             <Routes>
               {/* Rotas públicas */}
               <Route path="/" element={<Dashboard user={user} />} />
               <Route path="/explorar" element={<ExploreDesk user={user} />} />
-              <Route path="/feed" element={<FeedDesk user={user} />} />
-              <Route path="/verEvento/:id" element={<VerEvento user={user} />} />
-              <Route path="/teste" element={<Teste user={user} />} />
               <Route path="/empresa/:id" element={<CompanyProfileDesk user={user} />} />
-              <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
               <Route path="/sobre" element={<Sobre />} />
-              <Route path="/noticias" element={<NoticiadosDesk />} />
-              <Route path="/noticia/:id" element={<NoticiaDetalheDesk user={user} />} />
-              <Route path="/blog" element={<Blogs />} />
-              <Route path="/blog/:id" element={<BlogDetalheDesk user={user} />} />
               <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
-              <Route path="/recibos" element={<ReceiptsPage user={user} />} />
               <Route path="/lojas" element={<StoresDesk user={user} />} />
               <Route path="/loja/:storeId" element={<StoreDetailDesk user={user} />} />
               <Route path="/product/:productId/store/:store" element={<ProductDetailsDesk user={user}/>} />
-               <Route path="/checkout" element={<Checkout user={user}/>} />
               <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
-              <Route path="/inqueritos" element={<ListaInqueritos user={user}/>} />
               <Route path="/termos" element={<Terms />} />
               <Route path="/politicas" element={<Politicas />} />
               <Route path="/auth" element={<GuestRoute user={user}><AuthDesk user={user} /></GuestRoute>} />
@@ -299,58 +280,29 @@ const DesktopRoutes = ({ user }) => {
               <Route path="/app/verification" element={<CompanyVerificationNotice user={user} />} />
               <Route path="/search" element={<SearchResultsPage />} />
 
-              {/* Rotas protegidas */}
+              {/* Rotas protegidas - ESPECIFICANDO O MÓDULO REQUERIDO */}
               {renderProtectedRoute("/addProduct", <ProductFormDesk user={user} />, "moduloMarket")}
-              {renderProtectedRoute("/conexoes", <ConnectionsDesk user={user} />)}
-              {renderProtectedRoute("/search", <ConnectionsSearchDesk />)}
-              {renderProtectedRoute("/parceiros-investidores", <ParceirosInvestidoresDesk />)}
+              {renderProtectedRoute("/market", <MarketDesk user={user} />, "moduloMarket")}
               {renderProtectedRoute("/app", <ApxDesk user={user} />)}
-              {renderProtectedRoute("/inbox", <InboxDesk user={user} />)}
               {renderProtectedRoute("/perfil", <ProfileDesk user={user} />)}
               {renderProtectedRoute("/meuperfil", <ProfileDeskSingular user={user} />)}
               {renderProtectedRoute("/editar-perfil", <EditProfileDesk user={user} />)}
               {renderProtectedRoute("/editar-meuperfil", <EditProfileDeskSingular user={user} />)}
               {renderProtectedRoute("/cotacoes", <CotacoesDesk user={user} />)}
               {renderProtectedRoute("/cotacao", <NovaCotacaoDesk user={user} />, "moduloSMS")}
-              {renderProtectedRoute("/evento", <Eventos user={user} />, "moduloEventos")}
-              {renderProtectedRoute("/proposta/:id/:cotId", <ProposalDesk user={user} />, "moduloSMS")}
               {renderProtectedRoute("/cotacaoPdf/:id", <CotacoesPDF user={user}/>, "moduloSMS")}
-              {renderProtectedRoute("/edit-proforma/:numeroProforma", <EditarFaturaDesk user={user} />, "moduloProforma")}
-              {renderProtectedRoute("/verproforma/:numeroProforma/sender/:sender", <VerFaturaDesk user={user} />)}
-              {renderProtectedRoute("/proforma/:numeroProforma", <FaturaDesk user={user} />)}
-              {renderProtectedRoute("/concurso", <PublicarConcursoDesk user={user} />, "moduloSMS")}
-              {renderProtectedRoute("/concurso/:id", <ConcursoDetalhesDesk user={user} />)}
-              {renderProtectedRoute("/concursoPdf/:id", <EditalConcursoPDF user={user} />)}
-              {renderProtectedRoute("/inquerito/:surveyId", <SurveyPageDesk user={user} />)}
-              {renderProtectedRoute("/painel", <PortalDesk user={user} />)}
-              {renderProtectedRoute("/categoria/:categoriaId", <ListaDeServicosDesk user={user} />)}
-              {renderProtectedRoute("/post", <PostInputDesk user={user} />)}
-              {renderProtectedRoute("/pagamento-modulo/:moduleKey", <PagamentoModulo user={user} />)}
-              {renderProtectedRoute("/proforma", <CriarProformaDesk user={user} />)}
-              {renderProtectedRoute("/faturas/:id", <FaturaDesk user={user} />)}
-              {renderProtectedRoute("/enviar-proposta/:id/:companyId", <EnviarPropostaDesk user={user} />)}
-              {renderProtectedRoute("/propostas/:id/propostas", <PropostasDesk user={user} />)}
+              {renderProtectedRoute("/pagar/:moduleKey", <PagamentoModulo user={user} />)}
+              {renderProtectedRoute("/enviar-proposta/:id/:companyId", <EnviarPropostaDesk user={user} />, "moduloSMS")}
+              {renderProtectedRoute("/propostas/:id/propostas", <PropostasDesk user={user} />, "moduloSMS")}
               {renderProtectedRoute("/cotacao/:id/proposta/:propostaId", <DetalhesPropostaDesk user={user} />, "moduloSMS")}
               {renderProtectedRoute("/minha_proposta/cotacao/:id/proposta/:propostaId", <MinhaPropostaDesk user={user} />, "moduloSMS")}
               {renderProtectedRoute("/cotacao/:id", <CotacaoDetalhesDesk user={user} />, "moduloSMS")}
-              {renderProtectedRoute("/cotacaoPdf/:id", <CotacoesPDF user={user} />, "moduloSMS")}
-              {renderProtectedRoute("/concursos", <ConcursoDesk user={user} />)}
-              {renderProtectedRoute("/faturacao", <FaturacaoDesk user={user} />)}
-              {renderProtectedRoute("/market", <MarketDesk user={user} />, "moduloMarket")}
-              {renderProtectedRoute("/anunciar", <AnunciarDesk user={user} />)}
-              {renderProtectedRoute("/analises", <AnalyticsDesk user={user} />)}
-              {renderProtectedRoute("/callcenter", <CallCenterModuleDesk user={user} />)}
-              {renderProtectedRoute("/procurement", <LogisticaModuleDesk user={user} />)}
-              {renderProtectedRoute("/inquerito", <InqueritosModuleDesk user={user} />)}
-              {renderProtectedRoute("/recrutamento", <RecrutamentoDesk user={user} />)}
-              {renderProtectedRoute("/sms", <SmsDesk user={user} />)}
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Box>
-          
+
           {!isFullScreenRoute && <FooterDesk sx={{ flexShrink: 0, marginTop: 'auto' }} />}
-      
         </Box>
       </ActiveModulesProvider>
     </ThemeProvider>

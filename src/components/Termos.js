@@ -14,11 +14,18 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Stack
+  Stack,
+  Alert,
+  Chip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import BusinessIcon from '@mui/icons-material/Business';
+import ImageIcon from '@mui/icons-material/Image';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import SecurityIcon from '@mui/icons-material/Security';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 // =============================================
 // PDF Document Component
@@ -71,6 +78,15 @@ const styles = StyleSheet.create({
   },
   contactInfo: {
     marginTop: 5
+  },
+  highlightBox: {
+    backgroundColor: '#f0f9ff',
+    padding: 10,
+    marginVertical: 10,
+    borderRadius: 5,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3498db',
+    borderLeftStyle: 'solid'
   }
 });
 
@@ -93,13 +109,31 @@ const TermsPDFDocument = () => (
         Ao aceder ou utilizar a plataforma, o utilizador concorda com os presentes Termos de Uso e Política de Privacidade. Caso não concorde, não utilize a plataforma.
       </Text>
       
-      <Text style={styles.sectionTitle}>2. Elegibilidade</Text>
+      <Text style={styles.sectionTitle}>2. Uso de Imagens e Dados das Empresas</Text>
+      <Text style={styles.paragraph}>
+        Ao cadastrar sua empresa na plataforma Connection Mozambique, você autoriza o uso das seguintes informações e elementos visuais:
+      </Text>
+      <Text style={styles.listItem}>• Logotipo da empresa</Text>
+      <Text style={styles.listItem}>• Nome comercial e/ou razão social</Text>
+      <Text style={styles.listItem}>• Imagens institucionais e de produtos/serviços</Text>
+      <Text style={styles.listItem}>• Descrições e informações cadastrais não sensíveis</Text>
+      <Text style={styles.paragraph}>
+        Estes dados serão utilizados exclusivamente para fins de promoção, visibilidade e crescimento da sua empresa na plataforma,
+        bem como para o desenvolvimento e melhoria dos serviços oferecidos pela Connection Mozambique.
+      </Text>
+      <Text style={styles.paragraph}>
+        O uso dessas informações visa aumentar a exposição da sua empresa para potenciais clientes e parceiros de negócio,
+        contribuindo para o networking e oportunidades comerciais. A Connection Mozambique não compartilha dados sensíveis
+        e mantém o compromisso com a segurança das informações.
+      </Text>
+      
+      <Text style={styles.sectionTitle}>3. Elegibilidade</Text>
       <Text style={styles.paragraph}>Para utilizar a plataforma, os utilizadores devem:</Text>
       <Text style={styles.listItem}>• Ter pelo menos 18 anos de idade</Text>
       <Text style={styles.listItem}>• Possuir NUIT e NUEL válidos da empresa</Text>
       <Text style={styles.listItem}>• Fornecer informações verdadeiras e precisas</Text>
       
-      <Text style={styles.sectionTitle}>3. Gestão de Contas</Text>
+      <Text style={styles.sectionTitle}>4. Gestão de Contas</Text>
       <Text style={styles.paragraph}>Para criar uma conta, é necessário fornecer:</Text>
       <Text style={styles.listItem}>• Nome da empresa, NUIT, NUEL</Text>
       <Text style={styles.listItem}>• Contacto e e-mail válidos</Text>
@@ -108,27 +142,27 @@ const TermsPDFDocument = () => (
         O utilizador é responsável pela segurança da sua conta e deve notificar imediatamente qualquer uso não autorizado.
       </Text>
       
-      <Text style={styles.sectionTitle}>4. Obrigações do Utilizador</Text>
+      <Text style={styles.sectionTitle}>5. Obrigações do Utilizador</Text>
       <Text style={styles.paragraph}>Os utilizadores concordam em:</Text>
       <Text style={styles.listItem}>• Não utilizar a plataforma para fins ilegais</Text>
       <Text style={styles.listItem}>• Não publicar conteúdos ofensivos ou falsos</Text>
       <Text style={styles.listItem}>• Manter informações precisas e atualizadas</Text>
       
-      <Text style={styles.sectionTitle}>5. Propriedade Intelectual</Text>
+      <Text style={styles.sectionTitle}>6. Propriedade Intelectual</Text>
       <Text style={styles.paragraph}>
         Todos os direitos da plataforma pertencem à Connection Mozambique. O conteúdo publicado pelos utilizadores continua sendo de sua responsabilidade.
       </Text>
       
-      <Text style={styles.sectionTitle}>6. Pagamentos</Text>
+      <Text style={styles.sectionTitle}>7. Pagamentos</Text>
       <Text style={styles.paragraph}>Algumas funcionalidades requerem pagamento via:</Text>
       <Text style={styles.listItem}>• E-mola, M-pesa ou Mkesh</Text>
       
-      <Text style={styles.sectionTitle}>7. Suspensão e Cancelamento</Text>
+      <Text style={styles.sectionTitle}>8. Suspensão e Cancelamento</Text>
       <Text style={styles.paragraph}>Reservamo-nos o direito de suspender contas em caso de:</Text>
       <Text style={styles.listItem}>• Violação dos Termos</Text>
       <Text style={styles.listItem}>• Atividades fraudulentas</Text>
       
-      <Text style={styles.sectionTitle}>8. Módulos</Text>
+      <Text style={styles.sectionTitle}>9. Módulos</Text>
       <Text style={styles.paragraph}>Oferecemos diversos módulos incluindo:</Text>
       <Text style={styles.listItem}>• Proforma, Marketplace, Anúncios</Text>
       <Text style={styles.listItem}>• SMS, Call Center, Recrutamento</Text>
@@ -140,17 +174,25 @@ const TermsPDFDocument = () => (
       
       <Text style={styles.sectionTitle}>1. Dados Coletados</Text>
       <Text style={styles.paragraph}>Coletamos os seguintes dados para fornecer nossos serviços:</Text>
-      <Text style={styles.listItem}>• Informações da empresa (nome, NUIT, NUEL)</Text>
+      <Text style={styles.listItem}>• Informações da empresa (nome, NUIT, NUEL) - dados institucionais</Text>
+      <Text style={styles.listItem}>• Logotipo, imagens e elementos visuais da marca</Text>
       <Text style={styles.listItem}>• Dados de contacto (e-mail, telefone)</Text>
-      <Text style={styles.listItem}>• Logotipo e informações de localização</Text>
-      <Text style={styles.listItem}>• Dados de navegação e interação</Text>
+      <Text style={styles.listItem}>• Informações de localização (província, distrito)</Text>
+      <Text style={styles.listItem}>• Dados de navegação e interação na plataforma</Text>
       
-      <Text style={styles.sectionTitle}>2. Uso dos Dados</Text>
-      <Text style={styles.paragraph}>Utilizamos seus dados para:</Text>
-      <Text style={styles.listItem}>• Fornecer e melhorar nossos serviços</Text>
-      <Text style={styles.listItem}>• Processar cotações e transações</Text>
-      <Text style={styles.listItem}>• Realizar análises de mercado</Text>
-      <Text style={styles.listItem}>• Comunicar com os utilizadores</Text>
+      <Text style={styles.sectionTitle}>2. Uso de Dados Não Sensíveis para Divulgação</Text>
+      <Text style={styles.paragraph}>
+        A Connection Mozambique utiliza os dados institucionais e imagens fornecidos pelas empresas para fins de divulgação, promoção e crescimento mútuo.
+        Estes dados são considerados não sensíveis e incluem:
+      </Text>
+      <Text style={styles.listItem}>• Logotipo e identidade visual da empresa</Text>
+      <Text style={styles.listItem}>• Nome, sigla e descrição institucional</Text>
+      <Text style={styles.listItem}>• Imagens de produtos, serviços e instalações</Text>
+      <Text style={styles.listItem}>• Informações de contacto empresarial</Text>
+      <Text style={styles.paragraph}>
+        Estes elementos são essenciais para a funcionalidade da plataforma, permitindo que outras empresas encontrem e se conectem com seus negócios.
+        Ao aderir à plataforma, você concorda que estes dados possam ser exibidos publicamente e utilizados para fins de marketing e crescimento da rede.
+      </Text>
       
       <Text style={styles.sectionTitle}>3. Cookies</Text>
       <Text style={styles.paragraph}>Utilizamos cookies para:</Text>
@@ -162,13 +204,14 @@ const TermsPDFDocument = () => (
       </Text>
       
       <Text style={styles.sectionTitle}>4. Compartilhamento de Dados</Text>
-      <Text style={styles.paragraph}>Não compartilhamos dados com terceiros, exceto:</Text>
-      <Text style={styles.listItem}>• Parceiros essenciais para operação dos serviços</Text>
-      <Text style={styles.listItem}>• Autoridades legais mediante requisição formal</Text>
+      <Text style={styles.paragraph}>Não compartilhamos dados sensíveis com terceiros. Dados não sensíveis (como logotipo, nome e imagens) são:</Text>
+      <Text style={styles.listItem}>• Exibidos publicamente para promover sua empresa na plataforma</Text>
+      <Text style={styles.listItem}>• Compartilhados com potenciais clientes e parceiros dentro da plataforma</Text>
+      <Text style={styles.listItem}>• Utilizados para melhorar a experiência de negócios</Text>
       
       <Text style={styles.sectionTitle}>5. Segurança de Dados</Text>
       <Text style={styles.paragraph}>Implementamos medidas robustas de segurança incluindo:</Text>
-      <Text style={styles.listItem}>• Criptografia de dados</Text>
+      <Text style={styles.listItem}>• Criptografia de dados sensíveis</Text>
       <Text style={styles.listItem}>• Autenticação de dois fatores</Text>
       <Text style={styles.listItem}>• Armazenamento seguro com backups</Text>
       
@@ -178,12 +221,16 @@ const TermsPDFDocument = () => (
       <Text style={styles.listItem}>• Solicitar exclusão de dados</Text>
       <Text style={styles.listItem}>• Revogar consentimento</Text>
       <Text style={styles.listItem}>• Solicitar portabilidade de dados</Text>
+      <Text style={styles.paragraph}>
+        Importante ressaltar que a exclusão de dados não sensíveis (como logotipo e imagens) pode afetar a visibilidade da sua empresa na plataforma.
+      </Text>
       
       <Text style={styles.sectionTitle}>7. Retenção de Dados</Text>
       <Text style={styles.paragraph}>Mantemos os dados apenas enquanto necessário para:</Text>
       <Text style={styles.listItem}>• Cumprir obrigações legais</Text>
       <Text style={styles.listItem}>• Manter contratos comerciais</Text>
       <Text style={styles.listItem}>• Prevenir fraudes e melhorar serviços</Text>
+      <Text style={styles.listItem}>• Promover sua empresa e produtos associados</Text>
       
       <View style={styles.divider} />
       
@@ -245,26 +292,29 @@ const TermsAndPrivacy = () => {
                     <ListItem button component="a" href="#introduction">
                       <ListItemText primary="1. Introdução" />
                     </ListItem>
+                    <ListItem button component="a" href="#image-usage">
+                      <ListItemText primary="2. Uso de Imagens e Dados" />
+                    </ListItem>
                     <ListItem button component="a" href="#eligibility">
-                      <ListItemText primary="2. Elegibilidade" />
+                      <ListItemText primary="3. Elegibilidade" />
                     </ListItem>
                     <ListItem button component="a" href="#account-management">
-                      <ListItemText primary="3. Gestão de Contas" />
+                      <ListItemText primary="4. Gestão de Contas" />
                     </ListItem>
                     <ListItem button component="a" href="#user-obligations">
-                      <ListItemText primary="4. Obrigações" />
+                      <ListItemText primary="5. Obrigações" />
                     </ListItem>
                     <ListItem button component="a" href="#intellectual-property">
-                      <ListItemText primary="5. Propriedade Intelectual" />
+                      <ListItemText primary="6. Propriedade Intelectual" />
                     </ListItem>
                     <ListItem button component="a" href="#payments">
-                      <ListItemText primary="6. Pagamentos" />
+                      <ListItemText primary="7. Pagamentos" />
                     </ListItem>
                     <ListItem button component="a" href="#termination">
-                      <ListItemText primary="7. Suspensão" />
+                      <ListItemText primary="8. Suspensão" />
                     </ListItem>
                     <ListItem button component="a" href="#modules">
-                      <ListItemText primary="8. Módulos" />
+                      <ListItemText primary="9. Módulos" />
                     </ListItem>
                   </List>
                 </AccordionDetails>
@@ -279,8 +329,8 @@ const TermsAndPrivacy = () => {
                     <ListItem button component="a" href="#data-collection">
                       <ListItemText primary="1. Dados Coletados" />
                     </ListItem>
-                    <ListItem button component="a" href="#data-use">
-                      <ListItemText primary="2. Uso dos Dados" />
+                    <ListItem button component="a" href="#data-non-sensitive">
+                      <ListItemText primary="2. Uso de Dados Não Sensíveis" />
                     </ListItem>
                     <ListItem button component="a" href="#cookies">
                       <ListItemText primary="3. Cookies" />
@@ -388,10 +438,64 @@ const TermsAndPrivacy = () => {
                 </Typography>
               </Box>
 
+              {/* Image and Data Usage - NOVA SEÇÃO */}
+              <Box id="image-usage" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ImageIcon sx={{ color: theme.palette.primary.main }} />
+                  2. Uso de Imagens e Dados das Empresas
+                </Typography>
+                
+                <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Importante:</strong> Ao cadastrar sua empresa, você autoriza o uso de dados não sensíveis para promoção e visibilidade do seu negócio.
+                  </Typography>
+                </Alert>
+                
+                <Typography paragraph>
+                  Ao cadastrar sua empresa na plataforma Connection Mozambique, você autoriza o uso das seguintes informações 
+                  e elementos visuais:
+                </Typography>
+                <List sx={{ listStyleType: "disc", pl: 4 }}>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Logotipo da empresa" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Nome comercial e/ou razão social" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Imagens institucionais e de produtos/serviços" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Descrições e informações cadastrais não sensíveis" />
+                  </ListItem>
+                </List>
+                <Typography paragraph sx={{ mt: 2 }}>
+                  Estes dados serão utilizados exclusivamente para fins de <strong>promoção, visibilidade e crescimento da sua empresa na plataforma</strong>,
+                  bem como para o desenvolvimento e melhoria dos serviços oferecidos pela Connection Mozambique.
+                </Typography>
+                <Box sx={{ 
+                  bgcolor: '#e8f5e9', 
+                  p: 2, 
+                  borderRadius: 2, 
+                  mt: 2,
+                  borderLeft: `4px solid ${theme.palette.success.main}`
+                }}>
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TrendingUpIcon color="success" />
+                    <strong>Benefício para sua empresa:</strong> O uso dessas informações aumenta a exposição da sua empresa 
+                    para potenciais clientes e parceiros de negócio, contribuindo para networking e oportunidades comerciais.
+                  </Typography>
+                </Box>
+                <Typography paragraph sx={{ mt: 2 }}>
+                  A Connection Mozambique não compartilha dados sensíveis (como informações bancárias, senhas, documentos pessoais) 
+                  e mantém o compromisso com a segurança das informações.
+                </Typography>
+              </Box>
+
               {/* Eligibility */}
               <Box id="eligibility" sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  2. Elegibilidade
+                  3. Elegibilidade
                 </Typography>
                 <Typography paragraph>
                   Para utilizar a plataforma, os utilizadores devem:
@@ -412,7 +516,7 @@ const TermsAndPrivacy = () => {
               {/* Account Management */}
               <Box id="account-management" sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  3. Gestão de Contas
+                  4. Gestão de Contas
                 </Typography>
                 <Typography paragraph>
                   Para criar uma conta, é necessário fornecer:
@@ -437,7 +541,7 @@ const TermsAndPrivacy = () => {
               {/* User Obligations */}
               <Box id="user-obligations" sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  4. Obrigações do Utilizador
+                  5. Obrigações do Utilizador
                 </Typography>
                 <Typography paragraph>
                   Os utilizadores concordam em:
@@ -458,7 +562,7 @@ const TermsAndPrivacy = () => {
               {/* Intellectual Property */}
               <Box id="intellectual-property" sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  5. Propriedade Intelectual
+                  6. Propriedade Intelectual
                 </Typography>
                 <Typography paragraph>
                   Todos os direitos da plataforma pertencem à Connection
@@ -470,7 +574,7 @@ const TermsAndPrivacy = () => {
               {/* Payments */}
               <Box id="payments" sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  6. Pagamentos
+                  7. Pagamentos
                 </Typography>
                 <Typography paragraph>
                   Algumas funcionalidades requerem pagamento via:
@@ -485,7 +589,7 @@ const TermsAndPrivacy = () => {
               {/* Termination */}
               <Box id="termination" sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  7. Suspensão e Cancelamento
+                  8. Suspensão e Cancelamento
                 </Typography>
                 <Typography paragraph>
                   Reservamo-nos o direito de suspender contas em caso de:
@@ -503,7 +607,7 @@ const TermsAndPrivacy = () => {
               {/* Modules */}
               <Box id="modules" sx={{ mb: 4 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  8. Módulos
+                  9. Módulos
                 </Typography>
                 <Typography paragraph>
                   Oferecemos diversos módulos incluindo:
@@ -541,42 +645,67 @@ const TermsAndPrivacy = () => {
                 </Typography>
                 <List sx={{ listStyleType: "disc", pl: 4 }}>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Informações da empresa (nome, NUIT, NUEL)" />
+                    <ListItemText primary="Informações da empresa (nome, NUIT, NUEL) - dados institucionais" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Logotipo, imagens e elementos visuais da marca" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
                     <ListItemText primary="Dados de contacto (e-mail, telefone)" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Logotipo e informações de localização" />
+                    <ListItemText primary="Informações de localização (província, distrito)" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Dados de navegação e interação" />
+                    <ListItemText primary="Dados de navegação e interação na plataforma" />
                   </ListItem>
                 </List>
               </Box>
 
-              {/* Data Use */}
-              <Box id="data-use" sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2 }}>
-                  2. Uso dos Dados
+              {/* Non-Sensitive Data Usage - NOVA SEÇÃO */}
+              <Box id="data-non-sensitive" sx={{ mb: 4 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon sx={{ color: theme.palette.primary.main }} />
+                  2. Uso de Dados Não Sensíveis para Divulgação
                 </Typography>
+                
                 <Typography paragraph>
-                  Utilizamos seus dados para:
+                  A Connection Mozambique utiliza os dados institucionais e imagens fornecidos pelas empresas para fins de 
+                  <strong> divulgação, promoção e crescimento mútuo</strong>. Estes dados são considerados <strong>não sensíveis</strong> e incluem:
                 </Typography>
                 <List sx={{ listStyleType: "disc", pl: 4 }}>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Fornecer e melhorar nossos serviços" />
+                    <ListItemText primary="Logotipo e identidade visual da empresa" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Processar cotações e transações" />
+                    <ListItemText primary="Nome, sigla e descrição institucional" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Realizar análises de mercado" />
+                    <ListItemText primary="Imagens de produtos, serviços e instalações" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Comunicar com os utilizadores" />
+                    <ListItemText primary="Informações de contacto empresarial" />
                   </ListItem>
                 </List>
+                
+                <Box sx={{ 
+                  bgcolor: '#fff3e0', 
+                  p: 2, 
+                  borderRadius: 2, 
+                  mt: 2,
+                  borderLeft: `4px solid ${theme.palette.warning.main}`
+                }}>
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <VisibilityIcon color="warning" />
+                    <strong>Finalidade da Divulgação:</strong> Estes elementos são essenciais para a funcionalidade da plataforma, 
+                    permitindo que outras empresas encontrem e se conectem com seus negócios.
+                  </Typography>
+                </Box>
+                
+                <Typography paragraph sx={{ mt: 2 }}>
+                  Ao aderir à plataforma, você concorda que estes dados possam ser exibidos publicamente e utilizados 
+                  para fins de marketing e crescimento da rede Connection Mozambique.
+                </Typography>
               </Box>
 
               {/* Cookies */}
@@ -609,14 +738,17 @@ const TermsAndPrivacy = () => {
                   4. Compartilhamento de Dados
                 </Typography>
                 <Typography paragraph>
-                  Não compartilhamos dados com terceiros, exceto:
+                  Não compartilhamos dados sensíveis com terceiros. Dados não sensíveis (como logotipo, nome e imagens) são:
                 </Typography>
                 <List sx={{ listStyleType: "disc", pl: 4 }}>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Parceiros essenciais para operação dos serviços" />
+                    <ListItemText primary="Exibidos publicamente para promover sua empresa na plataforma" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Autoridades legais mediante requisição formal" />
+                    <ListItemText primary="Compartilhados com potenciais clientes e parceiros dentro da plataforma" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Utilizados para melhorar a experiência de negócios" />
                   </ListItem>
                 </List>
               </Box>
@@ -631,7 +763,7 @@ const TermsAndPrivacy = () => {
                 </Typography>
                 <List sx={{ listStyleType: "disc", pl: 4 }}>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
-                    <ListItemText primary="Criptografia de dados" />
+                    <ListItemText primary="Criptografia de dados sensíveis" />
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
                     <ListItemText primary="Autenticação de dois fatores" />
@@ -664,6 +796,11 @@ const TermsAndPrivacy = () => {
                     <ListItemText primary="Solicitar portabilidade de dados" />
                   </ListItem>
                 </List>
+                <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+                  <Typography variant="body2">
+                    Importante: A exclusão de dados não sensíveis (como logotipo e imagens) pode afetar a visibilidade da sua empresa na plataforma.
+                  </Typography>
+                </Alert>
               </Box>
 
               {/* Data Retention */}
@@ -683,6 +820,9 @@ const TermsAndPrivacy = () => {
                   </ListItem>
                   <ListItem sx={{ display: "list-item", padding: 0 }}>
                     <ListItemText primary="Prevenir fraudes e melhorar serviços" />
+                  </ListItem>
+                  <ListItem sx={{ display: "list-item", padding: 0 }}>
+                    <ListItemText primary="Promover sua empresa e produtos associados" />
                   </ListItem>
                 </List>
               </Box>

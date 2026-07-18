@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { get, onValue, ref, update } from "firebase/database";
 import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../../fb";
@@ -133,6 +133,27 @@ const ApxDesk = ({ user }) => {
 
   const { activeModules, isLoading: modulesLoading } = useActiveModules();
 
+  // 🔥 FILTRAR MÓDULOS ATIVOS (não expirados)
+  const activeModulesFiltered = useMemo(() => {
+    if (!activeModules) return {};
+    
+    const now = new Date();
+    const filtered = {};
+    
+    Object.keys(activeModules).forEach(key => {
+      const module = activeModules[key];
+      // Verifica se o módulo está ativo E não expirou
+      if (module.status === "active" && module.expiresAt) {
+        const expiryDate = new Date(module.expiresAt);
+        if (expiryDate > now) {
+          filtered[key] = module;
+        }
+      }
+    });
+    
+    return filtered;
+  }, [activeModules]);
+
   // Stats simulados (depois podem vir do Firebase)
   const [stats, setStats] = useState({
     visualizacoes: 1247,
@@ -140,6 +161,7 @@ const ApxDesk = ({ user }) => {
     cotacoesAtivas: 5,
     produtosCadastrados: 48
   });
+
 
   useEffect(() => {
     if (user) {
@@ -429,7 +451,7 @@ const ApxDesk = ({ user }) => {
           </Grid>
         </Grid>
 
-        {/* Módulos Section */}
+        {/* Módulos Section - AGORA USANDO activeModulesFiltered */}
         <Card 
           className="animate-fade-up delay-4"
           sx={{ 
@@ -453,9 +475,16 @@ const ApxDesk = ({ user }) => {
               alignItems: 'center',
               gap: 1
             }}>
-              <Dashboard sx={{ color: T.gold }} /> Módulos Disponíveis
+              <Dashboard sx={{ color: T.gold }} /> Módulos Ativos
             </Typography>
-            <ModuleGrid activeModules={activeModules} />
+            
+            {/* Mostra quantos módulos estão ativos */}
+            <Typography variant="body2" sx={{ color: T.textSub, mt: 0.5 }}>
+              {Object.keys(activeModulesFiltered).length} módulo(s) ativo(s)
+            </Typography>
+            
+            {/* Passa apenas os módulos filtrados */}
+            <ModuleGrid activeModules={activeModulesFiltered} />
           </Box>
         </Card>
       </Container>

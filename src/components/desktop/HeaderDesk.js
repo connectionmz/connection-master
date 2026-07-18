@@ -32,18 +32,13 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
-import GavelIcon from "@mui/icons-material/Gavel";
 import DomainIcon from "@mui/icons-material/Domain";
 import DescriptionIcon from "@mui/icons-material/Description";
-import FeedIcon from "@mui/icons-material/Feed";
-import PeopleIcon from "@mui/icons-material/People";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DownloadIcon from "@mui/icons-material/Download";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import CloseIcon from "@mui/icons-material/Close";
-import VerifiedIcon from "@mui/icons-material/Verified";
 import WarningIcon from "@mui/icons-material/Warning";
 import PersonIcon from "@mui/icons-material/Person";
 import logo from "../../img/bg2.png";
@@ -94,42 +89,25 @@ const BG_GRID = {
 };
 
 const HeaderDesk = ({ user }) => {
-  const [pendingConnections, setPendingConnections] = useState(0);
   const [pendingQuotes, setPendingQuotes] = useState(0);
-  const [pendingContests, setPendingContests] = useState(0);
-  const [pendingNotifications, setPendingNotifications] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
-  
+
   // Refs para controlar os listeners
   const listenersRef = useRef([]);
   const isMountedRef = useRef(true);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
-  const publicPanel = user?.publicPainel;
   const isMobile = useMediaQuery("(max-width:600px)");
   const isVerify = user?.subscriptions?.isverify === "true";
 
   // URLs
   const apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e";
   const shortApkUrl = "https://bit.ly/connectionmz-apk";
-
-  // Memoizar as funções de callback para evitar recriação
-  const handlePendingConnections = useCallback((snapshot) => {
-    if (!isMountedRef.current) return;
-    if (snapshot.exists()) {
-      const pendingCount = Object.values(snapshot.val()).filter(
-        (connection) => connection.status === "pending"
-      ).length;
-      setPendingConnections(pendingCount);
-    } else {
-      setPendingConnections(0);
-    }
-  }, []);
 
   const handlePendingQuotes = useCallback((snapshot) => {
     if (!isMountedRef.current || !user?.sector) return;
@@ -148,22 +126,9 @@ const HeaderDesk = ({ user }) => {
     }
   }, [user?.sector, user?.id]);
 
-  const handlePendingNotifications = useCallback((snapshot) => {
-    if (!isMountedRef.current) return;
-    if (snapshot.exists()) {
-      const notifications = Object.values(snapshot.val());
-      const pendingCount = notifications.filter(
-        (notification) => notification.status === "unread"
-      ).length;
-      setPendingNotifications(pendingCount);
-    } else {
-      setPendingNotifications(0);
-    }
-  }, []);
-
   useEffect(() => {
     isMountedRef.current = true;
-    
+
     // Limpar listeners anteriores
     listenersRef.current.forEach(({ ref, listener }) => {
       off(ref, 'value', listener);
@@ -171,32 +136,23 @@ const HeaderDesk = ({ user }) => {
     listenersRef.current = [];
 
     if (user?.id) {
-      const targetUserConnectionRef = ref(db, `connections/${user.id}/`);
       const targetUserQuotesRef = ref(db, `cotacoes/`);
-      const targetUserNotificationsRef = ref(db, `notifications/${user.id}/`);
 
-      // Configurar novos listeners
-      onValue(targetUserConnectionRef, handlePendingConnections);
       onValue(targetUserQuotesRef, handlePendingQuotes);
-      onValue(targetUserNotificationsRef, handlePendingNotifications);
 
-      // Armazenar referências para limpeza
       listenersRef.current = [
-        { ref: targetUserConnectionRef, listener: handlePendingConnections },
         { ref: targetUserQuotesRef, listener: handlePendingQuotes },
-        { ref: targetUserNotificationsRef, listener: handlePendingNotifications },
       ];
     }
 
     return () => {
       isMountedRef.current = false;
-      // Limpar todos os listeners
       listenersRef.current.forEach(({ ref, listener }) => {
         off(ref, 'value', listener);
       });
       listenersRef.current = [];
     };
-  }, [user?.id, user?.sector, handlePendingConnections, handlePendingQuotes, handlePendingNotifications]);
+  }, [user?.id, user?.sector, handlePendingQuotes]);
 
   const toggleDrawer = useCallback((open) => (event) => {
     if (event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
@@ -222,41 +178,23 @@ const HeaderDesk = ({ user }) => {
   }, []);
 
   const handleDirectDownload = useCallback(() => {
-    const link = document.createElement('a');
-    link.href = apkDownloadUrl;
-    link.setAttribute('download', 'connectionmozambique.apk');
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.open(apkDownloadUrl, "_blank", "noopener,noreferrer");
     setDownloadDialogOpen(false);
   }, [apkDownloadUrl]);
 
-  const handleOpenInNewTab = useCallback(() => {
-    window.open(apkDownloadUrl, '_blank', 'noopener,noreferrer');
-    setDownloadDialogOpen(false);
-  }, [apkDownloadUrl]);
-
-  const handleShareApp = useCallback(() => {
+  const handleShareApp = useCallback(async () => {
     if (navigator.share) {
-      navigator.share({
-        title: 'Connection Mozambique App',
-        text: 'Baixe o app Connection Mozambique para Android',
-        url: shortApkUrl,
-      }).catch((error) => console.log('Erro ao compartilhar:', error));
-    } else {
-      navigator.clipboard.writeText(shortApkUrl)
-        .then(() => alert('Link copiado!'))
-        .catch(() => {
-          const textArea = document.createElement('textarea');
-          textArea.value = shortApkUrl;
-          document.body.appendChild(textArea);
-          textArea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textArea);
-          alert('Link copiado!');
+      try {
+        await navigator.share({
+          title: "Connection Mozambique",
+          text: "Baixe o app Connection Mozambique",
+          url: shortApkUrl,
         });
+      } catch (error) {
+        console.error('Erro ao compartilhar:', error);
+      }
+    } else {
+      await navigator.clipboard.writeText(shortApkUrl);
     }
     setDownloadDialogOpen(false);
   }, [shortApkUrl]);
@@ -275,12 +213,12 @@ const HeaderDesk = ({ user }) => {
       navigate("/auth");
       return false;
     }
-    
+
     if (requiresVerify && !isVerify) {
       setShowVerificationAlert(true);
       return false;
     }
-    
+
     navigate(path);
     return true;
   }, [user, isVerify, navigate]);
@@ -291,13 +229,13 @@ const HeaderDesk = ({ user }) => {
       setDrawerOpen(false);
       return;
     }
-    
+
     if (requiresVerify && !isVerify) {
       setShowVerificationAlert(true);
       setDrawerOpen(false);
       return;
     }
-    
+
     navigate(path);
     setDrawerOpen(false);
   }, [user, isVerify, navigate]);
@@ -319,11 +257,12 @@ const HeaderDesk = ({ user }) => {
   }, [location.pathname]);
 
   // Menu items estruturados (fora do componente para evitar recriação)
+  // Escopo atual: plataforma de fornecedores nacional + loja (Mercado + Cotações)
   const mainNavItems = [
     {
       to: "/explorar",
       icon: <DomainIcon />,
-      label: "Empresas",
+      label: "Fornecedores",
       requiresAuth: false,
       requiresVerify: false,
     },
@@ -342,43 +281,16 @@ const HeaderDesk = ({ user }) => {
       requiresAuth: true,
       requiresVerify: true,
     },
-    {
-      to: "/feed",
-      icon: <FeedIcon />,
-      label: "Feed",
-      requiresAuth: true,
-      requiresVerify: true,
-    },
   ];
 
-  const notificationNavItems = [
-    {
-      to: "/inbox",
-      icon: <NotificationsIcon />,
-      label: "Notificações",
-      badge: pendingNotifications,
-      requiresAuth: true,
-      requiresVerify: true,
-    },
-    {
-      to: "/conexoes",
-      icon: <PeopleIcon />,
-      label: "Conexões",
-      badge: pendingConnections,
-      requiresAuth: true,
-      requiresVerify: true,
-    },
-  ];
-
-  // Itens para o menu mobile (adicionei módulos e perfil)
+  // Itens para o menu mobile
   const mobileMenuItems = [
     ...mainNavItems,
-    ...notificationNavItems,
     { type: "divider" },
     {
       to: "/app",
       icon: <DashboardIcon />,
-      label: "Módulos",
+      label: "Painel",
       requiresAuth: true,
       requiresVerify: true,
     },
@@ -394,10 +306,10 @@ const HeaderDesk = ({ user }) => {
   return (
     <>
       <style>{KEYFRAMES}</style>
-      
-      <AppBar 
-        position="sticky" 
-        sx={{ 
+
+      <AppBar
+        position="sticky"
+        sx={{
           bgcolor: T.navy,
           background: `linear-gradient(180deg, ${T.navy} 0%, ${T.navyMid} 100%)`,
           borderBottom: `1px solid ${T.darkBorder}`,
@@ -406,11 +318,11 @@ const HeaderDesk = ({ user }) => {
       >
         {/* Grid overlay */}
         <Box sx={BG_GRID} />
-        
+
         <Container maxWidth="xl">
-          <Toolbar 
-            sx={{ 
-              justifyContent: "space-between", 
+          <Toolbar
+            sx={{
+              justifyContent: "space-between",
               px: { xs: 0, sm: 2 },
               minHeight: { xs: '64px', md: '72px' },
               position: 'relative',
@@ -420,13 +332,13 @@ const HeaderDesk = ({ user }) => {
             {/* Logo */}
             <Box display="flex" alignItems="center" gap={2}>
               <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-                <img 
-                  src={logo} 
-                  alt="Logo" 
-                  style={{ 
+                <img
+                  src={logo}
+                  alt="Logo"
+                  style={{
                     width: isMobile ? "90px" : "120px",
                     filter: 'brightness(1.2)',
-                  }} 
+                  }}
                 />
               </Link>
 
@@ -436,7 +348,7 @@ const HeaderDesk = ({ user }) => {
                   {mainNavItems.map((item, index) => {
                     const isActive = isActiveRoute(item.to);
                     const isDisabled = item.requiresVerify && !isVerify;
-                    
+
                     return (
                       <Tooltip key={index} title={isDisabled ? "Verificação necessária" : ""} arrow>
                         <span>
@@ -490,41 +402,6 @@ const HeaderDesk = ({ user }) => {
 
             {/* Right side - User actions */}
             <Box display="flex" alignItems="center" gap={1}>
-              {/* Notifications & Connections - Desktop */}
-              {!isMobile && user && isVerify && (
-                <>
-                  {notificationNavItems.map((item, index) => (
-                    <Tooltip key={index} title={item.label} arrow>
-                      <IconButton
-                        onClick={() => navigate(item.to)}
-                        sx={{
-                          color: isActiveRoute(item.to) ? T.gold : T.darkText,
-                          bgcolor: 'rgba(255,255,255,0.06)',
-                          border: `1px solid ${T.darkBorder}`,
-                          borderRadius: '10px',
-                          width: 40,
-                          height: 40,
-                          position: 'relative',
-                          '&:hover': {
-                            bgcolor: 'rgba(200,144,58,0.15)',
-                            color: T.gold,
-                            borderColor: T.gold,
-                          },
-                        }}
-                      >
-                        <Badge
-                          badgeContent={item.badge}
-                          color="error"
-                          classes={{ badge: 'notification-badge' }}
-                        >
-                          {item.icon}
-                        </Badge>
-                      </IconButton>
-                    </Tooltip>
-                  ))}
-                </>
-              )}
-
               {/* Profile / Login button */}
               {user ? (
                 <>
@@ -574,17 +451,17 @@ const HeaderDesk = ({ user }) => {
                       }
                     }}
                   >
-                    <MenuItem 
+                    <MenuItem
                       onClick={() => { handleProfileMenuClose(); navigate(`/app`); }}
                       sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
                     >
                       <ListItemIcon>
                         <DashboardIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText>Módulos</ListItemText>
+                      <ListItemText>Painel</ListItemText>
                     </MenuItem>
-                    
-                    <MenuItem 
+
+                    <MenuItem
                       onClick={() => { handleProfileMenuClose(); navigate(`/perfil`); }}
                       sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
                     >
@@ -593,9 +470,9 @@ const HeaderDesk = ({ user }) => {
                       </ListItemIcon>
                       <ListItemText>Meu Perfil</ListItemText>
                     </MenuItem>
-                    
+
                     {!isVerify && (
-                      <MenuItem 
+                      <MenuItem
                         disabled
                         sx={{ color: T.darkMuted, opacity: 0.7 }}
                       >
@@ -605,10 +482,10 @@ const HeaderDesk = ({ user }) => {
                         <ListItemText secondary="Verificação pendente" />
                       </MenuItem>
                     )}
-                    
+
                     <Box sx={{ borderTop: `1px solid ${T.darkBorder}`, my: 1 }} />
-                    
-                    <MenuItem 
+
+                    <MenuItem
                       onClick={() => { handleProfileMenuClose(); handleLogout(); }}
                       sx={{ color: T.error, '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' } }}
                     >
@@ -666,7 +543,7 @@ const HeaderDesk = ({ user }) => {
         </Container>
       </AppBar>
 
-      {/* Mobile Drawer - CORRIGIDO com links para Módulos e Perfil */}
+      {/* Mobile Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -679,18 +556,18 @@ const HeaderDesk = ({ user }) => {
           }
         }}
       >
-        <Box sx={{ 
-          p: 2, 
-          borderBottom: `1px solid ${T.darkBorder}`, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          p: 2,
+          borderBottom: `1px solid ${T.darkBorder}`,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           background: `linear-gradient(90deg, ${T.navyCard} 0%, ${T.navy} 100%)`,
         }}>
-          <Typography sx={{ 
-            fontFamily: '"Playfair Display", serif', 
-            fontWeight: 700, 
-            color: T.white 
+          <Typography sx={{
+            fontFamily: '"Playfair Display", serif',
+            fontWeight: 700,
+            color: T.white
           }}>
             Menu
           </Typography>
@@ -702,18 +579,18 @@ const HeaderDesk = ({ user }) => {
         <List sx={{ pt: 0 }}>
           {/* User info if logged in */}
           {user && (
-            <Box sx={{ 
-              p: 2, 
-              bgcolor: 'rgba(255,255,255,0.02)', 
+            <Box sx={{
+              p: 2,
+              bgcolor: 'rgba(255,255,255,0.02)',
               mb: 1,
               borderBottom: `1px solid ${T.darkBorder}`,
             }}>
               <Box display="flex" alignItems="center" gap={1.5}>
-                <Avatar 
-                  src={user?.logoUrl} 
-                  sx={{ 
-                    width: 48, 
-                    height: 48, 
+                <Avatar
+                  src={user?.logoUrl}
+                  sx={{
+                    width: 48,
+                    height: 48,
                     border: `2px solid ${isVerify ? T.gold : T.darkBorder}`,
                   }}
                 >
@@ -729,12 +606,12 @@ const HeaderDesk = ({ user }) => {
                 </Box>
               </Box>
               {!isVerify && (
-                <Box sx={{ 
-                  mt: 1, 
-                  p: 1, 
-                  bgcolor: 'rgba(245,158,11,0.12)', 
-                  borderRadius: 1, 
-                  border: '1px solid rgba(245,158,11,0.25)' 
+                <Box sx={{
+                  mt: 1,
+                  p: 1,
+                  bgcolor: 'rgba(245,158,11,0.12)',
+                  borderRadius: 1,
+                  border: '1px solid rgba(245,158,11,0.25)'
                 }}>
                   <Typography sx={{ color: T.warning, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <WarningIcon sx={{ fontSize: 14 }} />
@@ -745,18 +622,18 @@ const HeaderDesk = ({ user }) => {
             </Box>
           )}
 
-          {/* Menu items para mobile - INCLUINDO MÓDULOS E PERFIL */}
+          {/* Menu items para mobile */}
           {mobileMenuItems.map((item, index) => {
             if (item.type === "divider") {
               return <Divider key={index} sx={{ borderColor: T.darkBorder, my: 1 }} />;
             }
-            
+
             const isDisabled = item.requiresVerify && !isVerify;
             const isActive = isActiveRoute(item.to);
-            
+
             // Verificar se deve mostrar o item (requer autenticação e o usuário não está logado)
             if (item.requiresAuth && !user) return null;
-            
+
             return (
               <ListItem
                 button
@@ -770,17 +647,17 @@ const HeaderDesk = ({ user }) => {
                   py: 1.5,
                 }}
               >
-                <ListItemIcon sx={{ 
+                <ListItemIcon sx={{
                   color: isActive ? T.gold : T.darkText,
                   minWidth: 40,
                 }}>
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText 
+                <ListItemText
                   primary={item.label}
                   secondary={item.badge > 0 ? `${item.badge} pendente` : null}
                   secondaryTypographyProps={{ color: T.gold }}
-                  sx={{ 
+                  sx={{
                     color: T.white,
                     '& .MuiListItemText-primary': { color: isActive ? T.gold : T.white }
                   }}
@@ -799,7 +676,7 @@ const HeaderDesk = ({ user }) => {
                   handleLogout();
                   setDrawerOpen(false);
                 }}
-                sx={{ 
+                sx={{
                   py: 1.5,
                   color: T.error,
                   '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' }
@@ -821,8 +698,8 @@ const HeaderDesk = ({ user }) => {
                 navigate("/auth");
                 setDrawerOpen(false);
               }}
-              sx={{ 
-                bgcolor: 'rgba(200,144,58,0.12)', 
+              sx={{
+                bgcolor: 'rgba(200,144,58,0.12)',
                 mt: 2,
                 py: 1.5,
                 borderRadius: 1,
@@ -853,7 +730,7 @@ const HeaderDesk = ({ user }) => {
           }
         }}
       >
-        <MenuItem 
+        <MenuItem
           onClick={handleDownloadClose}
           component="a"
           href={apkDownloadUrl}
@@ -867,7 +744,7 @@ const HeaderDesk = ({ user }) => {
           </ListItemIcon>
           <ListItemText>Versão Android (APK)</ListItemText>
         </MenuItem>
-        <MenuItem 
+        <MenuItem
           onClick={handleDownloadClose}
           component="a"
           href={shortApkUrl}
@@ -944,8 +821,8 @@ const HeaderDesk = ({ user }) => {
           onClose={() => setShowVerificationAlert(false)}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          <Alert 
-            severity="warning" 
+          <Alert
+            severity="warning"
             onClose={() => setShowVerificationAlert(false)}
             icon={<WarningIcon />}
             sx={{
@@ -978,7 +855,7 @@ const HeaderDesk = ({ user }) => {
 
       {/* Verification Banner for Desktop */}
       {user && !isVerify && !isMobile && (
-        <Box 
+        <Box
           sx={{
             bgcolor: 'rgba(245,158,11,0.12)',
             borderBottom: `1px solid ${T.warning}`,
@@ -986,24 +863,24 @@ const HeaderDesk = ({ user }) => {
             textAlign: 'center',
           }}>
           <Container maxWidth="xl">
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
               gap: 2,
               flexWrap: 'wrap'
             }}>
               <Typography sx={{ color: T.warning, fontSize: '0.9rem' }}>
                 ⚠️ Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
               </Typography>
-              
+
               <Button
                 variant="outlined"
                 color="error"
                 size="small"
                 startIcon={<LogoutIcon />}
                 onClick={handleLogout}
-                sx={{ 
+                sx={{
                   color: T.error,
                   borderColor: T.error,
                   '&:hover': {

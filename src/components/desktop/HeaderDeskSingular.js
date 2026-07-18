@@ -113,7 +113,7 @@ const HeaderDeskSingular = ({ user }) => {
 
   // Protected routes configuration
   const protectedRoutes = [
-    "/empresas",
+    "/explorar",
     "/lojas",
     "/feed",
     "/inbox",
@@ -278,7 +278,7 @@ const HeaderDeskSingular = ({ user }) => {
   // Itens de navegação principal
   const mainNavItems = [
     { 
-      to: "/empresas", 
+      to: "/explorar", 
       icon: <DomainIcon />, 
       label: "Empresas",
       requiresAuth: false,

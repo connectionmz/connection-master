@@ -592,7 +592,7 @@ const PostDetailPageDesk = ({ user }) => {
             <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               {/* Company Info */}
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Link to={`/perfil/${post.companyId}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', mr: 2 }}>
+                <Link to={`/empresa/${post.companyId}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', mr: 2 }}>
                   <Badge
                     overlap="circular"
                     anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -626,7 +626,7 @@ const PostDetailPageDesk = ({ user }) => {
                 </Link>
                 
                 <Box>
-                  <Link to={`/perfil/${post.companyId}`} style={{ textDecoration: 'none' }}>
+                  <Link to={`/empresa/${post.companyId}`} style={{ textDecoration: 'none' }}>
                     <Typography 
                       variant="subtitle1" 
                       sx={{ 
