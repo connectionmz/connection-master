@@ -7,14 +7,11 @@ import {
   Box,
   useTheme,
   Chip,
-  Tooltip,
-  Badge
+  Tooltip
 } from '@mui/material';
 import { 
   Store as StoreIcon,
-  AdsClick as AdIcon,
   LocalShipping as TruckIcon,
-  Event as EventIcon,
   Lock as LockIcon,
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
@@ -42,35 +39,13 @@ export const allModules = [
 const ModuleGrid = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { activeModules, isLoading } = useActiveModules();
-
-  // Verificar se um módulo está ativo (não expirado)
-  const isModuleActive = (moduleKey) => {
-    if (!activeModules) return false;
-    
-    const module = activeModules[moduleKey];
-    if (!module) return false;
-    
-    // Verifica se o status é "active"
-    if (module.status !== "active") return false;
-    
-    // Verifica se não expirou
-    if (module.expiresAt) {
-      const now = new Date();
-      const expiryDate = new Date(module.expiresAt);
-      if (expiryDate <= now) return false;
-    }
-    
-    return true;
-  };
+  const { activeModules, isLoading, isModuleActive } = useActiveModules();
 
   const handleModuleClick = (module) => {
-    // Verifica se o módulo está ativo
     if (isModuleActive(module.key)) {
       navigate(module.link);
     } else {
-      // Mostra um alerta ou snackbar
-      navigate('/pagar'+module.key);
+      navigate(`/pagamento-modulo/${module.key}`);
     }
   };
 
