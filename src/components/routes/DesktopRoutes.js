@@ -47,6 +47,7 @@ import SelectAccountType from '../SelectAccountType';
 import Dashboard from '../Dashboard';
 import SearchResultsPage from '../SearchResultsPage';
 import ListaDeServicosDesk from '../desktop/ListaDeServicosDesk';
+import Feed from '../Feed';
 
 const theme = createTheme({
   palette: {
@@ -262,6 +263,7 @@ const DesktopRoutes = ({ user }) => {
               <Route path="/explorar" element={<ExploreDesk user={user} />} />
               <Route path="/empresa/:id" element={<CompanyProfileDesk user={user} />} />
               <Route path="/sobre" element={<Sobre />} />
+              <Route path="/feed" element={<Feed />} />
               <Route path="/produto/:id/loja/:loja" element={<ProdutoPage user={user}/>} />
               <Route path="/lojas" element={<StoresDesk user={user} />} />
               <Route path="/loja/:storeId" element={<StoreDetailDesk user={user} />} />

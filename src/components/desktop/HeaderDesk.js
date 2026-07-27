@@ -273,6 +273,13 @@ const HeaderDesk = ({ user }) => {
       requiresAuth: false,
       requiresVerify: false,
     },
+     {
+      to: "/feed",
+      icon: <StoreMallDirectoryIcon />,
+      label: "feed",
+      requiresAuth: false,
+      requiresVerify: false,
+    },
     {
       to: "/cotacoes",
       icon: <DescriptionIcon />,

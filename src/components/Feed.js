@@ -11,34 +11,53 @@ const Feed = () => {
   const [selectedCompany, setSelectedCompany] = useState(null);
 
   useEffect(() => {
-    const companiesRef = ref(db, 'company');
+    // Os posts vivem no node raiz `posts/`, não em company/{id}/publishedPhotos.
+    // Cada post já traz o objeto `company` embutido (nome, logoUrl, id, etc).
+    const postsRef = ref(db, 'posts');
 
-    onValue(companiesRef, (snapshot) => {
-      const companiesData = snapshot.val();
-      let allPosts = [];
-      let companiesWithPosts = [];
+    const unsubscribe = onValue(postsRef, (snapshot) => {
+      const postsData = snapshot.val();
+      const allPosts = [];
+      const companiesMap = {};
 
-      if (companiesData) {
-        Object.values(companiesData).forEach(company => {
-          if (company.publishedPhotos) {
-            const companyPosts = Object.values(company.publishedPhotos).map(post => ({
-              ...post,
-              company: company.nome,
-              logoUrl: company.logoUrl || null
-            }));
-            allPosts = [...allPosts, ...companyPosts];
+      if (postsData) {
+        Object.entries(postsData).forEach(([postId, post]) => {
+          // Schema real do sub-objeto `company` dentro de cada post:
+          // { id, logo, name, provincia, sector }
+          const company = post.company || {};
+          const companyName = company.name || 'Empresa';
+          const companyLogo = company.logo || null;
 
-            companiesWithPosts.push({ 
-              name: company.name, 
-              logoUrl: company.logoUrl || 'https://via.placeholder.com/150' 
-            });
+          allPosts.push({
+            ...post,
+            id: post.id || postId,
+            // Sobrescreve `company` (que na origem é um objeto) por uma
+            // string — é isto que o PostCard espera renderizar como texto.
+            company: companyName,
+            companyId: company.id || null,
+            logoUrl: companyLogo,
+          });
+
+          // Dedup por id da empresa (ou nome, se id não existir)
+          const companyKey = company.id || companyName;
+          if (companyKey && !companiesMap[companyKey]) {
+            companiesMap[companyKey] = {
+              name: companyName,
+              logoUrl: companyLogo || 'https://via.placeholder.com/150',
+            };
           }
         });
       }
+
+      // Mais recentes primeiro, quando houver timestamp
+      allPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
       setPosts(allPosts);
-      setCompaniesWithPosts(companiesWithPosts);
-      setFilteredPosts(allPosts); 
+      setCompaniesWithPosts(Object.values(companiesMap));
+      setFilteredPosts(allPosts);
     });
+
+    return () => unsubscribe();
   }, []);
 
   const handleSelectCompany = (companyName) => {
@@ -64,8 +83,8 @@ const Feed = () => {
       )}
 
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1">
-        {filteredPosts.map((post, index) => (
-          <PostCard post={post} key={index} />
+        {filteredPosts.map((post) => (
+          <PostCard post={post} key={post.id} />
         ))}
       </div>
     </div>
