@@ -3,6 +3,43 @@ import { onValue, ref } from 'firebase/database';
 import { db } from '../fb';
 
 const ActiveModulesContext = createContext();
+const EMPTY_ACTIVE_MODULES = {};
+
+export const normalizeExpirationTimestamp = (expiresAt) => {
+  if (expiresAt === undefined || expiresAt === null || expiresAt === '') {
+    return null;
+  }
+
+  const numericTimestamp = Number(expiresAt);
+  if (Number.isFinite(numericTimestamp)) {
+    return numericTimestamp;
+  }
+
+  const parsedTimestamp = Date.parse(expiresAt);
+  return Number.isFinite(parsedTimestamp) ? parsedTimestamp : NaN;
+};
+
+export const filterActiveModules = (modulesData, now = Date.now()) => {
+  if (!modulesData || typeof modulesData !== 'object') {
+    return {};
+  }
+
+  return Object.entries(modulesData).reduce((modules, [moduleKey, moduleData]) => {
+    if (!moduleData || moduleData.status !== 'active') {
+      return modules;
+    }
+
+    const expirationTimestamp = normalizeExpirationTimestamp(moduleData.expiresAt);
+    if (Number.isNaN(expirationTimestamp) || (
+      expirationTimestamp !== null && expirationTimestamp <= now
+    )) {
+      return modules;
+    }
+
+    modules[moduleKey] = moduleData;
+    return modules;
+  }, {});
+};
 
 /**
  * Fonte única da verdade para módulos ativos: company/{userId}/activeModules
@@ -14,69 +51,84 @@ const ActiveModulesContext = createContext();
  * por isso um módulo ativado no painel não refletia no app.
  */
 export const ActiveModulesProvider = ({ children, userId }) => {
-  const [activeModules, setActiveModules] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [moduleState, setModuleState] = useState({
+    userId: null,
+    activeModules: {},
+    isLoading: false,
+    error: null,
+  });
+
+  const isCurrentUser = moduleState.userId === userId;
+  const activeModules = isCurrentUser ? moduleState.activeModules : EMPTY_ACTIVE_MODULES;
+  const isLoading = Boolean(userId) && (!isCurrentUser || moduleState.isLoading);
+  const error = isCurrentUser ? moduleState.error : null;
 
   useEffect(() => {
+    let isCurrentSubscription = true;
+
+    setModuleState({
+      userId: userId || null,
+      activeModules: {},
+      isLoading: Boolean(userId),
+      error: null,
+    });
+
     if (!userId) {
-      setActiveModules({});
-      setIsLoading(false);
-      return;
+      return undefined;
     }
 
     const modulesRef = ref(db, `company/${userId}/activeModules`);
 
     const unsubscribe = onValue(modulesRef, (snapshot) => {
+      if (!isCurrentSubscription) return;
+
       try {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const modules = {};
-          const now = Date.now();
+        const modules = snapshot.exists()
+          ? filterActiveModules(snapshot.val())
+          : {};
 
-          Object.keys(data).forEach(moduleKey => {
-            const moduleData = data[moduleKey];
-
-            if (!moduleData || moduleData.status !== 'active') return;
-
-            // Módulo sem data de expiração é tratado como válido (ex: vitalício/trial sem prazo)
-            if (moduleData.expiresAt) {
-              const expiresAtTimestamp = Number(moduleData.expiresAt);
-              if (isNaN(expiresAtTimestamp) || expiresAtTimestamp <= now) return;
-            }
-
-            // Mantém o objeto completo (status, expiresAt, paidAt, smsCount, etc.)
-            // para que componentes como ModuleGrid.jsx continuem funcionando
-            // sem precisar de mudanças adicionais.
-            modules[moduleKey] = moduleData;
-          });
-
-          setActiveModules(modules);
-        } else {
-          setActiveModules({});
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error processing modules:", error);
-        setActiveModules({});
-        setIsLoading(false);
+        setModuleState({
+          userId,
+          activeModules: modules,
+          isLoading: false,
+          error: null,
+        });
+      } catch (processingError) {
+        console.error("Error processing modules:", processingError);
+        setModuleState({
+          userId,
+          activeModules: {},
+          isLoading: false,
+          error: processingError,
+        });
       }
-    }, (error) => {
-      console.error("Error fetching modules:", error);
-      setActiveModules({});
-      setIsLoading(false);
+    }, (fetchError) => {
+      if (!isCurrentSubscription) return;
+
+      console.error("Error fetching modules:", fetchError);
+      setModuleState({
+        userId,
+        activeModules: {},
+        isLoading: false,
+        error: fetchError,
+      });
     });
 
-    return () => unsubscribe();
+    return () => {
+      isCurrentSubscription = false;
+      unsubscribe();
+    };
   }, [userId]);
 
   const value = useMemo(() => ({
     activeModules,
     isLoading,
+    error,
     // Métodos auxiliares
     isModuleActive: (moduleKey) => !!activeModules[moduleKey],
     getActiveModulesList: () => Object.keys(activeModules),
     getActiveModulesCount: () => Object.keys(activeModules).length
-  }), [activeModules, isLoading]);
+  }), [activeModules, isLoading, error]);
 
   return (
     <ActiveModulesContext.Provider value={value}>

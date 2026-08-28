@@ -9,11 +9,8 @@ import {
   Person as PersonalIcon,
   Business as BusinessIcon,
   ArrowForward as ArrowForwardIcon,
-  Security as SecurityIcon,
   Lock,
   CheckCircle,
-  Warning,
-  Info
 } from '@mui/icons-material';
 import { 
   Snackbar, 
@@ -35,22 +32,17 @@ import {
   CardActions,
   Avatar,
   Divider,
-  Stepper,
-  Step,
-  StepLabel,
   Container,
   Chip,
   Zoom
 } from '@mui/material';
 import { signInWithEmailAndPassword, signInWithPopup, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
-import fbApp, { auth, db, googleProvider } from '../fb';
+import { auth, db, googleProvider } from '../fb';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
-import { HomeIcon, Shield, ShieldCheck, ShieldAlert, Fingerprint } from 'lucide-react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { jwtService, secureAuthService } from '../services/auth';
+import { useLanguage } from '../context/LanguageContext';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -168,7 +160,6 @@ const KEYFRAMES = `
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutos
 const RATE_LIMIT_TIME = 3000; // 3 segundos
-const MIN_RECAPTCHA_SCORE = 0.3; // Score mínimo para considerar válido
 
 const RECAPTCHA_ACTIONS = {
   LOGIN: 'login',
@@ -180,12 +171,6 @@ const RECAPTCHA_ACTIONS = {
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
-};
-
-const validatePassword = (password) => {
-  // Mínimo 8 caracteres, com pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial
-  const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  return re.test(password);
 };
 
 const sanitizeInput = (value) => {
@@ -453,7 +438,6 @@ export const AccountTypeSelector = ({ onSelect }) => {
 };
 
 const AuthDesk = () => {
-  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -463,9 +447,7 @@ const AuthDesk = () => {
   const [passwordError, setPasswordError] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [showAccountTypeDialog, setShowAccountTypeDialog] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [lastSubmitTime, setLastSubmitTime] = useState(0);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState(null);
@@ -477,11 +459,10 @@ const AuthDesk = () => {
     lastAction: null,
     suspiciousActivity: false
   });
-  const [securityScore, setSecurityScore] = useState(0.9);
   
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:600px)');
-  const theme = useTheme();
+  const { t } = useLanguage();
 
   const siteKey = process.env.REACT_APP_RECAPTCHA_V3_KEY_1;
 
@@ -609,8 +590,7 @@ const AuthDesk = () => {
   // Detecta comportamento automatizado
   const detectAutomation = () => {
     const redFlags = [
-      'webdriver' in navigator,
-      navigator.webdriver,
+      navigator.webdriver === true,
       window.__nightmare,
       window._phantom,
       window.callPhantom,
@@ -670,13 +650,11 @@ const AuthDesk = () => {
       
       // Simular score baseado em comportamento
       const randomScore = Math.random() * 0.3 + 0.6; // Entre 0.6 e 0.9
-      setSecurityScore(randomScore);
       
       return { success: true, score: randomScore };
       
     } catch (error) {
       console.warn('Falha na verificação de segurança:', error);
-      setSecurityScore(0.3);
       return { success: true, score: 0.3 };
     }
   };
@@ -726,7 +704,6 @@ const AuthDesk = () => {
 
     try {
       await set(userRef, sanitizedData);
-      setCurrentUser(user);
 
       const companyRef = ref(db, 'company/' + user.uid);
       const snapshot = await get(companyRef);
@@ -879,23 +856,11 @@ const AuthDesk = () => {
     setShowPassword((prev) => !prev);
   };
 
-  const getSecurityIcon = () => {
-    if (securityScore >= 0.8) return <ShieldCheck size={18} color={T.gold} />;
-    if (securityScore >= 0.5) return <Shield size={18} color="#f59e0b" />;
-    return <ShieldAlert size={18} color="#ef4444" />;
-  };
-
-  const getSecurityMessage = () => {
-    if (securityScore >= 0.8) return 'Conexão segura';
-    if (securityScore >= 0.5) return 'Verificação padrão';
-    return 'Verificação adicional necessária';
-  };
-
   return (
     <>
       <style>{KEYFRAMES}</style>
       
-      <Grid container component="main" sx={{ height: '100vh', bgcolor: T.cream }}>
+      <Grid container component="main" sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
         {/* Lado esquerdo - Formulário */}
         <Grid 
           item 
@@ -905,7 +870,7 @@ const AuthDesk = () => {
             display: 'flex', 
             justifyContent: 'center', 
             alignItems: 'center',
-            background: T.cream,
+            bgcolor: 'background.default',
             position: 'relative',
             overflow: 'hidden',
           }}
@@ -956,8 +921,9 @@ const AuthDesk = () => {
                   width: '100%',
                   p: 4,
                   borderRadius: '24px',
-                  border: `1px solid ${T.border}`,
-                  background: T.white,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
                   boxShadow: '0 20px 40px rgba(0,0,0,0.05)',
                 }}
               >
@@ -965,15 +931,15 @@ const AuthDesk = () => {
                   variant="h5" 
                   sx={{ 
                     fontWeight: 700, 
-                    color: T.text,
+                    color: 'text.primary',
                     fontFamily: '"Playfair Display", serif',
                     mb: 1
                   }}
                 >
-                  Bem-vindo de volta
+                  {t('auth.welcomeBack')}
                 </Typography>
-                <Typography sx={{ color: T.textSub, mb: 3, fontSize: '0.9rem' }}>
-                  Entre com sua conta para acessar a plataforma
+                <Typography color="text.secondary" sx={{ mb: 3, fontSize: '0.9rem' }}>
+                  {t('auth.signInDescription')}
                 </Typography>
 
                 <Box component="form" onSubmit={handleEmailSignIn} noValidate>
@@ -982,7 +948,7 @@ const AuthDesk = () => {
                     required
                     fullWidth
                     id="email"
-                    label="Email"
+                    label={t('auth.email')}
                     name="email"
                     autoComplete="email"
                     autoFocus
@@ -1023,7 +989,7 @@ const AuthDesk = () => {
                     required
                     fullWidth
                     name="password"
-                    label="Senha"
+                    label={t('auth.password')}
                     type={showPassword ? 'text' : 'password'}
                     id="password"
                     autoComplete="current-password"
@@ -1044,6 +1010,7 @@ const AuthDesk = () => {
                             edge="end" 
                             disabled={isLockedOut}
                             sx={{ color: T.gold }}
+                            aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                           >
                             {showPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
@@ -1076,7 +1043,7 @@ const AuthDesk = () => {
                     fullWidth
                     variant="contained"
                     size="large"
-                    disabled={isEmailLoading || isGoogleLoading || isGuestLoading || isLockedOut}
+                    disabled={isEmailLoading || isGoogleLoading || isLockedOut}
                     startIcon={isEmailLoading ? <CircularProgress size={20} sx={{ color: T.white }} /> : <Email />}
                     className="login-btn"
                     sx={{
@@ -1096,17 +1063,17 @@ const AuthDesk = () => {
                       }
                     }}
                   >
-                    {isLockedOut ? 'Conta Bloqueada' : isEmailLoading ? 'Entrando...' : 'Entrar com Email'}
+                    {isLockedOut ? t('auth.accountLocked') : isEmailLoading ? t('auth.signingIn') : t('auth.signInWithEmail')}
                   </Button>
 
                   <Box sx={{ position: 'relative', my: 3 }}>
                     <Divider sx={{ borderColor: T.border }}>
                       <Chip 
-                        label="ou" 
+                        label={t('auth.or')}
                         size="small"
                         sx={{ 
-                          bgcolor: T.surface,
-                          color: T.textSub,
+                          bgcolor: 'background.default',
+                          color: 'text.secondary',
                           fontSize: '0.7rem'
                         }} 
                       />
@@ -1117,7 +1084,7 @@ const AuthDesk = () => {
                     fullWidth
                     variant="contained"
                     size="large"
-                    disabled={isGoogleLoading || isEmailLoading || isGuestLoading || isLockedOut}
+                    disabled={isGoogleLoading || isEmailLoading || isLockedOut}
                     onClick={handleGoogleSignIn}
                     startIcon={isGoogleLoading ? <CircularProgress size={20} /> : <Google />}
                     className="google-btn"
@@ -1136,7 +1103,7 @@ const AuthDesk = () => {
                       }
                     }}
                   >
-                    {isLockedOut ? 'Conta Bloqueada' : isGoogleLoading ? 'Entrando...' : 'Continuar com Google'}
+                    {isLockedOut ? t('auth.accountLocked') : isGoogleLoading ? t('auth.signingIn') : t('auth.continueGoogle')}
                   </Button>
 
                   <Grid container justifyContent="space-between" sx={{ mt: 3 }}>
@@ -1150,12 +1117,12 @@ const AuthDesk = () => {
                           '&:hover': { color: T.gold } 
                         }}
                       >
-                        Esqueceu a senha?
+                        {t('auth.forgotPassword')}
                       </Link>
                     </Grid>
                     <Grid item>
                       <Typography variant="body2" sx={{ color: T.textSub }}>
-                        Não tem conta?{' '}
+                        {t('auth.noAccount')}{' '}
                         <Link 
                           href="/create" 
                           sx={{ 
@@ -1165,7 +1132,7 @@ const AuthDesk = () => {
                             '&:hover': { textDecoration: 'underline' }
                           }}
                         >
-                          Cadastre-se
+                          {t('auth.register')}
                         </Link>
                       </Typography>
                     </Grid>

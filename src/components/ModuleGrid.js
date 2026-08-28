@@ -16,22 +16,23 @@ import {
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useActiveModules } from '../context/ActiveModulesContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // Configuração dos módulos com suas chaves correspondentes
 export const allModules = [
   { 
-    name: 'Produtos & Servicos', 
+    nameKey: 'modules.market.name',
     key: 'moduloMarket',
     link: '/market', 
     icon: <StoreIcon fontSize="large" />, 
-    description: 'Cadastre seus produtos & servicos'
+    descriptionKey: 'modules.market.description'
   },
   { 
-    name: 'Alerta', 
+    nameKey: 'modules.alert.name',
     key: 'moduloSMS',
-    link: '/sms', 
+    link: '/cotacoes',
     icon: <TruckIcon fontSize="large" />, 
-    description: 'Receba solicitacoes e pedidos de cotacao'
+    descriptionKey: 'modules.alert.description'
   },
 
 ];
@@ -39,13 +40,14 @@ export const allModules = [
 const ModuleGrid = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { activeModules, isLoading, isModuleActive } = useActiveModules();
+  const { isLoading, isModuleActive } = useActiveModules();
+  const { t } = useLanguage();
 
   const handleModuleClick = (module) => {
     if (isModuleActive(module.key)) {
       navigate(module.link);
     } else {
-      navigate(`/pagamento-modulo/${module.key}`);
+      navigate(`/pagar/${module.key}`);
     }
   };
 
@@ -53,7 +55,7 @@ const ModuleGrid = () => {
     return (
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="body1" color="text.secondary">
-          Carregando módulos...
+          {t('modules.loading')}
         </Typography>
       </Box>
     );
@@ -64,23 +66,36 @@ const ModuleGrid = () => {
       <Grid container spacing={3} justifyContent="center">
         {allModules.map((module) => {
           const isActive = isModuleActive(module.key);
+          const moduleName = t(module.nameKey);
           
           return (
-            <Grid item xs={12} sm={6} md={3} key={module.name}>
+            <Grid item xs={12} sm={6} md={4} key={module.key}>
               <Tooltip 
-                title={isActive ? `Acessar ${module.name}` : `Módulo ${module.name} não está ativo`}
+                title={t(isActive ? 'modules.open' : 'modules.subscribe', { name: moduleName })}
                 arrow
               >
                 <Card
                   onClick={() => handleModuleClick(module)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleModuleClick(module);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t(isActive ? 'modules.open' : 'modules.subscribe', { name: moduleName })}
                   sx={{
                     height: '100%',
                     p: 3,
-                    cursor: isActive ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     borderRadius: 3,
                     textAlign: 'center',
                     transition: 'all 0.25s ease',
-                    border: '1px solid #eee',
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     position: 'relative',
                     opacity: isActive ? 1 : 0.6,
                     ...(isActive ? {
@@ -101,7 +116,7 @@ const ModuleGrid = () => {
                     {isActive ? (
                       <Chip
                         icon={<CheckCircleIcon sx={{ fontSize: 14 }} />}
-                        label="Ativo"
+                        label={t('modules.active')}
                         size="small"
                         color="success"
                         sx={{ fontSize: '0.65rem' }}
@@ -109,7 +124,7 @@ const ModuleGrid = () => {
                     ) : (
                       <Chip
                         icon={<LockIcon sx={{ fontSize: 14 }} />}
-                        label="Bloqueado"
+                        label={t('modules.locked')}
                         size="small"
                         color="error"
                         sx={{ fontSize: '0.65rem' }}
@@ -124,7 +139,7 @@ const ModuleGrid = () => {
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        backgroundColor: isActive ? theme.palette.grey[100] : theme.palette.grey[200],
+                        backgroundColor: isActive ? 'action.hover' : 'action.disabledBackground',
                         borderRadius: '12px',
                         width: 64,
                         height: 64,
@@ -136,22 +151,22 @@ const ModuleGrid = () => {
                     </Box>
 
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                      {module.name}
+                      {moduleName}
                     </Typography>
 
                     <Typography variant="body2" color="text.secondary">
-                      {module.description}
+                      {t(module.descriptionKey)}
                     </Typography>
 
                     {/* Indicador de status */}
                     <Box sx={{ mt: 2 }}>
                       {isActive ? (
                         <Typography variant="caption" color="success.main">
-                          ✅ Disponível
+                          {t('modules.available')}
                         </Typography>
                       ) : (
                         <Typography variant="caption" color="error.main">
-                          🔒 Indisponível - Assine para acessar
+                          {t('modules.unavailable')}
                         </Typography>
                       )}
                     </Box>

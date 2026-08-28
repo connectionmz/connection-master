@@ -618,7 +618,7 @@ const StoresDesk = ({ user }) => {
             <Alert severity="warning"
               action={
                 <Button color="inherit" size="small"
-                  onClick={() => navigate('/pagamento-modulo/moduloMarket')}>
+                  onClick={() => navigate('/pagar/moduloMarket')}>
                   Ativar
                 </Button>
               }

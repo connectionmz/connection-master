@@ -12,6 +12,7 @@ import {
   Stack,
   FormControl,
 } from "@mui/material";
+import { useLanguage } from "../../context/LanguageContext";
 
 const ChangePassword = () => {
   const [formData, setFormData] = useState({
@@ -22,6 +23,7 @@ const ChangePassword = () => {
 
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ message: "", error: false });
+  const { t } = useLanguage();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -36,7 +38,7 @@ const ChangePassword = () => {
     const { currentPassword, newPassword, confirmPassword } = formData;
 
     if (newPassword !== confirmPassword) {
-      setFeedback({ message: "As senhas não coincidem.", error: true });
+      setFeedback({ message: t('password.error.mismatch'), error: true });
       return;
     }
 
@@ -44,7 +46,7 @@ const ChangePassword = () => {
     const user = auth.currentUser;
 
     if (!user) {
-      setFeedback({ message: "Usuário não autenticado.", error: true });
+      setFeedback({ message: t('password.error.unauthenticated'), error: true });
       setLoading(false);
       return;
     }
@@ -54,7 +56,7 @@ const ChangePassword = () => {
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
       setFeedback({ 
-        message: "Senha atualizada com sucesso!", 
+        message: t('password.success'),
         error: false 
       });
       setFormData({
@@ -65,7 +67,7 @@ const ChangePassword = () => {
     } catch (error) {
       console.error("Erro ao atualizar senha:", error.message);
       setFeedback({ 
-        message: "Erro ao atualizar a senha. Verifique as informações.", 
+        message: t('password.error.generic'),
         error: true 
       });
     } finally {
@@ -80,18 +82,19 @@ const ChangePassword = () => {
         justifyContent: "center",
         alignItems: "center",
         minHeight: "100%",
-        p: 2
+        bgcolor: 'background.default',
+        p: { xs: 2, sm: 4 },
       }}
     >
-      <Paper elevation={3} sx={{ p: 4, width: "100%", maxWidth: "500px" }}>
+      <Paper elevation={3} sx={{ p: { xs: 3, sm: 4 }, width: "100%", maxWidth: "500px", borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
         <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 3 }}>
-          Alterar Senha
+          {t('password.changeTitle')}
         </Typography>
         
         <FormControl component="form" onSubmit={handleChangePassword} fullWidth>
           <Stack spacing={3}>
             <TextField
-              label="Senha Atual"
+              label={t('auth.currentPassword')}
               type="password"
               name="currentPassword"
               value={formData.currentPassword}
@@ -99,10 +102,12 @@ const ChangePassword = () => {
               required
               fullWidth
               variant="outlined"
+              autoComplete="current-password"
+              inputProps={{ 'aria-label': t('auth.currentPassword') }}
             />
             
             <TextField
-              label="Nova Senha"
+              label={t('auth.newPassword')}
               type="password"
               name="newPassword"
               value={formData.newPassword}
@@ -110,10 +115,12 @@ const ChangePassword = () => {
               required
               fullWidth
               variant="outlined"
+              autoComplete="new-password"
+              inputProps={{ 'aria-label': t('auth.newPassword') }}
             />
             
             <TextField
-              label="Confirmar Nova Senha"
+              label={t('auth.confirmPassword')}
               type="password"
               name="confirmPassword"
               value={formData.confirmPassword}
@@ -121,6 +128,8 @@ const ChangePassword = () => {
               required
               fullWidth
               variant="outlined"
+              autoComplete="new-password"
+              inputProps={{ 'aria-label': t('auth.confirmPassword') }}
             />
             
             {feedback.message && (
@@ -137,7 +146,7 @@ const ChangePassword = () => {
               sx={{ mt: 2 }}
               endIcon={loading && <CircularProgress size={24} />}
             >
-              {loading ? "Atualizando..." : "Atualizar Senha"}
+              {loading ? t('password.updating') : t('password.update')}
             </Button>
           </Stack>
         </FormControl>

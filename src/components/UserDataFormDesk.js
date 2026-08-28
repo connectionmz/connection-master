@@ -19,6 +19,7 @@ import { get, ref, set, push } from 'firebase/database';
 import { auth, db } from '../fb';
 import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { signOut } from 'firebase/auth';
+import { useLanguage } from '../context/LanguageContext';
 
 // Funções de segurança
 const validateInput = (name, value) => {
@@ -98,9 +99,9 @@ const sanitizeDataBeforeSave = (data) => {
   return sanitized;
 };
 
-const steps = ['Informações Básicas', 'Endereço & Contacto'];
-
 const UserDataFormDesk = () => {
+  const { t } = useLanguage();
+  const steps = [t('onboarding.basicInfo'), t('onboarding.addressContact')];
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -352,7 +353,7 @@ const UserDataFormDesk = () => {
 
         await set(ref(db, `company/${user.uid}`), dataToSave);
         await push(ref(db, `subscriptions/${user.uid}`), { status: "active" });
-        window.location='/'
+        navigate('/', { replace: true });
       }
     } catch (error) {
       setErrorMessage("Ocorreu um erro ao salvar os dados. Tente novamente.");
@@ -464,15 +465,15 @@ const UserDataFormDesk = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', my: 4, p: 3, bgcolor: 'background.paper', borderRadius: 2 }}>
+    <Box component="main" sx={{ maxWidth: 800, mx: 'auto', my: { xs: 2, md: 4 }, p: { xs: 2, sm: 3 }, bgcolor: 'background.paper', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1">Cadastrar</Typography>
+        <Typography variant="h4" component="h1">{t('onboarding.personalTitle')}</Typography>
         <Button
           variant="outlined"
           color="primary"
           size="large"
           onClick={handleLoginRedirect}>
-          Retornar para Login
+          {t('onboarding.backLogin')}
         </Button>
       </Box>
       <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
@@ -482,7 +483,7 @@ const UserDataFormDesk = () => {
           </Step>
         ))}
       </Stepper>
-      <Box sx={{ p: 3, border: '1px solid #eee', borderRadius: 2 }}>
+      <Box sx={{ p: { xs: 1, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         {renderStepContent(activeStep)}
         {errorMessage && (
           <Alert severity="error" sx={{ mt: 2 }}>
@@ -496,7 +497,7 @@ const UserDataFormDesk = () => {
             disabled={activeStep === 0}
             onClick={handleBack}
             sx={{ minWidth: 120 }}>
-            Voltar
+            {t('onboarding.back')}
           </Button>
           {activeStep === steps.length - 1 ? (
             <Button
@@ -506,7 +507,7 @@ const UserDataFormDesk = () => {
               disabled={isLoading}
               sx={{ minWidth: 120 }}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Finalizar Cadastro'}
+              {isLoading ? <CircularProgress size={24} aria-label={t('onboarding.processing')} /> : t('onboarding.finish')}
             </Button>
           ) : (
             <Button
@@ -515,7 +516,7 @@ const UserDataFormDesk = () => {
               onClick={handleNext}
               sx={{ minWidth: 120 }}
             >
-              Próximo
+              {t('onboarding.next')}
             </Button>
           )}
         </Box>

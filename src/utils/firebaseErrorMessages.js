@@ -19,3 +19,9 @@ const firebaseErrorMessages = {
   'auth/missing-phone-number': 'Número de telefone não fornecido.',
   // ... remova todas as duplicatas
 };
+
+const DEFAULT_FIREBASE_ERROR_MESSAGE = 'Ocorreu um erro. Tente novamente.';
+
+export const getFirebaseErrorMessage = (errorCode) => (
+  firebaseErrorMessages[errorCode] || DEFAULT_FIREBASE_ERROR_MESSAGE
+);

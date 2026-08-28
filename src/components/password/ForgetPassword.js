@@ -5,13 +5,10 @@ import {
   TextField,
   Button,
   Typography,
-  Paper,
   Alert,
   CircularProgress,
   Fade,
   InputAdornment,
-  IconButton,
-  Container,
   Snackbar,
   Grid,
   useMediaQuery,
@@ -26,6 +23,7 @@ import { auth } from '../../fb';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../img/bg.png';
 import marketing from '../../img/marketing.jpg';
+import { useLanguage } from '../../context/LanguageContext';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; 
@@ -66,6 +64,7 @@ const ForgetPassword = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { t } = useLanguage();
 
   // Verificar se está em período de bloqueio
   useEffect(() => {
@@ -103,7 +102,7 @@ const ForgetPassword = () => {
     }
   }, []);
 
-  const handleFailedResetAttempt = () => {
+  const handleFailedResetAttempt = useCallback(() => {
     const newAttempts = resetAttempts + 1;
     setResetAttempts(newAttempts);
     localStorage.setItem('resetAttempts', newAttempts.toString());
@@ -113,24 +112,24 @@ const ForgetPassword = () => {
       setLockoutUntil(lockoutTime);
       localStorage.setItem('resetLockout', lockoutTime.toString());
       
-      setErrorMessage(`Muitas tentativas de recuperação. Sua conta foi temporariamente bloqueada por ${LOCKOUT_TIME/60000} minutos.`);
+      setErrorMessage(t('password.error.locked', { minutes: LOCKOUT_TIME / 60000 }));
       setShowSnackbar(true);
     }
-  };
+  }, [resetAttempts, t]);
 
   const handleResetPassword = useCallback(async (e) => {
     e.preventDefault();
     
     if (isLockedOut) {
       const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
-      setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
+      setErrorMessage(t('password.error.locked', { minutes: timeLeft }));
       setShowSnackbar(true);
       return;
     }
 
     const now = Date.now();
     if (now - lastSubmitTime < RATE_LIMIT_TIME) {
-      setErrorMessage('Aguarde alguns segundos antes de tentar novamente');
+      setErrorMessage(t('password.error.rateLimit'));
       setShowSnackbar(true);
       return;
     }
@@ -139,19 +138,19 @@ const ForgetPassword = () => {
     const sanitizedEmail = sanitizeInput(email);
     
     if (!sanitizedEmail) {
-      setErrorMessage('Por favor, insira seu email');
+      setErrorMessage(t('password.error.requiredEmail'));
       setShowSnackbar(true);
       return;
     }
     
     if (!validateEmail(sanitizedEmail)) {
-      setErrorMessage('Por favor, insira um email válido');
+      setErrorMessage(t('password.error.invalidEmail'));
       setShowSnackbar(true);
       return;
     }
     
     if (!validateInputLength(sanitizedEmail, 255)) {
-      setErrorMessage('Email muito longo');
+      setErrorMessage(t('password.error.longEmail'));
       setShowSnackbar(true);
       return;
     }
@@ -170,25 +169,25 @@ const ForgetPassword = () => {
       localStorage.removeItem('resetAttempts');
       localStorage.removeItem('resetLockout');
       
-      setSuccessMessage('Email de redefinição enviado! Verifique sua caixa de entrada.');
+      setSuccessMessage(t('password.resetSent'));
       setEmail('');
       
     } catch (error) {
       handleFailedResetAttempt();
       
-      let userFriendlyMessage = 'Erro ao enviar email de redefinição';
+      let userFriendlyMessage = t('password.error.resetGeneric');
       switch (error.code) {
         case 'auth/user-not-found':
-          userFriendlyMessage = 'Email não encontrado. Verifique o endereço digitado.';
+          userFriendlyMessage = t('password.error.notFound');
           break;
         case 'auth/invalid-email':
-          userFriendlyMessage = 'Email inválido. Por favor, verifique o formato.';
+          userFriendlyMessage = t('password.error.invalidEmail');
           break;
         case 'auth/too-many-requests':
-          userFriendlyMessage = 'Muitas tentativas. Tente novamente mais tarde.';
+          userFriendlyMessage = t('password.error.tooMany');
           break;
         default:
-          userFriendlyMessage = `Erro: ${error.message}`;
+          userFriendlyMessage = t('password.error.resetGeneric');
       }
       
       setErrorMessage(userFriendlyMessage);
@@ -196,7 +195,7 @@ const ForgetPassword = () => {
       setIsLoading(false);
       setShowSnackbar(true);
     }
-  }, [email, isLockedOut, lockoutUntil, lastSubmitTime]);
+  }, [email, handleFailedResetAttempt, isLockedOut, lockoutUntil, lastSubmitTime, t]);
 
   const handleBackToLogin = () => {
     navigate('/auth');
@@ -207,7 +206,7 @@ const ForgetPassword = () => {
   }, []);
 
   return (
-    <Grid container component="main" sx={{ height: '100vh' }}>
+    <Grid container component="main" sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Grid 
         item 
         xs={12} 
@@ -245,16 +244,16 @@ const ForgetPassword = () => {
               }} 
             />
             <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
-              Recuperar Senha
+              {t('password.recoverTitle')}
             </Typography>
             {isLockedOut && (
               <Alert severity="warning" sx={{ width: '100%', mb: 2 }}>
-                Muitas tentativas de recuperação. Tente novamente em {Math.ceil((lockoutUntil - Date.now()) / 60000)} minutos.
+                {t('password.error.locked', { minutes: Math.ceil((lockoutUntil - Date.now()) / 60000) })}
               </Alert>
             )}
             
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
-              Digite seu email para receber instruções de redefinição de senha
+              {t('password.recoverDescription')}
             </Typography>
             
             <Box 
@@ -270,7 +269,7 @@ const ForgetPassword = () => {
                 required
                 fullWidth
                 id="email"
-                label="Email"
+                label={t('auth.email')}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -321,7 +320,7 @@ const ForgetPassword = () => {
                   }
                 }}
               >
-                {isLockedOut ? 'Conta Bloqueada' : isLoading ? 'Enviando...' : 'Enviar Link de Recuperação'}
+                {isLockedOut ? t('auth.accountLocked') : isLoading ? t('password.sending') : t('password.sendLink')}
               </Button>
 
               <Button
@@ -346,13 +345,13 @@ const ForgetPassword = () => {
                   }
                 }}
               >
-                Voltar para Login
+                {t('password.backToLogin')}
               </Button>
             </Box>
 
             <Box sx={{ mt: 4, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                Não recebeu o email?{' '}
+                {t('password.didNotReceive')}{' '}
                 <Button
                   variant="text"
                   size="small"
@@ -364,12 +363,12 @@ const ForgetPassword = () => {
                     color: 'primary.main'
                   }}
                 >
-                  Reenviar
+                  {t('password.resend')}
                 </Button>
               </Typography>
               
               <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                Verifique sua pasta de spam ou lixo eletrônico
+                {t('password.checkSpam')}
               </Typography>
             </Box>
           </Box>

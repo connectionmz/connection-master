@@ -882,7 +882,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 .map(([key, product]) => (
                   <TableRow key={key} hover>
                     <TableCell>
-                      <Link to={`/produto/${key}/loja/${storeId}`} style={{ textDecoration: 'none' }}>
+                      <Link to={`/market/products/${key}/edit`} style={{ textDecoration: 'none' }}>
                         {product?.imageUrl ? (
                           <img
                             src={product.imageUrl}
@@ -908,7 +908,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                     </TableCell>
                     <TableCell>
                       <Link
-                        to={`/produto/${key}/loja/${storeId}`}
+                        to={`/market/products/${key}/edit`}
                         style={{ textDecoration: 'none', color: 'inherit' }}
                       >
                         <Typography sx={{ fontWeight: 500, color: T.text }}>
@@ -943,7 +943,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       <Tooltip title="Ver produto">
                         <IconButton
                           component={Link}
-                          to={`/produto/${key}/loja/${storeId}`}
+                          to={`/product/${key}/store/${storeId}`}
                           sx={{ color: T.gold }}
                         >
                           <Visibility />
@@ -1165,7 +1165,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
               <Button
                 variant="contained"
                 component={Link}
-                to={`/addProduct`}
+                to="/market/products/new"
                 size={isMobile ? 'small' : 'medium'}
                 startIcon={<Add />}
                 sx={{

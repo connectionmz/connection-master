@@ -8,6 +8,8 @@ import {
   Stack, useMediaQuery, IconButton, Avatar, useTheme,
   Badge, Snackbar, Tooltip, Grid, Dialog, DialogTitle,
   DialogContent, DialogActions, List, ListItem, ListItemButton,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Share as ShareIcon,

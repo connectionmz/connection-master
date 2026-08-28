@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ref, get, push, set } from 'firebase/database';
+import { ref, get, push, update } from 'firebase/database';
 import { auth, db } from '../../fb';
 import ProductGridDesk from './ProductGridDesk';
 import { 
@@ -47,7 +47,8 @@ import {
   Select,
   InputAdornment,
   FormHelperText,
-  Autocomplete
+  Autocomplete,
+  Snackbar
 } from '@mui/material';
 import { 
   Store, 
@@ -230,6 +231,7 @@ const StoreDetailDesk = ({ user }) => {
     
     const [quoteSubmitting, setQuoteSubmitting] = useState(false);
     const [quoteError, setQuoteError] = useState('');
+    const [quoteFeedback, setQuoteFeedback] = useState({ open: false, message: '', severity: 'success' });
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -464,24 +466,23 @@ const StoreDetailDesk = ({ user }) => {
         updateQuoteItem(itemId, 'productType', 'custom');
     };
 
-    // Função auxiliar para obter IP do cliente
-    const getClientIP = async () => {
-        try {
-            const response = await fetch('https://api.ipify.org?format=json');
-            const data = await response.json();
-            return data.ip;
-        } catch (error) {
-            console.error('Erro ao obter IP:', error);
-            return null;
-        }
-    };
-
     // Enviar cotação com múltiplos itens
     const handleSubmitQuote = async () => {
         // Validar se todos os itens têm nome
         const invalidItems = quoteItems.filter(item => !item.productName.trim());
         if (invalidItems.length > 0) {
             setQuoteError('Por favor, preencha o nome de todos os produtos/serviços');
+            return;
+        }
+
+        const customerEmail = quoteForm.customerEmail.trim();
+        const customerContact = quoteForm.customerContact.trim();
+        if (quoteForm.contactPreference === 'email' && !/^\S+@\S+\.\S+$/.test(customerEmail)) {
+            setQuoteError('Indique um email válido para a loja responder.');
+            return;
+        }
+        if (quoteForm.contactPreference === 'whatsapp' && customerContact.replace(/\D/g, '').length < 9) {
+            setQuoteError('Indique um contacto de WhatsApp válido para a loja responder.');
             return;
         }
 
@@ -512,8 +513,8 @@ const StoreDetailDesk = ({ user }) => {
                 // Dados do cliente
                 customerId: currentUser?.uid || null,
                 customerName: currentUser?.displayName || null,
-                customerEmail: quoteForm.customerEmail || currentUser?.email || null,
-                customerContact: quoteForm.customerContact || null,
+                customerEmail: customerEmail || currentUser?.email || null,
+                customerContact: customerContact || null,
                 
                 // Itens da cotação
                 items: itemsList,
@@ -529,32 +530,38 @@ const StoreDetailDesk = ({ user }) => {
                 updatedAt: new Date().toISOString(),
                 
                 source: 'store_page',
-                userAgent: navigator.userAgent,
-                ipAddress: await getClientIP(),
             };
-            
-            await set(ref(db, `quotes/${storeId}/${quoteId}`), quoteData);
 
-            await sendEmailCotacaoDireta(store.email, {
-                title: 'Novo Pedido de Cotação Disponível',
-                cliente: currentUser?.displayName || 'Cliente',
-                message: quoteForm.message,
-                link: `${window.location.origin}/cotacoes`  // Fixed: removed extra }
-            })      
-
+            const quoteUpdates = {
+                [`quotes/${storeId}/${quoteId}`]: quoteData,
+            };
             if (currentUser?.uid) {
-                await set(ref(db, `user_quotes/${currentUser.uid}/${quoteId}`), {
+                quoteUpdates[`user_quotes/${currentUser.uid}/${quoteId}`] = {
                     ...quoteData,
-                    storeId: storeId,
                     storeName: store.name,
                     createdAt: new Date().toISOString()
+                };
+            }
+
+            await update(ref(db), quoteUpdates);
+
+            try {
+                await sendEmailCotacaoDireta(store.email, {
+                    title: 'Novo Pedido de Cotação Disponível',
+                    cliente: currentUser?.displayName || 'Cliente',
+                    message: quoteForm.message,
+                    link: `${window.location.origin}/cotacoes`
                 });
+            } catch (emailError) {
+                console.error('Cotação guardada, mas a notificação por email falhou:', emailError);
             }
 
             handleCloseQuoteDialog();
-            
-            // Mostrar feedback de sucesso
-            alert(`Cotação #${quoteId} enviada com sucesso!\n\nItens solicitados: ${itemsList.length}\nA loja ${store.name} entrará em contato em breve.`);
+            setQuoteFeedback({
+                open: true,
+                severity: 'success',
+                message: `Cotação #${quoteId} enviada. A loja ${store.name} responderá pelos contactos indicados.`
+            });
             
         } catch (error) {
             console.error('Erro ao enviar cotação:', error);
@@ -1624,7 +1631,6 @@ const StoreDetailDesk = ({ user }) => {
                         type="email"
                         value={quoteForm.customerEmail}
                         onChange={(e) => setQuoteForm(prev => ({ ...prev, customerEmail: e.target.value }))}
-                        sx={{ mb: 2 }}
                         placeholder="exemplo@email.com"
                         InputProps={{
                             startAdornment: (
@@ -1635,6 +1641,7 @@ const StoreDetailDesk = ({ user }) => {
                         }}
                         InputLabelProps={{ sx: { color: T.textSub } }}
                         sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
                                 borderRadius: '12px',
                                 '&:hover fieldset': { borderColor: T.gold },
@@ -1648,7 +1655,6 @@ const StoreDetailDesk = ({ user }) => {
                         label="Seu Contacto"
                         value={quoteForm.customerContact}
                         onChange={(e) => setQuoteForm(prev => ({ ...prev, customerContact: e.target.value }))}
-                        sx={{ mb: 2 }}
                         placeholder="+258 84 123 4567"
                         InputProps={{
                             startAdornment: (
@@ -1659,6 +1665,7 @@ const StoreDetailDesk = ({ user }) => {
                         }}
                         InputLabelProps={{ sx: { color: T.textSub } }}
                         sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
                                 borderRadius: '12px',
                                 '&:hover fieldset': { borderColor: T.gold },
@@ -1675,9 +1682,9 @@ const StoreDetailDesk = ({ user }) => {
                         value={quoteForm.message}
                         onChange={(e) => setQuoteForm(prev => ({ ...prev, message: e.target.value }))}
                         placeholder="Informações adicionais, prazo desejado, observações..."
-                        sx={{ mb: 2 }}
                         InputLabelProps={{ sx: { color: T.textSub } }}
                         sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
                                 borderRadius: '12px',
                                 '&:hover fieldset': { borderColor: T.gold },
@@ -1713,9 +1720,7 @@ const StoreDetailDesk = ({ user }) => {
                     </FormControl>
 
                     <Typography variant="caption" sx={{ color: T.textSub, display: 'block', mt: 1 }}>
-                        A sua solicitação será enviada diretamente para a loja. 
-                        {quoteForm.contactPreference === 'whatsapp' && ' Você será redirecionado ao WhatsApp.'}
-                        {quoteForm.contactPreference === 'email' && ' Você será redirecionado ao seu cliente de email.'}
+                        A sua solicitação será enviada diretamente para a loja, que responderá pelo meio selecionado.
                     </Typography>
                 </DialogContent>
 
@@ -1752,6 +1757,27 @@ const StoreDetailDesk = ({ user }) => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={quoteFeedback.open}
+                autoHideDuration={7000}
+                onClose={() => setQuoteFeedback(feedback => ({ ...feedback, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert
+                    severity={quoteFeedback.severity}
+                    variant="filled"
+                    onClose={() => setQuoteFeedback(feedback => ({ ...feedback, open: false }))}
+                    action={auth.currentUser ? (
+                        <Button color="inherit" size="small" onClick={() => navigate('/minhas-cotacoes')}>
+                            Ver meus pedidos
+                        </Button>
+                    ) : null}
+                    sx={{ width: '100%' }}
+                >
+                    {quoteFeedback.message}
+                </Alert>
+            </Snackbar>
 
             {/* Botão Flutuante de Partilha para Mobile */}
             {isMobile && (

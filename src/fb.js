@@ -15,15 +15,15 @@ import { getStorage } from "firebase/storage";
  * Firebase Configs
  * ======================
  */
-const firebaseConfig1 = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY_1,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN_1,
-  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL_1, 
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID_1,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET_1,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID_1,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID_1,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID_1
+const firebaseConfig = {
+  apiKey: "AIzaSyCvIGkglL_zZwudy7VRHyhH0YkGYC1omB8",
+  authDomain: "connectionmz.firebaseapp.com",
+  databaseURL: "https://connectionmz-default-rtdb.firebaseio.com",
+  projectId: "connectionmz",
+  storageBucket: "connectionmz.firebasestorage.app",
+  messagingSenderId: "1063227375294",
+  appId: "1:1063227375294:web:441e446bc00d2ac8ade8ef",
+  measurementId: "G-YJFX10V2TZ"
 };
 
 /**
@@ -32,7 +32,7 @@ const firebaseConfig1 = {
  * ======================
  */
 const app = getApps().length === 0 
-  ? initializeApp(firebaseConfig1, { automaticDataCollectionEnabled: true })
+  ? initializeApp(firebaseConfig, { automaticDataCollectionEnabled: true })
   : getApp();
 
 /**
@@ -61,9 +61,6 @@ const initializeAuthPersistence = async () => {
     return false;
   }
 };
-
-// Inicializar imediatamente
-initializeAuthPersistence();
 
 /**
  * ======================
