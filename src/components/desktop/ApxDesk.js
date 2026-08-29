@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { get, onValue, ref, update } from "firebase/database";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { get, ref, update } from "firebase/database";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../fb";
 import { signOut } from "firebase/auth";
 import ModuleGrid from "../ModuleGrid";
@@ -11,34 +11,26 @@ import {
   Avatar,
   Select,
   MenuItem,
-  CircularProgress,
   Card,
   IconButton,
   Grid,
   Paper,
   useMediaQuery,
   useTheme,
-  Divider,
-  Stack,
   Container,
   Chip
 } from "@mui/material";
 import { 
   CameraAlt, 
   ExitToApp, 
-  Receipt, 
   Save, 
-  ArrowForward, 
   LocationOn,
   Dashboard,
   BusinessCenter,
-  Settings,
-  Help,
-  Notifications,
   Verified,
-  Edit
 } from "@mui/icons-material";
 import { useActiveModules } from "../../context/ActiveModulesContext";
+import { useLanguage } from "../../context/LanguageContext";
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -127,41 +119,11 @@ const ApxDesk = ({ user }) => {
   const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user?.provincia || "");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const navigate = useNavigate();
   const [provincias, setProvincias] = useState([]);
 
   const { activeModules, isLoading: modulesLoading } = useActiveModules();
-
-  // 🔥 FILTRAR MÓDULOS ATIVOS (não expirados)
-  const activeModulesFiltered = useMemo(() => {
-    if (!activeModules) return {};
-    
-    const now = new Date();
-    const filtered = {};
-    
-    Object.keys(activeModules).forEach(key => {
-      const module = activeModules[key];
-      // Verifica se o módulo está ativo E não expirou
-      if (module.status === "active" && module.expiresAt) {
-        const expiryDate = new Date(module.expiresAt);
-        if (expiryDate > now) {
-          filtered[key] = module;
-        }
-      }
-    });
-    
-    return filtered;
-  }, [activeModules]);
-
-  // Stats simulados (depois podem vir do Firebase)
-  const [stats, setStats] = useState({
-    visualizacoes: 1247,
-    propostasEnviadas: 23,
-    cotacoesAtivas: 5,
-    produtosCadastrados: 48
-  });
-
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     if (user) {
@@ -222,7 +184,7 @@ const ApxDesk = ({ user }) => {
       <Box 
         sx={{ 
           minHeight: '100vh', 
-          background: T.cream,
+          bgcolor: 'background.default',
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
@@ -242,7 +204,7 @@ const ApxDesk = ({ user }) => {
               mb: 2
             }}
           />
-          <Typography sx={{ color: T.textSub }}>Carregando dashboard...</Typography>
+          <Typography color="text.secondary">{t('dashboard.loading')}</Typography>
         </Box>
       </Box>
     );
@@ -251,7 +213,8 @@ const ApxDesk = ({ user }) => {
   return (
     <Box 
       sx={{ 
-        backgroundColor: T.cream, 
+        bgcolor: 'background.default',
+        color: 'text.primary',
         minHeight: '100vh',
         fontFamily: '"Plus Jakarta Sans", sans-serif',
       }}
@@ -311,12 +274,12 @@ const ApxDesk = ({ user }) => {
                     fontFamily: '"Playfair Display", serif',
                   }}
                 >
-                  Bem-vindo(a), {userData.nome || "Usuário"}
+                  {t('dashboard.welcome')}, {userData.nome || t('dashboard.user')}
                 </Typography>
                 {user?.subscriptions?.isverify && (
                   <Chip
                     icon={<Verified style={{ fontSize: 14, color: T.white }} />}
-                    label="Verificado"
+                    label={t('dashboard.verified')}
                     size="small"
                     sx={{
                       bgcolor: T.gold,
@@ -329,21 +292,21 @@ const ApxDesk = ({ user }) => {
               </Box>
               
               <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}>
-                {userData.sector || "Setor não definido"} · {userData.email || "Email não definido"}
+                {userData.sector || t('dashboard.sectorMissing')} · {userData.email || t('dashboard.emailMissing')}
               </Typography>
               
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <LocationOn sx={{ fontSize: 16, color: T.gold }} />
                   <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-                    {provinceTemp || "Localização não definida"}
+                    {provinceTemp || t('dashboard.locationMissing')}
                   </Typography>
                 </Box>
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <BusinessCenter sx={{ fontSize: 16, color: T.gold }} />
                   <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-                    Membro desde {new Date(userData.timestamp || Date.now()).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+                    {t('dashboard.memberSince')} {new Date(userData.timestamp || Date.now()).toLocaleDateString(language === 'pt' ? 'pt-MZ' : 'en-US', { month: 'long', year: 'numeric' })}
                   </Typography>
                 </Box>
               </Box>
@@ -372,7 +335,7 @@ const ApxDesk = ({ user }) => {
                 boxShadow: '0 8px 16px rgba(8,25,46,0.15)',
               }}
             >
-              Nova Publicação
+              {t('dashboard.newPost')}
             </Button>
           </Grid>
 
@@ -381,8 +344,9 @@ const ApxDesk = ({ user }) => {
               sx={{
                 p: 1.5,
                 borderRadius: '14px',
-                border: `1px solid ${T.border}`,
-                background: T.white,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -399,11 +363,11 @@ const ApxDesk = ({ user }) => {
                   sx={{ 
                     flex: 1,
                     fontWeight: 500,
-                    color: T.text,
+                    color: 'text.primary',
                     '& .MuiSelect-select': { py: 0.5 }
                   }}
                 >
-                  <MenuItem value="">Todas as províncias</MenuItem>
+                  <MenuItem value="">{t('dashboard.allProvinces')}</MenuItem>
                   {provincias.map((prov) => (
                     <MenuItem key={prov.provincia} value={prov.provincia}>
                       {prov.provincia}
@@ -446,45 +410,48 @@ const ApxDesk = ({ user }) => {
                 fontSize: '0.95rem',
               }}
             >
-              Sair da Conta
+              {t('dashboard.logout')}
             </Button>
           </Grid>
         </Grid>
 
-        {/* Módulos Section - AGORA USANDO activeModulesFiltered */}
+        {/* Módulos */}
         <Card 
           className="animate-fade-up delay-4"
           sx={{ 
             mb: 4,
             borderRadius: '20px',
-            border: `1px solid ${T.border}`,
-            background: T.white,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
             overflow: 'hidden'
           }}
         >
           <Box sx={{ 
             p: 3,
-            background: `linear-gradient(90deg, ${T.goldPale} 0%, ${T.white} 100%)`,
-            borderBottom: `1px solid ${T.border}`,
+            background: theme.palette.mode === 'dark'
+              ? `linear-gradient(90deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+              : `linear-gradient(90deg, ${T.goldPale} 0%, ${theme.palette.background.paper} 100%)`,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
           }}>
             <Typography variant="h6" sx={{ 
               fontWeight: 700, 
-              color: T.text,
+              color: 'text.primary',
               fontFamily: '"Playfair Display", serif',
               display: 'flex',
               alignItems: 'center',
               gap: 1
             }}>
-              <Dashboard sx={{ color: T.gold }} /> Módulos Ativos
+              <Dashboard sx={{ color: T.gold }} /> {t('dashboard.modules')}
             </Typography>
             
             {/* Mostra quantos módulos estão ativos */}
-            <Typography variant="body2" sx={{ color: T.textSub, mt: 0.5 }}>
-              {Object.keys(activeModulesFiltered).length} módulo(s) ativo(s)
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {t('dashboard.activeModulesCount', { count: Object.keys(activeModules).length })}
             </Typography>
             
-            {/* Passa apenas os módulos filtrados */}
-            <ModuleGrid activeModules={activeModulesFiltered} />
+            <ModuleGrid />
           </Box>
         </Card>
       </Container>

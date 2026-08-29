@@ -1,53 +1,131 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { ref, onValue } from 'firebase/database';
-import { db, auth } from '../fb'; // Importe também o auth do seu arquivo fb
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { auth, db, initializeAuthPersistence } from '../fb';
 
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [authUser, setAuthUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        const userRef = ref(db, `company/${firebaseUser.uid}`);
-        
-        const unsubscribeDB = onValue(userRef, (snapshot) => {
-          const userData = snapshot.val();
-          
-          if (userData) {
-            setUser({
-              ...userData,
-              id: firebaseUser.uid, // Garantimos que o id vem do auth
-              email: firebaseUser.email // Se precisar do email do auth
-            });
-          } else {
-            // Usuário autenticado mas sem dados na company
-            setUser({
-              id: firebaseUser.uid,
-              email: firebaseUser.email
-            });
-          }
-          setLoading(false);
-        });
+    let isDisposed = false;
+    let sessionVersion = 0;
+    let unsubscribeAuth = null;
+    let unsubscribeProfile = null;
 
-        return unsubscribeDB; // Retorna a função para desinscrever do DB
-      } else {
-        // Usuário não autenticado
-        setUser(null);
-        setLoading(false);
+    const clearProfileListener = () => {
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
       }
-    });
+    };
+
+    const initializeSession = async () => {
+      try {
+        await initializeAuthPersistence();
+        if (isDisposed) return;
+
+        unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+          sessionVersion += 1;
+          const currentVersion = sessionVersion;
+          clearProfileListener();
+          setError(null);
+
+          if (!firebaseUser) {
+            setAuthUser(null);
+            setProfile(null);
+            setIsProfileLoading(false);
+            setIsSessionLoading(false);
+            return;
+          }
+
+          setAuthUser(firebaseUser);
+          setProfile(null);
+          setIsProfileLoading(true);
+          setIsSessionLoading(false);
+
+          const profileRef = ref(db, `company/${firebaseUser.uid}`);
+          unsubscribeProfile = onValue(profileRef, (snapshot) => {
+            if (isDisposed || currentVersion !== sessionVersion) return;
+
+            const profileData = snapshot.val();
+            setProfile(profileData ? {
+              ...profileData,
+              id: firebaseUser.uid,
+              email: firebaseUser.email || null,
+              photoURL: profileData.logoUrl || 'https://via.placeholder.com/150',
+              displayName: profileData.nome || 'Nome da Empresa',
+              endereco: profileData.endereco || 'Endereço não informado',
+            } : null);
+            setIsProfileLoading(false);
+          }, (profileError) => {
+            if (isDisposed || currentVersion !== sessionVersion) return;
+
+            console.error('Erro ao carregar perfil:', profileError);
+            setProfile(null);
+            setIsProfileLoading(false);
+            setError(profileError);
+          });
+        }, (authError) => {
+          if (isDisposed) return;
+
+          console.error('Erro na autenticação:', authError);
+          sessionVersion += 1;
+          clearProfileListener();
+          setAuthUser(null);
+          setProfile(null);
+          setIsProfileLoading(false);
+          setIsSessionLoading(false);
+          setError(authError);
+        });
+      } catch (persistenceError) {
+        if (isDisposed) return;
+
+        console.error('Erro ao inicializar persistência:', persistenceError);
+        setIsSessionLoading(false);
+        setError(persistenceError);
+      }
+    };
+
+    initializeSession();
 
     return () => {
-      unsubscribeAuth(); // Desinscreve do auth quando o componente desmontar
+      isDisposed = true;
+      sessionVersion += 1;
+      clearProfileListener();
+      if (unsubscribeAuth) unsubscribeAuth();
     };
   }, []);
 
+  const signOut = useCallback(() => firebaseSignOut(auth), []);
+
+  const value = useMemo(() => ({
+    authUser,
+    profile,
+    isSessionLoading,
+    isProfileLoading,
+    error,
+    signOut,
+    // Aliases temporários para consumidores legados.
+    user: profile,
+    userData: profile,
+    loading: isSessionLoading || isProfileLoading,
+  }), [authUser, profile, isSessionLoading, isProfileLoading, error, signOut]);
+
   return (
-    <UserContext.Provider value={{ user, loading }}>
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );

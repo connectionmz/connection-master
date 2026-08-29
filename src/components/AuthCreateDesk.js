@@ -15,8 +15,6 @@ import {
   Alert, 
   TextField, 
   Button, 
-  Checkbox, 
-  FormControlLabel, 
   Grid, 
   Box, 
   Typography,
@@ -42,6 +40,7 @@ import { ref, set } from 'firebase/database';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
+import { useLanguage } from '../context/LanguageContext';
 
 // Constantes de segurança
 const SECURITY_CONFIG = {
@@ -150,6 +149,7 @@ const AuthCreateDesk = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const formRef = useRef(null);
+  const { t } = useLanguage();
 
   // Verificar bloqueio
   useEffect(() => {
@@ -244,9 +244,7 @@ const AuthCreateDesk = () => {
       // Redirecionar para seleção de tipo de conta
       navigate('/select-account-type', { 
         state: { 
-          message: "Sua conta foi criada com sucesso! Agora selecione o tipo de conta.",
-          userId: user.uid,
-          email: user.email
+          registrationComplete: true,
         }
       });
       
@@ -257,48 +255,14 @@ const AuthCreateDesk = () => {
     }
   }, [navigate]);
 
-  const formLoadTime = useRef(Date.now());
-  const mouseMovements = useRef(0);
-
-  useEffect(() => {
-    const handleMouseMove = () => {
-      mouseMovements.current += 1;
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  const validateHumanInteraction = () => {
-    const formFillTime = Date.now() - formLoadTime.current;
-    if (formFillTime < 3000) {
-      console.warn('Formulário preenchido muito rapidamente');
-      return false;
-    }
-
-    if (mouseMovements.current < 3) {
-      console.warn('Pouca interação com mouse detectada');
-      return false;
-    }
-
-    return true;
-  };
-
-  const performVerifiedAction = async (actionName, asyncCallback) => {
+  const performVerifiedAction = async (asyncCallback) => {
     if (isLockedOut) {
       const timeLeft = Math.ceil((lockoutUntil - Date.now()) / 60000);
       setErrorMessage(`Conta temporariamente bloqueada. Tente novamente em ${timeLeft} minutos.`);
       return;
     }
 
-    if (!validateHumanInteraction()) {
-      setErrorMessage('Detectado comportamento automatizado. Por favor, preencha o formulário como humano.');
-      return;
-    }
-
     setShowSecurityDialog(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
     setSecurityChecklist(prev => ({ ...prev, captchaVerified: true }));
     
     return asyncCallback();
@@ -365,7 +329,7 @@ const AuthCreateDesk = () => {
     return !hasError;
   };
 
-  const handleEmailSignIn = useCallback(async (e) => {
+  const handleEmailSignIn = async (e) => {
     e.preventDefault();
     
     if (isLockedOut) {
@@ -400,7 +364,7 @@ const AuthCreateDesk = () => {
     setShowSecurityDialog(true);
 
     try {
-      await performVerifiedAction('signup', async () => {
+      await performVerifiedAction(async () => {
         const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         await sendEmailVerification(result.user);
         await saveUserData(result.user);
@@ -428,7 +392,7 @@ const AuthCreateDesk = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, saveUserData, isLockedOut, lastSubmitTime, lockoutUntil]);
+  };
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
@@ -503,19 +467,19 @@ const AuthCreateDesk = () => {
         />
         <Box component="ul" pl={2}>
           <Box component="li" color={hasMinLength ? 'success.main' : 'error.main'}>
-            <Typography variant="caption">Mínimo 8 caracteres</Typography>
+            <Typography variant="caption">{t('register.password.minLength')}</Typography>
           </Box>
           <Box component="li" color={hasUpperCase ? 'success.main' : 'error.main'}>
-            <Typography variant="caption">Pelo menos uma letra maiúscula</Typography>
+            <Typography variant="caption">{t('register.password.uppercase')}</Typography>
           </Box>
           <Box component="li" color={hasLowerCase ? 'success.main' : 'error.main'}>
-            <Typography variant="caption">Pelo menos uma letra minúscula</Typography>
+            <Typography variant="caption">{t('register.password.lowercase')}</Typography>
           </Box>
           <Box component="li" color={hasNumber ? 'success.main' : 'error.main'}>
-            <Typography variant="caption">Pelo menos um número</Typography>
+            <Typography variant="caption">{t('register.password.number')}</Typography>
           </Box>
           <Box component="li" color={hasSpecialChar ? 'success.main' : 'error.main'}>
-            <Typography variant="caption">Pelo menos um caractere especial (@$!%*?&)</Typography>
+            <Typography variant="caption">{t('register.password.special')}</Typography>
           </Box>
         </Box>
       </Box>
@@ -523,7 +487,7 @@ const AuthCreateDesk = () => {
   };
 
   return (
-    <Grid container component="main" sx={{ height: '100vh' }}>
+    <Grid container component="main" sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
       <Grid 
         item 
         xs={12} 
@@ -562,12 +526,12 @@ const AuthCreateDesk = () => {
             />
             
             <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
-              Criar nova conta
+              {t('register.title')}
             </Typography>
 
             {isLockedOut && (
               <Alert severity="warning" sx={{ width: '100%', mb: 2 }}>
-                Muitas tentativas de criação. Tente novamente em {Math.ceil((lockoutUntil - Date.now()) / 60000)} minutos.
+                {t('register.locked', { minutes: Math.ceil((lockoutUntil - Date.now()) / 60000) })}
               </Alert>
             )}
             
@@ -585,7 +549,7 @@ const AuthCreateDesk = () => {
                 required
                 fullWidth
                 id="email"
-                label="Email"
+                label={t('auth.email')}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -611,7 +575,7 @@ const AuthCreateDesk = () => {
                 required
                 fullWidth
                 name="password"
-                label="Senha"
+                label={t('auth.password')}
                 type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="new-password"
@@ -623,7 +587,7 @@ const AuthCreateDesk = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="toggle password visibility"
+                        aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                         onClick={togglePasswordVisibility}
                         edge="end"
                         disabled={isLockedOut}
@@ -673,11 +637,11 @@ const AuthCreateDesk = () => {
                   }
                 }}
               >
-                {isLockedOut ? 'Conta Bloqueada' : isLoading ? 'Criando conta...' : 'Criar conta'}
+                {isLockedOut ? t('auth.accountLocked') : isLoading ? t('register.creating') : t('register.create')}
               </Button>
               
               <Typography variant="body2" align="center" sx={{ color: 'text.secondary' }}>
-                Já tem uma conta?{' '}
+                {t('register.haveAccount')}{' '}
                 <Link 
                   href="/auth" 
                   sx={{
@@ -687,7 +651,7 @@ const AuthCreateDesk = () => {
                     }
                   }}
                 >
-                  Entrar agora
+                  {t('register.signIn')}
                 </Link>
               </Typography>
             </Box>

@@ -36,24 +36,15 @@ import {
   Collapse,
   Alert as MuiAlert,
   Container,
-  Fade,
-  Zoom,
   Avatar,
   Chip,
-  Stack,
 } from '@mui/material';
 import {
   Add,
-  DoneAll,
   Delete,
-  ArrowBack,
-  CloudUpload,
   Image,
   Cancel,
   HelpOutline,
-  Category,
-  Description,
-  AttachMoney,
   Inventory,
   Info,
   Scale,
@@ -62,7 +53,6 @@ import {
   Warning,
   ExpandMore,
   ExpandLess,
-  Storefront,
   CheckCircle,
   Close,
   Save,
@@ -74,11 +64,12 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from 'firebase/storage';
-import { push, ref, set } from 'firebase/database';
+import { get, push, ref, set } from 'firebase/database';
 import { db } from '../../fb';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../BackButton';
 import { NumericFormat } from 'react-number-format';
+import { normalizeProduct, validateProduct } from './productData';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -282,7 +273,7 @@ const ProductFormDesk = ({ user }) => {
     }
 
     const storage = getStorage();
-    const storageReference = storageRef(storage, `products/${Date.now()}_${product.imageFile.name}`);
+    const storageReference = storageRef(storage, `products/${storeId}/new/${Date.now()}_${product.imageFile.name}`);
     const uploadTask = uploadBytesResumable(storageReference, product.imageFile);
 
     return new Promise((resolve, reject) => {
@@ -302,45 +293,13 @@ const ProductFormDesk = ({ user }) => {
   };
 
   const validateProducts = () => {
-    let newErrors = {};
-    let isValid = true;
-
-    products.forEach((product, index) => {
-      if (!product.name || product.name.trim() === '') {
-        newErrors[`name-${index}`] = 'Nome é obrigatório';
-        isValid = false;
-      }
-
-      if (!product.price || isNaN(parseFloat(product.price)) || parseFloat(product.price) <= 0) {
-        newErrors[`price-${index}`] = 'Preço deve ser um número maior que zero';
-        isValid = false;
-      }
-
-      if (product.type === 'product') {
-        if (!product.qtd || isNaN(parseFloat(product.qtd)) || parseFloat(product.qtd) <= 0) {
-          newErrors[`qtd-${index}`] = 'Quantidade deve ser um número maior que zero';
-          isValid = false;
-        }
-        if (product.nationalShipping) {
-          if (!product.weight || isNaN(parseFloat(product.weight)) || parseFloat(product.weight) <= 0) {
-            newErrors[`weight-${index}`] = 'Peso deve ser um número maior que zero';
-            isValid = false;
-          }
-          if (!product.height || isNaN(parseFloat(product.height)) || parseFloat(product.height) <= 0) {
-            newErrors[`height-${index}`] = 'Altura deve ser um número maior que zero';
-            isValid = false;
-          }
-          if (!product.width || isNaN(parseFloat(product.width)) || parseFloat(product.width) <= 0) {
-            newErrors[`width-${index}`] = 'Largura deve ser um número maior que zero';
-            isValid = false;
-          }
-          if (!product.length || isNaN(parseFloat(product.length)) || parseFloat(product.length) <= 0) {
-            newErrors[`length-${index}`] = 'Comprimento deve ser um número maior que zero';
-            isValid = false;
-          }
-        }
-      }
-    });
+    const newErrors = products.reduce((allErrors, product, index) => {
+      Object.entries(validateProduct(product)).forEach(([field, message]) => {
+        allErrors[`${field}-${index}`] = message;
+      });
+      return allErrors;
+    }, {});
+    const isValid = Object.keys(newErrors).length === 0;
 
     setErrors(newErrors);
     if (!isValid) {
@@ -359,28 +318,23 @@ const ProductFormDesk = ({ user }) => {
     setUploadSuccess(false);
 
     try {
+      const storeSnapshot = await get(ref(db, `stores/${storeId}`));
+      if (!storeSnapshot.exists()) {
+        setErrorMessage('Crie a sua loja antes de adicionar produtos.');
+        setSnackbarOpen(true);
+        navigate('/market', { replace: true });
+        return;
+      }
+
       const uploadedProducts = await Promise.all(products.map((product) => handleUploadImages(product)));
 
       const productsRef = ref(db, `stores/${storeId}/products`);
       const uploadPromises = uploadedProducts.map((product) => {
         const newProductRef = push(productsRef);
-        return set(newProductRef, {
-          type: product.type,
-          name: product.name,
-          price: parseFloat(product.price),
-          description: product.description || '',
+        return set(newProductRef, normalizeProduct(product, {
           imageUrl: product.imageUrl || '',
-          category: product.category || 'Geral',
-          sku: product.sku || '',
-          qtd: product.type === 'product' ? parseFloat(product.qtd) : null,
-          weight: product.type === 'product' && product.nationalShipping ? parseFloat(product.weight) : null,
-          height: product.type === 'product' && product.nationalShipping ? parseFloat(product.height) : null,
-          width: product.type === 'product' && product.nationalShipping ? parseFloat(product.width) : null,
-          length: product.type === 'product' && product.nationalShipping ? parseFloat(product.length) : null,
-          nationalShipping: product.type === 'product' ? product.nationalShipping : false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
+          includeCreatedAt: true,
+        }));
       });
 
       await Promise.all(uploadPromises);
@@ -789,11 +743,11 @@ const ProductFormDesk = ({ user }) => {
                           onChange={(e) => handleProductChange(index, 'qtd', e.target.value)}
                           size={isTablet ? 'small' : 'medium'}
                           inputProps={{ min: 0 }}
-                          sx={{ mb: 1 }}
                           error={!!errors[`qtd-${index}`]}
                           helperText={errors[`qtd-${index}`]}
                           required
                           sx={{
+                            mb: 1,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '10px',
                               '&:hover fieldset': { borderColor: T.gold },
@@ -874,11 +828,11 @@ const ProductFormDesk = ({ user }) => {
                                   startAdornment: <Scale sx={{ fontSize: 16, color: T.gold }} />,
                                   endAdornment: <InputAdornment position="end">kg</InputAdornment>
                                 }}
-                                sx={{ mb: 1 }}
                                 error={!!errors[`weight-${index}`]}
                                 helperText={errors[`weight-${index}`]}
                                 required
                                 sx={{
+                                  mb: 1,
                                   '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
                                     '&:hover fieldset': { borderColor: T.gold },
@@ -900,11 +854,11 @@ const ProductFormDesk = ({ user }) => {
                                   startAdornment: <Straighten sx={{ fontSize: 16, color: T.gold }} />,
                                   endAdornment: <InputAdornment position="end">cm</InputAdornment>
                                 }}
-                                sx={{ mb: 1 }}
                                 error={!!errors[`height-${index}`]}
                                 helperText={errors[`height-${index}`]}
                                 required
                                 sx={{
+                                  mb: 1,
                                   '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
                                     '&:hover fieldset': { borderColor: T.gold },
@@ -923,11 +877,11 @@ const ProductFormDesk = ({ user }) => {
                                   startAdornment: <Straighten sx={{ fontSize: 16, color: T.gold }} />,
                                   endAdornment: <InputAdornment position="end">cm</InputAdornment>
                                 }}
-                                sx={{ mb: 1 }}
                                 error={!!errors[`width-${index}`]}
                                 helperText={errors[`width-${index}`]}
                                 required
                                 sx={{
+                                  mb: 1,
                                   '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
                                     '&:hover fieldset': { borderColor: T.gold },
@@ -1312,12 +1266,12 @@ const ProductFormDesk = ({ user }) => {
               fullWidth
               value={products[currentProductIndex].name}
               onChange={(e) => handleProductChange(currentProductIndex, 'name', e.target.value)}
-              sx={{ mb: 3 }}
               error={!!errors[`name-${currentProductIndex}`]}
               helperText={errors[`name-${currentProductIndex}`] || 'Ex: Camiseta ou Consultoria'}
               required
               InputLabelProps={{ sx: { color: T.textSub } }}
               sx={{
+                mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '12px',
                   '&:hover fieldset': { borderColor: T.gold },
@@ -1331,10 +1285,10 @@ const ProductFormDesk = ({ user }) => {
               fullWidth
               value={products[currentProductIndex].category}
               onChange={(e) => handleProductChange(currentProductIndex, 'category', e.target.value)}
-              sx={{ mb: 3 }}
               helperText="Ex: Moda, Serviços Digitais"
               InputLabelProps={{ sx: { color: T.textSub } }}
               sx={{
+                mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '12px',
                   '&:hover fieldset': { borderColor: T.gold },
@@ -1354,7 +1308,6 @@ const ProductFormDesk = ({ user }) => {
               customInput={TextField}
               fullWidth
               label="Preço (MZN) *"
-              sx={{ mb: 3 }}
               InputProps={{
                 startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
               }}
@@ -1363,6 +1316,7 @@ const ProductFormDesk = ({ user }) => {
               required
               InputLabelProps={{ sx: { color: T.textSub } }}
               sx={{
+                mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '12px',
                   '&:hover fieldset': { borderColor: T.gold },
@@ -1379,13 +1333,13 @@ const ProductFormDesk = ({ user }) => {
                   type="number"
                   value={products[currentProductIndex].qtd}
                   onChange={(e) => handleProductChange(currentProductIndex, 'qtd', e.target.value)}
-                  sx={{ mb: 3 }}
                   inputProps={{ min: 0 }}
                   error={!!errors[`qtd-${currentProductIndex}`]}
                   helperText={errors[`qtd-${currentProductIndex}`] || 'Estoque disponível'}
                   required
                   InputLabelProps={{ sx: { color: T.textSub } }}
                   sx={{
+                    mb: 3,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1399,10 +1353,10 @@ const ProductFormDesk = ({ user }) => {
                   fullWidth
                   value={products[currentProductIndex].sku}
                   onChange={(e) => handleProductChange(currentProductIndex, 'sku', e.target.value)}
-                  sx={{ mb: 3 }}
                   helperText="Código interno (ex: CAM-BRANCO-M)"
                   InputLabelProps={{ sx: { color: T.textSub } }}
                   sx={{
+                    mb: 3,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1447,7 +1401,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].weight}
                       onChange={(e) => handleProductChange(currentProductIndex, 'weight', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Scale sx={{ fontSize: 20, color: T.gold }} />,
@@ -1458,6 +1411,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1476,7 +1430,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].height}
                       onChange={(e) => handleProductChange(currentProductIndex, 'height', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Straighten sx={{ fontSize: 20, color: T.gold }} />,
@@ -1487,6 +1440,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1501,7 +1455,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].width}
                       onChange={(e) => handleProductChange(currentProductIndex, 'width', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Straighten sx={{ fontSize: 20, color: T.gold }} />,
@@ -1512,6 +1465,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1526,7 +1480,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].length}
                       onChange={(e) => handleProductChange(currentProductIndex, 'length', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Straighten sx={{ fontSize: 20, color: T.gold }} />,
@@ -1537,6 +1490,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1555,10 +1509,10 @@ const ProductFormDesk = ({ user }) => {
                 fullWidth
                 value={products[currentProductIndex].sku}
                 onChange={(e) => handleProductChange(currentProductIndex, 'sku', e.target.value)}
-                sx={{ mb: 3 }}
                 helperText="Código opcional para serviços"
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 3,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },

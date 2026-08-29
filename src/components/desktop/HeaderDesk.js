@@ -41,10 +41,12 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import CloseIcon from "@mui/icons-material/Close";
 import WarningIcon from "@mui/icons-material/Warning";
 import PersonIcon from "@mui/icons-material/Person";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import logo from "../../img/bg2.png";
 import { db, auth } from "../../fb";
 import { signOut } from "firebase/auth";
 import { ShareIcon } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
 
 /* ── Design tokens — consistente com StoresDesk ─────────────────────── */
 const T = {
@@ -104,6 +106,7 @@ const HeaderDesk = ({ user }) => {
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width:600px)");
   const isVerify = user?.subscriptions?.isverify === "true";
+  const { t } = useLanguage();
 
   // URLs
   const apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e";
@@ -160,14 +163,6 @@ const HeaderDesk = ({ user }) => {
     }
     setDrawerOpen(open);
   }, []);
-
-  const handleDownloadClick = useCallback((event) => {
-    if (isMobile) {
-      setDownloadDialogOpen(true);
-    } else {
-      setDownloadAnchorEl(event.currentTarget);
-    }
-  }, [isMobile]);
 
   const handleDownloadClose = useCallback(() => {
     setDownloadAnchorEl(null);
@@ -262,31 +257,38 @@ const HeaderDesk = ({ user }) => {
     {
       to: "/explorar",
       icon: <DomainIcon />,
-      label: "Fornecedores",
+      label: t('nav.suppliers'),
       requiresAuth: false,
       requiresVerify: false,
     },
     {
       to: "/lojas",
       icon: <StoreMallDirectoryIcon />,
-      label: "Lojas",
+      label: t('nav.stores'),
       requiresAuth: false,
       requiresVerify: false,
     },
      {
       to: "/feed",
       icon: <StoreMallDirectoryIcon />,
-      label: "feed",
+      label: t('nav.feed'),
       requiresAuth: false,
       requiresVerify: false,
     },
     {
       to: "/cotacoes",
       icon: <DescriptionIcon />,
-      label: "Cotações",
+      label: t('nav.quotes'),
       badge: pendingQuotes,
       requiresAuth: true,
       requiresVerify: true,
+    },
+    {
+      to: "/minhas-cotacoes",
+      icon: <ReceiptLongIcon />,
+      label: t('nav.sentQuotes'),
+      requiresAuth: true,
+      requiresVerify: false,
     },
   ];
 
@@ -297,14 +299,14 @@ const HeaderDesk = ({ user }) => {
     {
       to: "/app",
       icon: <DashboardIcon />,
-      label: "Painel",
+      label: t('nav.dashboard'),
       requiresAuth: true,
       requiresVerify: true,
     },
     {
       to: "/perfil",
       icon: <PersonIcon />,
-      label: "Meu Perfil",
+      label: t('nav.profile'),
       requiresAuth: true,
       requiresVerify: false,
     },
@@ -357,7 +359,7 @@ const HeaderDesk = ({ user }) => {
                     const isDisabled = item.requiresVerify && !isVerify;
 
                     return (
-                      <Tooltip key={index} title={isDisabled ? "Verificação necessária" : ""} arrow>
+                      <Tooltip key={index} title={isDisabled ? t('nav.verificationRequired') : ""} arrow>
                         <span>
                           <Button
                             onClick={() => handleNavigation(item.to, item.requiresAuth, item.requiresVerify)}
@@ -465,7 +467,7 @@ const HeaderDesk = ({ user }) => {
                       <ListItemIcon>
                         <DashboardIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText>Painel</ListItemText>
+                      <ListItemText>{t('nav.dashboard')}</ListItemText>
                     </MenuItem>
 
                     <MenuItem
@@ -475,7 +477,7 @@ const HeaderDesk = ({ user }) => {
                       <ListItemIcon>
                         <AccountCircleIcon sx={{ color: T.gold, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText>Meu Perfil</ListItemText>
+                      <ListItemText>{t('nav.profile')}</ListItemText>
                     </MenuItem>
 
                     {!isVerify && (
@@ -499,7 +501,7 @@ const HeaderDesk = ({ user }) => {
                       <ListItemIcon>
                         <LogoutIcon sx={{ color: T.error, fontSize: 20 }} />
                       </ListItemIcon>
-                      <ListItemText>Sair</ListItemText>
+                      <ListItemText>{t('nav.signOut')}</ListItemText>
                     </MenuItem>
                   </Menu>
                 </>
@@ -522,7 +524,7 @@ const HeaderDesk = ({ user }) => {
                     },
                   }}
                 >
-                  Entrar
+                  {t('nav.signIn')}
                 </Button>
               )}
 
@@ -692,7 +694,7 @@ const HeaderDesk = ({ user }) => {
                 <ListItemIcon sx={{ color: T.error, minWidth: 40 }}>
                   <LogoutIcon />
                 </ListItemIcon>
-                <ListItemText primary="Sair" sx={{ color: T.error }} />
+                <ListItemText primary={t('nav.signOut')} sx={{ color: T.error }} />
               </ListItem>
             </>
           )}
@@ -715,7 +717,7 @@ const HeaderDesk = ({ user }) => {
               <ListItemIcon sx={{ color: T.gold, minWidth: 40 }}>
                 <AccountCircleIcon />
               </ListItemIcon>
-              <ListItemText primary="Entrar / Registrar" sx={{ color: T.gold }} />
+              <ListItemText primary={t('nav.signInOrRegister')} sx={{ color: T.gold }} />
             </ListItem>
           )}
         </List>
@@ -841,10 +843,10 @@ const HeaderDesk = ({ user }) => {
             }}
           >
             <Typography variant="body1" fontWeight="bold" sx={{ color: T.warning }}>
-              Conta em verificação
+              {t('verification.title')}
             </Typography>
             <Typography variant="body2" sx={{ color: T.darkTextSub, mt: 0.5 }}>
-              Seus dados estão sendo verificados. Você receberá uma notificação quando o processo for concluído.
+              {t('verification.description')}
             </Typography>
             <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
               <Button
@@ -853,7 +855,7 @@ const HeaderDesk = ({ user }) => {
                 onClick={handleLogout}
                 sx={{ color: T.error }}
               >
-                Sair
+                {t('nav.signOut')}
               </Button>
             </Box>
           </Alert>
@@ -878,7 +880,7 @@ const HeaderDesk = ({ user }) => {
               flexWrap: 'wrap'
             }}>
               <Typography sx={{ color: T.warning, fontSize: '0.9rem' }}>
-                ⚠️ Sua conta não está verificada. Acesso limitado a algumas funcionalidades.
+                ⚠️ {t('verification.limited')}
               </Typography>
 
               <Button
@@ -896,7 +898,7 @@ const HeaderDesk = ({ user }) => {
                   }
                 }}
               >
-                Sair
+                {t('nav.signOut')}
               </Button>
             </Box>
           </Container>

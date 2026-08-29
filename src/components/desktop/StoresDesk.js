@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ref, get, set, push, increment, onValue, update } from "firebase/database";
+import { ref, get, increment, update } from "firebase/database";
 import { db } from "../../fb";
 import { useActiveModules } from '../../context/ActiveModulesContext';
 import {
   Grid, Typography, CircularProgress, Box, Avatar,
   IconButton, useMediaQuery, useTheme, Menu, MenuItem,
   ListItemIcon, ListItemText, Tooltip, InputBase,
-  Button, Alert, Fab, Snackbar, Drawer, Container, Badge, Chip,
+  Button, Alert, Snackbar, Drawer, Container, Badge, Chip,
 } from "@mui/material";
 import {
   Share, Verified, Store, VisibilityOff, Search,
-  NavigateNext, Close as CloseIcon,
-  RequestQuote as QuoteIcon,
+  Close as CloseIcon,
   WhatsApp as WhatsAppIcon,
   Category,
 } from "@mui/icons-material";
@@ -256,7 +255,6 @@ const StoresDesk = ({ user }) => {
   const [sharedProductId,  setSharedProductId]  = useState(null);
   const [snackbar, setSnackbar] = useState({ open:false, message:'', severity:'success' });
 
-  const userId       = user?.id || 'anonymous';
   const userProvince = user?.provinciaTemp || user?.provincia || null;
   const hasMarket    = activeModules?.moduloMarket || false;
 
@@ -273,11 +271,10 @@ const StoresDesk = ({ user }) => {
         [`loja_metrics/${storeId}/ultimo_clique`]: Date.now(),
         [`loja_metrics/${storeId}/from`]: 'Mercado',
       };
-      if (productId) updates[`stores/${storeId}/products/${productId}/clicks`] = increment(1);
+      if (productId) updates[`market_metrics/products/${storeId}/${productId}/clicks`] = increment(1);
       await update(ref(db), updates);
-      await set(push(ref(db, 'clicks')), { storeId, productId, userId, timestamp:Date.now(), page:'Mercado' });
     } catch (e) { console.error('trackClick:', e); }
-  }, [userId]);
+  }, []);
 
   /* ── Fetch ─────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -618,7 +615,7 @@ const StoresDesk = ({ user }) => {
             <Alert severity="warning"
               action={
                 <Button color="inherit" size="small"
-                  onClick={() => navigate('/pagamento-modulo/moduloMarket')}>
+                  onClick={() => navigate('/pagar/moduloMarket')}>
                   Ativar
                 </Button>
               }

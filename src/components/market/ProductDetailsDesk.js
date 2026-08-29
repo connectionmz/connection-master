@@ -8,6 +8,8 @@ import {
   Stack, useMediaQuery, IconButton, Avatar, useTheme,
   Badge, Snackbar, Tooltip, Grid, Dialog, DialogTitle,
   DialogContent, DialogActions, List, ListItem, ListItemButton,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Share as ShareIcon,
@@ -58,9 +60,6 @@ const BG_GRID = {
 };
 
 /* ── Shipping constants ─────────────────────────────────────────────────── */
-const BASE_SHIPPING_FEE    = 100;
-const SHIPPING_RATE_PER_KG = 50;
-const MAX_WEIGHT_KG        = 1000;
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 const calcDiscountPct = (orig, disc) =>
@@ -110,28 +109,11 @@ const ProductDetailsDesk = ({ user }) => {
 
   const [shareAnchorEl,       setShareAnchorEl]       = useState(null);
   const [openContactModal,    setOpenContactModal]    = useState(false);
-  const [showShippingDetails, setShowShippingDetails] = useState(false);
-
-  const [shipping, setShipping] = useState({ cost:0, calculated:false, error:'' });
   const [snackbar, setSnackbar] = useState({ open:false, message:'', severity:'success' });
 
   /* ── Helpers ───────────────────────────────────────────────────── */
   const showSnack = useCallback((message, severity = 'success') => {
     setSnackbar({ open:true, message, severity });
-  }, []);
-
-  const calcShipping = useCallback((weight, qty) => {
-    const w = Number(weight);
-    if (!w || isNaN(w) || w <= 0) {
-      setShipping({ cost:0, calculated:false, error:'Peso do produto inválido' });
-      return;
-    }
-    const total = w * qty;
-    if (total > MAX_WEIGHT_KG) {
-      setShipping({ cost:0, calculated:false, error:`Peso excede limite máximo (${MAX_WEIGHT_KG} kg)` });
-      return;
-    }
-    setShipping({ cost: BASE_SHIPPING_FEE + total * SHIPPING_RATE_PER_KG, calculated:true, error:'' });
   }, []);
 
   /* ── Fetch ─────────────────────────────────────────────────────── */
@@ -149,7 +131,7 @@ const ProductDetailsDesk = ({ user }) => {
       
 
         // increment views — fire and forget
-        update(ref(db, `stores/${store}/products/${productId}`), { views: increment(1) })
+        update(ref(db, `market_metrics/products/${store}/${productId}`), { views: increment(1) })
           .catch(console.error);
 
         const storeSnap = await get(ref(db, `stores/${store}`));
@@ -157,10 +139,6 @@ const ProductDetailsDesk = ({ user }) => {
         if (storeSnap.exists()) setStoreInfo(storeSnap.val());
         if (company.exists()) setStoreInfo(prev => ({ ...prev, contacto: company.val().contacto }));  
 
-        if (data.nationalShipping) {
-          if (data.weight) calcShipping(data.weight, 1);
-          else setShipping({ cost:0, calculated:false, error:'Produto não possui peso definido' });
-        }
       } catch (e) {
         console.error(e);
         showSnack('Erro ao carregar dados do produto', 'error');
@@ -169,14 +147,7 @@ const ProductDetailsDesk = ({ user }) => {
       }
     };
     fetchData();
-  }, [productId, store, calcShipping, showSnack]);
-
-  /* Recalculate shipping when quantity changes */
-  useEffect(() => {
-    if (product?.nationalShipping && product?.weight) {
-      calcShipping(product.weight, quantity);
-    }
-  }, [quantity, product?.weight, product?.nationalShipping, calcShipping]);
+  }, [productId, store, showSnack]);
 
   /* ── Enhanced Share functionality with proper preview ─────────────────── */
   const shareOnPlatform = useCallback(async (platform) => {
@@ -293,7 +264,6 @@ const ProductDetailsDesk = ({ user }) => {
   const outOfStock  = product.qtd !== null && product.qtd !== undefined && Number(product.qtd) === 0;
   const isOwner     = user?.id === storeInfo?.company?.id;
   const discPct     = calcDiscountPct(product.price, product.discountPrice);
-  const storePhone  = resolveStorePhone(storeInfo);
 
   /* ── Shared contact item style ─────────────────────────────────── */
   const contactItemSx = {

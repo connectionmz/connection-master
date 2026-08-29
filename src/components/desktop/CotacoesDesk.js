@@ -36,6 +36,7 @@ import {
     Accordion,
     AccordionSummary,
     AccordionDetails,
+    TextField,
 } from '@mui/material';
 import { 
     Delete, 
@@ -65,11 +66,12 @@ import {
     Inventory,
     Description
 } from '@mui/icons-material';
-import { ref, onValue, update, remove, set, get } from 'firebase/database';
+import { ref, onValue, update, remove, set, get, push } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../fb';
 import EditarCotacao from './EditarCotacao'; 
 import { useActiveModules } from '../../context/ActiveModulesContext';
+import { buildQuoteResponseUpdates, validateQuoteResponse } from '../market/quoteResponse';
 
 /* ── Design tokens ───────────────────────────────────────────────────── */
 const T = {
@@ -142,17 +144,30 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedQuoteForMenu, setSelectedQuoteForMenu] = useState(null);
     const [expandedQuote, setExpandedQuote] = useState(null);
+    const [responseDialogOpen, setResponseDialogOpen] = useState(false);
+    const [responseQuote, setResponseQuote] = useState(null);
+    const [responseForm, setResponseForm] = useState({ message: '', totalPrice: '', validityDays: '7' });
+    const [responseSubmitting, setResponseSubmitting] = useState(false);
+    const [responseError, setResponseError] = useState('');
     
     const { activeModules, isLoading: modulesLoading } = useActiveModules();
     const navigate = useNavigate();
     const isMobile = useMediaQuery('(max-width:600px)');
     const isTablet = useMediaQuery('(max-width:900px)');
 
-    const isModuleActive = activeModules?.moduloSMS || !user;
+    const hasSmsModule = Boolean(activeModules?.moduloSMS);
+    const hasMarketModule = Boolean(activeModules?.moduloMarket);
+    const hasQuotesAccess = hasSmsModule || hasMarketModule;
+
+    useEffect(() => {
+        if (!hasSmsModule && hasMarketModule) {
+            setActiveTab('recebidas');
+        }
+    }, [hasSmsModule, hasMarketModule]);
 
     // Buscar cotações recebidas (solicitações de clientes)
     useEffect(() => {
-        if (!isModuleActive || !user?.id) return;
+        if (!hasMarketModule || !user?.id) return;
 
         const quotesRef = ref(db, `quotes/${user.id}`);
         const unsubscribeQuotes = onValue(quotesRef, (snapshot) => {
@@ -163,8 +178,12 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     id,
                     ...quote,
                     type: 'received_quote',
-                    isClicked: clickedQuotes[id] || false
+                    isClicked: Boolean(quote.viewed)
                 }));
+
+                setClickedQuotes(Object.fromEntries(
+                    quotesArray.filter(quote => quote.viewed).map(quote => [quote.id, true])
+                ));
                 
                 setQuotesReceived(quotesArray.sort((a, b) => 
                     new Date(b.createdAt) - new Date(a.createdAt)
@@ -175,11 +194,15 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         });
         
         return () => unsubscribeQuotes();
-    }, [user?.id, isModuleActive, clickedQuotes]);
+    }, [user?.id, hasMarketModule]);
 
     // Buscar cotações publicadas (normais)
     useEffect(() => {
-        if (!isModuleActive || !user?.id) return;
+        if (!hasSmsModule || !user?.id) {
+            setCotacoes([]);
+            setLoading(false);
+            return;
+        }
 
         const cotacoesRef = ref(db, 'cotacoes');
         const unsubscribeCotacoes = onValue(cotacoesRef, (snapshot) => {
@@ -247,36 +270,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
         });
         
         return () => unsubscribeCotacoes();
-    }, [user?.id, user?.provincia, user?.sector, activeTab, isModuleActive]);
-
-    // Carregar status de clique para cotações recebidas
-    useEffect(() => {
-        if (!isModuleActive || !user?.id) return;
-
-        const loadClickedQuotesStatus = async () => {
-            try {
-                const quotesRef = ref(db, `quotes/${user.id}`);
-                onValue(quotesRef, (snapshot) => {
-                    const quotesData = snapshot.val();
-                    const clickedStatus = {};
-
-                    if (quotesData) {
-                        Object.entries(quotesData).forEach(([quoteId, quote]) => {
-                            if (quote.viewed) {
-                                clickedStatus[quoteId] = true;
-                            }
-                        });
-                    }
-
-                    setClickedQuotes(clickedStatus);
-                });
-            } catch (error) {
-                console.error('Error loading clicked quotes status:', error);
-            }
-        };
-
-        loadClickedQuotesStatus();
-    }, [user?.id, isModuleActive]);
+    }, [user?.id, user?.provincia, user?.sector, activeTab, hasSmsModule]);
 
     const isDateValid = (dateString) => {
         const now = new Date();
@@ -286,7 +280,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     const handlePublishQuotation = () => {
         if (!user) {
-            navigate('/login', { state: { from: '/cotacao' } });
+            navigate('/auth', { state: { from: '/cotacao' } });
             return;
         }
         navigate('/cotacao');
@@ -327,7 +321,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
     // Marcar cotação recebida como visualizada
     const markQuoteAsViewed = async (quoteId) => {
-        if (user && isModuleActive && !clickedQuotes[quoteId]) {
+        if (user && hasMarketModule && !clickedQuotes[quoteId]) {
             try {
                 await update(ref(db, `quotes/${user.id}/${quoteId}`), {
                     viewed: true,
@@ -359,6 +353,62 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     const handleMenuClose = () => {
         setAnchorEl(null);
         setSelectedQuoteForMenu(null);
+    };
+
+    const handleOpenPlatformResponse = (quote) => {
+        setResponseQuote(quote);
+        setResponseForm({
+            message: quote.response?.message || '',
+            totalPrice: quote.response?.totalPrice ? String(quote.response.totalPrice) : '',
+            validityDays: '7',
+        });
+        setResponseError('');
+        setResponseDialogOpen(true);
+        handleMenuClose();
+    };
+
+    const handleClosePlatformResponse = () => {
+        if (responseSubmitting) return;
+        setResponseDialogOpen(false);
+        setResponseQuote(null);
+        setResponseError('');
+    };
+
+    const handleSubmitPlatformResponse = async () => {
+        const validation = validateQuoteResponse(responseForm);
+        const firstValidationError = Object.values(validation.errors)[0];
+        if (firstValidationError) {
+            setResponseError(firstValidationError);
+            return;
+        }
+        if (!responseQuote || !hasMarketModule || auth.currentUser?.uid !== responseQuote.storeId) {
+            setResponseError('Não tem autorização para responder a este pedido.');
+            return;
+        }
+
+        setResponseSubmitting(true);
+        setResponseError('');
+
+        try {
+            const { updates: responseUpdates } = buildQuoteResponseUpdates({
+                quote: responseQuote,
+                form: responseForm,
+                responderId: auth.currentUser.uid,
+                notificationId: responseQuote.customerId
+                    ? push(ref(db, `notifications/${responseQuote.customerId}`)).key
+                    : null,
+            });
+
+            await update(ref(db), responseUpdates);
+            setSnackbar({ open: true, message: 'Resposta enviada ao cliente.', severity: 'success' });
+            setResponseDialogOpen(false);
+            setResponseQuote(null);
+        } catch (error) {
+            console.error('Erro ao responder ao pedido da loja:', error);
+            setResponseError('Não foi possível enviar a resposta. Tente novamente.');
+        } finally {
+            setResponseSubmitting(false);
+        }
     };
 
     const handleContactCustomer = (type, quote) => {
@@ -443,7 +493,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     };
 
     const handleCotacaoClick = async (id) => {
-        if (user && isModuleActive) {
+        if (user && hasSmsModule) {
             try {
                 await set(ref(db, `cotacoes/${id}/clicks/${user.id}`), true);
                 setClickedCotacoes(prev => ({
@@ -458,7 +508,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
     };
 
     const handleEditClick = (cotacao) => {
-        if (!user || !isModuleActive) return;
+        if (!user || !hasSmsModule) return;
         setSelectedCotacao(cotacao);
         setEditDialogOpen(true);
     };
@@ -878,7 +928,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                                     Ver detalhes
                                                 </Button>
                                                 
-                                                {user && isModuleActive && (
+                                                {user && hasSmsModule && (
                                                     (cotacao?.company?.id === user.id || 
                                                      cotacao?.userId === user.id || 
                                                      cotacao?.createdBy === user.id) && (
@@ -945,6 +995,14 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 }
             }}
         >
+            {selectedQuoteForMenu && (
+                <MenuItem onClick={() => handleOpenPlatformResponse(selectedQuoteForMenu)}>
+                    <ListItemIcon>
+                        <Reply sx={{ color: T.gold }} />
+                    </ListItemIcon>
+                    <ListItemText primary={selectedQuoteForMenu.responded ? 'Atualizar resposta na plataforma' : 'Responder na plataforma'} />
+                </MenuItem>
+            )}
             {selectedQuoteForMenu?.customerContact && (
                 <>
                     <MenuItem onClick={() => handleContactCustomer('whatsapp', selectedQuoteForMenu)}>
@@ -1028,7 +1086,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                         </Typography>
                     </Box>
                     
-                    {isModuleActive && user && (
+                    {hasSmsModule && user && (
                         <Button
                             variant="contained"
                             startIcon={<Add />}
@@ -1050,7 +1108,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 </Paper>
 
                 {/* Module Activation Alert */}
-                {user && !isModuleActive && (
+                {user && !hasQuotesAccess && (
                     <Alert
                         severity="warning"
                         icon={<Warning />}
@@ -1066,7 +1124,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                             <Button
                                 variant="contained"
                                 size="medium"
-                                onClick={() => window.location = '/pagamento-modulo/moduloSMS'}
+                                onClick={() => navigate('/pagar/moduloSMS')}
                                 sx={{
                                     bgcolor: T.warning,
                                     color: T.navy,
@@ -1080,7 +1138,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                     </Alert>
                 )}
 
-                {isModuleActive && user && (
+                {hasQuotesAccess && user && (
                     <>
                         {/* Tabs */}
                         <Paper sx={{ 
@@ -1108,27 +1166,26 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                                     '& .MuiTabs-indicator': { bgcolor: T.gold }
                                 }}
                             >
-                                <Tab value="recentes" label="Recentes" icon={<AccessTime sx={{ fontSize: 18 }} />} iconPosition="start" />
-                                <Tab value="expiradas" label="Expiradas" icon={<History sx={{ fontSize: 18 }} />} iconPosition="start" />
-                                <Tab value="fechada" label="Fechadas" icon={<CheckCircle sx={{ fontSize: 18 }} />} iconPosition="start" />
-                                <Tab
-                                    value="minhas"
-                                    label="Minhas"
-                                    icon={
-                                        <Avatar
-                                            src={user?.logoUrl}
-                                            sx={{ width: 20, height: 20 }}
-                                        />
-                                    }
-                                    iconPosition="start"
-                                />
-                                <Tab 
-                                    value="recebidas" 
-                                    label="Recebidas" 
-                                    icon={<Receipt sx={{ fontSize: 18 }} />} 
-                                    iconPosition="start"
-                                    sx={{ position: 'relative' }}
-                                />
+                                {hasSmsModule && <Tab value="recentes" label="Recentes" icon={<AccessTime sx={{ fontSize: 18 }} />} iconPosition="start" />}
+                                {hasSmsModule && <Tab value="expiradas" label="Expiradas" icon={<History sx={{ fontSize: 18 }} />} iconPosition="start" />}
+                                {hasSmsModule && <Tab value="fechada" label="Fechadas" icon={<CheckCircle sx={{ fontSize: 18 }} />} iconPosition="start" />}
+                                {hasSmsModule && (
+                                    <Tab
+                                        value="minhas"
+                                        label="Minhas"
+                                        icon={<Avatar src={user?.logoUrl} sx={{ width: 20, height: 20 }} />}
+                                        iconPosition="start"
+                                    />
+                                )}
+                                {hasMarketModule && (
+                                    <Tab
+                                        value="recebidas"
+                                        label="Recebidas da loja"
+                                        icon={<Receipt sx={{ fontSize: 18 }} />}
+                                        iconPosition="start"
+                                        sx={{ position: 'relative' }}
+                                    />
+                                )}
                             </Tabs>
                         </Paper>
 
@@ -1147,7 +1204,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
             </Container>
 
             {/* Edit Dialog */}
-            {user && isModuleActive && (
+            {user && hasSmsModule && (
                 <Dialog
                     open={editDialogOpen}
                     onClose={handleCloseEditDialog}
@@ -1195,6 +1252,68 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
 
             {/* Action Menu for Received Quotes */}
             {actionMenu}
+
+            <Dialog
+                open={responseDialogOpen}
+                onClose={handleClosePlatformResponse}
+                fullWidth
+                maxWidth="sm"
+                PaperProps={{ sx: { bgcolor: T.navyCard, color: T.white, borderRadius: 3 } }}
+            >
+                <DialogTitle>Responder ao pedido</DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ color: T.darkTextSub, mb: 2 }}>
+                        A resposta ficará disponível no histórico do cliente.
+                    </Typography>
+                    {responseError && <Alert severity="error" sx={{ mb: 2 }}>{responseError}</Alert>}
+                    <TextField
+                        autoFocus
+                        required
+                        fullWidth
+                        multiline
+                        minRows={4}
+                        label="Mensagem"
+                        value={responseForm.message}
+                        onChange={(event) => setResponseForm(form => ({ ...form, message: event.target.value }))}
+                        disabled={responseSubmitting}
+                        sx={{ mb: 2 }}
+                    />
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} sm={7}>
+                            <TextField
+                                fullWidth
+                                label="Preço total (MT, opcional)"
+                                inputMode="decimal"
+                                value={responseForm.totalPrice}
+                                onChange={(event) => setResponseForm(form => ({ ...form, totalPrice: event.target.value }))}
+                                disabled={responseSubmitting}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={5}>
+                            <TextField
+                                fullWidth
+                                type="number"
+                                label="Validade (dias)"
+                                value={responseForm.validityDays}
+                                onChange={(event) => setResponseForm(form => ({ ...form, validityDays: event.target.value }))}
+                                inputProps={{ min: 1, max: 90 }}
+                                disabled={responseSubmitting}
+                            />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ p: 3 }}>
+                    <Button onClick={handleClosePlatformResponse} disabled={responseSubmitting}>Cancelar</Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmitPlatformResponse}
+                        disabled={responseSubmitting}
+                        startIcon={responseSubmitting ? <CircularProgress size={18} /> : <Reply />}
+                    >
+                        {responseSubmitting ? 'A enviar...' : 'Enviar resposta'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Snackbar */}
             <Snackbar

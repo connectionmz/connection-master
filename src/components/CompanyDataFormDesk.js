@@ -21,13 +21,8 @@ import {
   DialogActions,
   Paper,
   Container,
-  Chip,
   IconButton,
   InputAdornment,
-  Zoom,
-  Fade,
-  Slide,
-  Grow,
   Card,
   CardContent,
   Avatar,
@@ -44,20 +39,13 @@ import {
   Business, 
   LocationOn, 
   Phone, 
-  Email, 
   Badge, 
   Assignment, 
   CheckCircle,
   ArrowBack,
   ArrowForward,
   Save,
-  Info,
-  Warning,
   CheckCircleOutline,
-  Lock,
-  Language,
-  Store,
-  People,
   Work,
   Agriculture,
   PrecisionManufacturing,
@@ -66,11 +54,11 @@ import {
   Restaurant,
   HealthAndSafety,
   School,
-  SportsEsports,
   ShoppingBasket
 } from '@mui/icons-material';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { useLanguage } from '../context/LanguageContext';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -291,6 +279,7 @@ const StyledTextField = ({ label, name, value, onChange, error, helperText, icon
 );
 
 const CompanyDataFormDesk = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -307,7 +296,7 @@ const CompanyDataFormDesk = () => {
   const [isCheckingCompany, setIsCheckingCompany] = useState(true);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [slug, setSlug] = useState('');
-  const [isGeneratingSlug, setIsGeneratingSlug] = useState(false);
+  const [, setIsGeneratingSlug] = useState(false);
   
   // Estados para edição de imagem
   const [imgSrc, setImgSrc] = useState(null);
@@ -681,7 +670,7 @@ const CompanyDataFormDesk = () => {
       setSuccessMessage("Cadastro realizado com sucesso! Redirecionando...");
       
       setTimeout(() => {
-        navigate('/auth');
+        navigate('/app/verification', { replace: true });
       }, 2000);
     } catch (error) {
       console.error("Erro no cadastro:", error);
@@ -1190,7 +1179,8 @@ const CompanyDataFormDesk = () => {
       <Box 
         sx={{ 
           minHeight: '100vh', 
-          background: T.cream,
+          bgcolor: 'background.default',
+          color: 'text.primary',
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
@@ -1210,7 +1200,7 @@ const CompanyDataFormDesk = () => {
               mb: 2
             }}
           />
-          <Typography sx={{ color: T.textSub }}>Verificando dados existentes...</Typography>
+          <Typography color="text.secondary">{t('onboarding.loadingExisting')}</Typography>
         </Box>
       </Box>
     );
@@ -1219,7 +1209,8 @@ const CompanyDataFormDesk = () => {
   return (
     <Box 
       sx={{ 
-        backgroundColor: T.cream, 
+        bgcolor: 'background.default',
+        color: 'text.primary',
         minHeight: '100vh',
         fontFamily: '"Plus Jakarta Sans", sans-serif',
         py: 4
@@ -1272,7 +1263,7 @@ const CompanyDataFormDesk = () => {
                   mb: 1
                 }}
               >
-                Cadastro da Empresa
+                {t('onboarding.companyTitle')}
               </Typography>
               <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
                 Preencha os dados para registrar sua empresa na plataforma
@@ -1297,7 +1288,7 @@ const CompanyDataFormDesk = () => {
                 fontWeight: 600,
               }}
             >
-              Voltar para Login
+              {t('onboarding.backLogin')}
             </Button>
           </Box>
         </Paper>
@@ -1307,8 +1298,9 @@ const CompanyDataFormDesk = () => {
           sx={{
             p: 4,
             borderRadius: '24px',
-            border: `1px solid ${T.border}`,
-            background: T.white,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
           }}
         >
           <Box sx={{ mb: 4 }}>
@@ -1458,7 +1450,7 @@ const CompanyDataFormDesk = () => {
                   flex: 1
                 }}
               >
-                {isLoading ? 'Processando...' : 'Finalizar Cadastro'}
+                {isLoading ? t('onboarding.processing') : t('onboarding.finish')}
               </Button>
             ) : (
               <Button
@@ -1479,14 +1471,14 @@ const CompanyDataFormDesk = () => {
                   flex: 1
                 }}
               >
-                Próximo
+                {t('onboarding.next')}
               </Button>
             )}
           </Box>
 
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="caption" sx={{ color: T.textSub }}>
-              Passo {activeStep + 1} de {steps.length}
+              {t('onboarding.step', { current: activeStep + 1, total: steps.length })}
             </Typography>
             <Box
               sx={{

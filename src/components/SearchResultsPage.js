@@ -50,6 +50,7 @@ import {
   ThumbUp,
   TrendingDown,
   AccessTime,
+  StorefrontOutlined,
 } from "@mui/icons-material";
 import { formatPrice } from "../utils/utils";
 import { db } from "../fb";
@@ -365,7 +366,7 @@ const SearchResultsPage = () => {
                 {item.type === 'service' ? (
                   <Handyman sx={{ fontSize: 48, color: T.borderMid }} />
                 ) : (
-                  <StorefrontOutlinedIcon sx={{ fontSize: 48, color: T.borderMid }} />
+                  <StorefrontOutlined sx={{ fontSize: 48, color: T.borderMid }} />
                 )}
                 <Typography variant="caption" sx={{ color: T.textSub, display: 'block', mt: 1 }}>
                   Sem imagem

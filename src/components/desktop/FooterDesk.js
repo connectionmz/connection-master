@@ -8,13 +8,7 @@ import {
   IconButton,
   Grid,
   Divider,
-  Button,
-  TextField,
-  InputAdornment,
-  Paper,
   Chip,
-  useMediaQuery,
-  useTheme
 } from "@mui/material";
 import {
   Facebook,
@@ -25,8 +19,6 @@ import {
   Email,
   Phone,
   LocationOn,
-  Send,
-  ArrowForward,
   ArrowUpward,
   Business,
   Security,
@@ -38,7 +30,8 @@ import {
   Handyman,
   Verified
 } from "@mui/icons-material";
-import { X, Mail, MapPin, Phone as PhoneIcon, Clock, Award, Shield, Users } from "lucide-react";
+import { X, Clock, Users } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -123,11 +116,7 @@ const KEYFRAMES = `
 
 const FooterDesk = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
-  
-  const [email, setEmail] = React.useState("");
+  const { t } = useLanguage();
   const [showScrollTop, setShowScrollTop] = React.useState(false);
 
   // Detectar scroll para mostrar botão
@@ -143,34 +132,24 @@ const FooterDesk = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleNewsletterSubmit = (e) => {
-    e.preventDefault();
-    if (email) {
-      // Aqui você pode adicionar a lógica para salvar o email
-      console.log("Newsletter subscribed:", email);
-      setEmail("");
-      alert("Obrigado por se inscrever na nossa newsletter!");
-    }
-  };
-
   const handleNavigation = (path) => {
     navigate(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const quickLinks = [
-    { label: "Início", path: "/", icon: <Business fontSize="small" /> },
-    { label: "Explorar Empresas", path: "/explorar", icon: <Storefront fontSize="small" /> },
-    { label: "Cotações", path: "/cotacoes", icon: <RequestQuote fontSize="small" /> },
-    { label: "Serviços", path: "/servicos", icon: <Handyman fontSize="small" /> },
-    { label: "Sobre Nós", path: "/sobre", icon: <Users size={16} /> },
-    { label: "Contacto", path: "/contacto", icon: <Phone fontSize="small" /> },
+    { label: t('footer.home'), path: "/", icon: <Business fontSize="small" /> },
+    { label: t('footer.explore'), path: "/explorar", icon: <Storefront fontSize="small" /> },
+    { label: t('nav.quotes'), path: "/cotacoes", icon: <RequestQuote fontSize="small" /> },
+    { label: t('footer.services'), path: "/servicos", icon: <Handyman fontSize="small" /> },
+    { label: t('footer.aboutUs'), path: "/sobre", icon: <Users size={16} /> },
+    { label: t('footer.contact'), path: "/contacto", icon: <Phone fontSize="small" /> },
   ];
 
   const legalLinks = [
-    { label: "Termos e Condições", path: "/termos", icon: <Description fontSize="small" /> },
-    { label: "Política de Privacidade", path: "/privacidade", icon: <PrivacyTip fontSize="small" /> },
-    { label: "Política de Cookies", path: "/cookies", icon: <Security fontSize="small" /> },
+    { label: t('footer.termsConditions'), path: "/termos", icon: <Description fontSize="small" /> },
+    { label: t('footer.privacyPolicy'), path: "/privacidade", icon: <PrivacyTip fontSize="small" /> },
+    { label: t('footer.cookiesPolicy'), path: "/cookies", icon: <Security fontSize="small" /> },
     { label: "FAQ", path: "/faq", icon: <Help fontSize="small" /> },
   ];
 
@@ -178,7 +157,7 @@ const FooterDesk = () => {
     { icon: <LocationOn />, text: "Av. 25 de Setembro, Pemba, Cabo Delgado", link: null },
     { icon: <Phone />, text: "+258 86 655 6104", link: "tel:+258866556104" },
     { icon: <Email />, text: "admin@connectionmozambique.com", link: "mailto:admin@connectionmozambique.co.mz" },
-    { icon: <Clock />, text: "Seg - Sab: 8:00 - 17:00", link: null },
+    { icon: <Clock />, text: t('footer.hours'), link: null },
   ];
 
   const socialLinks = [
@@ -191,7 +170,7 @@ const FooterDesk = () => {
   ];
 
   const certificates = [
-    "Empresa Verificada",
+    t('footer.verifiedCompany'),
   ];
 
   return (
@@ -260,7 +239,7 @@ const FooterDesk = () => {
               </Typography>
               
               <Typography sx={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, mb: 3 }}>
-                A maior plataforma empresarial de Moçambique. Conectamos compradores a fornecedores verificados, facilitando negócios e impulsionando a economia nacional.
+                {t('footer.about')}
               </Typography>
 
               {/* Certificações */}
@@ -296,7 +275,7 @@ const FooterDesk = () => {
                 fontSize: '0.85rem'
               }}
             >
-              Links Rápidos
+              {t('footer.quickLinks')}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {quickLinks.map((link, index) => (
@@ -337,7 +316,7 @@ const FooterDesk = () => {
                 fontSize: '0.85rem'
               }}
             >
-              Informações Legais
+              {t('footer.legalInformation')}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {legalLinks.map((link, index) => (
@@ -378,7 +357,7 @@ const FooterDesk = () => {
                 fontSize: '0.85rem'
               }}
             >
-              Contactos
+              {t('footer.contacts')}
             </Typography>
             
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -417,7 +396,7 @@ const FooterDesk = () => {
                   letterSpacing: '0.06em'
                 }}
               >
-                SIGA-NOS
+                {t('footer.followUs').toUpperCase()}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {socialLinks.map((social, index) => (
@@ -461,8 +440,7 @@ const FooterDesk = () => {
         >
           <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
             <small>
-              © {new Date().getFullYear()} Connection Mozambique, LDA - Plataforma Empresarial de Moçambique. 
-              Todos os direitos reservados.
+              {t('footer.copyright', { year: new Date().getFullYear() })}
             </small>
           </Typography>
 
@@ -481,7 +459,7 @@ const FooterDesk = () => {
                   '&:hover': { color: T.gold }
                 }}
               >
-                Termos
+                {t('footer.terms')}
               </Link>
               <Typography sx={{ color: 'rgba(255,255,255,0.2)' }}>|</Typography>
               <Link
@@ -493,7 +471,7 @@ const FooterDesk = () => {
                   '&:hover': { color: T.gold }
                 }}
               >
-                Privacidade
+                {t('footer.privacy')}
               </Link>
               <Typography sx={{ color: 'rgba(255,255,255,0.2)' }}>|</Typography>
               <Link

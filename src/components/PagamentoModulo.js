@@ -15,8 +15,9 @@ import {
 } from '@mui/material';
 import BackButton from './BackButton';
 import PagamentoAccordion from '../according/PagamentoAccordion';
+import { useLanguage } from '../context/LanguageContext';
 
-const PagamentoModulo = ({ user }) => {
+const PagamentoModulo = () => {
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
   
   const { moduleKey } = useParams();
@@ -26,9 +27,10 @@ const PagamentoModulo = ({ user }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [existingPayment, setExistingPayment] = useState(null);
   const [isLoadingModules, setIsLoadingModules] = useState(true);
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
+  const numberLocale = language === 'pt' ? 'pt-MZ' : 'en-US';
 
   useEffect(() => {
     const modulesRef = ref(db, 'modules/modulos');
@@ -53,26 +55,8 @@ const PagamentoModulo = ({ user }) => {
     if (!isLoadingModules && moduleKey) {
       const foundModule = modules.find((mod) => mod.key === moduleKey);
       setCurrentModule(foundModule || null);
-      
-      if (user?.id) {
-        const paymentsRef = ref(db, 'payments');
-        onValue(paymentsRef, (snapshot) => {
-          const payments = snapshot.val();
-          if (payments) {
-            const userPayments = Object.entries(payments)
-              .filter(([_, payment]) => payment.userId === user.id && payment.moduleKey === moduleKey)
-              .map(([key, payment]) => ({ key, ...payment }));
-            
-            if (userPayments.length > 0) {
-              setExistingPayment(userPayments[0]);
-            } else {
-              setExistingPayment(null);
-            }
-          }
-        });
-      }
     }
-  }, [modules, moduleKey, isLoadingModules, user?.id]);
+  }, [modules, moduleKey, isLoadingModules]);
 
   // Função simplificada para formatar o número de telefone
   const handlePhoneNumberChange = (e) => {
@@ -122,9 +106,19 @@ const PagamentoModulo = ({ user }) => {
     setError('');
 
     try {
+      if (!BACKEND_URL) {
+        setError('payment.error.configuration');
+        return;
+      }
+
+      if (!currentModule || !validatePhoneNumber(phoneNumber)) {
+        setError('payment.error.validation');
+        return;
+      }
+
       const user = auth.currentUser;
       if (!user) {
-        setError('Usuário não autenticado. Faça login novamente.');
+        setError('payment.error.authentication');
         return;
       }
 
@@ -144,7 +138,8 @@ const PagamentoModulo = ({ user }) => {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9]/g, "");
 
-      const response = await fetch(`${BACKEND_URL}/pagar`, {
+      const paymentEndpoint = `${BACKEND_URL.replace(/\/$/, '')}/pagar`;
+      const response = await fetch(paymentEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -169,11 +164,11 @@ const PagamentoModulo = ({ user }) => {
     } catch (err) {
       
       if (err.message.includes('blocked') || err.code === 'auth/requests-blocked') {
-        setError('Problema de conexão com o serviço de autenticação. Tente novamente em alguns instantes.');
-      } else if (err.message.includes('não autenticado')) {
-        setError('Faça login novamente.');
+        setError('payment.error.connection');
+      } else if (err.code?.startsWith('auth/')) {
+        setError('payment.error.authentication');
       } else {
-        setError('Erro ao processar pagamento.');
+        setError('payment.error.generic');
       }
     } finally {
       setLoading(false);
@@ -188,9 +183,13 @@ const PagamentoModulo = ({ user }) => {
         justifyContent: 'center', 
         alignItems: 'center', 
         minHeight: '100vh',
-        backgroundColor: '#f5f5f5'
+        bgcolor: 'background.default',
+        color: 'text.primary',
       }}>
-        <CircularProgress size={60} />
+        <Box sx={{ textAlign: 'center' }} role="status" aria-live="polite">
+          <CircularProgress size={48} aria-label={t('payment.loading')} />
+          <Typography color="text.secondary" sx={{ mt: 2 }}>{t('payment.loading')}</Typography>
+        </Box>
       </Box>
     );
   }
@@ -199,7 +198,8 @@ const PagamentoModulo = ({ user }) => {
     return (
       <Box sx={{ 
         p: 6, 
-        backgroundColor: '#f5f5f5', 
+        bgcolor: 'background.default',
+        color: 'text.primary',
         minHeight: '100vh', 
         display: 'flex', 
         flexDirection: 'column', 
@@ -207,13 +207,13 @@ const PagamentoModulo = ({ user }) => {
         justifyContent: 'center'
       }}>
         <Typography variant="h4" color="error" gutterBottom>
-          Módulo não encontrado
+          {t('payment.notFoundTitle')}
         </Typography>
         <Typography variant="body1" sx={{ mb: 3 }}>
-          O módulo que você está tentando acessar não existe ou foi removido.
+          {t('payment.notFoundDescription')}
         </Typography>
         <Button variant="contained" onClick={() => navigate('/')}>
-          Voltar para a página inicial
+          {t('payment.backHome')}
         </Button>
       </Box>
     );
@@ -227,7 +227,8 @@ const PagamentoModulo = ({ user }) => {
       flexDirection: 'column', 
       alignItems: 'center', 
       width: '100%',
-      backgroundColor: '#f5f5f5'
+      bgcolor: 'background.default',
+      color: 'text.primary',
     }}>
       <BackButton sx={{ mb: 2, alignSelf: 'flex-start' }} />
 
@@ -235,7 +236,10 @@ const PagamentoModulo = ({ user }) => {
         width: '100%', 
         maxWidth: '800px',
         boxShadow: 3,
-        borderRadius: 2
+        borderRadius: 3,
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
       }}>
         <CardContent>
           <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -246,10 +250,10 @@ const PagamentoModulo = ({ user }) => {
           </Typography>
           <Box sx={{ mt: 2, mb: 3 }}>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Validade:</strong> {currentModule.validade === 'Anual' ? '1 ano' : '1 mês'}
+              <strong>{t('payment.validity')}:</strong> {currentModule.validade === 'Anual' ? t('payment.oneYear') : t('payment.oneMonth')}
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Preço:</strong> {currentModule.price.toLocaleString('pt-PT')} MT
+              <strong>{t('payment.price')}:</strong> {currentModule.price.toLocaleString(numberLocale)} MT
             </Typography>
           </Box>
           <Box sx={{ mb: 3 }}>
@@ -267,8 +271,8 @@ const PagamentoModulo = ({ user }) => {
           {!paymentSuccess ? (
             <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
               <TextField
-                label="Valor do Módulo"
-                value={`${currentModule.price.toLocaleString('pt-PT')} MT`}
+                label={t('payment.moduleValue')}
+                value={`${currentModule.price.toLocaleString(numberLocale)} MT`}
                 fullWidth
                 margin="normal"
                 InputProps={{ readOnly: true }}
@@ -276,7 +280,7 @@ const PagamentoModulo = ({ user }) => {
               />
               
               <TextField
-                label="Referência"
+                label={t('payment.reference')}
                 value={currentModule.name}
                 fullWidth
                 margin="normal"
@@ -285,7 +289,7 @@ const PagamentoModulo = ({ user }) => {
               />
               
               <TextField
-                label="Telefone M-Pesa"
+                label={t('payment.phone')}
                 value={formatPhoneDisplay(phoneNumber)}
                 onChange={handlePhoneNumberChange}
                 fullWidth
@@ -294,18 +298,20 @@ const PagamentoModulo = ({ user }) => {
                 placeholder="84 123 4567"
                 helperText={
                   phoneNumber && !validatePhoneNumber(phoneNumber) 
-                    ? "Número inválido. Use um número Moçambicano começando com 82, 83, 84, etc." 
-                    : "Digite apenas os 9 dígitos do seu número (ex: 841234567)"
+                    ? t('payment.phoneInvalid')
+                    : t('payment.phoneHelp')
                 }
-                error={phoneNumber && !validatePhoneNumber(phoneNumber)}
+                error={Boolean(phoneNumber && !validatePhoneNumber(phoneNumber))}
                 inputProps={{
-                  maxLength: 13, // Permite espaço para formatação
+                  maxLength: 13,
+                  inputMode: 'numeric',
+                  autoComplete: 'tel-national',
                 }}
                 sx={{ mb: 3 }}
               />
               {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
+                  {t(error)}
                 </Alert>
               )}
               
@@ -318,13 +324,23 @@ const PagamentoModulo = ({ user }) => {
                 fullWidth
                 sx={{ py: 1.5 }}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Pagar via M-Pesa'}
+                {loading ? <CircularProgress size={24} color="inherit" aria-label={t('payment.processing')} /> : t('payment.submit')}
               </Button>
             </Box>
           ) : (
-            <Alert severity="success" sx={{ width: '100%' }}>
-              Pagamento processado com sucesso! Sua assinatura foi ativada.
-            </Alert>
+            <Box sx={{ width: '100%' }}>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {t('payment.success')}
+              </Alert>
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                onClick={() => navigate(moduleKey === 'moduloMarket' ? '/market' : '/app')}
+              >
+                {t('payment.continue')}
+              </Button>
+            </Box>
           )}
         </CardActions>
       </Card>

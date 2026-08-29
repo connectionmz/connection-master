@@ -38,11 +38,9 @@ import {
   Alert,
   Avatar,
   Fade,
-  Zoom,
   Tooltip,
   Breadcrumbs,
   Link,
-  Rating,
   Skeleton,
   Badge,
   Table,
@@ -56,9 +54,7 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   ShoppingCart as ShoppingCartIcon,
-  Mouse as MouseIcon,
   Category as CategoryIcon,
-  Event as EventIcon,
   Update as UpdateIcon,
   LocalShipping as LocalShippingIcon,
   BarChart as BarChartIcon,
@@ -70,12 +66,7 @@ import {
   Straighten as StraightenIcon,
   Storefront as StoreIcon,
   TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Star as StarIcon,
-  StarBorder as StarBorderIcon,
   CalendarToday as CalendarIcon,
-  Schedule as ScheduleIcon,
-  Verified as VerifiedIcon,
   ArrowBack as ArrowBackIcon,
   ContentCopy as CopyIcon,
   CheckCircle as CheckCircleIcon,
@@ -84,7 +75,7 @@ import {
 import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from "firebase/storage";
 import { NumericFormat } from "react-number-format";
 import { formatPrice } from "../../utils/utils";
-import BackButton from "../BackButton";
+import { normalizeProduct, validateProduct } from './productData';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -168,11 +159,11 @@ const KEYFRAMES = `
 `;
 
 const ProductPage = ({ user }) => {
-  const { id, loja } = useParams();
+  const { id } = useParams();
+  const storeId = user?.id;
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -189,11 +180,6 @@ const ProductPage = ({ user }) => {
     message: "",
     severity: "success"
   });
-  const [salesData, setSalesData] = useState({
-    daily: [120, 85, 95, 110, 130, 145, 168],
-    weekly: [450, 520, 580, 490, 610],
-    monthly: [1850, 2100, 2350, 2800],
-  });
 
   const showSnackbar = (message, severity = "success") => {
     setSnackbar({ open: true, message, severity });
@@ -206,7 +192,12 @@ const ProductPage = ({ user }) => {
   useEffect(() => {
     const fetchProductData = async () => {
       try {
-        const productRef = ref(db, `stores/${loja}/products/${id}`);
+        if (!storeId) {
+          navigate('/auth', { replace: true });
+          return;
+        }
+
+        const productRef = ref(db, `stores/${storeId}/products/${id}`);
         const snapshot = await get(productRef);
 
         if (snapshot.exists()) {
@@ -229,7 +220,7 @@ const ProductPage = ({ user }) => {
           });
         } else {
           showSnackbar("Produto não encontrado", "error");
-          navigate(`/dashboard/${loja}/produtos`);
+          navigate('/market', { replace: true });
         }
       } catch (error) {
         console.error("Error fetching product:", error);
@@ -240,7 +231,7 @@ const ProductPage = ({ user }) => {
     };
 
     fetchProductData();
-  }, [id, loja, navigate]);
+  }, [id, storeId, navigate]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -278,7 +269,7 @@ const ProductPage = ({ user }) => {
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/produto/${id}/loja/${loja}`;
+    const url = `${window.location.origin}/product/${id}/store/${storeId}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -286,7 +277,7 @@ const ProductPage = ({ user }) => {
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/produto/${id}/loja/${loja}`;
+    const url = `${window.location.origin}/product/${id}/store/${storeId}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -303,49 +294,8 @@ const ProductPage = ({ user }) => {
   };
 
   const validateFormData = () => {
-    let newErrors = {};
-    let isValid = true;
-
-    if (!formData.name?.trim()) {
-      newErrors["name"] = "Nome é obrigatório";
-      isValid = false;
-    }
-
-    const priceValue = parseFloat(formData.price?.replace(",", "."));
-    if (!formData.price || isNaN(priceValue) || priceValue <= 0) {
-      newErrors["price"] = "Preço deve ser um número maior que zero";
-      isValid = false;
-    }
-
-    if (formData.type === "product") {
-      const qtdValue = parseFloat(formData.qtd);
-      if (!formData.qtd || isNaN(qtdValue) || qtdValue <= 0) {
-        newErrors["qtd"] = "Quantidade deve ser um número maior que zero";
-        isValid = false;
-      }
-      if (formData.nationalShipping) {
-        const weightValue = parseFloat(formData.weight);
-        if (!formData.weight || isNaN(weightValue) || weightValue <= 0) {
-          newErrors["weight"] = "Peso deve ser um número maior que zero";
-          isValid = false;
-        }
-        const heightValue = parseFloat(formData.height);
-        if (!formData.height || isNaN(heightValue) || heightValue <= 0) {
-          newErrors["height"] = "Altura deve ser um número maior que zero";
-          isValid = false;
-        }
-        const widthValue = parseFloat(formData.width);
-        if (!formData.width || isNaN(widthValue) || widthValue <= 0) {
-          newErrors["width"] = "Largura deve ser um número maior que zero";
-          isValid = false;
-        }
-        const lengthValue = parseFloat(formData.length);
-        if (!formData.length || isNaN(lengthValue) || lengthValue <= 0) {
-          newErrors["length"] = "Comprimento deve ser um número maior que zero";
-          isValid = false;
-        }
-      }
-    }
+    const newErrors = validateProduct(formData);
+    const isValid = Object.keys(newErrors).length === 0;
 
     setErrors(newErrors);
     if (!isValid) {
@@ -365,7 +315,7 @@ const ProductPage = ({ user }) => {
       let imageUrl = formData.imageUrl;
 
       if (imageFile) {
-        const imageRef = storageRef(storage, `products/${loja}/${id}/${imageFile.name}`);
+        const imageRef = storageRef(storage, `products/${storeId}/${id}/${imageFile.name}`);
         await uploadBytes(imageRef, imageFile);
         imageUrl = await getDownloadURL(imageRef);
 
@@ -379,25 +329,9 @@ const ProductPage = ({ user }) => {
         }
       }
 
-      const priceValue = parseFloat(formData.price.replace(",", "."));
-      const productToUpdate = {
-        type: formData.type,
-        name: formData.name.trim(),
-        price: priceValue,
-        category: formData.category?.trim() || "",
-        description: formData.description?.trim() || "",
-        imageUrl: imageUrl,
-        sku: formData.sku?.trim() || "",
-        qtd: formData.type === "product" ? parseFloat(formData.qtd) : null,
-        weight: formData.type === "product" && formData.nationalShipping ? parseFloat(formData.weight) : null,
-        height: formData.type === "product" && formData.nationalShipping ? parseFloat(formData.height) : null,
-        width: formData.type === "product" && formData.nationalShipping ? parseFloat(formData.width) : null,
-        length: formData.type === "product" && formData.nationalShipping ? parseFloat(formData.length) : null,
-        nationalShipping: formData.type === "product" ? formData.nationalShipping : false,
-        updatedAt: Date.now(),
-      };
+      const productToUpdate = normalizeProduct(formData, { imageUrl });
 
-      await update(ref(db, `stores/${loja}/products/${id}`), productToUpdate);
+      await update(ref(db, `stores/${storeId}/products/${id}`), productToUpdate);
       setProduct(productToUpdate);
       showSnackbar("Produto atualizado com sucesso!", "success");
       handleEditClose();
@@ -420,9 +354,9 @@ const ProductPage = ({ user }) => {
         }
       }
 
-      await remove(ref(db, `stores/${loja}/products/${id}`));
+      await remove(ref(db, `stores/${storeId}/products/${id}`));
       showSnackbar("Produto removido com sucesso!", "success");
-      navigate(`/dashboard/${loja}/produtos`);
+      navigate('/market', { replace: true });
     } catch (error) {
       console.error("Erro ao remover produto:", error);
       showSnackbar("Erro ao remover o produto.", "error");
@@ -517,13 +451,13 @@ const ProductPage = ({ user }) => {
                 </Typography>
                 <Breadcrumbs sx={{ color: 'rgba(255,255,255,0.7)' }} separator={<ArrowBackIcon sx={{ fontSize: 14 }} />}>
                   <Link
-                    href={`/dashboard/${loja}`}
+                    href="/market"
                     sx={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', '&:hover': { color: T.gold } }}
                   >
                     Dashboard
                   </Link>
                   <Link
-                    href={`/dashboard/${loja}/produtos`}
+                    href="/market"
                     sx={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', '&:hover': { color: T.gold } }}
                   >
                     Produtos
@@ -1180,7 +1114,6 @@ const ProductPage = ({ user }) => {
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
                 error={!!errors["name"]}
                 helperText={errors["name"] || "Ex: Camiseta Branca ou Consultoria de Marketing"}
                 size={isMobile ? "small" : "medium"}
@@ -1188,6 +1121,7 @@ const ProductPage = ({ user }) => {
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1207,7 +1141,6 @@ const ProductPage = ({ user }) => {
                 customInput={TextField}
                 fullWidth
                 label="Preço (MZN) *"
-                sx={{ mb: 2 }}
                 InputProps={{
                   startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
                 }}
@@ -1218,6 +1151,7 @@ const ProductPage = ({ user }) => {
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1231,12 +1165,12 @@ const ProductPage = ({ user }) => {
                 value={formData.category}
                 onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
                 helperText="Ex: Roupas, Eletrônicos, Serviços"
                 size={isMobile ? "small" : "medium"}
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1252,12 +1186,12 @@ const ProductPage = ({ user }) => {
                 multiline
                 rows={isMobile ? 3 : 4}
                 fullWidth
-                sx={{ mb: 2 }}
                 helperText="Detalhes atrativos para o cliente"
                 size={isMobile ? "small" : "medium"}
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1275,7 +1209,6 @@ const ProductPage = ({ user }) => {
                     customInput={TextField}
                     fullWidth
                     label="Quantidade *"
-                    sx={{ mb: 2 }}
                     error={!!errors["qtd"]}
                     helperText={errors["qtd"] || "Estoque disponível"}
                     size={isMobile ? "small" : "medium"}
@@ -1283,6 +1216,7 @@ const ProductPage = ({ user }) => {
                     disabled={saving}
                     InputLabelProps={{ sx: { color: T.textSub } }}
                     sx={{
+                      mb: 2,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '12px',
                         '&:hover fieldset': { borderColor: T.gold },
@@ -1296,12 +1230,12 @@ const ProductPage = ({ user }) => {
                     value={formData.sku}
                     onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
                     fullWidth
-                    sx={{ mb: 2 }}
                     helperText="Código interno (ex: CAM-BRANCO-M)"
                     size={isMobile ? "small" : "medium"}
                     disabled={saving}
                     InputLabelProps={{ sx: { color: T.textSub } }}
                     sx={{
+                      mb: 2,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '12px',
                         '&:hover fieldset': { borderColor: T.gold },
@@ -1442,12 +1376,12 @@ const ProductPage = ({ user }) => {
                   value={formData.sku}
                   onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
                   fullWidth
-                  sx={{ mb: 2 }}
                   helperText="Código opcional para serviços"
                   size={isMobile ? "small" : "medium"}
                   disabled={saving}
                   InputLabelProps={{ sx: { color: T.textSub } }}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },

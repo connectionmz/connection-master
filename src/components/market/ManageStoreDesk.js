@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ref, get, remove, update } from 'firebase/database';
+import { ref, get, onValue, remove, update } from 'firebase/database';
 import { db, storage } from '../../fb';
 import { Link } from 'react-router-dom';
 import {
@@ -48,13 +48,8 @@ import {
   Select,
   InputLabel,
   Container,
-  Fade,
-  Zoom,
   Avatar,
-  Badge,
   Stack,
-  LinearProgress,
-  CardActions
 } from '@mui/material';
 import {
   Search,
@@ -84,19 +79,15 @@ import {
   Inventory,
   AttachMoney,
   Verified,
-  ArrowBack,
   Save,
-  Business,
-  Info,
-  Schedule,
-  Payment,
   ShoppingCart,
-  Description
+  Description,
+  RequestQuote,
+  Warning
 } from '@mui/icons-material';
 import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import { formatPrice } from '../../utils/utils';
 import { NumericFormat } from 'react-number-format';
-import { Star } from 'lucide-react';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -291,6 +282,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [settingsTab, setSettingsTab] = useState(0);
+  const [activeSection, setActiveSection] = useState('overview');
+  const [receivedQuotes, setReceivedQuotes] = useState([]);
+  const [marketMetrics, setMarketMetrics] = useState({ views: 0, clicks: 0 });
   const [errors, setErrors] = useState({});
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -299,15 +293,35 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
     averageRating: 0,
   });
 
-  // Estatísticas simuladas
+  // Estatísticas derivadas apenas de dados reais disponíveis
   useEffect(() => {
     setStats({
       totalProducts: products.length,
-      totalSales: Math.floor(products.length * 23.5),
-      totalViews: products.reduce((acc, [, p]) => acc + (p.views || 0), 0),
-      averageRating: 4.7,
+      totalSales: receivedQuotes.filter((quote) => quote.status === 'accepted').length,
+      totalViews: marketMetrics.views,
+      averageRating: 0,
     });
-  }, [products]);
+  }, [products, receivedQuotes, marketMetrics.views]);
+
+  useEffect(() => {
+    if (!storeId) return undefined;
+    const unsubscribe = onValue(ref(db, `quotes/${storeId}`), (snapshot) => {
+      const data = snapshot.val() || {};
+      setReceivedQuotes(Object.entries(data).map(([id, quote]) => ({ id, ...quote })));
+    });
+    return unsubscribe;
+  }, [storeId]);
+
+  useEffect(() => {
+    if (!storeId) return;
+    get(ref(db, `market_metrics/products/${storeId}`)).then((snapshot) => {
+      const productMetrics = snapshot.val() || {};
+      setMarketMetrics(Object.values(productMetrics).reduce((totals, metric) => ({
+        views: totals.views + Number(metric?.views || 0),
+        clicks: totals.clicks + Number(metric?.clicks || 0),
+      }), { views: 0, clicks: 0 }));
+    }).catch(() => setMarketMetrics({ views: 0, clicks: 0 }));
+  }, [storeId]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -882,7 +896,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 .map(([key, product]) => (
                   <TableRow key={key} hover>
                     <TableCell>
-                      <Link to={`/produto/${key}/loja/${storeId}`} style={{ textDecoration: 'none' }}>
+                      <Link to={`/market/products/${key}/edit`} style={{ textDecoration: 'none' }}>
                         {product?.imageUrl ? (
                           <img
                             src={product.imageUrl}
@@ -908,7 +922,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                     </TableCell>
                     <TableCell>
                       <Link
-                        to={`/produto/${key}/loja/${storeId}`}
+                        to={`/market/products/${key}/edit`}
                         style={{ textDecoration: 'none', color: 'inherit' }}
                       >
                         <Typography sx={{ fontWeight: 500, color: T.text }}>
@@ -943,7 +957,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       <Tooltip title="Ver produto">
                         <IconButton
                           component={Link}
-                          to={`/produto/${key}/loja/${storeId}`}
+                          to={`/product/${key}/store/${storeId}`}
                           sx={{ color: T.gold }}
                         >
                           <Visibility />
@@ -977,6 +991,17 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
       );
     }
   };
+
+  const pendingQuotes = receivedQuotes.filter((quote) => quote.status === 'pending');
+  const awaitingDecision = receivedQuotes.filter((quote) => quote.status === 'answered');
+  const acceptedQuotes = receivedQuotes.filter((quote) => quote.status === 'accepted');
+  const rejectedQuotes = receivedQuotes.filter((quote) => quote.status === 'rejected');
+  const outOfStockProducts = products.filter(([, product]) =>
+    product?.type === 'product' && Number(product?.qtd) === 0
+  );
+  const incompleteProducts = products.filter(([, product]) =>
+    !product?.name?.trim() || !(Number(product?.price) > 0) || !product?.imageUrl
+  );
 
   return (
     <Box
@@ -1085,7 +1110,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                     {stats.totalSales}
                   </Typography>
                   <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>
-                    Vendas
+                    Negócios aceites
                   </Typography>
                 </Paper>
               </Grid>
@@ -1113,7 +1138,97 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
           </Box>
         </Paper>
 
+        <Paper sx={{ mb: 3, borderRadius: 2, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
+          <Tabs
+            value={activeSection}
+            onChange={(_, section) => setActiveSection(section)}
+            variant={isMobile ? 'scrollable' : 'fullWidth'}
+            scrollButtons="auto"
+            aria-label="Secções de gestão da loja"
+          >
+            <Tab value="overview" label="Visão geral" />
+            <Tab value="products" label={`Produtos (${products.length})`} />
+            <Tab value="requests" label={`Pedidos (${pendingQuotes.length})`} />
+            <Tab value="settings" label="Definições" />
+          </Tabs>
+        </Paper>
+
+        {activeSection === 'overview' && (
+          <Stack spacing={3}>
+            <Grid container spacing={2}>
+              {[
+                { label: 'Pedidos pendentes', value: pendingQuotes.length, icon: <RequestQuote />, color: T.gold },
+                { label: 'Aguardam decisão', value: awaitingDecision.length, icon: <AccessTime />, color: T.warning },
+                { label: 'Propostas aceites', value: acceptedQuotes.length, icon: <Verified />, color: T.success },
+                { label: 'Cliques em produtos', value: marketMetrics.clicks, icon: <Visibility />, color: T.navyLight },
+              ].map((item) => (
+                <Grid item xs={6} md={3} key={item.label}>
+                  <Paper variant="outlined" sx={{ p: 2.5, height: '100%', borderRadius: 2 }}>
+                    <Box sx={{ color: item.color, mb: 1 }}>{item.icon}</Box>
+                    <Typography variant="h4" fontWeight={800}>{item.value}</Typography>
+                    <Typography color="text.secondary" variant="body2">{item.label}</Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+
+            {(outOfStockProducts.length > 0 || incompleteProducts.length > 0) && (
+              <Alert severity="warning" icon={<Warning />}>
+                {outOfStockProducts.length > 0 && `${outOfStockProducts.length} produto(s) sem stock. `}
+                {incompleteProducts.length > 0 && `${incompleteProducts.length} produto(s) precisam de imagem ou dados válidos.`}
+              </Alert>
+            )}
+
+            <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Ações rápidas</Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button component={Link} to="/market/products/new" variant="contained" startIcon={<Add />}>Adicionar produto</Button>
+                <Button onClick={() => setActiveSection('requests')} variant="outlined" startIcon={<RequestQuote />}>Ver pedidos</Button>
+                <Button component={Link} to={`/loja/${storeId}`} variant="outlined" startIcon={<Visibility />}>Ver loja pública</Button>
+                <Button onClick={() => setActiveSection('settings')} startIcon={<Settings />}>Editar loja</Button>
+              </Stack>
+            </Paper>
+          </Stack>
+        )}
+
+        {activeSection === 'requests' && (
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
+            <Typography variant="h5" fontWeight={800}>Pedidos recebidos</Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              {pendingQuotes.length} pendente(s), {awaitingDecision.length} a aguardar decisão, {acceptedQuotes.length} aceite(s) e {rejectedQuotes.length} recusado(s).
+            </Typography>
+            {receivedQuotes.length === 0 ? (
+              <Alert severity="info">Ainda não recebeu pedidos através da sua loja.</Alert>
+            ) : (
+              <Stack spacing={1.5} sx={{ mb: 3 }}>
+                {receivedQuotes.slice(0, 5).map((quote) => (
+                  <Paper key={quote.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1}>
+                      <Box>
+                        <Typography fontWeight={700}>{quote.customerName || 'Cliente'}</Typography>
+                        <Typography variant="body2" color="text.secondary">{quote.totalItems || quote.items?.length || 0} item(ns)</Typography>
+                      </Box>
+                      <Chip size="small" label={quote.status || 'pending'} />
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            )}
+            <Button component={Link} to="/cotacoes" variant="contained" startIcon={<RequestQuote />}>Abrir central de pedidos</Button>
+          </Paper>
+        )}
+
+        {activeSection === 'settings' && (
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
+            <Typography variant="h5" fontWeight={800}>Definições da loja</Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>Atualize informações, contactos, localização, horários e políticas.</Typography>
+            <Button variant="contained" startIcon={<Settings />} onClick={() => toggleModal('settings', true)}>Abrir definições</Button>
+          </Paper>
+        )}
+
         {/* Barra de pesquisa e ações */}
+        {activeSection === 'products' && (
+          <>
         <Paper
           className="animate-fade-up delay-1"
           sx={{
@@ -1165,7 +1280,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
               <Button
                 variant="contained"
                 component={Link}
-                to={`/addProduct`}
+                to="/market/products/new"
                 size={isMobile ? 'small' : 'medium'}
                 startIcon={<Add />}
                 sx={{
@@ -1226,6 +1341,8 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 },
               }}
             />
+          </>
+        )}
           </>
         )}
       </Container>
@@ -1334,7 +1451,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   label="Nome da Loja"
                   value={storeData.name}
                   onChange={(e) => setStoreData((prev) => ({ ...prev, name: e.target.value }))}
-                  sx={{ mb: 3 }}
                   error={!!errors['storeName']}
                   helperText={errors['storeName'] || ''}
                   size={isMobile ? 'small' : 'medium'}
@@ -1346,6 +1462,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                     ),
                   }}
                   sx={{
+                    mb: 3,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1360,7 +1477,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   onChange={(e) => setStoreData((prev) => ({ ...prev, description: e.target.value }))}
                   multiline
                   rows={isMobile ? 3 : 4}
-                  sx={{ mb: 3 }}
                   size={isMobile ? 'small' : 'medium'}
                   InputProps={{
                     startAdornment: (
@@ -1370,6 +1486,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                     ),
                   }}
                   sx={{
+                    mb: 3,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1467,9 +1584,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1496,9 +1613,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1526,9 +1643,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1560,9 +1677,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1582,9 +1699,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       location: { ...prev.location, city: e.target.value },
                     }))
                   }
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1604,9 +1721,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       location: { ...prev.location, province: e.target.value },
                     }))
                   }
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1638,9 +1755,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1667,9 +1784,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1696,9 +1813,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1725,9 +1842,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1847,9 +1964,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   }
                   multiline
                   rows={3}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1871,9 +1988,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   }
                   multiline
                   rows={3}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1895,9 +2012,9 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   }
                   multiline
                   rows={3}
-                  sx={{ mb: 2 }}
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -2101,7 +2218,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 value={productData.name}
                 onChange={(e) => setProductData((prev) => ({ ...prev, name: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
                 error={!!errors['name']}
                 helperText={errors['name'] || 'Ex: Camiseta Branca ou Consultoria de Marketing'}
                 size={isMobile ? 'small' : 'medium'}
@@ -2114,6 +2230,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   ),
                 }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -2132,7 +2249,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 customInput={TextField}
                 fullWidth
                 label="Preço (MZN) *"
-                sx={{ mb: 2 }}
                 InputProps={{
                   startAdornment: <InputAdornment position="start"><AttachMoney sx={{ color: T.gold }} /></InputAdornment>,
                 }}
@@ -2141,6 +2257,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 size={isMobile ? 'small' : 'medium'}
                 required
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -2153,7 +2270,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 value={productData.category}
                 onChange={(e) => setProductData((prev) => ({ ...prev, category: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
                 helperText="Ex: Roupas, Eletrônicos, Serviços"
                 size={isMobile ? 'small' : 'medium'}
                 InputProps={{
@@ -2164,6 +2280,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   ),
                 }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -2178,10 +2295,10 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                 multiline
                 rows={isMobile ? 3 : 4}
                 fullWidth
-                sx={{ mb: 2 }}
                 helperText="Detalhes atrativos para o cliente"
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -2198,7 +2315,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                     customInput={TextField}
                     fullWidth
                     label="Quantidade *"
-                    sx={{ mb: 2 }}
                     error={!!errors['qtd']}
                     helperText={errors['qtd'] || 'Estoque disponível'}
                     size={isMobile ? 'small' : 'medium'}
@@ -2211,6 +2327,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                       ),
                     }}
                     sx={{
+                      mb: 2,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '12px',
                         '&:hover fieldset': { borderColor: T.gold },
@@ -2223,10 +2340,10 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                     value={productData.sku}
                     onChange={(e) => setProductData((prev) => ({ ...prev, sku: e.target.value }))}
                     fullWidth
-                    sx={{ mb: 2 }}
                     helperText="Código interno (ex: CAM-BRANCO-M)"
                     size={isMobile ? 'small' : 'medium'}
                     sx={{
+                      mb: 2,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '12px',
                         '&:hover fieldset': { borderColor: T.gold },
@@ -2271,7 +2388,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           customInput={TextField}
                           fullWidth
                           label="Peso (kg) *"
-                          sx={{ mb: 2 }}
                           InputProps={{
                             startAdornment: <InputAdornment position="start"><Scale sx={{ color: T.gold }} /></InputAdornment>,
                           }}
@@ -2280,6 +2396,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           size={isMobile ? 'small' : 'medium'}
                           required
                           sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '12px',
                               '&:hover fieldset': { borderColor: T.gold },
@@ -2298,7 +2415,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           customInput={TextField}
                           fullWidth
                           label="Altura (cm) *"
-                          sx={{ mb: 2 }}
                           InputProps={{
                             startAdornment: <InputAdornment position="start"><Straighten sx={{ color: T.gold }} /></InputAdornment>,
                           }}
@@ -2307,6 +2423,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           size={isMobile ? 'small' : 'medium'}
                           required
                           sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '12px',
                               '&:hover fieldset': { borderColor: T.gold },
@@ -2325,7 +2442,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           customInput={TextField}
                           fullWidth
                           label="Largura (cm) *"
-                          sx={{ mb: 2 }}
                           InputProps={{
                             startAdornment: <InputAdornment position="start"><Straighten sx={{ color: T.gold }} /></InputAdornment>,
                           }}
@@ -2334,6 +2450,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           size={isMobile ? 'small' : 'medium'}
                           required
                           sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '12px',
                               '&:hover fieldset': { borderColor: T.gold },
@@ -2352,7 +2469,6 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           customInput={TextField}
                           fullWidth
                           label="Comprimento (cm) *"
-                          sx={{ mb: 2 }}
                           InputProps={{
                             startAdornment: <InputAdornment position="start"><Straighten sx={{ color: T.gold }} /></InputAdornment>,
                           }}
@@ -2361,6 +2477,7 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                           size={isMobile ? 'small' : 'medium'}
                           required
                           sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '12px',
                               '&:hover fieldset': { borderColor: T.gold },
@@ -2378,10 +2495,10 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
                   value={productData.sku}
                   onChange={(e) => setProductData((prev) => ({ ...prev, sku: e.target.value }))}
                   fullWidth
-                  sx={{ mb: 2 }}
                   helperText="Código opcional para serviços"
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
