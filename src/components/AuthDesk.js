@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { 
   Email, 
@@ -461,6 +461,11 @@ const AuthDesk = () => {
   });
   
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedLocation = location.state?.from;
+  const returnPath = typeof requestedLocation === 'string'
+    ? requestedLocation
+    : requestedLocation?.pathname || '/';
   const isMobile = useMediaQuery('(max-width:600px)');
   const { t } = useLanguage();
 
@@ -710,7 +715,7 @@ const AuthDesk = () => {
       if (!snapshot.exists()) {
         setShowAccountTypeDialog(true);
       } else {
-        navigate('/');
+        navigate(returnPath, { replace: true });
       }
     } catch (error) {
       console.error('Erro ao salvar dados do usuário:', error.message);

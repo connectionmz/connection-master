@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isStoreOwner(storeId) {
+      return request.auth != null && request.auth.uid == storeId;
+    }
+
+    function isValidMarketImage() {
+      return request.resource == null || (
+        request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*')
+      );
+    }
+
+    match /store-logos/{storeId}/{path=**} {
+      allow read: if true;
+      allow create, update, delete: if isStoreOwner(storeId) && isValidMarketImage();
+    }
+
+    match /products/{storeId}/{path=**} {
+      allow read: if true;
+      allow create, update, delete: if isStoreOwner(storeId) && isValidMarketImage();
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { buildQuoteResponseUpdates, validateQuoteResponse } from './quoteResponse';
+import { buildCustomerDecisionUpdates, buildQuoteResponseUpdates, validateQuoteResponse } from './quoteResponse';
 
 describe('quoteResponse', () => {
   test('rejeita resposta vazia, preço inválido e prazo fora do limite', () => {
@@ -27,5 +27,15 @@ describe('quoteResponse', () => {
       responderId: 'store1',
     });
     expect(Object.keys(updates).some(path => path.startsWith('user_quotes/'))).toBe(false);
+  });
+
+  test('regista decisão do cliente nos dois históricos e notifica a loja', () => {
+    const updates = buildCustomerDecisionUpdates({
+      quote: { id: 'q1', storeId: 'store1', customerId: 'customer1', customerName: 'Cliente' },
+      customerId: 'customer1', decision: 'accepted', notificationId: 'n1', now: Date.UTC(2026, 7, 29),
+    });
+    expect(updates['quotes/store1/q1/status']).toBe('accepted');
+    expect(updates['user_quotes/customer1/q1/status']).toBe('accepted');
+    expect(updates['notifications/store1/n1'].type).toBe('store-quote-decision');
   });
 });

@@ -36,24 +36,15 @@ import {
   Collapse,
   Alert as MuiAlert,
   Container,
-  Fade,
-  Zoom,
   Avatar,
   Chip,
-  Stack,
 } from '@mui/material';
 import {
   Add,
-  DoneAll,
   Delete,
-  ArrowBack,
-  CloudUpload,
   Image,
   Cancel,
   HelpOutline,
-  Category,
-  Description,
-  AttachMoney,
   Inventory,
   Info,
   Scale,
@@ -62,7 +53,6 @@ import {
   Warning,
   ExpandMore,
   ExpandLess,
-  Storefront,
   CheckCircle,
   Close,
   Save,
@@ -283,7 +273,7 @@ const ProductFormDesk = ({ user }) => {
     }
 
     const storage = getStorage();
-    const storageReference = storageRef(storage, `products/${Date.now()}_${product.imageFile.name}`);
+    const storageReference = storageRef(storage, `products/${storeId}/new/${Date.now()}_${product.imageFile.name}`);
     const uploadTask = uploadBytesResumable(storageReference, product.imageFile);
 
     return new Promise((resolve, reject) => {
@@ -753,11 +743,11 @@ const ProductFormDesk = ({ user }) => {
                           onChange={(e) => handleProductChange(index, 'qtd', e.target.value)}
                           size={isTablet ? 'small' : 'medium'}
                           inputProps={{ min: 0 }}
-                          sx={{ mb: 1 }}
                           error={!!errors[`qtd-${index}`]}
                           helperText={errors[`qtd-${index}`]}
                           required
                           sx={{
+                            mb: 1,
                             '& .MuiOutlinedInput-root': {
                               borderRadius: '10px',
                               '&:hover fieldset': { borderColor: T.gold },
@@ -838,11 +828,11 @@ const ProductFormDesk = ({ user }) => {
                                   startAdornment: <Scale sx={{ fontSize: 16, color: T.gold }} />,
                                   endAdornment: <InputAdornment position="end">kg</InputAdornment>
                                 }}
-                                sx={{ mb: 1 }}
                                 error={!!errors[`weight-${index}`]}
                                 helperText={errors[`weight-${index}`]}
                                 required
                                 sx={{
+                                  mb: 1,
                                   '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
                                     '&:hover fieldset': { borderColor: T.gold },
@@ -864,11 +854,11 @@ const ProductFormDesk = ({ user }) => {
                                   startAdornment: <Straighten sx={{ fontSize: 16, color: T.gold }} />,
                                   endAdornment: <InputAdornment position="end">cm</InputAdornment>
                                 }}
-                                sx={{ mb: 1 }}
                                 error={!!errors[`height-${index}`]}
                                 helperText={errors[`height-${index}`]}
                                 required
                                 sx={{
+                                  mb: 1,
                                   '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
                                     '&:hover fieldset': { borderColor: T.gold },
@@ -887,11 +877,11 @@ const ProductFormDesk = ({ user }) => {
                                   startAdornment: <Straighten sx={{ fontSize: 16, color: T.gold }} />,
                                   endAdornment: <InputAdornment position="end">cm</InputAdornment>
                                 }}
-                                sx={{ mb: 1 }}
                                 error={!!errors[`width-${index}`]}
                                 helperText={errors[`width-${index}`]}
                                 required
                                 sx={{
+                                  mb: 1,
                                   '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
                                     '&:hover fieldset': { borderColor: T.gold },
@@ -1276,12 +1266,12 @@ const ProductFormDesk = ({ user }) => {
               fullWidth
               value={products[currentProductIndex].name}
               onChange={(e) => handleProductChange(currentProductIndex, 'name', e.target.value)}
-              sx={{ mb: 3 }}
               error={!!errors[`name-${currentProductIndex}`]}
               helperText={errors[`name-${currentProductIndex}`] || 'Ex: Camiseta ou Consultoria'}
               required
               InputLabelProps={{ sx: { color: T.textSub } }}
               sx={{
+                mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '12px',
                   '&:hover fieldset': { borderColor: T.gold },
@@ -1295,10 +1285,10 @@ const ProductFormDesk = ({ user }) => {
               fullWidth
               value={products[currentProductIndex].category}
               onChange={(e) => handleProductChange(currentProductIndex, 'category', e.target.value)}
-              sx={{ mb: 3 }}
               helperText="Ex: Moda, Serviços Digitais"
               InputLabelProps={{ sx: { color: T.textSub } }}
               sx={{
+                mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '12px',
                   '&:hover fieldset': { borderColor: T.gold },
@@ -1318,7 +1308,6 @@ const ProductFormDesk = ({ user }) => {
               customInput={TextField}
               fullWidth
               label="Preço (MZN) *"
-              sx={{ mb: 3 }}
               InputProps={{
                 startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
               }}
@@ -1327,6 +1316,7 @@ const ProductFormDesk = ({ user }) => {
               required
               InputLabelProps={{ sx: { color: T.textSub } }}
               sx={{
+                mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '12px',
                   '&:hover fieldset': { borderColor: T.gold },
@@ -1343,13 +1333,13 @@ const ProductFormDesk = ({ user }) => {
                   type="number"
                   value={products[currentProductIndex].qtd}
                   onChange={(e) => handleProductChange(currentProductIndex, 'qtd', e.target.value)}
-                  sx={{ mb: 3 }}
                   inputProps={{ min: 0 }}
                   error={!!errors[`qtd-${currentProductIndex}`]}
                   helperText={errors[`qtd-${currentProductIndex}`] || 'Estoque disponível'}
                   required
                   InputLabelProps={{ sx: { color: T.textSub } }}
                   sx={{
+                    mb: 3,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1363,10 +1353,10 @@ const ProductFormDesk = ({ user }) => {
                   fullWidth
                   value={products[currentProductIndex].sku}
                   onChange={(e) => handleProductChange(currentProductIndex, 'sku', e.target.value)}
-                  sx={{ mb: 3 }}
                   helperText="Código interno (ex: CAM-BRANCO-M)"
                   InputLabelProps={{ sx: { color: T.textSub } }}
                   sx={{
+                    mb: 3,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },
@@ -1411,7 +1401,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].weight}
                       onChange={(e) => handleProductChange(currentProductIndex, 'weight', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Scale sx={{ fontSize: 20, color: T.gold }} />,
@@ -1422,6 +1411,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1440,7 +1430,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].height}
                       onChange={(e) => handleProductChange(currentProductIndex, 'height', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Straighten sx={{ fontSize: 20, color: T.gold }} />,
@@ -1451,6 +1440,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1465,7 +1455,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].width}
                       onChange={(e) => handleProductChange(currentProductIndex, 'width', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Straighten sx={{ fontSize: 20, color: T.gold }} />,
@@ -1476,6 +1465,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1490,7 +1480,6 @@ const ProductFormDesk = ({ user }) => {
                       type="number"
                       value={products[currentProductIndex].length}
                       onChange={(e) => handleProductChange(currentProductIndex, 'length', e.target.value)}
-                      sx={{ mb: 3 }}
                       inputProps={{ min: 0, step: 0.01 }}
                       InputProps={{
                         startAdornment: <Straighten sx={{ fontSize: 20, color: T.gold }} />,
@@ -1501,6 +1490,7 @@ const ProductFormDesk = ({ user }) => {
                       required
                       InputLabelProps={{ sx: { color: T.textSub } }}
                       sx={{
+                        mb: 3,
                         '& .MuiOutlinedInput-root': {
                           borderRadius: '12px',
                           '&:hover fieldset': { borderColor: T.gold },
@@ -1519,10 +1509,10 @@ const ProductFormDesk = ({ user }) => {
                 fullWidth
                 value={products[currentProductIndex].sku}
                 onChange={(e) => handleProductChange(currentProductIndex, 'sku', e.target.value)}
-                sx={{ mb: 3 }}
                 helperText="Código opcional para serviços"
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 3,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },

@@ -23,11 +23,12 @@ export const validateQuoteResponse = ({ message = '', totalPrice = '', validityD
   return { errors, parsedPrice, parsedValidityDays };
 };
 
-export const buildQuoteResponseUpdates = ({ quote, form, responderId, now = Date.now() }) => {
+export const buildQuoteResponseUpdates = ({ quote, form, responderId, notificationId, now = Date.now() }) => {
   const { errors, parsedPrice, parsedValidityDays } = validateQuoteResponse(form);
   if (Object.keys(errors).length) return { errors, updates: null };
 
   const respondedAt = new Date(now).toISOString();
+  const responseId = String(now);
   const response = {
     message: form.message.trim(),
     totalPrice: parsedPrice,
@@ -42,10 +43,53 @@ export const buildQuoteResponseUpdates = ({ quote, form, responderId, now = Date
 
   paths.forEach((path) => {
     updates[`${path}/response`] = response;
+    updates[`${path}/responseHistory/${responseId}`] = response;
     updates[`${path}/status`] = 'answered';
     updates[`${path}/responded`] = true;
+    updates[`${path}/customerViewed`] = false;
     updates[`${path}/updatedAt`] = respondedAt;
   });
 
+  if (quote.customerId && notificationId) {
+    updates[`notifications/${quote.customerId}/${notificationId}`] = {
+      fromUserId: responderId,
+      fromUserName: quote.storeName || 'Loja',
+      message: `A loja ${quote.storeName || ''} respondeu ao seu pedido de cotação.`.trim(),
+      status: 'unread',
+      timestamp: respondedAt,
+      type: 'store-quote-response',
+      link: '/minhas-cotacoes',
+      quoteId: quote.id,
+    };
+  }
+
   return { errors: {}, updates, response };
+};
+
+export const buildCustomerDecisionUpdates = ({ quote, customerId, decision, note = '', notificationId, now = Date.now() }) => {
+  const allowed = ['accepted', 'rejected', 'revision_requested'];
+  if (!allowed.includes(decision)) throw new Error('Invalid quote decision');
+  if (!quote || quote.customerId !== customerId || !quote.storeId) throw new Error('Unauthorized quote decision');
+  if (decision === 'revision_requested' && !note.trim()) throw new Error('Revision note is required');
+
+  const decidedAt = new Date(now).toISOString();
+  const decisionData = { type: decision, note: note.trim(), decidedAt, customerId };
+  const paths = [`quotes/${quote.storeId}/${quote.id}`, `user_quotes/${customerId}/${quote.id}`];
+  const updates = {};
+  paths.forEach((path) => {
+    updates[`${path}/customerDecision`] = decisionData;
+    updates[`${path}/decisionHistory/${now}`] = decisionData;
+    updates[`${path}/status`] = decision;
+    updates[`${path}/updatedAt`] = decidedAt;
+  });
+  if (notificationId) {
+    updates[`notifications/${quote.storeId}/${notificationId}`] = {
+      fromUserId: customerId,
+      fromUserName: quote.customerName || 'Cliente',
+      message: `O cliente atualizou o pedido ${quote.id}.`,
+      status: 'unread', timestamp: decidedAt, type: 'store-quote-decision',
+      link: '/cotacoes', quoteId: quote.id,
+    };
+  }
+  return updates;
 };

@@ -5,31 +5,20 @@ import {
   AccordionDetails,
   Typography,
   Box,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   IconButton,
   useTheme,
   useMediaQuery
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import CloseIcon from '@mui/icons-material/Close';
-import PaymentIcon from '@mui/icons-material/Payment';
-import SmartphoneIcon from '@mui/icons-material/Smartphone';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import EmailIcon from '@mui/icons-material/Email';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 const PagamentoAccordion = ({ data }) => {
-  const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState('');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  const handleOpenModal = () => setOpen(true);
-  const handleCloseModal = () => setOpen(false);
 
   const handleCopy = async (text) => {
     try {
@@ -63,22 +52,10 @@ const PagamentoAccordion = ({ data }) => {
   ];
 
   return (
-    <>
-      <Accordion 
-        sx={{ 
-          mt: 2,
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          overflow: 'hidden',
-          '&:before': {
-            display: 'none'
-          }
-        }}
-      >
-        <AccordionDetails>
-          <Accordion sx={{ 
+      <Accordion sx={{
             borderRadius: '8px',
-            borderLeft: '4px solid #1976d2'
+            borderLeft: '4px solid #1976d2',
+            '&:before': { display: 'none' },
           }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box display="flex" alignItems="center" gap={2}>
@@ -130,10 +107,10 @@ const PagamentoAccordion = ({ data }) => {
                       <IconButton 
                         size="small"
                         onClick={() => handleCopy(account.nib)}
-                        title="Copiar NIB"
+                        aria-label={`Copiar NIB de ${account.bank}`}
                         sx={{ ml: 1 }}
                       >
-                        <ContentCopyIcon fontSize="small" />
+                        {copied === account.nib ? <CheckCircleIcon color="success" fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
                       </IconButton>
                     </Box>
                   </Box>
@@ -163,10 +140,10 @@ const PagamentoAccordion = ({ data }) => {
                       <IconButton 
                         size="small"
                         onClick={() => handleCopy(account.account)}
-                        title="Copiar Conta"
+                        aria-label={`Copiar número de conta de ${account.bank}`}
                         sx={{ ml: 1 }}
                       >
-                        <ContentCopyIcon fontSize="small" />
+                        {copied === account.account ? <CheckCircleIcon color="success" fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
                       </IconButton>
                     </Box>
                   </Box>
@@ -225,8 +202,8 @@ const PagamentoAccordion = ({ data }) => {
                   <IconButton 
                     size="small"
                     onClick={() => handleCopy('comercial@connectionmozambique.com')}
-                    title="Copiar email">
-                    <ContentCopyIcon fontSize="small" />
+                    aria-label="Copiar email comercial">
+                    {copied === 'comercial@connectionmozambique.com' ? <CheckCircleIcon color="success" fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
                   </IconButton>
                 </Box>
                 <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
@@ -261,22 +238,7 @@ const PagamentoAccordion = ({ data }) => {
                 </Box>
               </Box>
             </AccordionDetails>
-          </Accordion>
-        </AccordionDetails>
       </Accordion>
-      <Dialog 
-        open={open} 
-        onClose={handleCloseModal} 
-        fullWidth 
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            borderRadius: '16px',
-            overflow: 'hidden'
-          }
-        }}>
-      </Dialog>
-    </>
   );
 };
 

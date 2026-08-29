@@ -17,26 +17,19 @@ import {
   useTheme,
   Chip,
   Card,
-  CardContent,
   Grid,
   Divider,
   Button,
   Tabs,
   Tab,
-  Link,
-  Rating,
-  Breadcrumbs,
   Paper,
   Stack,
   Fab,
   Container,
   Fade,
-  Grow,
   Zoom,
-  Skeleton,
   Alert,
   Tooltip,
-  Badge,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -46,7 +39,6 @@ import {
   InputLabel,
   Select,
   InputAdornment,
-  FormHelperText,
   Autocomplete,
   Snackbar
 } from '@mui/material';
@@ -63,27 +55,12 @@ import {
   WhatsApp,
   LocalShipping,
   AssignmentReturn,
-  Payment,
-  Favorite,
-  FavoriteBorder,
-  Star,
-  StarHalf,
-  StarBorder,
-  NavigateNext,
-  Home,
-  Groups,
-  CalendarMonth,
-  ThumbUp,
   Public,
   Language,
   Verified,
-  Security,
   Info,
   ArrowBack,
-  CheckCircle,
   Schedule,
-  Map,
-  CreditCard,
   Telegram,
   LinkedIn,
   RequestQuote,
@@ -205,7 +182,6 @@ const StoreDetailDesk = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [shareAnchorEl, setShareAnchorEl] = useState(null);
     const [activeTab, setActiveTab] = useState(0);
-    const [isFavorite, setIsFavorite] = useState(false);
     const [showBackToTop, setShowBackToTop] = useState(false);
     const [openQuoteDialog, setOpenQuoteDialog] = useState(false);
     const [productOptions, setProductOptions] = useState([]);
@@ -234,7 +210,6 @@ const StoreDetailDesk = ({ user }) => {
     const [quoteFeedback, setQuoteFeedback] = useState({ open: false, message: '', severity: 'success' });
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
     useEffect(() => {
         const fetchStoreDetails = async () => {
@@ -333,23 +308,6 @@ const StoreDetailDesk = ({ user }) => {
         setActiveTab(newValue);
     };
 
-    const toggleFavorite = () => {
-        setIsFavorite(!isFavorite);
-        const favorites = JSON.parse(localStorage.getItem('storeFavorites') || '[]');
-        if (!isFavorite) {
-            favorites.push(storeId);
-        } else {
-            const index = favorites.indexOf(storeId);
-            if (index > -1) favorites.splice(index, 1);
-        }
-        localStorage.setItem('storeFavorites', JSON.stringify(favorites));
-    };
-
-    useEffect(() => {
-        const favorites = JSON.parse(localStorage.getItem('storeFavorites') || '[]');
-        setIsFavorite(favorites.includes(storeId));
-    }, [storeId]);
-
     const shareOnPlatform = (platform) => {
         if (!store) return;
         
@@ -434,6 +392,11 @@ const StoreDetailDesk = ({ user }) => {
 
     // Abrir modal de cotação
     const handleOpenQuoteDialog = () => {
+        if (!auth.currentUser) {
+            navigate('/auth', { state: { from: `/loja/${storeId}` } });
+            return;
+        }
+
         setQuoteItems([
             {
                 id: Date.now(),
@@ -491,6 +454,11 @@ const StoreDetailDesk = ({ user }) => {
 
         try {
             const currentUser = auth.currentUser;
+            if (!currentUser) {
+                setQuoteError('Inicie sessão para enviar o pedido de cotação.');
+                navigate('/auth', { state: { from: `/loja/${storeId}` } });
+                return;
+            }
             const quoteId = push(ref(db, 'quotes')).key;
             
             // Preparar dados dos itens
@@ -511,7 +479,7 @@ const StoreDetailDesk = ({ user }) => {
                 storeEmail: store.email,
                 
                 // Dados do cliente
-                customerId: currentUser?.uid || null,
+                customerId: currentUser.uid,
                 customerName: currentUser?.displayName || null,
                 customerEmail: customerEmail || currentUser?.email || null,
                 customerContact: customerContact || null,
@@ -569,11 +537,6 @@ const StoreDetailDesk = ({ user }) => {
         } finally {
             setQuoteSubmitting(false);
         }
-    };
-
-    const formatTime = (time) => {
-        if (!time) return '--:--';
-        return time;
     };
 
     const isStoreOpen = () => {

@@ -328,9 +328,19 @@ const PagamentoModulo = () => {
               </Button>
             </Box>
           ) : (
-            <Alert severity="success" sx={{ width: '100%' }}>
-              {t('payment.success')}
-            </Alert>
+            <Box sx={{ width: '100%' }}>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {t('payment.success')}
+              </Alert>
+              <Button
+                variant="contained"
+                size="large"
+                fullWidth
+                onClick={() => navigate(moduleKey === 'moduloMarket' ? '/market' : '/app')}
+              >
+                {t('payment.continue')}
+              </Button>
+            </Box>
           )}
         </CardActions>
       </Card>

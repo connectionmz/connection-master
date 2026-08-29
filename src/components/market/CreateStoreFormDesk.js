@@ -9,7 +9,6 @@ import {
   TextField,
   Typography,
   Alert,
-  IconButton,
   FormControlLabel,
   Checkbox,
   FormGroup,
@@ -18,28 +17,22 @@ import {
   Paper,
   Avatar,
   Divider,
-  Stack,
-  Chip,
   InputAdornment,
-  useMediaQuery,
-  useTheme,
   Fade,
   Zoom
 } from '@mui/material';
 import { 
-  PhotoCamera, 
   Info, 
   Storefront, 
-  Payment, 
   CheckCircle,
   Upload,
   Business,
   Description,
   LocationOn,
-  AttachMoney,
-  Warning,
   ArrowForward
 } from '@mui/icons-material';
+
+const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -120,10 +113,7 @@ const KEYFRAMES = `
   }
 `;
 
-const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+const CreateStoreFormDesk = ({ storeId, user }) => {
   const [store, setStore] = useState({
     name: '',
     description: '',
@@ -171,28 +161,25 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setLogoFile(file);
-      setStore({
-        ...store,
-        company: {
-          ...store.company,
-          logo: URL.createObjectURL(file),
-        },
-      });
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Selecione um ficheiro de imagem válido.');
+      return;
     }
-  };
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      setError('O logótipo deve ter no máximo 5 MB.');
+      return;
+    }
 
-  const handlePayment = async () => {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setProgress(50);
-      return true;
-    } catch (error) {
-      setError('A transação falhou. Por favor, tente novamente.');
-      console.error('Erro no pagamento:', error.message);
-      return false;
-    }
+    setError(null);
+    setLogoFile(file);
+    setStore((currentStore) => ({
+      ...currentStore,
+      company: {
+        ...currentStore.company,
+        logo: URL.createObjectURL(file),
+      },
+    }));
   };
 
   const createStore = async () => {
@@ -213,69 +200,53 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
       return;
     }
 
+    if (!store.name.trim()) {
+      setError('Indique o nome da loja.');
+      setIsLoading(false);
+      setStep(1);
+      return;
+    }
+
     try {
       setProgress(10);
-      const paymentSuccessful = await handlePayment();
-
-      if (!paymentSuccessful) {
-        setProgress(0);
-        return;
-      }
 
       let logoUrl = store.company.logo;
       if (logoFile) {
         setProgress(30);
         const logoStorageRef = storageRef(storage, `store-logos/${storeId}/${logoFile.name}`);
-        const uploadTask = uploadBytes(logoStorageRef, logoFile);
-
-        uploadTask.then(async (snapshot) => {
-          setProgress(60);
-          logoUrl = await getDownloadURL(snapshot.ref);
-
-          setProgress(80);
-          const storeRef = dbRef(db, `stores/${storeId}`);
-          await set(storeRef, {
-            ...store,
-            company: {
-              ...store.company,
-              logo: logoUrl,
-            },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-
-          setProgress(100);
-          setStep(3);
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
-        }).catch(error => {
-          setError('Erro ao fazer upload do logo.');
-          console.error('Erro no upload:', error);
-        });
-      } else {
+        const snapshot = await uploadBytes(logoStorageRef, logoFile);
         setProgress(60);
-        const storeRef = dbRef(db, `stores/${storeId}`);
-        await set(storeRef, {
-          ...store,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-
-        setProgress(100);
-        setStep(3);
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        logoUrl = await getDownloadURL(snapshot.ref);
       }
+
+      setProgress(80);
+      const now = new Date().toISOString();
+      const storeRef = dbRef(db, `stores/${storeId}`);
+      await set(storeRef, {
+        ...store,
+        name: store.name.trim(),
+        description: store.description.trim(),
+        ownerId: user.id,
+        company: {
+          ...store.company,
+          id: user.id,
+          email: user.email || store.company.email || '',
+          logo: logoUrl,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      setProgress(100);
+      setStep(3);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       setError('Erro ao criar a loja. Por favor, tente novamente.');
       console.error('Erro:', error);
     } finally {
-      if (error) {
-        setIsLoading(false);
-        setProgress(0);
-      }
+      setIsLoading(false);
     }
   };
 
@@ -322,7 +293,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
           </Typography>
         </Box>
 
-        {/* Alert de preço */}
+        {/* Estado da subscrição */}
         <Paper
           className="animate-fade-up delay-1"
           elevation={0}
@@ -335,14 +306,13 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
           }}
         >
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-            <AttachMoney sx={{ color: T.gold, fontSize: 32 }} />
+            <CheckCircle sx={{ color: T.success, fontSize: 32 }} />
             <Box>
               <Typography sx={{ fontWeight: 600, color: T.text, mb: 0.5 }}>
-                Subscrição única de <strong style={{ color: T.gold }}>{planPrice} MT</strong>
+                Módulo Market ativo
               </Typography>
               <Typography variant="body2" sx={{ color: T.textSub }}>
-                Este valor é pago apenas uma vez e garante acesso vitalício à sua loja online,
-                incluindo gestão de produtos, pedidos e muito mais.
+                O pagamento e a ativação já foram confirmados. Complete agora os dados da sua loja.
               </Typography>
             </Box>
           </Box>
@@ -353,7 +323,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             {[
               { step: 1, label: 'Dados da Loja', icon: <Business sx={{ fontSize: 16 }} /> },
-              { step: 2, label: 'Pagamento', icon: <Payment sx={{ fontSize: 16 }} /> },
+              { step: 2, label: 'Criação', icon: <Storefront sx={{ fontSize: 16 }} /> },
               { step: 3, label: 'Confirmação', icon: <CheckCircle sx={{ fontSize: 16 }} /> },
             ].map((item) => (
               <Box key={item.step} sx={{ textAlign: 'center', flex: 1 }}>
@@ -654,7 +624,7 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
                     fontSize: '1rem',
                   }}
                 >
-                  {isLoading ? `Processando...` : 'Continuar para Pagamento'}
+                  {isLoading ? 'A criar loja...' : 'Criar loja'}
                 </Button>
               </Box>
             </Zoom>
@@ -673,13 +643,13 @@ const CreateStoreFormDesk = ({ storeId, planPrice = 800, user }) => {
                     mb: 2,
                   }}
                 >
-                  <Payment sx={{ fontSize: 40 }} />
+                  <Storefront sx={{ fontSize: 40 }} />
                 </Avatar>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: T.text, mb: 1 }}>
-                  Processando Pagamento
+                  A criar a sua loja
                 </Typography>
                 <Typography sx={{ color: T.textSub, mb: 3 }}>
-                  Aguarde enquanto processamos seu pagamento de <strong>{planPrice} MT</strong>
+                  Aguarde enquanto guardamos os dados e preparamos o espaço da loja.
                 </Typography>
                 <CircularProgress size={48} sx={{ color: T.gold }} />
               </Box>

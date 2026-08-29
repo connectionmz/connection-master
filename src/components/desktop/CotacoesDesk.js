@@ -66,7 +66,7 @@ import {
     Inventory,
     Description
 } from '@mui/icons-material';
-import { ref, onValue, update, remove, set, get } from 'firebase/database';
+import { ref, onValue, update, remove, set, get, push } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../fb';
 import EditarCotacao from './EditarCotacao'; 
@@ -394,6 +394,9 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                 quote: responseQuote,
                 form: responseForm,
                 responderId: auth.currentUser.uid,
+                notificationId: responseQuote.customerId
+                    ? push(ref(db, `notifications/${responseQuote.customerId}`)).key
+                    : null,
             });
 
             await update(ref(db), responseUpdates);

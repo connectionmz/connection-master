@@ -38,11 +38,9 @@ import {
   Alert,
   Avatar,
   Fade,
-  Zoom,
   Tooltip,
   Breadcrumbs,
   Link,
-  Rating,
   Skeleton,
   Badge,
   Table,
@@ -56,9 +54,7 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   ShoppingCart as ShoppingCartIcon,
-  Mouse as MouseIcon,
   Category as CategoryIcon,
-  Event as EventIcon,
   Update as UpdateIcon,
   LocalShipping as LocalShippingIcon,
   BarChart as BarChartIcon,
@@ -70,12 +66,7 @@ import {
   Straighten as StraightenIcon,
   Storefront as StoreIcon,
   TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Star as StarIcon,
-  StarBorder as StarBorderIcon,
   CalendarToday as CalendarIcon,
-  Schedule as ScheduleIcon,
-  Verified as VerifiedIcon,
   ArrowBack as ArrowBackIcon,
   ContentCopy as CopyIcon,
   CheckCircle as CheckCircleIcon,
@@ -84,7 +75,6 @@ import {
 import { ref as storageRef, getDownloadURL, uploadBytes, deleteObject } from "firebase/storage";
 import { NumericFormat } from "react-number-format";
 import { formatPrice } from "../../utils/utils";
-import BackButton from "../BackButton";
 import { normalizeProduct, validateProduct } from './productData';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
@@ -174,7 +164,6 @@ const ProductPage = ({ user }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -190,11 +179,6 @@ const ProductPage = ({ user }) => {
     open: false,
     message: "",
     severity: "success"
-  });
-  const [salesData, setSalesData] = useState({
-    daily: [120, 85, 95, 110, 130, 145, 168],
-    weekly: [450, 520, 580, 490, 610],
-    monthly: [1850, 2100, 2350, 2800],
   });
 
   const showSnackbar = (message, severity = "success") => {
@@ -1130,7 +1114,6 @@ const ProductPage = ({ user }) => {
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
                 error={!!errors["name"]}
                 helperText={errors["name"] || "Ex: Camiseta Branca ou Consultoria de Marketing"}
                 size={isMobile ? "small" : "medium"}
@@ -1138,6 +1121,7 @@ const ProductPage = ({ user }) => {
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1157,7 +1141,6 @@ const ProductPage = ({ user }) => {
                 customInput={TextField}
                 fullWidth
                 label="Preço (MZN) *"
-                sx={{ mb: 2 }}
                 InputProps={{
                   startAdornment: <InputAdornment position="start">MZN</InputAdornment>,
                 }}
@@ -1168,6 +1151,7 @@ const ProductPage = ({ user }) => {
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1181,12 +1165,12 @@ const ProductPage = ({ user }) => {
                 value={formData.category}
                 onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
                 fullWidth
-                sx={{ mb: 2 }}
                 helperText="Ex: Roupas, Eletrônicos, Serviços"
                 size={isMobile ? "small" : "medium"}
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1202,12 +1186,12 @@ const ProductPage = ({ user }) => {
                 multiline
                 rows={isMobile ? 3 : 4}
                 fullWidth
-                sx={{ mb: 2 }}
                 helperText="Detalhes atrativos para o cliente"
                 size={isMobile ? "small" : "medium"}
                 disabled={saving}
                 InputLabelProps={{ sx: { color: T.textSub } }}
                 sx={{
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     '&:hover fieldset': { borderColor: T.gold },
@@ -1225,7 +1209,6 @@ const ProductPage = ({ user }) => {
                     customInput={TextField}
                     fullWidth
                     label="Quantidade *"
-                    sx={{ mb: 2 }}
                     error={!!errors["qtd"]}
                     helperText={errors["qtd"] || "Estoque disponível"}
                     size={isMobile ? "small" : "medium"}
@@ -1233,6 +1216,7 @@ const ProductPage = ({ user }) => {
                     disabled={saving}
                     InputLabelProps={{ sx: { color: T.textSub } }}
                     sx={{
+                      mb: 2,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '12px',
                         '&:hover fieldset': { borderColor: T.gold },
@@ -1246,12 +1230,12 @@ const ProductPage = ({ user }) => {
                     value={formData.sku}
                     onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
                     fullWidth
-                    sx={{ mb: 2 }}
                     helperText="Código interno (ex: CAM-BRANCO-M)"
                     size={isMobile ? "small" : "medium"}
                     disabled={saving}
                     InputLabelProps={{ sx: { color: T.textSub } }}
                     sx={{
+                      mb: 2,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '12px',
                         '&:hover fieldset': { borderColor: T.gold },
@@ -1392,12 +1376,12 @@ const ProductPage = ({ user }) => {
                   value={formData.sku}
                   onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
                   fullWidth
-                  sx={{ mb: 2 }}
                   helperText="Código opcional para serviços"
                   size={isMobile ? "small" : "medium"}
                   disabled={saving}
                   InputLabelProps={{ sx: { color: T.textSub } }}
                   sx={{
+                    mb: 2,
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
                       '&:hover fieldset': { borderColor: T.gold },

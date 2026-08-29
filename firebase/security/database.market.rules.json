@@ -1,0 +1,67 @@
+{
+  "rules": {
+    "stores": {
+      "$storeId": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === $storeId"
+      }
+    },
+    "quotes": {
+      "$storeId": {
+        ".read": "auth != null && auth.uid === $storeId",
+        "$quoteId": {
+          ".write": "auth != null && newData.exists() && ((!data.exists() && auth.uid === newData.child('customerId').val() && newData.child('storeId').val() === $storeId) || (data.exists() && auth.uid === $storeId))",
+          ".validate": "newData.hasChildren(['id', 'storeId', 'customerId', 'items', 'status', 'createdAt', 'updatedAt'])",
+          "id": { ".validate": "newData.isString() && newData.val() === $quoteId" },
+          "storeId": { ".validate": "newData.isString() && newData.val() === $storeId && (!data.exists() || newData.val() === data.val())" },
+          "customerId": { ".validate": "newData.isString() && (!data.exists() || newData.val() === data.val())" },
+          "items": { ".validate": "newData.hasChildren() && (!data.exists() || newData.val() === data.val())" },
+          "createdAt": { ".validate": "newData.isString() && (!data.exists() || newData.val() === data.val())" },
+          "status": { ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'answered' || newData.val() === 'expired' || newData.val() === 'cancelled' || newData.val() === 'accepted' || newData.val() === 'rejected' || newData.val() === 'revision_requested')" },
+          "responded": { ".validate": "newData.isBoolean()" },
+          "viewed": { ".validate": "newData.isBoolean()" },
+          "$other": { ".validate": true }
+        }
+      }
+    },
+    "user_quotes": {
+      "$userId": {
+        ".read": "auth != null && auth.uid === $userId",
+        "$quoteId": {
+          ".write": "auth != null && newData.exists() && ((!data.exists() && auth.uid === $userId && newData.child('customerId').val() === $userId) || (data.exists() && auth.uid === data.child('storeId').val()))",
+          ".validate": "newData.hasChildren(['id', 'storeId', 'customerId', 'items', 'status', 'createdAt', 'updatedAt'])",
+          "id": { ".validate": "newData.isString() && newData.val() === $quoteId" },
+          "storeId": { ".validate": "newData.isString() && (!data.exists() || newData.val() === data.val())" },
+          "customerId": { ".validate": "newData.isString() && newData.val() === $userId && (!data.exists() || newData.val() === data.val())" },
+          "items": { ".validate": "newData.hasChildren() && (!data.exists() || newData.val() === data.val())" },
+          "createdAt": { ".validate": "newData.isString() && (!data.exists() || newData.val() === data.val())" },
+          "status": { ".validate": "newData.isString() && (newData.val() === 'pending' || newData.val() === 'answered' || newData.val() === 'expired' || newData.val() === 'cancelled' || newData.val() === 'accepted' || newData.val() === 'rejected' || newData.val() === 'revision_requested')" },
+          "responded": { ".validate": "newData.isBoolean()" },
+          "viewed": { ".validate": "newData.isBoolean()" },
+          "$other": { ".validate": true }
+        }
+      }
+    },
+    "loja_metrics": {
+      "$storeId": {
+        ".read": "auth != null && auth.uid === $storeId",
+        "total_cliques": { ".write": "newData.isNumber() && newData.val() === (data.exists() ? data.val() + 1 : 1)" },
+        "ultimo_clique": { ".write": "newData.isNumber() && newData.val() <= now && newData.val() >= now - 60000" },
+        "from": { ".write": "newData.isString() && newData.val() === 'Mercado'" },
+        "$other": { ".validate": false }
+      }
+    },
+    "market_metrics": {
+      "products": {
+        "$storeId": {
+          ".read": "auth != null && auth.uid === $storeId",
+          "$productId": {
+            "views": { ".write": "newData.isNumber() && newData.val() === (data.exists() ? data.val() + 1 : 1)" },
+            "clicks": { ".write": "newData.isNumber() && newData.val() === (data.exists() ? data.val() + 1 : 1)" },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}

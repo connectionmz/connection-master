@@ -1,19 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { onValue, ref } from 'firebase/database';
+import { onValue, push, ref, update } from 'firebase/database';
 import {
   Alert, Box, Button, Card, CardContent, Chip, CircularProgress,
-  Container, Divider, Link, Stack, Typography,
+  Container, Dialog, DialogActions, DialogContent, DialogTitle, Divider,
+  Link, Stack, TextField, Typography,
 } from '@mui/material';
-import { Email, Phone, ReceiptLong, Storefront } from '@mui/icons-material';
+import { Check, Close, Email, Phone, RateReview, ReceiptLong, Storefront } from '@mui/icons-material';
 import { db } from '../../fb';
 import { useLanguage } from '../../context/LanguageContext';
+import { buildCustomerDecisionUpdates } from '../market/quoteResponse';
 
 const STATUS_COLORS = {
   pending: 'warning',
   answered: 'success',
   expired: 'default',
   cancelled: 'default',
+  accepted: 'success',
+  rejected: 'error',
+  revision_requested: 'info',
 };
 
 const SentStoreQuotesDesk = ({ userId }) => {
@@ -21,6 +26,9 @@ const SentStoreQuotesDesk = ({ userId }) => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [decisionDialog, setDecisionDialog] = useState({ open: false, quote: null, type: '', note: '' });
+  const [decisionSubmitting, setDecisionSubmitting] = useState(false);
+  const [decisionError, setDecisionError] = useState('');
 
   useEffect(() => {
     if (!userId) {
@@ -43,6 +51,21 @@ const SentStoreQuotesDesk = ({ userId }) => {
     return unsubscribe;
   }, [userId, t]);
 
+  useEffect(() => {
+    const unseenResponses = quotes.filter(quote => quote.response && quote.customerViewed === false);
+    if (!userId || unseenResponses.length === 0) return;
+
+    const viewedAt = new Date().toISOString();
+    const viewedUpdates = {};
+    unseenResponses.forEach((quote) => {
+      viewedUpdates[`user_quotes/${userId}/${quote.id}/customerViewed`] = true;
+      viewedUpdates[`user_quotes/${userId}/${quote.id}/customerViewedAt`] = viewedAt;
+      viewedUpdates[`quotes/${quote.storeId}/${quote.id}/customerViewed`] = true;
+      viewedUpdates[`quotes/${quote.storeId}/${quote.id}/customerViewedAt`] = viewedAt;
+    });
+    update(ref(db), viewedUpdates).catch(() => undefined);
+  }, [quotes, userId]);
+
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(
     language === 'en' ? 'en-GB' : 'pt-PT',
     { dateStyle: 'medium', timeStyle: 'short' },
@@ -51,6 +74,34 @@ const SentStoreQuotesDesk = ({ userId }) => {
     language === 'en' ? 'en-GB' : 'pt-PT',
     { style: 'currency', currency: 'MZN', maximumFractionDigits: 2 },
   ), [language]);
+
+  const openDecision = (quote, type) => {
+    setDecisionError('');
+    setDecisionDialog({ open: true, quote, type, note: '' });
+  };
+
+  const submitDecision = async () => {
+    try {
+      setDecisionSubmitting(true);
+      setDecisionError('');
+      const notificationId = push(ref(db, `notifications/${decisionDialog.quote.storeId}`)).key;
+      const updates = buildCustomerDecisionUpdates({
+        quote: decisionDialog.quote,
+        customerId: userId,
+        decision: decisionDialog.type,
+        note: decisionDialog.note,
+        notificationId,
+      });
+      await update(ref(db), updates);
+      setDecisionDialog({ open: false, quote: null, type: '', note: '' });
+    } catch (decisionFailure) {
+      setDecisionError(decisionFailure.message === 'Revision note is required'
+        ? t('market.sentQuotes.revisionRequired')
+        : t('market.sentQuotes.decisionError'));
+    } finally {
+      setDecisionSubmitting(false);
+    }
+  };
 
   if (loading) {
     return <Box sx={{ minHeight: '50vh', display: 'grid', placeItems: 'center' }}><CircularProgress /></Box>;
@@ -133,6 +184,20 @@ const SentStoreQuotesDesk = ({ userId }) => {
                   </Alert>
                 )}
 
+                {quote.response && ['answered', 'revision_requested'].includes(quote.status) && (
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 2 }}>
+                    <Button variant="contained" color="success" startIcon={<Check />} onClick={() => openDecision(quote, 'accepted')}>
+                      {t('market.sentQuotes.accept')}
+                    </Button>
+                    <Button variant="outlined" startIcon={<RateReview />} onClick={() => openDecision(quote, 'revision_requested')}>
+                      {t('market.sentQuotes.requestRevision')}
+                    </Button>
+                    <Button variant="text" color="error" startIcon={<Close />} onClick={() => openDecision(quote, 'rejected')}>
+                      {t('market.sentQuotes.reject')}
+                    </Button>
+                  </Stack>
+                )}
+
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 3 }}>
                   {quote.storeContact && (
                     <Button component="a" href={`tel:${quote.storeContact}`} startIcon={<Phone />} variant="outlined">
@@ -153,6 +218,25 @@ const SentStoreQuotesDesk = ({ userId }) => {
           ))}
         </Stack>
       )}
+
+      <Dialog open={decisionDialog.open} onClose={() => !decisionSubmitting && setDecisionDialog({ open: false, quote: null, type: '', note: '' })} fullWidth maxWidth="sm">
+        <DialogTitle>{t(`market.sentQuotes.decision.${decisionDialog.type}`)}</DialogTitle>
+        <DialogContent>
+          {decisionError && <Alert severity="error" sx={{ mb: 2 }}>{decisionError}</Alert>}
+          <TextField
+            fullWidth multiline minRows={3}
+            required={decisionDialog.type === 'revision_requested'}
+            label={t('market.sentQuotes.decisionNote')}
+            value={decisionDialog.note}
+            onChange={(event) => setDecisionDialog(current => ({ ...current, note: event.target.value }))}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={decisionSubmitting} onClick={() => setDecisionDialog({ open: false, quote: null, type: '', note: '' })}>{t('common.cancel', 'Cancelar')}</Button>
+          <Button variant="contained" disabled={decisionSubmitting} onClick={submitDecision}>{t('common.confirm', 'Confirmar')}</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
