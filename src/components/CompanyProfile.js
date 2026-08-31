@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, Logout, Edit, CameraAlt, Language, Store, RequestQuote, Message, Phone } from "@mui/icons-material";
+import VerifiedRounded from "@mui/icons-material/VerifiedRounded";
+import MoreHoriz from "@mui/icons-material/MoreHoriz";
+import Twitter from "@mui/icons-material/Twitter";
+import Instagram from "@mui/icons-material/Instagram";
+import LinkedIn from "@mui/icons-material/LinkedIn";
+import Edit from "@mui/icons-material/Edit";
+import CameraAlt from "@mui/icons-material/CameraAlt";
+import Language from "@mui/icons-material/Language";
+import Store from "@mui/icons-material/Store";
+import RequestQuote from "@mui/icons-material/RequestQuote";
+import Message from "@mui/icons-material/Message";
+import Phone from "@mui/icons-material/Phone";
+import Logout from "@mui/icons-material/Logout";
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push } from 'firebase/database'; 
 import { auth, db } from '../fb'; 

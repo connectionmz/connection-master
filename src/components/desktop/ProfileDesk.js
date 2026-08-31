@@ -23,7 +23,8 @@ import {
 } from "@mui/material";
 import VetrineDesk from './VetrineDesk';
 import { readAndCompressImage } from 'browser-image-resizer';
-import { LinkIcon, Share, MapPin, Phone, Mail, Award, Target, Eye, Users, Clock, CheckCircle, Star } from 'lucide-react';
+import { LinkIcon, Share, MapPin, Phone, Mail, Award, Target, Eye, Users, Clock, CheckCircle } from 'lucide-react';
+import Star from 'lucide-react/icons/star';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 

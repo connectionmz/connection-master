@@ -75,7 +75,10 @@ const ProtectedRoute = ({
           <Button variant="contained" color="primary" onClick={() => navigate('/app')}>
             Ver Módulos Disponíveis
           </Button>
-          <Button variant="outlined" onClick={() => navigate(`/pagar/${requiredModule}`)}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate(`/pagar/${requiredModule}`, { state: { from: location } })}
+          >
             Adquirir Módulo
           </Button>
         </Box>

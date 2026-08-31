@@ -17,6 +17,7 @@ import Profile from '../Profile';
 import Apx from '../Apx';
 import Faturacao from '../Faturacao';
 import Feed from '../Feed';
+import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import Stores from '../Stores';
 import StoreDetails from '../StoreDetails';
 import CotacoesPDF from '../pdf/CotacoesPDF';
@@ -32,8 +33,6 @@ import Analytics from '../Analytics';
 import Fatura from '../pdf/Fatura';
 import ProductForm from '../market/ProductForm';
 import PublicarConcurso from '../PublicarConcurso';
-import Teste from '../Teste';
-import Anunciar from '../Anunciar';
 import Propostas from '../Propostas';
 import DetalhesProposta from '../DetalhesProposta';
 import ConcursoDetalhes from '../ConcursoDetalhes';
@@ -102,7 +101,6 @@ const UserRoutes = ({ user }) => {
       {/* Campanha e Posts */}
       <Route path="/campaign" element={<Campaign />} />
       <Route path="/post" element={<PostInput user={user?.id} />} />
-      <Route path="/anunciar" element={<Anunciar user={user} />} />
 
       {/* Perfil */}
       <Route path="/profile" element={<Profile />} />
@@ -120,13 +118,14 @@ const UserRoutes = ({ user }) => {
       <Route path="/logistica" element={<LogisticaModule />} />
       <Route path="/inqueritos" element={<InqueritosModule user={user} />} />
       <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
+      <Route path="/pagar/:moduleKey" element={<PagamentoModulo user={user} />} />
 
       {/* Outros */}
       <Route path="/search" element={<ConnectionsSearch />} />
       <Route path="/empresas" element={<Explore user={user} />} />
-      <Route path="/feed" element={<Feed />} />
+      <Route path="/feed" element={<Feed user={user} />} />
+      <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
       <Route path="/apx" element={<Apx user={user} />} />
-      <Route path="/rfq" element={<Teste />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/inbox" element={<Inbox />} />
       <Route path="/analytics" element={<Analytics />} />

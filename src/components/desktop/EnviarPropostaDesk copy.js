@@ -23,7 +23,6 @@ import 'react-quill/dist/quill.snow.css';
 import { db } from '../../fb';
 import { useNavigate, useParams } from 'react-router-dom';
 import BackButton from '../BackButton';
-import sendEmail from '../sms/SendMail';
 import { saveContentToInbox } from '../SaveToInbox';
 import { CheckCircle } from '@mui/icons-material';
 import sendEmailProposta from '../sms/SendMailProposal';

@@ -272,6 +272,7 @@ const testEmailService = async () => {
 };
 
 export { 
+  sendEmailWithAuth,
   sendEmail, 
   SendMailProforma, 
   sendEmailConcurso, 

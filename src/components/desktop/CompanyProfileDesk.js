@@ -1,12 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, 
-  Logout, Edit, CameraAlt, Language, Store, RequestQuote, 
-  Message, Phone, WhatsApp, Facebook, Email, Report, Block, LockOpen,
-  LinkOff, Code, Article, Info, Home, X, LocationOn, 
-  Business, Work, CalendarToday, RemoveRedEye, People,
-  CheckCircle, Warning, Close, Share
-} from "@mui/icons-material";
+import VerifiedRounded from "@mui/icons-material/VerifiedRounded";
+import MoreHoriz from "@mui/icons-material/MoreHoriz";
+import Twitter from "@mui/icons-material/Twitter";
+import Instagram from "@mui/icons-material/Instagram";
+import LinkedIn from "@mui/icons-material/LinkedIn";
+import Edit from "@mui/icons-material/Edit";
+import CameraAlt from "@mui/icons-material/CameraAlt";
+import Language from "@mui/icons-material/Language";
+import Store from "@mui/icons-material/Store";
+import RequestQuote from "@mui/icons-material/RequestQuote";
+import Message from "@mui/icons-material/Message";
+import Phone from "@mui/icons-material/Phone";
+import WhatsApp from "@mui/icons-material/WhatsApp";
+import Facebook from "@mui/icons-material/Facebook";
+import Email from "@mui/icons-material/Email";
+import Report from "@mui/icons-material/Report";
+import Block from "@mui/icons-material/Block";
+import LockOpen from "@mui/icons-material/LockOpen";
+import LinkOff from "@mui/icons-material/LinkOff";
+import Code from "@mui/icons-material/Code";
+import Article from "@mui/icons-material/Article";
+import Info from "@mui/icons-material/Info";
+import Home from "@mui/icons-material/Home";
+import X from "@mui/icons-material/X";
+import LocationOn from "@mui/icons-material/LocationOn";
+import Business from "@mui/icons-material/Business";
+import Work from "@mui/icons-material/Work";
+import CalendarToday from "@mui/icons-material/CalendarToday";
+import RemoveRedEye from "@mui/icons-material/RemoveRedEye";
+import People from "@mui/icons-material/People";
+import CheckCircle from "@mui/icons-material/CheckCircle";
+import Warning from "@mui/icons-material/Warning";
+import Close from "@mui/icons-material/Close";
+import Share from "@mui/icons-material/Share";
+import Logout from "@mui/icons-material/Logout";
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push, set, onValue, remove, query, orderByChild, equalTo } from 'firebase/database';
 import { auth, db } from '../../fb';

@@ -40,6 +40,7 @@ import SelectAccountType from '../SelectAccountType';
 import Dashboard from '../Dashboard';
 import SearchResultsPage from '../SearchResultsPage';
 import Feed from '../Feed';
+import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import ProtectedRoute from '../ProtectedRoute';
 import DesktopLayout from '../layout/DesktopLayout';
 import LegacyProductRedirect from './LegacyProductRedirect';
@@ -76,7 +77,8 @@ const DesktopRoutes = ({ user, authUser, profileLoading }) => {
               <Route path="/explorar" element={<ExploreDesk user={user} />} />
               <Route path="/empresa/:id" element={<CompanyProfileDesk user={user} />} />
               <Route path="/sobre" element={<Sobre />} />
-              <Route path="/feed" element={<Feed />} />
+              <Route path="/feed" element={<Feed user={user} />} />
+              <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
               <Route path="/produto/:id/loja/:loja" element={<LegacyProductRedirect />} />
               <Route path="/lojas" element={<StoresDesk user={user} />} />
               <Route path="/loja/:storeId" element={<StoreDetailDesk user={user} />} />

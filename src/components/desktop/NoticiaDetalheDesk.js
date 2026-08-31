@@ -32,22 +32,20 @@ import {
   Link
 } from '@mui/material';
 
-import {
-  Delete as DeleteIcon,
-  Share as ShareIcon,
-  ThumbUp as ThumbUpIcon,
-  Report as ReportIcon,
-  ThumbUpOutlined as ThumbUpOutlinedIcon,
-  ShareOutlined as ShareOutlinedIcon,
-  FlagOutlined as FlagOutlinedIcon,
-  Send as SendIcon,
-  Edit as EditIcon,
-  MoreVert as MoreVertIcon,
-  Close as CloseIcon,
-  Check as CheckIcon,
-  PictureAsPdf as PdfIcon,
-  InsertDriveFile as FileIcon
-} from '@mui/icons-material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ShareIcon from '@mui/icons-material/Share';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ReportIcon from '@mui/icons-material/Report';
+import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
+import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
+import SendIcon from '@mui/icons-material/Send';
+import EditIcon from '@mui/icons-material/Edit';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
+import PdfIcon from '@mui/icons-material/PictureAsPdf';
+import FileIcon from '@mui/icons-material/InsertDriveFile';
 import ReplyIcon from '@mui/icons-material/Reply';
 import BackButton from '../BackButton';
 import { formatDistanceToNow } from 'date-fns';
