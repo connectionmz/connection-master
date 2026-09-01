@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { db } from '../../fb';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { db, storage } from '../../fb';
 import { ref, onValue, push, set, remove, update, get } from 'firebase/database';
+import { deleteObject, ref as storageRef } from 'firebase/storage';
 import {
   Box,
   Button,
@@ -30,58 +31,56 @@ import {
   useTheme,
   Paper,
   Fade,
-  Chip,
   Container,
 } from '@mui/material';
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShareIcon from '@mui/icons-material/Share';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import ReportIcon from '@mui/icons-material/Report';
 import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import SendIcon from '@mui/icons-material/Send';
 import EditIcon from '@mui/icons-material/Edit';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CloseIcon from '@mui/icons-material/Close';
-import CheckIcon from '@mui/icons-material/Check';
 import ReplyIcon from '@mui/icons-material/Reply';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import WarningIcon from '@mui/icons-material/Warning';
 import BackButton from '../BackButton';
 import { formatDistanceToNow } from 'date-fns';
-import { pt } from 'date-fns/locale';
-import { formatDateTime } from '../../utils/utils';
+import { enGB, pt } from 'date-fns/locale';
 import EditPostDialog from './EditPostDialog';
+import { useLanguage } from '../../context/LanguageContext';
+import { isOwnedPostStoragePath } from '../../utils/postStorage';
+import { normalizePostDetail } from '../../utils/postData';
 
 /* ── Design tokens — consistente com StoresDesk ─────────────────────── */
-const T = {
-  navy:        '#08192E',
-  navyMid:     '#0E2849',
-  navyLight:   '#183A63',
-  navyCard:    '#0D2240',
-  gold:        '#C8903A',
-  goldLight:   '#E8B96A',
-  goldPale:    '#FDF3E3',
-  white:       '#FFFFFF',
-  text:        '#0F1C2D',
-  textSub:     '#6B89A5',
-  border:      '#E0E8F0',
-  borderMid:   '#C5D4E3',
-  surface:     '#F4F7FB',
-  darkBorder:  'rgba(255,255,255,0.08)',
-  darkBorderMid:'rgba(255,255,255,0.14)',
-  darkText:    'rgba(255,255,255,0.88)',
-  darkTextSub: 'rgba(255,255,255,0.52)',
-  darkMuted:   'rgba(255,255,255,0.30)',
-  success:     '#10b981',
-  error:       '#ef4444',
-  warning:     '#f59e0b',
-};
+const createTokens = (theme) => ({
+  navy: theme.palette.background.default,
+  navyMid: theme.palette.action.hover,
+  navyLight: theme.palette.primary.dark,
+  navyCard: theme.palette.background.paper,
+  gold: theme.palette.primary.main,
+  goldLight: theme.palette.primary.light,
+  goldPale: theme.palette.action.selected,
+  white: theme.palette.text.primary,
+  text: theme.palette.text.primary,
+  textSub: theme.palette.text.secondary,
+  border: theme.palette.divider,
+  borderMid: theme.palette.divider,
+  surface: theme.palette.background.default,
+  darkBorder: theme.palette.divider,
+  darkBorderMid: theme.palette.divider,
+  darkText: theme.palette.text.primary,
+  darkTextSub: theme.palette.text.secondary,
+  darkMuted: theme.palette.text.disabled,
+  success: theme.palette.success.main,
+  error: theme.palette.error.main,
+  warning: theme.palette.warning.main,
+});
 
-const KEYFRAMES = `
+const KEYFRAMES = (T) => `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
   @keyframes fadeUp {
     from { opacity:0; transform:translateY(20px); }
@@ -128,6 +127,8 @@ const BG_GRID = {
 
 const PostDetailPageDesk = ({ user }) => {
   const { postId } = useParams();
+  const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const [likes, setLikes] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
   const [comments, setComments] = useState([]);
@@ -143,38 +144,37 @@ const PostDetailPageDesk = ({ user }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [showReplies, setShowReplies] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingPost, setDeletingPost] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   
   const isMobile = useMediaQuery('(max-width:600px)');
   const theme = useTheme();
+  const T = createTokens(theme);
 
   // Formatador de data
   const formatDate = (dateString) => {
-    return formatDistanceToNow(new Date(dateString), { 
+    const date = new Date(dateString);
+    if (!dateString || Number.isNaN(date.getTime())) return t('feed.dateUnknown');
+    return formatDistanceToNow(date, {
       addSuffix: true, 
-      locale: pt 
+      locale: language === 'en' ? enGB : pt
     });
   };
 
   // Carregar dados do post
   useEffect(() => {
     setLoading(true);
+    setLoadError(false);
     const postsRef = ref(db, `posts/${postId}`);
     
     const unsubscribe = onValue(postsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setPost({
-          id: postId,
-          description: data.description || '',
-          url: data.url || '',
-          companyName: data.company?.name || 'Empresa Desconhecida',
-          logoUrl: data.company?.logo || 'https://via.placeholder.com/150',
-          companyId: data.company?.id,
-          createdAt: data.createdAt || new Date().toISOString(),
-          verified: data.company?.verified || false,
-        });
+        setPost(normalizePostDetail(data, postId, t('postDetail.companyUnknown')));
+        setImageFailed(false);
         
         const likesData = data.likes || {};
         setLikes(Object.keys(likesData).length);
@@ -203,28 +203,29 @@ const PostDetailPageDesk = ({ user }) => {
       setLoading(false);
     }, (error) => {
       console.error("Erro ao carregar post:", error);
+      setLoadError(true);
       setSnackbar({ 
         open: true, 
-        message: 'Erro ao carregar post', 
+        message: t('postDetail.loadError'),
         severity: 'error' 
       });
       setLoading(false);
     });
   
     return () => unsubscribe();
-  }, [postId, user?.id]);
+  }, [postId, user?.id, t]);
 
   const checkUserAuth = useCallback(() => {
     if (!user || !user.id) {
       setSnackbar({ 
         open: true, 
-        message: 'Você precisa estar logado para realizar esta ação', 
+        message: t('postDetail.authRequired'),
         severity: 'error' 
       });
       return false;
     }
     return true;
-  }, [user]);
+  }, [user, t]);
 
   const handleAddComment = async () => {
     if (!checkUserAuth() || !commentText.trim()) return;
@@ -248,14 +249,14 @@ const PostDetailPageDesk = ({ user }) => {
       setReplyingTo(null);
       setSnackbar({ 
         open: true, 
-        message: replyingTo ? 'Resposta enviada!' : 'Comentário adicionado!', 
+        message: replyingTo ? t('postDetail.replySuccess') : t('postDetail.commentSuccess'),
         severity: 'success' 
       });
     } catch (error) {
       console.error('Erro ao adicionar comentário:', error);
       setSnackbar({ 
         open: true, 
-        message: replyingTo ? 'Erro ao enviar resposta.' : 'Erro ao adicionar comentário.', 
+        message: replyingTo ? t('postDetail.replyError') : t('postDetail.commentError'),
         severity: 'error' 
       });
     }
@@ -288,7 +289,7 @@ const PostDetailPageDesk = ({ user }) => {
         setHasLiked(false);
         setSnackbar({
           open: true,
-          message: 'Gosto removido',
+          message: t('postDetail.unlikeSuccess'),
           severity: 'info',
         });
       } else {
@@ -300,7 +301,7 @@ const PostDetailPageDesk = ({ user }) => {
         setHasLiked(true);
         setSnackbar({
           open: true,
-          message: 'Gostou',
+          message: t('postDetail.likeSuccess'),
           severity: 'success',
         });
       }
@@ -308,7 +309,7 @@ const PostDetailPageDesk = ({ user }) => {
       console.error('Erro ao curtir:', error);
       setSnackbar({
         open: true,
-        message: 'Erro ao processar sua curtida',
+        message: t('postDetail.likeError'),
         severity: 'error'
       });
     } finally {
@@ -346,14 +347,14 @@ const PostDetailPageDesk = ({ user }) => {
           .then(() => {
             setSnackbar({ 
               open: true, 
-              message: 'Link copiado!', 
+              message: t('postDetail.copySuccess'),
               severity: 'success' 
             });
           })
           .catch(() => {
             setSnackbar({ 
               open: true, 
-              message: 'Falha ao copiar o link', 
+              message: t('postDetail.copyError'),
               severity: 'error' 
             });
           });
@@ -378,7 +379,7 @@ const PostDetailPageDesk = ({ user }) => {
     if (!checkUserAuth() || !motivoDenuncia.trim()) {
       setSnackbar({ 
         open: true, 
-        message: 'Por favor, insira um motivo.', 
+        message: t('postDetail.reportReasonRequired'),
         severity: 'error' 
       });
       return;
@@ -391,7 +392,7 @@ const PostDetailPageDesk = ({ user }) => {
       if (snapshot.exists()) {
         setSnackbar({ 
           open: true, 
-          message: 'Você já denunciou este post.', 
+          message: t('postDetail.reportDuplicate'),
           severity: 'error' 
         });
       } else {
@@ -406,7 +407,7 @@ const PostDetailPageDesk = ({ user }) => {
         
         setSnackbar({ 
           open: true, 
-          message: 'Denúncia enviada!', 
+          message: t('postDetail.reportSuccess'),
           severity: 'success' 
         });
       }
@@ -414,7 +415,7 @@ const PostDetailPageDesk = ({ user }) => {
       console.error('Erro ao enviar denúncia:', error);
       setSnackbar({ 
         open: true, 
-        message: 'Erro ao enviar denúncia.', 
+        message: t('postDetail.reportError'),
         severity: 'error' 
       });
     } finally {
@@ -425,20 +426,25 @@ const PostDetailPageDesk = ({ user }) => {
 
   const handleDeleteComment = async (commentId) => {
     if (!checkUserAuth()) return;
+    const targetComment = comments.find((comment) => comment.id === commentId);
+    if (!targetComment || (targetComment.userId !== user.id && post?.companyId !== user.id)) {
+      setSnackbar({ open: true, message: t('postDetail.permissionDenied'), severity: 'error' });
+      return;
+    }
     
     try {
       const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
       await remove(commentRef);
       setSnackbar({ 
         open: true, 
-        message: 'Comentário excluído!', 
+        message: t('postDetail.commentDeleteSuccess'),
         severity: 'success' 
       });
     } catch (error) {
       console.error('Erro ao excluir comentário:', error);
       setSnackbar({ 
         open: true, 
-        message: 'Erro ao excluir comentário.', 
+        message: t('postDetail.commentDeleteError'),
         severity: 'error' 
       });
     }
@@ -446,12 +452,22 @@ const PostDetailPageDesk = ({ user }) => {
 
   const handleEditComment = (commentId, currentText) => {
     if (!checkUserAuth()) return;
+    const targetComment = comments.find((comment) => comment.id === commentId);
+    if (!targetComment || targetComment.userId !== user.id) {
+      setSnackbar({ open: true, message: t('postDetail.permissionDenied'), severity: 'error' });
+      return;
+    }
     setEditingCommentId(commentId);
     setEditedCommentText(currentText);
   };
 
   const handleSaveEdit = async (commentId) => {
     if (!checkUserAuth() || !editedCommentText.trim()) return;
+    const targetComment = comments.find((comment) => comment.id === commentId);
+    if (!targetComment || targetComment.userId !== user.id) {
+      setSnackbar({ open: true, message: t('postDetail.permissionDenied'), severity: 'error' });
+      return;
+    }
     
     try {
       const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
@@ -464,14 +480,14 @@ const PostDetailPageDesk = ({ user }) => {
       setEditedCommentText('');
       setSnackbar({ 
         open: true, 
-        message: 'Comentário atualizado!', 
+        message: t('postDetail.commentUpdateSuccess'),
         severity: 'success' 
       });
     } catch (error) {
       console.error('Erro ao atualizar comentário:', error);
       setSnackbar({ 
         open: true, 
-        message: 'Erro ao atualizar comentário.', 
+        message: t('postDetail.commentUpdateError'),
         severity: 'error' 
       });
     }
@@ -481,12 +497,62 @@ const PostDetailPageDesk = ({ user }) => {
     if (user?.id !== post.companyId) {
       setSnackbar({
         open: true,
-        message: 'Sem permissão para editar',
+        message: t('postDetail.permissionDenied'),
         severity: 'error'
       });
       return;
     }
     setEditDialogOpen(true);
+  };
+
+  const handleDeletePost = async () => {
+    if (deletingPost) return;
+    if (!user?.id || user.id !== post?.companyId) {
+      setDeleteDialogOpen(false);
+      setSnackbar({ open: true, message: t('postDetail.permissionDenied'), severity: 'error' });
+      return;
+    }
+
+    setDeletingPost(true);
+    try {
+      const postRef = ref(db, `posts/${postId}`);
+      const latestSnapshot = await get(postRef);
+      const latestPost = latestSnapshot.val();
+
+      if (!latestPost) {
+        setDeleteDialogOpen(false);
+        navigate('/feed', { replace: true });
+        return;
+      }
+
+      if (latestPost.company?.id !== user.id) {
+        setDeleteDialogOpen(false);
+        setSnackbar({ open: true, message: t('postDetail.permissionDenied'), severity: 'error' });
+        return;
+      }
+
+      const ownedStoragePath = isOwnedPostStoragePath(latestPost.storagePath, user.id)
+        ? latestPost.storagePath
+        : '';
+
+      await remove(postRef);
+
+      if (ownedStoragePath) {
+        try {
+          await deleteObject(storageRef(storage, ownedStoragePath));
+        } catch (storageError) {
+          console.error('Erro ao remover ficheiro da publicação:', storageError);
+        }
+      }
+
+      setDeleteDialogOpen(false);
+      navigate('/feed', { replace: true });
+    } catch (error) {
+      console.error('Erro ao eliminar publicação:', error);
+      setSnackbar({ open: true, message: t('postDetail.deleteError'), severity: 'error' });
+    } finally {
+      setDeletingPost(false);
+    }
   };
   
   const handleCommentKeyPress = (e) => {
@@ -494,14 +560,6 @@ const PostDetailPageDesk = ({ user }) => {
       e.preventDefault();
       handleAddComment();
     }
-  };
-
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
   };
 
   const handleCloseSnackbar = () => {
@@ -522,7 +580,7 @@ const PostDetailPageDesk = ({ user }) => {
     );
   }
 
-  if (!post) {
+  if (loadError || !post) {
     return (
       <Box sx={{ 
         minHeight: '100vh', 
@@ -542,7 +600,7 @@ const PostDetailPageDesk = ({ user }) => {
         }}>
           <WarningIcon sx={{ fontSize: 48, color: T.warning, mb: 2 }} />
           <Typography sx={{ color: T.white, fontSize: '1.2rem', mb: 1 }}>
-            Post não encontrado
+            {loadError ? t('postDetail.loadError') : t('postDetail.notFound')}
           </Typography>
           <Button 
             variant="outlined"
@@ -553,7 +611,7 @@ const PostDetailPageDesk = ({ user }) => {
               '&:hover': { borderColor: T.gold, color: T.gold }
             }}
           >
-            Voltar
+            {t('postDetail.back')}
           </Button>
         </Paper>
       </Box>
@@ -562,7 +620,7 @@ const PostDetailPageDesk = ({ user }) => {
 
   return (
     <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-      <style>{KEYFRAMES}</style>
+      <style>{KEYFRAMES(T)}</style>
       
       {/* Background Grid */}
       <Box sx={BG_GRID} />
@@ -574,18 +632,26 @@ const PostDetailPageDesk = ({ user }) => {
           {/* Post Card */}
           <Card className="post-card" sx={{ mb: 3 }}>
             {/* Media */}
-            <Box sx={{ position: 'relative' }}>
+            {post.url && !imageFailed ? <Box sx={{ position: 'relative' }}>
               <CardMedia
                 component="img"
                 height={isMobile ? 250 : 400}
                 image={post.url}
-                alt={`Post ${post.id}`}
+                alt={post.description || t('postDetail.imageAlt', { company: post.companyName })}
+                onError={() => setImageFailed(true)}
                 sx={{ 
                   objectFit: 'cover',
                   width: '100%'
                 }}
               />
-            </Box>
+            </Box> : (
+              <Box sx={{ height: isMobile ? 250 : 400, display: 'grid', placeItems: 'center', bgcolor: 'action.hover' }}>
+                <Box sx={{ textAlign: 'center', color: 'text.secondary', px: 2 }}>
+                  <WarningIcon aria-hidden="true" sx={{ fontSize: 44, mb: 1 }} />
+                  <Typography>{t('postDetail.imageUnavailable')}</Typography>
+                </Box>
+              </Box>
+            )}
 
             <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               {/* Company Info */}
@@ -647,16 +713,9 @@ const PostDetailPageDesk = ({ user }) => {
               </Box>
 
               {/* Description */}
-              <Typography 
-                variant="body1"
-                sx={{ 
-                  color: T.darkTextSub,
-                  lineHeight: 1.8,
-                  mb: 3,
-                  fontSize: '1rem'
-                }}
-                dangerouslySetInnerHTML={{ __html: post.description }}
-              />
+              <Typography variant="body1" sx={{ color: T.darkTextSub, lineHeight: 1.8, mb: 3, fontSize: '1rem', whiteSpace: 'pre-wrap' }}>
+                {post.description || t('postDetail.noDescription')}
+              </Typography>
 
               {/* Interaction Buttons */}
               <Box sx={{
@@ -666,7 +725,7 @@ const PostDetailPageDesk = ({ user }) => {
                 borderTop: `1px solid ${T.darkBorder}`,
                 pt: 2,
               }}>
-                <Tooltip title={hasLiked ? "Remover curtida" : "Curtir"} arrow>
+                <Tooltip title={hasLiked ? t('postDetail.unlike') : t('postDetail.like')} arrow>
                   <Button
                     startIcon={
                       loadingLike ? (
@@ -698,30 +757,39 @@ const PostDetailPageDesk = ({ user }) => {
                         }
                       }}
                     />
-                    {!isMobile && "Curtir"}
+                    {!isMobile && t('postDetail.like')}
                   </Button>
                 </Tooltip>
 
                 {user?.id === post.companyId && (
-                  <Tooltip title="Editar publicação" arrow>
-                    <Button
-                      startIcon={<EditIcon sx={{ color: T.darkTextSub }} />}
-                      onClick={handleEditClick}
-                      sx={{
-                        color: T.darkTextSub,
-                        textTransform: 'none',
-                        '&:hover': {
-                          color: T.gold,
-                          bgcolor: 'rgba(200,144,58,0.08)',
-                        },
-                      }}
-                    >
-                      {!isMobile && "Editar"}
-                    </Button>
-                  </Tooltip>
+                  <>
+                    <Tooltip title={t('postDetail.edit')} arrow>
+                      <Button
+                        startIcon={<EditIcon sx={{ color: T.darkTextSub }} />}
+                        onClick={handleEditClick}
+                        sx={{
+                          color: T.darkTextSub,
+                          textTransform: 'none',
+                          '&:hover': { color: T.gold, bgcolor: 'rgba(200,144,58,0.08)' },
+                        }}
+                      >
+                        {!isMobile && t('postDetail.edit')}
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title={t('postDetail.delete')} arrow>
+                      <Button
+                        startIcon={<DeleteIcon />}
+                        onClick={() => setDeleteDialogOpen(true)}
+                        color="error"
+                        sx={{ textTransform: 'none' }}
+                      >
+                        {!isMobile && t('postDetail.delete')}
+                      </Button>
+                    </Tooltip>
+                  </>
                 )}
 
-                <Tooltip title="Compartilhar" arrow>
+                <Tooltip title={t('postDetail.share')} arrow>
                   <Button
                     startIcon={<ShareOutlinedIcon sx={{ color: T.darkTextSub }} />}
                     onClick={handleShare}
@@ -734,11 +802,11 @@ const PostDetailPageDesk = ({ user }) => {
                       },
                     }}
                   >
-                    {!isMobile && "Compartilhar"}
+                    {!isMobile && t('postDetail.share')}
                   </Button>
                 </Tooltip>
 
-                <Tooltip title="Denunciar" arrow>
+                <Tooltip title={t('postDetail.report')} arrow>
                   <Button
                     startIcon={<FlagOutlinedIcon sx={{ color: T.darkTextSub }} />}
                     onClick={handleReport}
@@ -751,7 +819,7 @@ const PostDetailPageDesk = ({ user }) => {
                       },
                     }}
                   >
-                    {!isMobile && "Denunciar"}
+                    {!isMobile && t('postDetail.report')}
                   </Button>
                 </Tooltip>
               </Box>
@@ -770,7 +838,7 @@ const PostDetailPageDesk = ({ user }) => {
                   mb: 3
                 }}
               >
-                Comentários ({comments.filter(c => !c.parentId).length})
+                {t('postDetail.comments', { count: comments.filter(c => !c.parentId).length })}
               </Typography>
 
               {/* Add Comment */}
@@ -798,7 +866,7 @@ const PostDetailPageDesk = ({ user }) => {
                       justifyContent: 'space-between'
                     }}>
                       <Typography variant="caption" sx={{ color: T.gold }}>
-                        Respondendo a um comentário...
+                        {t('postDetail.replying')}
                       </Typography>
                       <Button 
                         size="small" 
@@ -812,12 +880,12 @@ const PostDetailPageDesk = ({ user }) => {
 
                   <TextField
                     id="comment-input"
-                    placeholder={replyingTo ? "Escreva sua resposta..." : "Escreva um comentário..."}
+                    placeholder={replyingTo ? t('postDetail.replyPlaceholder') : t('postDetail.commentPlaceholder')}
                     multiline
                     rows={2}
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    onKeyPress={handleCommentKeyPress}
+                    onKeyDown={handleCommentKeyPress}
                     fullWidth
                     variant="outlined"
                     sx={{
@@ -852,7 +920,7 @@ const PostDetailPageDesk = ({ user }) => {
               {comments.filter(c => !c.parentId).length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography sx={{ color: T.darkMuted }}>
-                    Seja o primeiro a comentar!
+                    {t('postDetail.firstComment')}
                   </Typography>
                 </Box>
               ) : (
@@ -914,14 +982,14 @@ const PostDetailPageDesk = ({ user }) => {
                                       onClick={() => setEditingCommentId(null)}
                                       sx={{ color: T.darkMuted }}
                                     >
-                                      Cancelar
+                                      {t('postDetail.cancel')}
                                     </Button>
                                     <Button 
                                       size="small"
                                       onClick={() => handleSaveEdit(comment.id)}
                                       sx={{ color: T.gold }}
                                     >
-                                      Salvar
+                                      {t('postDetail.save')}
                                     </Button>
                                   </Box>
                                 </Box>
@@ -944,7 +1012,7 @@ const PostDetailPageDesk = ({ user }) => {
                                     '&:hover': { color: T.gold }
                                   }}
                                 >
-                                  Responder
+                                  {t('postDetail.reply')}
                                 </Button>
                                 
                                 {(comment.userId === user?.id || post.companyId === user?.id) && (
@@ -1081,9 +1149,9 @@ const PostDetailPageDesk = ({ user }) => {
         }}
       >
         {[
-          { key: 'whatsapp', label: 'WhatsApp', icon: 'https://cdn-icons-png.flaticon.com/512/124/124034.png' },
-          { key: 'facebook', label: 'Facebook', icon: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' },
-          { key: 'twitter', label: 'Twitter', icon: 'https://cdn-icons-png.flaticon.com/512/124/124021.png' },
+          { key: 'whatsapp', label: 'WhatsApp' },
+          { key: 'facebook', label: 'Facebook' },
+          { key: 'twitter', label: 'Twitter' },
         ].map((item) => (
           <MenuItem 
             key={item.key} 
@@ -1091,7 +1159,7 @@ const PostDetailPageDesk = ({ user }) => {
             sx={{ color: T.darkText, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
           >
             <ListItemIcon>
-              <Box component="img" src={item.icon} alt={item.label} sx={{ width: 20, height: 20 }} />
+              <ShareIcon sx={{ fontSize: 20, color: T.gold }} />
             </ListItemIcon>
             <ListItemText>{item.label}</ListItemText>
           </MenuItem>
@@ -1103,7 +1171,7 @@ const PostDetailPageDesk = ({ user }) => {
           <ListItemIcon>
             <ShareIcon sx={{ fontSize: 20, color: T.gold }} />
           </ListItemIcon>
-          <ListItemText>Copiar link</ListItemText>
+          <ListItemText>{t('postDetail.copyLink')}</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -1129,20 +1197,20 @@ const PostDetailPageDesk = ({ user }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          Denunciar Post
+          {t('postDetail.reportTitle')}
           <IconButton onClick={() => setDenunciaModalOpen(false)} sx={{ color: T.darkMuted }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography sx={{ color: T.darkTextSub, mb: 2 }}>
-            Por favor, descreva o motivo da sua denúncia.
+            {t('postDetail.reportHelp')}
           </Typography>
           <TextField
             fullWidth
             multiline
             rows={4}
-            placeholder="Motivo da Denúncia"
+            placeholder={t('postDetail.reportPlaceholder')}
             value={motivoDenuncia}
             onChange={(e) => setMotivoDenuncia(e.target.value)}
             sx={{
@@ -1161,7 +1229,7 @@ const PostDetailPageDesk = ({ user }) => {
             onClick={() => setDenunciaModalOpen(false)}
             sx={{ color: T.darkMuted }}
           >
-            Cancelar
+            {t('postDetail.cancel')}
           </Button>
           <Button 
             onClick={handleDenunciar} 
@@ -1174,7 +1242,7 @@ const PostDetailPageDesk = ({ user }) => {
               '&.Mui-disabled': { bgcolor: T.darkMuted }
             }}
           >
-            Enviar Denúncia
+            {t('postDetail.sendReport')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1189,11 +1257,37 @@ const PostDetailPageDesk = ({ user }) => {
           setPost(updatedPost);
           setSnackbar({
             open: true,
-            message: 'Publicação atualizada!',
+            message: t('postDetail.updateSuccess'),
             severity: 'success'
           });
         }}
       />
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={deletingPost ? undefined : () => setDeleteDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t('postDetail.deleteTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary">{t('postDetail.deleteHelp')}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deletingPost}>
+            {t('postDetail.cancel')}
+          </Button>
+          <Button
+            onClick={handleDeletePost}
+            disabled={deletingPost}
+            color="error"
+            variant="contained"
+            startIcon={deletingPost ? <CircularProgress size={18} color="inherit" /> : <DeleteIcon />}
+          >
+            {deletingPost ? t('postDetail.deleting') : t('postDetail.confirmDelete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar */}
       <Snackbar

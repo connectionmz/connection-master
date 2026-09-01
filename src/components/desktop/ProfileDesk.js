@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Twitter, Instagram, LinkedIn, Language, Edit, CameraAlt, ExitToApp, X, WhatsApp, Facebook, Email, PlayArrow } from "@mui/icons-material";
+import { Twitter, Instagram, LinkedIn, Language, CameraAlt, X, WhatsApp, Facebook, Email, PlayArrow } from "@mui/icons-material";
 import { useNavigate } from 'react-router-dom';
 import { get, ref, update } from 'firebase/database';
-import { signOut } from 'firebase/auth';
 import { auth, db, storage } from '../../fb';
 import PostGallery from '../PostGallery';
-import { EditorText } from '../../utils/formUtils';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { AiFillSetting } from 'react-icons/ai';
+import { getCompanyPosts } from '../../services/posts';
+import { plainText } from '../../utils/postData';
 import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions, Container, Paper, Divider, Chip, Fade } from "@mui/material";
 import {
   Button,
@@ -17,37 +17,41 @@ import {
   Tabs,
   Tab,
   Link as MuiLink,
-  Skeleton,
   Snackbar,
   Alert,
+  useTheme,
 } from "@mui/material";
 import VetrineDesk from './VetrineDesk';
 import { readAndCompressImage } from 'browser-image-resizer';
-import { LinkIcon, Share, MapPin, Phone, Mail, Award, Target, Eye, Users, Clock, CheckCircle } from 'lucide-react';
-import Star from 'lucide-react/icons/star';
+import { LinkIcon, Share, MapPin, Phone, Mail, Award, Target } from 'lucide-react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { useLanguage } from '../../context/LanguageContext';
+import { createProfileThemeTokens } from '../../utils/profileTheme';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
-const T = {
-  navy:     '#08192E',
-  navyMid:  '#0E2849',
-  navyLight:'#183A63',
-  gold:     '#C8903A',
-  goldLight:'#E8B96A',
-  goldPale: '#FDF3E3',
-  cream:    '#FAFAF7',
-  white:    '#FFFFFF',
-  text:     '#0F1C2D',
-  textMid:  '#3D5A7A',
-  textSub:  '#6B89A5',
-  border:   '#E0E8F0',
-  borderMid:'#C5D4E3',
-  surface:  '#F4F7FB',
+const createTokens = (theme) => {
+  const tokens = createProfileThemeTokens(theme);
+  return {
+    navy: tokens.primaryDark,
+    navyMid: tokens.primary,
+    navyLight: tokens.primaryLight,
+    gold: tokens.primary,
+    goldLight: tokens.primaryLight,
+    goldPale: tokens.selected,
+    cream: tokens.background,
+    white: tokens.surface,
+    text: tokens.text,
+    textMid: tokens.textSecondary,
+    textSub: tokens.textSecondary,
+    border: tokens.divider,
+    borderMid: tokens.divider,
+    surface: tokens.surface,
+  };
 };
 
 /* ── Keyframes (mesmos da hero) ───────────────────────────────────────── */
-const KEYFRAMES = `
+const KEYFRAMES = (T) => `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
   @keyframes fadeUp {
@@ -110,38 +114,25 @@ const KEYFRAMES = `
   }
 `;
 
-const ProfileDesk = ({ userI }) => {
+const ProfileDesk = () => {
+  const theme = useTheme();
+  const T = createTokens(theme);
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inicio');
   const [userData, setUserData] = useState(null);
   const [social, setSocial] = useState({ linkedin: '', instagram: '', website: '', youtubeVideo: '' });
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState([]);
-  const [cotacoes, setCotacoes] = useState([]);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showFullText, setShowFullText] = useState(false);
-  const [profileData, setProfileData] = useState({
-    bio: '',
-    missaoVisaoValores: '',
-  });
   const [coverPhoto, setCoverPhoto] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const [isEditingCover, setIsEditingCover] = useState(false);
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const isMobile = useMediaQuery("(max-width:600px)");
-  const isTablet = useMediaQuery("(max-width:960px)");
-
-  // Estados para estatísticas (simuladas)
-  const [stats, setStats] = useState({
-    visualizacoes: 1542,
-    seguidores: 328,
-    publicacoes: 0,
-    avaliacao: 4.8
-  });
 
   // Estados para o crop de imagem
   const [imgSrc, setImgSrc] = useState(null);
@@ -168,7 +159,8 @@ const ProfileDesk = ({ userI }) => {
   // Função para extrair ID do YouTube
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
-    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    const youtubePattern = new RegExp('(?:youtube\\.com/(?:.*[?&]v=|embed/)|youtu\\.be/)([^"&?/\\s]{11})');
+    const match = url.match(youtubePattern);
     return match ? match[1] : null;
   };
 
@@ -187,7 +179,7 @@ const ProfileDesk = ({ userI }) => {
     if (file.size > MAX_FILE_SIZE) {
       setSnackbar({ 
         open: true, 
-        message: 'A imagem é muito grande (máximo 25MB)', 
+        message: t('profile.imageTooLarge'),
         severity: 'warning' 
       });
       return false;
@@ -199,7 +191,7 @@ const ProfileDesk = ({ userI }) => {
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
       setSnackbar({
         open: true,
-        message: 'Tipo de arquivo não suportado. Use JPEG, PNG ou WEBP',
+        message: t('profile.imageTypeError'),
         severity: 'warning'
       });
       return false;
@@ -226,12 +218,12 @@ const ProfileDesk = ({ userI }) => {
       setCurrentImageType(isCover ? 'cover' : 'profile');
     } catch (error) {
       console.error("Erro ao processar imagem:", error);
-      let errorMessage = 'Erro ao processar a imagem';
+      let errorMessage = t('profile.imageProcessError');
       
       if (error.message.includes('size')) {
-        errorMessage = 'A imagem é muito grande (máximo 25MB)';
+        errorMessage = t('profile.imageTooLarge');
       } else if (error.message.includes('type')) {
-        errorMessage = 'Tipo de arquivo não suportado';
+        errorMessage = t('profile.imageTypeError');
       }
       
       setSnackbar({ 
@@ -280,7 +272,7 @@ const ProfileDesk = ({ userI }) => {
       });
     } catch (error) {
       console.error("Erro ao aplicar crop:", error);
-      setSnackbar({ open: true, message: 'Erro ao recortar a imagem', severity: 'error' });
+      setSnackbar({ open: true, message: t('profile.cropError'), severity: 'error' });
       setIsCropping(false);
     }
   };
@@ -318,10 +310,10 @@ const ProfileDesk = ({ userI }) => {
         setProfilePhoto(imageURL);
       }
 
-      setSnackbar({ open: true, message: 'Foto atualizada com sucesso!', severity: 'success' });
+      setSnackbar({ open: true, message: t('profile.photoSuccess'), severity: 'success' });
     } catch (error) {
       console.error("Erro ao fazer upload da foto: ", error);
-      setSnackbar({ open: true, message: 'Erro ao atualizar a foto.', severity: 'error' });
+      setSnackbar({ open: true, message: t('profile.photoError'), severity: 'error' });
     } finally {
       uploadState(false);
     }
@@ -362,11 +354,11 @@ const ProfileDesk = ({ userI }) => {
     const profileUrl = `${window.location.origin}/perfil/${userData?.id}`;
     navigator.clipboard.writeText(profileUrl)
       .then(() => {
-        setSnackbar({ open: true, message: 'Link copiado para a área de transferência!', severity: 'success' });
+        setSnackbar({ open: true, message: t('profile.copySuccess'), severity: 'success' });
         handleShareClose();
       })
       .catch(() => {
-        setSnackbar({ open: true, message: 'Falha ao copiar o link', severity: 'error' });
+        setSnackbar({ open: true, message: t('profile.copyError'), severity: 'error' });
       });
   };
 
@@ -422,16 +414,10 @@ const ProfileDesk = ({ userI }) => {
         try {
           const companyRef = ref(db, `company/${user}`);
           const socialRef = ref(db, `company/${user}/social`);
-          const postsRef = ref(db, `posts`);
-          const cotacoesRef = ref(db, `cotacoes`);
-          const visitasRef = ref(db, `company/${user}/visitas`);
-
-          const [companySnapshot, socialSnapshot, cotacoesSnapshot, postsSnapshot, visitasSnapshot] = await Promise.all([
+          const [companySnapshot, socialSnapshot, companyPosts] = await Promise.all([
             get(companyRef),
             get(socialRef),
-            get(cotacoesRef),
-            get(postsRef),
-            get(visitasRef)
+            getCompanyPosts(user)
           ]);
 
           if (companySnapshot.exists()) {
@@ -450,19 +436,7 @@ const ProfileDesk = ({ userI }) => {
           if (socialSnapshot.exists()) {
             setSocial(socialSnapshot.val());
           }
-          if (postsSnapshot.exists()) {
-            const postsData = postsSnapshot.val();
-            const filteredPosts = Object.values(postsData).filter(post => post.company.id === user);
-            setPosts(filteredPosts);
-            setStats(prev => ({ ...prev, publicacoes: filteredPosts.length }));
-          }
-          if (cotacoesSnapshot.exists()) {
-            const cotacoesData = cotacoesSnapshot.val();
-            const userCotacoes = Object.keys(cotacoesData).filter(key =>
-              cotacoesData[key].company && cotacoesData[key].company.id === user
-            );
-            setCotacoes(userCotacoes.map(key => cotacoesData[key]));
-          }
+          setPosts(companyPosts);
         } catch (error) {
           console.error('Error fetching data: ', error);
           navigate('/auth');
@@ -479,46 +453,6 @@ const ProfileDesk = ({ userI }) => {
 
   // Funções auxiliares
   const toggleShowFullText = () => setShowFullText(prevState => !prevState);
-
-  const handleSaveProfile = async () => {
-    if (user) {
-      try {
-        const companyUpdate = {
-          bio: profileData.bio,
-          missaoVisaoValores: profileData.missaoVisaoValores,
-        };
-        await update(ref(db, `company/${user}`), companyUpdate);
-        setUserData(prev => ({ ...prev, ...profileData }));
-        setShowProfileModal(false);
-        setSnackbar({ open: true, message: 'Perfil atualizado com sucesso!', severity: 'success' });
-      } catch (error) {
-        console.error('Erro ao atualizar perfil: ', error);
-        setSnackbar({ open: true, message: 'Erro ao atualizar perfil', severity: 'error' });
-      }
-    }
-  };
-
-  const handleDescriptionChange = (value) => {
-    setProfileData((prevData) => ({
-      ...prevData,
-      missaoVisaoValores: value,
-    }));
-  };
-
-  const handleDeletePost = (postToDelete) => {
-    setPosts((prevPosts) => prevPosts.filter(post => post !== postToDelete));
-    setStats(prev => ({ ...prev, publicacoes: prev.publicacoes - 1 }));
-    setSnackbar({ open: true, message: 'Publicação removida', severity: 'info' });
-  };
-
-  const handleEditCaption = (postToEdit, newCaption) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post) =>
-        post === postToEdit ? { ...post, description: newCaption } : post
-      )
-    );
-    setSnackbar({ open: true, message: 'Legenda atualizada', severity: 'success' });
-  };
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -629,7 +563,7 @@ const ProfileDesk = ({ userI }) => {
                 }}
               >
                 <Typography variant="h6" sx={{ fontWeight: 700, color: T.text, fontFamily: '"Playfair Display", serif', mb: 2 }}>
-                  Informações da Empresa
+                  {t('profile.companyInfo')}
                 </Typography>
                 <Divider sx={{ mb: 3 }} />
                 
@@ -638,21 +572,21 @@ const ProfileDesk = ({ userI }) => {
                     <Box display="flex" alignItems="center" gap={1.5} mb={2}>
                       <MapPin size={18} color={T.gold} />
                       <Box>
-                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>Endereço</Typography>
-                        <Typography sx={{ color: T.text }}>{userData?.endereco || 'Não informado'}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>{t('profile.address')}</Typography>
+                        <Typography sx={{ color: T.text }}>{userData?.endereco || t('profile.notProvided')}</Typography>
                       </Box>
                     </Box>
                     
                     <Box display="flex" alignItems="center" gap={1.5} mb={2}>
                       <Phone size={18} color={T.gold} />
                       <Box>
-                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>Contacto</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>{t('profile.contact')}</Typography>
                         {userData?.contacto ? (
                           <MuiLink href={`tel:${userData.contacto}`} sx={{ color: T.gold, textDecoration: 'none' }}>
                             {userData.contacto}
                           </MuiLink>
                         ) : (
-                          <Typography sx={{ color: T.textSub }}>Não informado</Typography>
+                          <Typography sx={{ color: T.textSub }}>{t('profile.notProvided')}</Typography>
                         )}
                       </Box>
                     </Box>
@@ -660,13 +594,13 @@ const ProfileDesk = ({ userI }) => {
                     <Box display="flex" alignItems="center" gap={1.5} mb={2}>
                       <Mail size={18} color={T.gold} />
                       <Box>
-                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>Email</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>{t('profile.email')}</Typography>
                         {userData?.email ? (
                           <MuiLink href={`mailto:${userData.email}`} sx={{ color: T.gold, textDecoration: 'none' }}>
                             {userData.email}
                           </MuiLink>
                         ) : (
-                          <Typography sx={{ color: T.textSub }}>Não informado</Typography>
+                          <Typography sx={{ color: T.textSub }}>{t('profile.notProvided')}</Typography>
                         )}
                       </Box>
                     </Box>
@@ -676,25 +610,25 @@ const ProfileDesk = ({ userI }) => {
                     <Box display="flex" alignItems="center" gap={1.5} mb={2}>
                       <Target size={18} color={T.gold} />
                       <Box>
-                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>Setor</Typography>
-                        <Typography sx={{ color: T.text }}>{userData?.sector || 'Não informado'}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>{t('profile.sector')}</Typography>
+                        <Typography sx={{ color: T.text }}>{userData?.sector || t('profile.notProvided')}</Typography>
                       </Box>
                     </Box>
                     
                     <Box display="flex" alignItems="center" gap={1.5} mb={2}>
                       <Award size={18} color={T.gold} />
                       <Box>
-                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>Tipo de Entidade</Typography>
-                        <Typography sx={{ color: T.text }}>{userData?.tipoEntidade || 'Não informado'}</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>{t('profile.entityType')}</Typography>
+                        <Typography sx={{ color: T.text }}>{userData?.tipoEntidade || t('profile.notProvided')}</Typography>
                       </Box>
                     </Box>
                     
                     <Box display="flex" alignItems="center" gap={1.5} mb={2}>
                       <MapPin size={18} color={T.gold} />
                       <Box>
-                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>Província/Distrito</Typography>
+                        <Typography sx={{ fontSize: '0.8rem', color: T.textSub }}>{t('profile.provinceDistrict')}</Typography>
                         <Typography sx={{ color: T.text }}>
-                          {userData?.provincia || 'Não informado'} · {userData?.distrito || 'Não informado'}
+                          {userData?.provincia || t('profile.notProvided')} · {userData?.distrito || t('profile.notProvided')}
                         </Typography>
                       </Box>
                     </Box>
@@ -715,17 +649,12 @@ const ProfileDesk = ({ userI }) => {
                   }}
                 >
                   <Typography variant="h6" sx={{ fontWeight: 700, color: T.text, fontFamily: '"Playfair Display", serif', mb: 2 }}>
-                    Missão, Visão e Valores
+                    {t('profile.mission')}
                   </Typography>
                   <Divider sx={{ mb: 3 }} />
-                  <Box 
-                    sx={{ 
-                      color: T.textMid,
-                      lineHeight: 1.8,
-                      '& p': { mb: 2 }
-                    }}
-                    dangerouslySetInnerHTML={{ __html: userData.missaoVisaoValores }}
-                  />
+                  <Typography sx={{ color: T.textMid, lineHeight: 1.8 }}>
+                    {plainText(userData.missaoVisaoValores)}
+                  </Typography>
                 </Paper>
               )}
 
@@ -745,13 +674,12 @@ const ProfileDesk = ({ userI }) => {
                   }}
                 >
                   <Typography variant="h6" sx={{ fontWeight: 700, color: T.text, fontFamily: '"Playfair Display", serif', mb: 2 }}>
-                    Sobre a Empresa
+                    {t('profile.aboutCompany')}
                   </Typography>
                   <Divider sx={{ mb: 3 }} />
-                  <Box 
-                    sx={{ color: T.textMid, lineHeight: 1.8 }}
-                    dangerouslySetInnerHTML={{ __html: userData.bio }}
-                  />
+                  <Typography sx={{ color: T.textMid, lineHeight: 1.8 }}>
+                    {plainText(userData.bio)}
+                  </Typography>
                 </Paper>
               )}
             </Box>
@@ -761,11 +689,7 @@ const ProfileDesk = ({ userI }) => {
         return (
           <Fade in={true}>
             <Box>
-              <PostGallery 
-                posts={posts} 
-                onDelete={handleDeletePost} 
-                onEdit={handleEditCaption} 
-              />
+              <PostGallery posts={posts} />
             </Box>
           </Fade>
         );
@@ -780,7 +704,7 @@ const ProfileDesk = ({ userI }) => {
       default:
         return (
           <Box textAlign="center" color="text.secondary" mt={3}>
-            <Typography variant="body1">Nenhum conteúdo disponível.</Typography>
+            <Typography variant="body1">{t('profile.noContent')}</Typography>
           </Box>
         );
     }
@@ -798,7 +722,7 @@ const ProfileDesk = ({ userI }) => {
           fontFamily: '"Plus Jakarta Sans", sans-serif'
         }}
       >
-        <style>{KEYFRAMES}</style>
+        <style>{KEYFRAMES(T)}</style>
         <Box sx={{ textAlign: 'center' }}>
           <Box
             sx={{
@@ -811,7 +735,7 @@ const ProfileDesk = ({ userI }) => {
               mb: 2
             }}
           />
-          <Typography sx={{ color: T.textSub }}>Carregando perfil...</Typography>
+          <Typography sx={{ color: T.textSub }}>{t('profile.loading')}</Typography>
         </Box>
       </Box>
     );
@@ -825,7 +749,7 @@ const ProfileDesk = ({ userI }) => {
         fontFamily: '"Plus Jakarta Sans", sans-serif',
       }}
     >
-      <style>{KEYFRAMES}</style>
+      <style>{KEYFRAMES(T)}</style>
       
       {/* Capa do Perfil - Estilo Hero */}
       <Box position="relative" sx={{ mb: { xs: 8, sm: 10 } }}>
@@ -905,7 +829,7 @@ const ProfileDesk = ({ userI }) => {
             >
               <CircularProgress sx={{ color: T.gold }} />
               <Typography sx={{ color: T.white, ml: 2 }}>
-                Processando imagem...
+                {t('profile.processingImage')}
               </Typography>
             </Box>
           )}
@@ -975,7 +899,7 @@ const ProfileDesk = ({ userI }) => {
               <LinkIcon size={20} color={T.gold} />
             </ListItemIcon>
             <ListItemText primaryTypographyProps={{ sx: { color: T.text } }}>
-              Copiar link
+              {t('profile.copyLink')}
             </ListItemText>
           </MenuItem>
           <MenuItem onClick={shareOnFacebook} sx={{ py: 1.5 }}>
@@ -983,7 +907,7 @@ const ProfileDesk = ({ userI }) => {
               <Facebook sx={{ color: "#1877F2", fontSize: 20 }} />
             </ListItemIcon>
             <ListItemText primaryTypographyProps={{ sx: { color: T.text } }}>
-              Compartilhar no Facebook
+              {t('profile.shareFacebook')}
             </ListItemText>
           </MenuItem>
           <MenuItem onClick={shareOnTwitter} sx={{ py: 1.5 }}>
@@ -991,7 +915,7 @@ const ProfileDesk = ({ userI }) => {
               <Twitter sx={{ color: "#1DA1F2", fontSize: 20 }} />
             </ListItemIcon>
             <ListItemText primaryTypographyProps={{ sx: { color: T.text } }}>
-              Compartilhar no Twitter
+              {t('profile.shareTwitter')}
             </ListItemText>
           </MenuItem>
           <MenuItem onClick={shareOnWhatsApp} sx={{ py: 1.5 }}>
@@ -999,7 +923,7 @@ const ProfileDesk = ({ userI }) => {
               <WhatsApp sx={{ color: "#25D366", fontSize: 20 }} />
             </ListItemIcon>
             <ListItemText primaryTypographyProps={{ sx: { color: T.text } }}>
-              Compartilhar no WhatsApp
+              {t('profile.shareWhatsApp')}
             </ListItemText>
           </MenuItem>
           <MenuItem onClick={shareViaEmail} sx={{ py: 1.5 }}>
@@ -1007,7 +931,7 @@ const ProfileDesk = ({ userI }) => {
               <Email sx={{ color: "#EA4335", fontSize: 20 }} />
             </ListItemIcon>
             <ListItemText primaryTypographyProps={{ sx: { color: T.text } }}>
-              Compartilhar por e-mail
+              {t('profile.shareEmail')}
             </ListItemText>
           </MenuItem>
         </Menu>
@@ -1074,7 +998,7 @@ const ProfileDesk = ({ userI }) => {
         }}
       >
         <DialogTitle sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700, color: T.text }}>
-          Recortar Imagem
+          {t('profile.cropTitle')}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -1091,7 +1015,7 @@ const ProfileDesk = ({ userI }) => {
                   ref={imgRef}
                   src={imgSrc}
                   style={{ maxWidth: '100%', maxHeight: '70vh' }}
-                  alt="Imagem para recortar"
+                  alt={t('profile.cropAlt')}
                   onLoad={() => {
                     if (imgRef.current) {
                       const width = imgRef.current.width;
@@ -1117,7 +1041,7 @@ const ProfileDesk = ({ userI }) => {
               fontWeight: 600,
             }}
           >
-            Cancelar
+            {t('profile.cancel')}
           </Button>
           <Button 
             onClick={applyCrop} 
@@ -1132,7 +1056,7 @@ const ProfileDesk = ({ userI }) => {
               fontWeight: 600,
             }}
           >
-            Aplicar Recorte
+            {t('profile.applyCrop')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1185,7 +1109,7 @@ const ProfileDesk = ({ userI }) => {
               fontWeight: 600,
             }}
           >
-            Fechar
+            {t('profile.close')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1235,14 +1159,12 @@ const ProfileDesk = ({ userI }) => {
                 lineHeight: 1.8
               }}
             >
-              <Typography
-                dangerouslySetInnerHTML={{ 
-                  __html: userData.bio.length > 200 && !showFullText 
-                    ? userData.bio.substring(0, 200) + '...' 
-                    : userData.bio 
-                }}
-              />
-              {userData.bio.length > 200 && (
+              <Typography>
+                {plainText(userData.bio).length > 200 && !showFullText
+                  ? `${plainText(userData.bio).substring(0, 200)}...`
+                  : plainText(userData.bio)}
+              </Typography>
+              {plainText(userData.bio).length > 200 && (
                 <Button
                   onClick={toggleShowFullText}
                   sx={{
@@ -1253,7 +1175,7 @@ const ProfileDesk = ({ userI }) => {
                     '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
                   }}
                 >
-                  {showFullText ? 'Ver menos' : 'Ler mais'}
+                  {showFullText ? t('profile.readLess') : t('profile.readMore')}
                 </Button>
               )}
             </Box>
@@ -1277,7 +1199,7 @@ const ProfileDesk = ({ userI }) => {
                 fontWeight: 600,
               }}
             >
-              Editar Perfil
+              {t('profile.edit')}
             </Button>
           </Box>
 
@@ -1352,9 +1274,9 @@ const ProfileDesk = ({ userI }) => {
               },
             }}
           >
-            <Tab label="Início" value="inicio" />
-            <Tab label="Publicações" value="Publicados" />
-            <Tab label="Repositório" value="Repositorio" />
+            <Tab label={t('profile.tabs.home')} value="inicio" />
+            <Tab label={t('profile.tabs.posts')} value="Publicados" />
+            <Tab label={t('profile.tabs.repository')} value="Repositorio" />
           </Tabs>
         </Box>
         

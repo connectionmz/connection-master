@@ -4,7 +4,6 @@ import Home from '../Home';
 import Auth from '../Auth';
 import AuthCreate from '../AuthCreate';
 import Market from '../Market';
-import Campaign from '../Campaign';
 import PostInput from '../PostInput';
 import Concurso from '../Concurso';
 import Cotacoes from '../Cotacoes';
@@ -21,14 +20,12 @@ import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import Stores from '../Stores';
 import StoreDetails from '../StoreDetails';
 import CotacoesPDF from '../pdf/CotacoesPDF';
-import FaturaDetalhes from '../FaturaDetalhes';
 import Inbox from '../Inbox';
 import ListaDeServicos from '../ListaDeServicos';
 import CompanyProfile from '../CompanyProfile';
 import EditProfile from '../EditProfile';
 import Terms from '../Termos';
 import CriarProforma from '../CriarProfoma';
-import ProformaDetalhes from '../ProformaDetalhes';
 import Analytics from '../Analytics';
 import Fatura from '../pdf/Fatura';
 import ProductForm from '../market/ProductForm';
@@ -99,13 +96,14 @@ const UserRoutes = ({ user }) => {
       <Route path="/product/:productId/store/:store" element={<ProductDetails />} />
 
       {/* Campanha e Posts */}
-      <Route path="/campaign" element={<Campaign />} />
-      <Route path="/post" element={<PostInput user={user?.id} />} />
+      <Route path="/post" element={<PostInput user={user} />} />
 
       {/* Perfil */}
-      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile" element={<Profile user={user} />} />
+      <Route path="/perfil" element={<Profile user={user} />} />
       <Route path="/editar-perfil" element={<EditProfile user={user} />} />
       <Route path="/vperfil/:id" element={<CompanyProfile user={user} />} />
+      <Route path="/empresa/:id" element={<CompanyProfile user={user} />} />
 
       {/* Faturação e Proforma */}
       <Route path="/faturacao" element={<Faturacao user={user} />} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ref, update } from 'firebase/database';
 import { db } from '../../fb';
 import {
@@ -15,7 +15,9 @@ import {
   useTheme
 } from '@mui/material';
 import { Close as CloseIcon, Check as CheckIcon } from '@mui/icons-material';
-import ReactQuill from 'react-quill';
+import { useLanguage } from '../../context/LanguageContext';
+
+const MAX_DESCRIPTION_LENGTH = 2000;
 
 const EditPostDialog = ({ 
   open, 
@@ -25,28 +27,10 @@ const EditPostDialog = ({
   user 
 }) => {
   const theme = useTheme();
-  const [description, setDescription] = useState('');
+  const { t } = useLanguage();
+  const [description, setDescription] = useState(post?.description || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [content, setContent] = useState(post.description);
-
-  const modules = useMemo(() => ({
-    toolbar: [
-      ['bold', 'italic', 'underline'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link'],
-      ['clean']
-    ],
-    clipboard: {
-      matchVisual: false,
-    }
-  }), []);
-  
-  const formats = [
-    'bold', 'italic', 'underline',
-    'list', 'bullet',
-    'link'
-  ];
 
   // Inicializa o estado quando o post ou a abertura do dialog mudar
   useEffect(() => {
@@ -58,36 +42,37 @@ const EditPostDialog = ({
 
   const handleSave = async () => {
     if (!description.trim()) {
-      setError('A descrição não pode estar vazia');
+      setError(t('postEdit.descriptionRequired'));
       return;
     }
 
     // Verifica se o usuário tem permissão para editar
     if (user?.id !== post?.companyId) {
-      setError('Você não tem permissão para editar esta publicação');
+      setError(t('postDetail.permissionDenied'));
       return;
     }
 
     setLoading(true);
     
     try {
+      const updatedAt = new Date().toISOString();
       const postRef = ref(db, `posts/${post.id}`);
       await update(postRef, {
         description,
-        updatedAt: new Date().toISOString()
+        updatedAt
       });
       
       // Chama a função onSave com os dados atualizados
       onSave({
         ...post,
         description,
-        updatedAt: new Date().toISOString()
+        updatedAt
       });
       
       onClose();
     } catch (err) {
       console.error('Erro ao atualizar post:', err);
-      setError('Ocorreu um erro ao atualizar o post. Tente novamente.');
+      setError(t('postEdit.saveError'));
     } finally {
       setLoading(false);
     }
@@ -119,10 +104,11 @@ const EditPostDialog = ({
         alignItems: 'center',
         py: 2
       }}>
-        <Typography variant="h6">Editar Publicação</Typography>
+        <Typography component="span" variant="h6">{t('postEdit.title')}</Typography>
         <IconButton 
           edge="end" 
           color="inherit" 
+          aria-label={t('postEdit.close')}
           onClick={onClose}
           disabled={loading}
           sx={{ p: 0.5 }}
@@ -144,21 +130,19 @@ const EditPostDialog = ({
           </Box>
         )}
         
-        <ReactQuill
-            theme="snow"
-            value={content}
-            onChange={setContent}
-            modules={modules}
-            formats={formats}
-            placeholder="Escreva sua publicação aqui..."
-            style={{
-              flexGrow: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%'
-            }}
-            readOnly={loading}
-          />
+        <TextField
+          autoFocus
+          fullWidth
+          multiline
+          minRows={6}
+          label={t('postEdit.description')}
+          placeholder={t('postEdit.placeholder')}
+          value={description}
+          onChange={(event) => setDescription(event.target.value.slice(0, MAX_DESCRIPTION_LENGTH))}
+          disabled={loading}
+          inputProps={{ maxLength: MAX_DESCRIPTION_LENGTH }}
+          helperText={`${description.length}/${MAX_DESCRIPTION_LENGTH}`}
+        />
  
       </DialogContent>
       
@@ -176,7 +160,7 @@ const EditPostDialog = ({
             }
           }}
         >
-          Cancelar
+          {t('postDetail.cancel')}
         </Button>
         <Button
           onClick={handleSave}
@@ -191,7 +175,7 @@ const EditPostDialog = ({
               backgroundColor: theme.palette.primary.dark
             }
           }}>
-          {loading ? 'Salvando...' : 'Salvar Alterações'}
+          {loading ? t('postEdit.saving') : t('postEdit.save')}
         </Button>
       </DialogActions>
     </Dialog>
