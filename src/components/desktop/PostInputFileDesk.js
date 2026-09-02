@@ -23,6 +23,7 @@ import {
 import { push, ref, set } from 'firebase/database';
 import { db, storage } from '../../fb';
 import { useLanguage } from '../../context/LanguageContext';
+import { plainDocumentText, safeDocumentName } from '../../utils/documentUpload';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -42,8 +43,6 @@ const allowedFileTypes = [
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE_MB = 10;
-const plainText = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-const safeFileName = (value = 'document') => value.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-120);
 
 const ImagePreview = ({ file }) => {
   const [url, setUrl] = useState('');
@@ -174,7 +173,7 @@ const PostInputFileDesk = ({ user }) => {
         setUploadStatus(prev => ({ ...prev, [file.name]: 'uploading' }));
         
         const newPostRef = push(ref(db, `vitrine/${user.id}`));
-        const filePath = `vitrine/${user.id}/${newPostRef.key}_${safeFileName(file.name)}`;
+        const filePath = `vitrine/${user.id}/${newPostRef.key}_${safeDocumentName(file.name)}`;
         const fileRef = storageRef(storage, filePath);
         const uploadTask = uploadBytesResumable(fileRef, file);
         uploadTasksRef.current.add(uploadTask);
@@ -194,7 +193,7 @@ const PostInputFileDesk = ({ user }) => {
               uploadTasksRef.current.delete(uploadTask);
               try {
                 const url = await getDownloadURL(uploadTask.snapshot.ref);
-                const description = plainText(fileDescriptions[file.name]).slice(0, 2000);
+                const description = plainDocumentText(fileDescriptions[file.name]);
                 const postId = newPostRef.key;
 
                 const postData = {

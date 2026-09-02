@@ -4,29 +4,23 @@ import {
   useMediaQuery, Typography, InputBase, Button,
   Paper, Popper, ClickAwayListener, Fade, List, ListItem,
   ListItemAvatar, Avatar, ListItemText, Divider,
-  CircularProgress, Chip,
-  IconButton
+  CircularProgress, Chip, Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField, MenuItem, IconButton
 } from "@mui/material";
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import RequestQuoteOutlinedIcon from '@mui/icons-material/RequestQuoteOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import HandymanOutlinedIcon from '@mui/icons-material/HandymanOutlined';
-import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
-import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
-import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import HistoryIcon from '@mui/icons-material/History';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import CategoryIcon from '@mui/icons-material/Category';
 import InventoryIcon from '@mui/icons-material/Inventory';
-import { useNavigate, useLocation } from "react-router-dom";
-import { get, onValue, ref } from "firebase/database";
+import { useNavigate } from "react-router-dom";
+import { get, ref, update } from "firebase/database";
 import { db } from "../fb";
 import StorieListDesk from "./desktop/StorieListDesk";
 import StoresDesk from "./desktop/StoresDesk";
+import { useLanguage } from '../context/LanguageContext';
 
 /* ── Design tokens ──────────────────────────────────────────────────────── */
 const T = {
@@ -90,6 +84,7 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const inputRef = useRef(null);
+  const searchVersionRef = useRef(0);
   const isMobile = useMediaQuery('(max-width:600px)');
 
   // Carregar pesquisas recentes do localStorage
@@ -114,6 +109,7 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
 
   // Buscar sugestões de produtos/serviços em tempo real
   useEffect(() => {
+    const searchVersion = ++searchVersionRef.current;
     const fetchProductSuggestions = async () => {
       if (!searchTerm.trim() || searchTerm.length < 2) {
         setSuggestions([]);
@@ -125,21 +121,7 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
       const results = [];
 
       try {
-        // Usar storesData se disponível, caso contrário buscar do Firebase
-        let stores = storesData;
-        
-        if (stores.length === 0) {
-          const snapshot = await get(ref(db, 'stores'));
-          if (snapshot.exists()) {
-            stores = Object.entries(snapshot.val()).map(([id, store]) => ({
-              id,
-              name: store.name || store.company?.nome || 'Loja',
-              company: store.company,
-              products: store.products || {},
-              settings: store.settings || { showPrices: true }
-            }));
-          }
-        }
+        const stores = storesData;
 
         // Percorrer todas as lojas e produtos/serviços
         for (const store of stores) {
@@ -152,7 +134,6 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
             const matchesDescription = product.description?.toLowerCase().includes(searchTermLower);
             
             if (matchesName || matchesCategory || matchesDescription) {
-              const productType = product.type === 'service' ? 'Serviço' : 'Produto';
               const price = product.discountPrice || product.price;
               
               results.push({
@@ -184,11 +165,11 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
           })
           .slice(0, 10);
         
-        setSuggestions(sortedResults);
+        if (searchVersion === searchVersionRef.current) setSuggestions(sortedResults);
       } catch (error) {
         console.error('Erro ao buscar sugestões de produtos:', error);
       } finally {
-        setLoading(false);
+        if (searchVersion === searchVersionRef.current) setLoading(false);
       }
     };
 
@@ -205,18 +186,6 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
     }
     setOpen(false);
   }, [onSearch, saveRecentSearch]);
-
-  const handleProductSelect = useCallback((suggestion) => {
-    // Salvar pesquisa recente
-    saveRecentSearch(suggestion.name);
-    // Fechar o dropdown
-    setOpen(false);
-    setSearchTerm('');
-    // Chamar o callback para navegar para a página do produto
-    if (onProductSelect) {
-      onProductSelect(suggestion);
-    }
-  }, [saveRecentSearch, onProductSelect]);
 
   const handleInputChange = (e) => {
     setSearchTerm(e.target.value);
@@ -265,7 +234,7 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
 
   // Formatar preço
   const formatPrice = (price) => {
-    if (!price) return '';
+    if (price === null || price === undefined || Number.isNaN(Number(price))) return '';
     return new Intl.NumberFormat('pt-MZ', {
       style: 'currency',
       currency: 'MZN',
@@ -503,13 +472,15 @@ const ProductSearchWithSuggestions = ({ onSearch, onProductSelect, initialValue 
    COMPONENT PRINCIPAL
 ════════════════════════════════════════════════════════════════════════ */
 const Dashboard = ({ user }) => {
-  const isMobile = useMediaQuery('(max-width:600px)');
   const isTablet = useMediaQuery('(max-width:960px)');
   const navigate = useNavigate();
-  const location = useLocation();
   const [storesData, setStoresData] = useState([]);
+  const { t } = useLanguage();
+  const [provinces, setProvinces] = useState([]);
+  const [selectedProvince, setSelectedProvince] = useState('national');
+  const [savingProvince, setSavingProvince] = useState(false);
+  const provincePromptOpen = Boolean(user?.id && !user?.provincia);
 
-  const [campanhasAtivas, setCampanhasAtivas] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Carregar dados das lojas para o componente de busca
@@ -534,6 +505,22 @@ const Dashboard = ({ user }) => {
     fetchStores();
   }, []);
 
+  useEffect(() => {
+    get(ref(db, 'provincias')).then((snapshot) => setProvinces(snapshot.val() || [])).catch((error) => console.error('Erro ao carregar províncias:', error));
+  }, []);
+
+  const saveProvincePreference = async () => {
+    if (!user?.id) return;
+    setSavingProvince(true);
+    try {
+      await update(ref(db, `company/${user.id}`), { provincia: selectedProvince === 'national' ? 'Nacional' : selectedProvince });
+      showSnack(t('dashboard.provinceSaved'));
+    } catch (error) {
+      console.error('Erro ao guardar província:', error);
+      showSnack(t('dashboard.provinceError'), 'error');
+    } finally { setSavingProvince(false); }
+  };
+
   const showSnack = useCallback((message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   }, []);
@@ -557,34 +544,6 @@ const handleProductSelect = useCallback((product) => {
   const handlePopularSectorClick = useCallback((sector) => {
     navigate(`/explorar?sector=${encodeURIComponent(sector)}`);
   }, [navigate]);
-
-  useEffect(() => {
-    const campanhasRef = ref(db, 'campanhas');
-    const currentProvince = user?.provinciaTemp || user?.provincia || 'Cabo Delgado';
-
-    const unsub = onValue(campanhasRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-
-      const result = [];
-      Object.values(data).forEach((grupo) => {
-        Object.entries(grupo).forEach(([id, campanha]) => {
-          if (
-            campanha.component === 'home' &&
-            campanha.company?.provincia === currentProvince
-          ) {
-            result.push({ id, ...campanha });
-          }
-        });
-      });
-      setCampanhasAtivas(result);
-    }, (err) => {
-      console.error('campanhas:', err);
-      showSnack('Erro ao carregar campanhas.', 'error');
-    });
-
-    return () => unsub();
-  }, [user, showSnack]);
 
   return (
     <Box sx={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
@@ -659,13 +618,13 @@ const handleProductSelect = useCallback((product) => {
                   Popular:
                 </Typography>
                 {POPULAR_SECTORS.map((s) => (
-                  <Box key={s} component="span" className="sector-pill"
+                  <Button key={s} className="sector-pill"
                     onClick={() => handlePopularSectorClick(s)}
                     sx={{ px: 1.5, py: 0.4, border: '1px solid rgba(255,255,255,0.15)',
                       borderRadius: '100px', fontSize: '0.76rem', color: 'rgba(255,255,255,0.6)',
-                      cursor: 'pointer', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+                      minWidth: 0, textTransform: 'none', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                     {s}
-                  </Box>
+                  </Button>
                 ))}
               </Box>
             </Grid>
@@ -753,6 +712,17 @@ const handleProductSelect = useCallback((product) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <Dialog open={provincePromptOpen} disableEscapeKeyDown aria-labelledby="province-prompt-title">
+        <DialogTitle id="province-prompt-title">{t('dashboard.provinceTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>{t('dashboard.provinceDescription')}</Typography>
+          <TextField select fullWidth label={t('explore.province')} value={selectedProvince} onChange={(event) => setSelectedProvince(event.target.value)}>
+            <MenuItem value="national">{t('dashboard.national')}</MenuItem>
+            {provinces.map((item) => <MenuItem key={item.provincia} value={item.provincia}>{item.provincia}</MenuItem>)}
+          </TextField>
+        </DialogContent>
+        <DialogActions><Button variant="contained" onClick={saveProvincePreference} disabled={savingProvince}>{savingProvince ? t('dashboard.savingProvince') : t('dashboard.confirmProvince')}</Button></DialogActions>
+      </Dialog>
     </Box>
   );
 };
