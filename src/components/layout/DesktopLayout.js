@@ -17,6 +17,7 @@ import HeaderDeskSingular from '../desktop/HeaderDeskSingular';
 import FooterDesk from '../desktop/FooterDesk';
 import { useTheme as useColorMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { isPersonalAccount } from '../../utils/accountType';
 
 const FULLSCREEN_ROUTES = new Set([
   '/auth',
@@ -104,7 +105,7 @@ const DesktopLayout = ({ authUser, profile, profileLoading, children }) => {
   const renderHeader = () => {
     if (isFullscreenRoute || (authUser && (profileLoading || !profile))) return null;
     if (!authUser) return <HeaderDeskPublic />;
-    if (profile.type === 'singular') return <HeaderDeskSingular user={profile} />;
+    if (isPersonalAccount(profile)) return <HeaderDeskSingular user={profile} />;
     return <HeaderDesk user={profile} />;
   };
 

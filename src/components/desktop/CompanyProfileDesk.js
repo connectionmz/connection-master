@@ -1,17 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  VerifiedRounded, MoreHoriz, Twitter, Instagram, LinkedIn, 
-  Logout, Edit, CameraAlt, Language, Store, RequestQuote, 
-  Message, Phone, WhatsApp, Facebook, Email, Report, Block, LockOpen,
-  LinkOff, Code, Article, Info, Home, X, LocationOn, 
-  Business, Work, CalendarToday, RemoveRedEye, People,
-  CheckCircle, Warning, Close, Share
-} from "@mui/icons-material";
+import VerifiedRounded from "@mui/icons-material/VerifiedRounded";
+import MoreHoriz from "@mui/icons-material/MoreHoriz";
+import Instagram from "@mui/icons-material/Instagram";
+import LinkedIn from "@mui/icons-material/LinkedIn";
+import CameraAlt from "@mui/icons-material/CameraAlt";
+import Language from "@mui/icons-material/Language";
+import Store from "@mui/icons-material/Store";
+import RequestQuote from "@mui/icons-material/RequestQuote";
+import Phone from "@mui/icons-material/Phone";
+import WhatsApp from "@mui/icons-material/WhatsApp";
+import Facebook from "@mui/icons-material/Facebook";
+import Email from "@mui/icons-material/Email";
+import Report from "@mui/icons-material/Report";
+import Block from "@mui/icons-material/Block";
+import LockOpen from "@mui/icons-material/LockOpen";
+import LinkOff from "@mui/icons-material/LinkOff";
+import Code from "@mui/icons-material/Code";
+import Article from "@mui/icons-material/Article";
+import Info from "@mui/icons-material/Info";
+import Home from "@mui/icons-material/Home";
+import X from "@mui/icons-material/X";
+import LocationOn from "@mui/icons-material/LocationOn";
+import Business from "@mui/icons-material/Business";
+import Work from "@mui/icons-material/Work";
+import RemoveRedEye from "@mui/icons-material/RemoveRedEye";
+import People from "@mui/icons-material/People";
+import CheckCircle from "@mui/icons-material/CheckCircle";
+import Warning from "@mui/icons-material/Warning";
+import Share from "@mui/icons-material/Share";
 import { useNavigate, useParams } from 'react-router-dom';
 import { get, ref, update, push, set, onValue, remove, query, orderByChild, equalTo } from 'firebase/database';
-import { auth, db } from '../../fb';
+import { db } from '../../fb';
 import PostGallery from '../PostGallery';
-import noPhoto from '../../img/noimage.jpg';
+import { getCompanyPosts } from '../../services/posts';
+import { plainText } from '../../utils/postData';
 import {
   Box,
   Button,
@@ -20,8 +42,6 @@ import {
   Tab,
   Avatar,
   Grid,
-  Card,
-  CardContent,
   IconButton,
   Tooltip,
   useMediaQuery,
@@ -44,44 +64,48 @@ import {
   FormControlLabel,
   FormLabel,
   Chip,
-  Divider,
   Container,
   Badge,
   Fade,
   Stack,
   ListItemText,
+  useTheme,
 } from '@mui/material';
 import { saveContentToInbox } from '../SaveToInbox';
-import PostDetailPageDesk from './PostDetailPageDesk';
 import VetrineDesk from './VetrineDesk';
 import BackButton from '../BackButton';
+import { useLanguage } from '../../context/LanguageContext';
+import { createProfileThemeTokens } from '../../utils/profileTheme';
 
 /* ── Design tokens — consistente com StoresDesk ─────────────────────── */
-const T = {
-  navy:        '#08192E',
-  navyMid:     '#0E2849',
-  navyLight:   '#183A63',
-  navyCard:    '#0D2240',
-  gold:        '#C8903A',
-  goldLight:   '#E8B96A',
-  goldPale:    '#FDF3E3',
-  white:       '#FFFFFF',
-  text:        '#0F1C2D',
-  textSub:     '#6B89A5',
-  border:      '#E0E8F0',
-  borderMid:   '#C5D4E3',
-  surface:     '#F4F7FB',
-  darkBorder:  'rgba(255,255,255,0.08)',
-  darkBorderMid:'rgba(255,255,255,0.14)',
-  darkText:    'rgba(255,255,255,0.88)',
-  darkTextSub: 'rgba(255,255,255,0.52)',
-  darkMuted:   'rgba(255,255,255,0.30)',
-  success:     '#10b981',
-  error:       '#ef4444',
-  warning:     '#f59e0b',
+const createTokens = (theme) => {
+  const tokens = createProfileThemeTokens(theme);
+  return {
+    navy: tokens.background,
+    navyMid: tokens.hover,
+    navyLight: tokens.primaryDark,
+    navyCard: tokens.surface,
+    gold: tokens.primary,
+    goldLight: tokens.primaryLight,
+    goldPale: tokens.selected,
+    white: tokens.text,
+    text: tokens.text,
+    textSub: tokens.textSecondary,
+    border: tokens.divider,
+    borderMid: tokens.divider,
+    surface: tokens.background,
+    darkBorder: tokens.divider,
+    darkBorderMid: tokens.divider,
+    darkText: tokens.text,
+    darkTextSub: tokens.textSecondary,
+    darkMuted: tokens.textDisabled,
+    success: tokens.success,
+    error: tokens.error,
+    warning: tokens.warning,
+  };
 };
 
-const KEYFRAMES = `
+const KEYFRAMES = (T) => `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
   @keyframes fadeUp {
     from { opacity:0; transform:translateY(20px); }
@@ -120,11 +144,11 @@ const KEYFRAMES = `
   }
 `;
 
-const BG_GRID = {
+const createBackgroundGrid = (theme) => ({
   position:'absolute', inset:0, pointerEvents:'none', opacity:0.02,
-  backgroundImage:`linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundImage:`linear-gradient(${theme.palette.text.primary} 1px,transparent 1px),linear-gradient(90deg,${theme.palette.text.primary} 1px,transparent 1px)`,
   backgroundSize:'56px 56px',
-};
+});
 
 // Função utilitária para sanitizar paths do Firebase
 const sanitizeFirebasePath = (str) => {
@@ -132,12 +156,16 @@ const sanitizeFirebasePath = (str) => {
   
   // Substitui todos os caracteres inválidos por underscore
   // Caracteres inválidos: . # $ [ ] (espaço) vírgula ponto e vírgula apóstrofo
-  return str.replace(/[.#$\[\] ,;'"]/g, '_');
+  const invalidCharacters = new Set(['.', '#', '$', '[', ']', ' ', ',', ';', "'", '"']);
+  return [...str].map(character => invalidCharacters.has(character) ? '_' : character).join('');
 };
 
 
 
 const CompanyProfile = ({ user }) => {
+  const theme = useTheme();
+  const T = createTokens(theme);
+  const { t } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inicio');
@@ -146,14 +174,11 @@ const CompanyProfile = ({ user }) => {
   const [social, setSocial] = useState({ twitter: '', linkedin: '', instagram: '', website: '' });
   const [loading, setLoading] = useState(true);
   const [cotacoes, setCotacoes] = useState([]);
-  const [modules, setModules] = useState({});
-  const [smsLimit, setSmsLimit] = useState(0);
   const [companyId, setCompanyId] = useState(null);
   const [posts, setPosts] = useState([]);
   const [visits, setVisits] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState(null);
   const isMobile = useMediaQuery('(max-width:600px)');
-  const isTablet = useMediaQuery('(max-width:900px)');
   const [error, setError] = useState(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [openDisconnectDialog, setOpenDisconnectDialog] = useState(false);
@@ -167,19 +192,19 @@ const CompanyProfile = ({ user }) => {
   const [shareAnchorEl, setShareAnchorEl] = useState(null);
 
   const blockReasons = [
-    "Conteúdo inadequado",
-    "Spam ou mensagens indesejadas",
-    "Problemas pessoais",
-    "Empresa desnecessária",
-    "Outro motivo"
+    { value: 'inappropriate', label: t('profile.reason.inappropriate') },
+    { value: 'spam', label: t('profile.reason.spam') },
+    { value: 'personal', label: t('profile.reason.personal') },
+    { value: 'unnecessary', label: t('profile.reason.unnecessary') },
+    { value: 'other', label: t('profile.reason.other') },
   ];
 
   const reportReasons = [
-    "Conteúdo ofensivo",
-    "Informações falsas",
-    "Comportamento inadequado",
-    "Violação de termos",
-    "Outro motivo"
+    { value: 'offensive', label: t('profile.reason.offensive') },
+    { value: 'false_information', label: t('profile.reason.falseInformation') },
+    { value: 'misconduct', label: t('profile.reason.misconduct') },
+    { value: 'terms', label: t('profile.reason.terms') },
+    { value: 'other', label: t('profile.reason.other') },
   ];
 
   // Check if company is blocked - com sanitização
@@ -229,7 +254,7 @@ const CompanyProfile = ({ user }) => {
             const snapshot = await get(companyQuery);
 
             if (!snapshot.exists()) {
-              setError('Empresa não encontrada.');
+              setError('profile.companyNotFound');
               setOpenSnackbar(true);
               navigate('/empresa-nao-encontrada');
               return;
@@ -244,19 +269,18 @@ const CompanyProfile = ({ user }) => {
 
           // 3️⃣ Buscar dados relacionados
           const socialRef = ref(db, `company/${companyId}/social`);
-          const postsRef = ref(db, `posts`);
           const cotacoesRef = ref(db, `cotacoes`);
           const visitasRef = ref(db, `company/${companyId}/visitas`);
 
           const [
             socialSnapshot,
             cotacoesSnapshot,
-            postsSnapshot,
+            companyPosts,
             visitasSnapshot
           ] = await Promise.all([
             get(socialRef),
             get(cotacoesRef),
-            get(postsRef),
+            getCompanyPosts(companyId),
             get(visitasRef)
           ]);
 
@@ -271,8 +295,6 @@ const CompanyProfile = ({ user }) => {
             endereco: companyData.endereco || 'A carregar'
           });
 
-          setModules(companyData.activeModules || {});
-          setSmsLimit(companyData.activeModules?.moduloSMS?.limit || 0);
 
           // Registrar visita
           if (user) {
@@ -288,12 +310,7 @@ const CompanyProfile = ({ user }) => {
             setSocial(socialSnapshot.val());
           }
 
-          if (postsSnapshot.exists()) {
-            const postsData = postsSnapshot.val();
-            const filteredPosts = Object.values(postsData)
-              .filter(post => post.company && post.company.id === companyId);
-            setPosts(filteredPosts);
-          }
+          setPosts(companyPosts);
 
           if (cotacoesSnapshot.exists()) {
             const cotacoesData = cotacoesSnapshot.val();
@@ -311,7 +328,7 @@ const CompanyProfile = ({ user }) => {
 
         } catch (error) {
           console.error('Error fetching data: ', error);
-          setError('Erro ao carregar dados.');
+          setError('profile.loadError');
           setOpenSnackbar(true);
         } finally {
           setLoading(false);
@@ -364,7 +381,7 @@ const CompanyProfile = ({ user }) => {
     
     if (platform === 'copy') {
       navigator.clipboard.writeText(url);
-      setError('Link copiado!');
+      setError(t('profile.copySuccess'));
       setOpenSnackbar(true);
       handleShareClose();
       return;
@@ -416,7 +433,7 @@ const CompanyProfile = ({ user }) => {
 
   const handleConectar = async () => {
     if (!companyId || isBlocked || !user) {
-      setError("Você precisa estar logado para conectar-se a empresas.");
+      setError(t('profile.authConnect'));
       setOpenSnackbar(true);
       return;
     }
@@ -447,11 +464,11 @@ const CompanyProfile = ({ user }) => {
     try {
       await set(targetUserConnectionRef, connectionRequest);
       await saveContentToInbox(companyId, notification);
-      setError("Solicitação de conexão enviada com sucesso!");
+      setError(t('profile.connectSuccess'));
       setOpenSnackbar(true);
     } catch (error) {
       console.error("Erro ao enviar solicitação:", error);
-      setError("Erro ao tentar enviar a solicitação. Tente novamente.");
+      setError(t('profile.connectError'));
       setOpenSnackbar(true);
     }
   };
@@ -464,11 +481,11 @@ const CompanyProfile = ({ user }) => {
     
     try {
       await remove(targetUserConnectionRef);
-      setError("Solicitação de conexão cancelada com sucesso!");
+      setError(t('profile.cancelConnectionSuccess'));
       setOpenSnackbar(true);
     } catch (error) {
       console.error("Erro ao cancelar a solicitação:", error);
-      setError("Erro ao tentar cancelar a solicitação. Tente novamente.");
+      setError(t('profile.cancelConnectionError'));
       setOpenSnackbar(true);
     }
   };
@@ -497,12 +514,12 @@ const CompanyProfile = ({ user }) => {
         link: `/perfil/${currentUserId}`
       });
 
-      setError("Desconectado com sucesso!");
+      setError(t('profile.disconnectSuccess'));
       setOpenSnackbar(true);
       handleCloseDisconnectDialog();
     } catch (error) {
       console.error("Erro ao desconectar:", error);
-      setError("Erro ao tentar desconectar. Tente novamente.");
+      setError(t('profile.disconnectError'));
       setOpenSnackbar(true);
       handleCloseDisconnectDialog();
     }
@@ -510,14 +527,14 @@ const CompanyProfile = ({ user }) => {
 
   const handleSubmitReport = async () => {
     if (!user) {
-      setError("Você precisa estar logado para reportar uma empresa.");
+      setError(t('profile.authReport'));
       setOpenSnackbar(true);
       handleCloseReportDialog();
       return;
     }
 
     if (!reportReason) {
-      setError("Por favor, selecione um motivo");
+      setError(t('profile.reasonRequired'));
       setOpenSnackbar(true);
       return;
     }
@@ -535,26 +552,26 @@ const CompanyProfile = ({ user }) => {
         companyName: userData?.displayName
       });
 
-      setError("Denúncia enviada com sucesso. Obrigado pelo feedback!");
+      setError(t('profile.reportSuccess'));
       setOpenSnackbar(true);
       handleCloseReportDialog();
     } catch (error) {
       console.error("Erro ao enviar denúncia:", error);
-      setError("Erro ao enviar denúncia. Tente novamente.");
+      setError(t('profile.reportError'));
       setOpenSnackbar(true);
     }
   };
 
   const handleBlockCompany = async () => {
     if (!user) {
-      setError("Você precisa estar logado para bloquear uma empresa.");
+      setError(t('profile.authBlock'));
       setOpenSnackbar(true);
       handleCloseBlockDialog();
       return;
     }
 
     if (!blockReason) {
-      setError("Por favor, selecione um motivo");
+      setError(t('profile.reasonRequired'));
       setOpenSnackbar(true);
       return;
     }
@@ -592,12 +609,12 @@ const CompanyProfile = ({ user }) => {
       setIsBlocked(true);
       setConnectionStatus(null);
       
-      setError("Empresa bloqueada com sucesso!");
+      setError(t('profile.blockSuccess'));
       setOpenSnackbar(true);
       handleCloseBlockDialog();
     } catch (error) {
       console.error("Erro ao bloquear empresa:", error);
-      setError("Erro ao bloquear empresa. Tente novamente.");
+      setError(t('profile.blockError'));
       setOpenSnackbar(true);
     }
   };
@@ -616,11 +633,11 @@ const CompanyProfile = ({ user }) => {
       await remove(blockRef);
       
       setIsBlocked(false);
-      setError("Empresa desbloqueada com sucesso!");
+      setError(t('profile.unblockSuccess'));
       setOpenSnackbar(true);
     } catch (error) {
       console.error("Erro ao desbloquear empresa:", error);
-      setError("Erro ao desbloquear empresa. Tente novamente.");
+      setError(t('profile.unblockError'));
       setOpenSnackbar(true);
     }
   };
@@ -636,28 +653,28 @@ const CompanyProfile = ({ user }) => {
                 <Paper sx={{ p: 2, bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2, textAlign: 'center' }}>
                   <RemoveRedEye sx={{ color: T.gold, fontSize: 28 }} />
                   <Typography sx={{ color: T.white, fontWeight: 700, mt: 1 }}>{visits.length}</Typography>
-                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>Visitas</Typography>
+                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>{t('profile.visits')}</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Paper sx={{ p: 2, bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2, textAlign: 'center' }}>
                   <Article sx={{ color: T.gold, fontSize: 28 }} />
                   <Typography sx={{ color: T.white, fontWeight: 700, mt: 1 }}>{posts.length}</Typography>
-                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>Publicações</Typography>
+                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>{t('profile.tabs.posts')}</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Paper sx={{ p: 2, bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2, textAlign: 'center' }}>
                   <People sx={{ color: T.gold, fontSize: 28 }} />
                   <Typography sx={{ color: T.white, fontWeight: 700, mt: 1 }}>-</Typography>
-                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>Conexões</Typography>
+                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>{t('profile.connections')}</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Paper sx={{ p: 2, bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2, textAlign: 'center' }}>
                   <RequestQuote sx={{ color: T.gold, fontSize: 28 }} />
                   <Typography sx={{ color: T.white, fontWeight: 700, mt: 1 }}>{cotacoes.length}</Typography>
-                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>Cotações</Typography>
+                  <Typography sx={{ color: T.darkTextSub, fontSize: '0.8rem' }}>{t('profile.quotes')}</Typography>
                 </Paper>
               </Grid>
             </Grid>
@@ -665,16 +682,15 @@ const CompanyProfile = ({ user }) => {
             {/* Company Description */}
             <Paper sx={{ p: 3, bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: 2 }}>
               <Typography sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700, color: T.white, mb: 2, fontSize: '1.2rem' }}>
-                Sobre a Empresa
+                {t('profile.aboutCompany')}
               </Typography>
               {userData?.missaoVisaoValores ? (
-                <Typography 
-                  dangerouslySetInnerHTML={{ __html: userData.missaoVisaoValores }} 
-                  sx={{ color: T.darkTextSub, lineHeight: 1.8 }}
-                />
+                <Typography sx={{ color: T.darkTextSub, lineHeight: 1.8 }}>
+                  {plainText(userData.missaoVisaoValores)}
+                </Typography>
               ) : (
                 <Typography sx={{ color: T.darkMuted, fontStyle: 'italic' }}>
-                  Nenhuma informação cadastrada.
+                  {t('profile.noInformation')}
                 </Typography>
               )}
             </Paper>
@@ -688,25 +704,25 @@ const CompanyProfile = ({ user }) => {
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <Business sx={{ color: T.gold, fontSize: 20 }} />
-                    <Typography sx={{ color: T.white, fontWeight: 600 }}>Informações Gerais</Typography>
+                    <Typography sx={{ color: T.white, fontWeight: 600 }}>{t('profile.generalInfo')}</Typography>
                   </Box>
                   
                   <Stack spacing={2}>
                     <Box>
-                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>Endereço</Typography>
-                      <Typography sx={{ color: T.darkText }}>{mCompany?.endereco || 'Não informado'}</Typography>
+                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>{t('profile.address')}</Typography>
+                      <Typography sx={{ color: T.darkText }}>{mCompany?.endereco || t('profile.notProvided')}</Typography>
                     </Box>
                     
                     <Box>
-                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>Localização</Typography>
+                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>{t('profile.location')}</Typography>
                       <Typography sx={{ color: T.darkText }}>
                         {mCompany?.provincia || ''} {mCompany?.distrito ? `, ${mCompany.distrito}` : ''}
                       </Typography>
                     </Box>
                     
                     <Box>
-                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>Sector de Atuação</Typography>
-                      <Typography sx={{ color: T.darkText }}>{mCompany?.sector || 'Não informado'}</Typography>
+                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>{t('profile.sector')}</Typography>
+                      <Typography sx={{ color: T.darkText }}>{mCompany?.sector || t('profile.notProvided')}</Typography>
                     </Box>
                   </Stack>
                 </Grid>
@@ -714,18 +730,18 @@ const CompanyProfile = ({ user }) => {
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <Work sx={{ color: T.gold, fontSize: 20 }} />
-                    <Typography sx={{ color: T.white, fontWeight: 600 }}>Detalhes</Typography>
+                    <Typography sx={{ color: T.white, fontWeight: 600 }}>{t('profile.details')}</Typography>
                   </Box>
                   
                   <Stack spacing={2}>
                     <Box>
-                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>Tipo de Entidade</Typography>
-                      <Typography sx={{ color: T.darkText }}>{mCompany?.tipoEntidade || 'Não informado'}</Typography>
+                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>{t('profile.entityType')}</Typography>
+                      <Typography sx={{ color: T.darkText }}>{mCompany?.tipoEntidade || t('profile.notProvided')}</Typography>
                     </Box>
                     
                     <Box>
-                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>Capacidade de Produção</Typography>
-                      <Typography sx={{ color: T.darkText }}>{mCompany?.capacidadeDeProducao || 'Não informado'}</Typography>
+                      <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>{t('profile.productionCapacity')}</Typography>
+                      <Typography sx={{ color: T.darkText }}>{mCompany?.capacidadeDeProducao || t('profile.notProvided')}</Typography>
                     </Box>
                     
                     <Box>
@@ -735,7 +751,7 @@ const CompanyProfile = ({ user }) => {
                           {mCompany.email}
                         </a>
                       ) : (
-                        <Typography sx={{ color: T.darkMuted }}>Não informado</Typography>
+                        <Typography sx={{ color: T.darkMuted }}>{t('profile.notProvided')}</Typography>
                       )}
                     </Box>
                     
@@ -746,7 +762,7 @@ const CompanyProfile = ({ user }) => {
                           {mCompany.contacto}
                         </a>
                       ) : (
-                        <Typography sx={{ color: T.darkMuted }}>Não informado</Typography>
+                        <Typography sx={{ color: T.darkMuted }}>{t('profile.notProvided')}</Typography>
                       )}
                     </Box>
                   </Stack>
@@ -760,7 +776,7 @@ const CompanyProfile = ({ user }) => {
       case 'Repositorio':
         return <VetrineDesk id={companyId} />;
       default:
-        return <Typography color="text.secondary" align="center">Nenhum conteúdo disponível.</Typography>;
+        return <Typography color="text.secondary" align="center">{t('profile.noContent')}</Typography>;
     }
   };
 
@@ -781,10 +797,10 @@ const CompanyProfile = ({ user }) => {
 
   return (
     <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-      <style>{KEYFRAMES}</style>
+      <style>{KEYFRAMES(T)}</style>
       
       {/* Background Grid */}
-      <Box sx={BG_GRID} />
+      <Box sx={createBackgroundGrid(theme)} />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 3 }}>
         <BackButton sx={{ color: T.darkText, mb: 2, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }} />
@@ -815,13 +831,13 @@ const CompanyProfile = ({ user }) => {
                 }}
               >
                 <CameraAlt sx={{ fontSize: 40, mr: 1 }} />
-                <Typography>Sem foto de capa</Typography>
+                <Typography>{t('profile.noCover')}</Typography>
               </Box>
             )}
 
             {/* Action Buttons on Cover */}
             <Box sx={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 1 }}>
-              <Tooltip title="Compartilhar perfil" arrow>
+              <Tooltip title={t('profile.share')} arrow>
                 <IconButton
                   onClick={handleShareOpen}
                   sx={{ 
@@ -913,7 +929,7 @@ const CompanyProfile = ({ user }) => {
                     mx: { xs: 'auto', sm: 0 }
                   }}
                 >
-                  {mCompany?.sector || 'Setor não informado'}
+                  {mCompany?.sector || t('profile.notProvided')}
                 </Typography>
 
                 {/* Location */}
@@ -936,7 +952,7 @@ const CompanyProfile = ({ user }) => {
               {/* Blocked Chip */}
               {isBlocked && user && (
                 <Chip 
-                  label="Empresa bloqueada" 
+                  label={t('profile.blocked')}
                   icon={<Block sx={{ fontSize: 14 }} />}
                   sx={{ 
                     bgcolor: 'rgba(239,68,68,0.12)', 
@@ -950,9 +966,7 @@ const CompanyProfile = ({ user }) => {
 
             {/* Bio */}
             {userData?.bio && (
-              <Typography 
-                dangerouslySetInnerHTML={{ __html: userData.bio }} 
-                sx={{ 
+              <Typography sx={{
                   color: T.darkTextSub,
                   mt: 3,
                   p: 2,
@@ -960,8 +974,9 @@ const CompanyProfile = ({ user }) => {
                   borderRadius: 2,
                   border: `1px solid ${T.darkBorder}`,
                   lineHeight: 1.8,
-                }}
-              />
+                }}>
+                {plainText(userData.bio)}
+              </Typography>
             )}
 
             {/* Action Buttons */}
@@ -985,7 +1000,7 @@ const CompanyProfile = ({ user }) => {
                         '&:hover': { borderColor: T.success, color: T.success }
                       }}
                     >
-                      Desbloquear Empresa
+                      {t('profile.unblock')}
                     </Button>
                   ) : (
                     <>
@@ -1009,10 +1024,10 @@ const CompanyProfile = ({ user }) => {
                         }}
                       >
                         {connectionStatus === "pending"
-                          ? "Cancelar Solicitação"
+                          ? t('profile.cancelRequest')
                           : connectionStatus === "accepted"
-                          ? "Desconectar"
-                          : "Conectar"}
+                          ? t('profile.disconnect')
+                          : t('profile.connect')}
                       </Button>
 
                       <IconButton 
@@ -1038,7 +1053,7 @@ const CompanyProfile = ({ user }) => {
                     '&:hover': { borderColor: T.gold, color: T.gold }
                   }}
                 >
-                  Faça login para conectar
+                  {t('profile.loginToConnect')}
                 </Button>
               )}
             </Box>
@@ -1053,7 +1068,7 @@ const CompanyProfile = ({ user }) => {
             }}>
               {/* Store */}
               {!isBlocked && (
-                <Tooltip title="Ir para a Loja" arrow>
+                <Tooltip title={t('profile.openStore')} arrow>
                   <IconButton 
                     onClick={() => companyId && navigate(`/loja/${companyId}`)}
                     sx={{ 
@@ -1069,7 +1084,7 @@ const CompanyProfile = ({ user }) => {
 
               {/* Phone */}
               {userData?.contacto && !isBlocked && (
-                <Tooltip title="Ligar" arrow>
+                <Tooltip title={t('profile.call')} arrow>
                   <IconButton 
                     href={`tel:${userData.contacto}`}
                     sx={{ 
@@ -1086,7 +1101,7 @@ const CompanyProfile = ({ user }) => {
 
               {/* Email */}
               {userData?.email && !isBlocked && (
-                <Tooltip title="Enviar e-mail" arrow>
+                <Tooltip title={t('profile.sendEmail')} arrow>
                   <IconButton 
                     href={`mailto:${userData.email}`}
                     sx={{ 
@@ -1233,10 +1248,10 @@ const CompanyProfile = ({ user }) => {
               '& .MuiTabs-indicator': { bgcolor: T.gold }
             }}
           >
-            <Tab label="Início" value="inicio" icon={<Home sx={{ fontSize: 18 }} />} iconPosition="start" />
-            <Tab label="Sobre" value="sobre" icon={<Info sx={{ fontSize: 18 }} />} iconPosition="start" />
-            <Tab label="Publicações" value="Publicados" icon={<Article sx={{ fontSize: 18 }} />} iconPosition="start" />
-            <Tab label="Repositório" value="Repositorio" icon={<Code sx={{ fontSize: 18 }} />} iconPosition="start" />
+            <Tab label={t('profile.tabs.home')} value="inicio" icon={<Home sx={{ fontSize: 18 }} />} iconPosition="start" />
+            <Tab label={t('profile.tabs.about')} value="sobre" icon={<Info sx={{ fontSize: 18 }} />} iconPosition="start" />
+            <Tab label={t('profile.tabs.posts')} value="Publicados" icon={<Article sx={{ fontSize: 18 }} />} iconPosition="start" />
+            <Tab label={t('profile.tabs.repository')} value="Repositorio" icon={<Code sx={{ fontSize: 18 }} />} iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -1284,7 +1299,7 @@ const CompanyProfile = ({ user }) => {
           <ListItemIcon>
             <Share sx={{ fontSize: 20, color: T.gold }} />
           </ListItemIcon>
-          <ListItemText>Copiar link</ListItemText>
+          <ListItemText>{t('profile.copyLink')}</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -1309,7 +1324,7 @@ const CompanyProfile = ({ user }) => {
               <ListItemIcon>
                 <LockOpen sx={{ color: T.success }} />
               </ListItemIcon>
-              <Typography color="success.main">Desbloquear Empresa</Typography>
+              <Typography color="success.main">{t('profile.unblock')}</Typography>
             </MenuItem>
           ) : (
             <>
@@ -1317,7 +1332,13 @@ const CompanyProfile = ({ user }) => {
                 <ListItemIcon>
                   <Report sx={{ color: T.warning }} />
                 </ListItemIcon>
-                <Typography>Denunciar Empresa</Typography>
+                <Typography>{t('profile.report')}</Typography>
+              </MenuItem>
+              <MenuItem onClick={handleOpenBlockDialog}>
+                <ListItemIcon>
+                  <Block sx={{ color: T.error }} />
+                </ListItemIcon>
+                <Typography color="error.main">{t('profile.block')}</Typography>
               </MenuItem>
             </>
           )
@@ -1326,7 +1347,7 @@ const CompanyProfile = ({ user }) => {
             <ListItemIcon>
               <LockOpen color="primary" />
             </ListItemIcon>
-            Faça login para acessar estas opções
+            {t('profile.loginForOptions')}
           </MenuItem>
         )}
       </Menu>
@@ -1346,11 +1367,11 @@ const CompanyProfile = ({ user }) => {
         }}
       >
         <DialogTitle sx={{ color: T.white, fontFamily: '"Playfair Display", serif' }}>
-          Denunciar Empresa
+          {t('profile.reportTitle')}
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ color: T.darkTextSub, mb: 2 }}>
-            Por favor, selecione o motivo da denúncia:
+            {t('profile.reportReasonPrompt')}
           </Typography>
           
           <FormControl component="fieldset" sx={{ width: '100%' }}>
@@ -1360,20 +1381,20 @@ const CompanyProfile = ({ user }) => {
             >
               {reportReasons.map((reason) => (
                 <FormControlLabel
-                  key={reason}
-                  value={reason}
+                  key={reason.value}
+                  value={reason.value}
                   control={<Radio sx={{ color: T.gold, '&.Mui-checked': { color: T.gold } }} />}
-                  label={<Typography sx={{ color: T.white }}>{reason}</Typography>}
+                  label={<Typography sx={{ color: T.white }}>{reason.label}</Typography>}
                 />
               ))}
             </RadioGroup>
           </FormControl>
 
-          {reportReason === "Outro motivo" && (
+          {reportReason === 'other' && (
             <TextField
               fullWidth
               margin="normal"
-              label="Descreva o motivo em detalhes"
+              label={t('profile.customReason')}
               multiline
               rows={4}
               value={customReason}
@@ -1394,12 +1415,12 @@ const CompanyProfile = ({ user }) => {
             onClick={handleCloseReportDialog}
             sx={{ color: T.darkMuted }}
           >
-            Cancelar
+            {t('profile.cancel')}
           </Button>
           <Button 
             onClick={handleSubmitReport} 
             variant="contained"
-            disabled={!reportReason || (reportReason === "Outro motivo" && !customReason)}
+            disabled={!reportReason || (reportReason === 'other' && !customReason)}
             sx={{
               bgcolor: T.gold,
               color: T.navy,
@@ -1407,7 +1428,7 @@ const CompanyProfile = ({ user }) => {
               '&.Mui-disabled': { bgcolor: T.darkMuted }
             }}
           >
-            Enviar Denúncia
+            {t('profile.sendReport')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1427,7 +1448,7 @@ const CompanyProfile = ({ user }) => {
         }}
       >
         <DialogTitle sx={{ color: T.white, fontFamily: '"Playfair Display", serif' }}>
-          Bloquear Empresa
+          {t('profile.blockTitle')}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ 
@@ -1439,19 +1460,17 @@ const CompanyProfile = ({ user }) => {
           }}>
             <Typography sx={{ color: T.warning, fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Warning sx={{ fontSize: 18 }} />
-              Ao bloquear esta empresa:
+              {t('profile.blockWarning')}
             </Typography>
             <Typography component="div" sx={{ color: T.darkTextSub, fontSize: '0.9rem', pl: 2 }}>
-              • Não poderá enviar pedidos de conexão<br />
-              • Não receberá pedidos de cotação<br />
-              • Não verá publicações desta empresa<br />
-              • Não receberá mensagens ou notificações
+              • {t('profile.blockEffectConnections')}<br />
+              • {t('profile.blockEffectQuotes')}
             </Typography>
           </Box>
 
           <FormControl component="fieldset" sx={{ width: '100%' }}>
             <FormLabel component="legend" sx={{ color: T.white, mb: 1 }}>
-              Selecione o motivo do bloqueio:
+              {t('profile.blockReasonPrompt')}
             </FormLabel>
             <RadioGroup
               value={blockReason}
@@ -1459,20 +1478,20 @@ const CompanyProfile = ({ user }) => {
             >
               {blockReasons.map((reason) => (
                 <FormControlLabel
-                  key={reason}
-                  value={reason}
+                  key={reason.value}
+                  value={reason.value}
                   control={<Radio sx={{ color: T.gold, '&.Mui-checked': { color: T.gold } }} />}
-                  label={<Typography sx={{ color: T.white }}>{reason}</Typography>}
+                  label={<Typography sx={{ color: T.white }}>{reason.label}</Typography>}
                 />
               ))}
             </RadioGroup>
           </FormControl>
 
-          {blockReason === "Outro motivo" && (
+          {blockReason === 'other' && (
             <TextField
               fullWidth
               margin="normal"
-              label="Descreva o motivo em detalhes"
+              label={t('profile.customReason')}
               multiline
               rows={4}
               value={customReason}
@@ -1493,19 +1512,19 @@ const CompanyProfile = ({ user }) => {
             onClick={handleCloseBlockDialog}
             sx={{ color: T.darkMuted }}
           >
-            Cancelar
+            {t('profile.cancel')}
           </Button>
           <Button 
             onClick={handleBlockCompany} 
             variant="contained"
             color="error"
             startIcon={<Block />}
-            disabled={!blockReason || (blockReason === "Outro motivo" && !customReason)}
+            disabled={!blockReason || (blockReason === 'other' && !customReason)}
             sx={{
               '&.Mui-disabled': { bgcolor: T.darkMuted }
             }}
           >
-            Confirmar Bloqueio
+            {t('profile.confirmBlock')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1523,14 +1542,14 @@ const CompanyProfile = ({ user }) => {
         }}
       >
         <DialogTitle sx={{ color: T.white, fontFamily: '"Playfair Display", serif' }}>
-          Confirmar Desconexão
+          {t('profile.disconnectTitle')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: T.darkTextSub }}>
-            Tem certeza que deseja desconectar-se de <strong style={{ color: T.white }}>{userData?.displayName}</strong>?
+            {t('profile.disconnectQuestion', { company: userData?.displayName || '' })}
             <br /><br />
             <span style={{ color: T.warning }}>
-              Esta empresa deixará de fazer parte da sua lista de clientes.
+              {t('profile.disconnectEffect')}
             </span>
           </DialogContentText>
         </DialogContent>
@@ -1539,7 +1558,7 @@ const CompanyProfile = ({ user }) => {
             onClick={handleCloseDisconnectDialog}
             sx={{ color: T.darkMuted }}
           >
-            Cancelar
+            {t('profile.cancel')}
           </Button>
           <Button 
             onClick={handleDesconectar} 
@@ -1547,7 +1566,7 @@ const CompanyProfile = ({ user }) => {
             color="error"
             startIcon={<LinkOff />}
           >
-            Desconectar
+            {t('profile.disconnect')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1569,7 +1588,7 @@ const CompanyProfile = ({ user }) => {
             '& .MuiAlert-icon': { color: T.white }
           }}
         >
-          {error}
+          {t(error || '')}
         </Alert>
       </Snackbar>
     </Box>

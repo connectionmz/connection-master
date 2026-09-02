@@ -47,7 +47,7 @@ const ModuleGrid = () => {
     if (isModuleActive(module.key)) {
       navigate(module.link);
     } else {
-      navigate(`/pagar/${module.key}`);
+      navigate(`/pagar/${module.key}`, { state: { from: module.link } });
     }
   };
 

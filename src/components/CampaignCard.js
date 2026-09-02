@@ -1,7 +1,10 @@
 import React, { useEffect } from 'react';
 import { db } from '../fb';
 import { ref, update, remove } from 'firebase/database';
-import { AdsClick, HistoryEdu, VerifiedRounded, Visibility } from '@mui/icons-material';
+import AdsClick from '@mui/icons-material/AdsClick';
+import HistoryEdu from '@mui/icons-material/HistoryEdu';
+import VerifiedRounded from '@mui/icons-material/VerifiedRounded';
+import Visibility from '@mui/icons-material/Visibility';
 
 const CampaignCard = ({ campaign, userCompany, loggedInUser }) => {
   const imageUrl = campaign.items && campaign.items.length > 0 ? campaign.items[0].imageUrl : '';

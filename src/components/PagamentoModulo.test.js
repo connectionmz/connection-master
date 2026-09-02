@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import PagamentoModulo from './PagamentoModulo';
 import { onValue } from 'firebase/database';
 import { useLanguage } from '../context/LanguageContext';
+import { useActiveModules } from '../context/ActiveModulesContext';
 
 jest.mock('../fb', () => ({ auth: { currentUser: null }, db: {} }));
 jest.mock('firebase/database', () => ({
@@ -10,6 +11,7 @@ jest.mock('firebase/database', () => ({
   onValue: jest.fn(),
 }));
 jest.mock('../context/LanguageContext', () => ({ useLanguage: jest.fn() }));
+jest.mock('../context/ActiveModulesContext', () => ({ useActiveModules: jest.fn() }));
 jest.mock('./BackButton', () => () => <button type="button">Back</button>);
 jest.mock('../according/PagamentoAccordion', () => () => <div>Module details</div>);
 
@@ -38,6 +40,7 @@ const renderPayment = (moduleKey = 'moduloMarket') => render(
 
 describe('PagamentoModulo', () => {
   beforeEach(() => {
+    useActiveModules.mockReturnValue({ isModuleActive: jest.fn(() => false) });
     useLanguage.mockReturnValue({
       language: 'en',
       t: (key) => translations[key] || key,

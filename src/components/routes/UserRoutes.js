@@ -4,7 +4,6 @@ import Home from '../Home';
 import Auth from '../Auth';
 import AuthCreate from '../AuthCreate';
 import Market from '../Market';
-import Campaign from '../Campaign';
 import PostInput from '../PostInput';
 import Concurso from '../Concurso';
 import Cotacoes from '../Cotacoes';
@@ -13,27 +12,23 @@ import PublicarCotacao from '../PublicarCotacao';
 import CotacaoDetalhes from '../CotacaoDetalhes';
 import EnviarProposta from '../EnviarProposta';
 import Explore from '../Explore';
-import Profile from '../Profile';
 import Apx from '../Apx';
 import Faturacao from '../Faturacao';
 import Feed from '../Feed';
+import PostDetailPageDesk from '../desktop/PostDetailPageDesk';
 import Stores from '../Stores';
 import StoreDetails from '../StoreDetails';
 import CotacoesPDF from '../pdf/CotacoesPDF';
-import FaturaDetalhes from '../FaturaDetalhes';
 import Inbox from '../Inbox';
 import ListaDeServicos from '../ListaDeServicos';
 import CompanyProfile from '../CompanyProfile';
-import EditProfile from '../EditProfile';
+import { AccountEditProfileRoute, AccountProfileRoute } from './AccountProfileRoute';
 import Terms from '../Termos';
 import CriarProforma from '../CriarProfoma';
-import ProformaDetalhes from '../ProformaDetalhes';
 import Analytics from '../Analytics';
 import Fatura from '../pdf/Fatura';
 import ProductForm from '../market/ProductForm';
 import PublicarConcurso from '../PublicarConcurso';
-import Teste from '../Teste';
-import Anunciar from '../Anunciar';
 import Propostas from '../Propostas';
 import DetalhesProposta from '../DetalhesProposta';
 import ConcursoDetalhes from '../ConcursoDetalhes';
@@ -100,14 +95,16 @@ const UserRoutes = ({ user }) => {
       <Route path="/product/:productId/store/:store" element={<ProductDetails />} />
 
       {/* Campanha e Posts */}
-      <Route path="/campaign" element={<Campaign />} />
-      <Route path="/post" element={<PostInput user={user?.id} />} />
-      <Route path="/anunciar" element={<Anunciar user={user} />} />
+      <Route path="/post" element={<PostInput user={user} />} />
 
       {/* Perfil */}
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/editar-perfil" element={<EditProfile user={user} />} />
+      <Route path="/profile" element={<Navigate to="/perfil" replace />} />
+      <Route path="/perfil" element={<AccountProfileRoute user={user} />} />
+      <Route path="/meuperfil" element={<Navigate to="/perfil" replace />} />
+      <Route path="/editar-perfil" element={<AccountEditProfileRoute user={user} />} />
+      <Route path="/editar-meuperfil" element={<Navigate to="/editar-perfil" replace />} />
       <Route path="/vperfil/:id" element={<CompanyProfile user={user} />} />
+      <Route path="/empresa/:id" element={<CompanyProfile user={user} />} />
 
       {/* Faturação e Proforma */}
       <Route path="/faturacao" element={<Faturacao user={user} />} />
@@ -120,13 +117,14 @@ const UserRoutes = ({ user }) => {
       <Route path="/logistica" element={<LogisticaModule />} />
       <Route path="/inqueritos" element={<InqueritosModule user={user} />} />
       <Route path="/pagamento-modulo/:moduleKey" element={<PagamentoModulo user={user} />} />
+      <Route path="/pagar/:moduleKey" element={<PagamentoModulo user={user} />} />
 
       {/* Outros */}
       <Route path="/search" element={<ConnectionsSearch />} />
       <Route path="/empresas" element={<Explore user={user} />} />
-      <Route path="/feed" element={<Feed />} />
+      <Route path="/feed" element={<Feed user={user} />} />
+      <Route path="/post/:postId" element={<PostDetailPageDesk user={user} />} />
       <Route path="/apx" element={<Apx user={user} />} />
-      <Route path="/rfq" element={<Teste />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/inbox" element={<Inbox />} />
       <Route path="/analytics" element={<Analytics />} />
