@@ -11,8 +11,8 @@ export const toPublicCompany = (id, company = {}) => ({
   logoUrl: company.logoUrl || '', slug: company.slug || '', verified: company.verified || false,
 });
 
-export const createCompanyDirectory = (data = {}) => Object.entries(data)
-  .filter(([, company]) => isBusinessAccount(company))
+export const createCompanyDirectory = (data = {}, { assumeBusiness = false } = {}) => Object.entries(data)
+  .filter(([, company]) => assumeBusiness || isBusinessAccount(company))
   .map(([id, company]) => toPublicCompany(id, company));
 
 export const filterCompanyDirectory = (companies, filters) => {

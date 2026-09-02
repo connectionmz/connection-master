@@ -10,7 +10,8 @@ import {
 import { Business, Category, Close, LocationOn, Search, Tune } from '@mui/icons-material';
 import { db } from '../../fb';
 import { useLanguage } from '../../context/LanguageContext';
-import { createCompanyDirectory, filterCompanyDirectory } from '../../utils/companyDirectory';
+import { filterCompanyDirectory } from '../../utils/companyDirectory';
+import { loadPublicCompanyDirectory } from '../../services/companyDirectory';
 
 const EMPTY_FILTERS = { sector: '', subsector: '', province: '', district: '', entityType: '' };
 const PAGE_SIZE = 24;
@@ -36,7 +37,7 @@ const ExploreDesk = () => {
   const theme = useTheme();
   const T = useMemo(() => createExploreTokens(theme), [theme]);
   const { t } = useLanguage();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [companies, setCompanies] = useState([]);
   const [references, setReferences] = useState({ provinces: [], sectors: [], entityTypes: [] });
   const [search, setSearch] = useState('');
@@ -50,10 +51,10 @@ const ExploreDesk = () => {
 
   useEffect(() => {
     let active = true;
-    Promise.all([get(ref(db, 'company')), get(ref(db, 'provincias')), get(ref(db, 'sectores_de_atividade')), get(ref(db, 'tipos_entidades'))])
-      .then(([companiesSnap, provincesSnap, sectorsSnap, typesSnap]) => {
+    Promise.all([loadPublicCompanyDirectory(db), get(ref(db, 'provincias')), get(ref(db, 'sectores_de_atividade')), get(ref(db, 'tipos_entidades'))])
+      .then(([directory, provincesSnap, sectorsSnap, typesSnap]) => {
         if (!active) return;
-        setCompanies(createCompanyDirectory(companiesSnap.val() || {}));
+        setCompanies(directory);
         setReferences({ provinces: provincesSnap.val() || [], sectors: sectorsSnap.val() || [], entityTypes: typesSnap.val() || [] });
       })
       .catch((loadError) => { console.error('Erro ao carregar diretório:', loadError); if (active) setError(t('explore.loadError')); })
@@ -69,9 +70,13 @@ const ExploreDesk = () => {
   const activeCount = Object.values(filters).filter(Boolean).length;
 
   useEffect(() => setPage(1), [search, filters]);
+  useEffect(() => {
+    const sector = searchParams.get('sector') || '';
+    setFilters((current) => current.sector === sector ? current : { ...current, sector, subsector: '' });
+  }, [searchParams]);
 
   const openFilters = () => { setDraft(filters); setDialogOpen(true); };
-  const clearFilters = () => { setFilters(EMPTY_FILTERS); setDraft(EMPTY_FILTERS); setSearch(''); };
+  const clearFilters = () => { setFilters(EMPTY_FILTERS); setDraft(EMPTY_FILTERS); setSearch(''); setSearchParams({}); };
   const setDraftField = (name, value) => setDraft((current) => ({
     ...current, [name]: value,
     ...(name === 'sector' ? { subsector: '' } : {}),
@@ -133,7 +138,7 @@ const ExploreDesk = () => {
           <TextField select disabled={!draft.sector} label={t('explore.subsector')} value={draft.subsector} onChange={(e) => setDraftField('subsector', e.target.value)}><MenuItem value="">{t('explore.all')}</MenuItem>{subsectors.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
           <TextField select label={t('explore.entityType')} value={draft.entityType} onChange={(e) => setDraftField('entityType', e.target.value)}><MenuItem value="">{t('explore.all')}</MenuItem>{references.entityTypes.map((item) => <MenuItem key={item.tipo} value={item.tipo}>{item.tipo}</MenuItem>)}</TextField>
         </Stack></DialogContent>
-        <DialogActions><Button onClick={() => setDraft(EMPTY_FILTERS)}>{t('explore.clearFilters')}</Button><Button variant="contained" onClick={() => { setFilters(draft); setDialogOpen(false); }}>{t('explore.apply')}</Button></DialogActions>
+        <DialogActions><Button onClick={() => setDraft(EMPTY_FILTERS)}>{t('explore.clearFilters')}</Button><Button variant="contained" onClick={() => { setFilters(draft); setSearchParams(draft.sector ? { sector: draft.sector } : {}); setDialogOpen(false); }}>{t('explore.apply')}</Button></DialogActions>
       </Dialog>
     </Box>
   );
