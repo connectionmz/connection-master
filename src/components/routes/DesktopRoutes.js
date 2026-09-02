@@ -14,8 +14,6 @@ import Sobre from '../Sobre';
 import EmailVerification from '../EmailVerification';
 import CompanyVerificationNotice from '../CompanyVerificationNotice';
 import AuthDesk from '../AuthDesk';
-import ProfileDesk from '../desktop/ProfileDesk';
-import EditProfileDesk from '../desktop/EditProfileDesk';
 import CotacoesPDF from '../pdf/CotacoesPDF';
 import EmpresaNaoEncontrada from '../desktop/EmpresaNaoEncontrada';
 import ForgetPassword from '../password/ForgetPassword';
@@ -32,8 +30,7 @@ import PropostasDesk from '../desktop/PropostasDesk';
 import EnviarPropostaDesk from '../desktop/EnviarPropostaDesk';
 import PagamentoModulo from '../PagamentoModulo';
 import UserDataFormDesk from '../UserDataFormDesk';
-import ProfileDeskSingular from '../desktop/ProfileDeskSingular';
-import EditProfileDeskSingular from '../desktop/EditProfileDeskSingular';
+import { AccountEditProfileRoute, AccountProfileRoute } from './AccountProfileRoute';
 import { ActiveModulesProvider } from '../../context/ActiveModulesContext';
 import GuestRoute from './GuestRoute';
 import SelectAccountType from '../SelectAccountType';
@@ -51,7 +48,7 @@ const DesktopRoutes = ({ user, authUser, profileLoading }) => {
   const renderProtectedRoute = (
     path,
     element,
-    { requiresVerification = false, requiredModule = null } = {},
+    { requiresVerification = false, requiresProfile = false, requiredModule = null } = {},
   ) => (
     <Route
       path={path}
@@ -61,6 +58,7 @@ const DesktopRoutes = ({ user, authUser, profileLoading }) => {
           profile={user}
           profileLoading={profileLoading}
           requiresVerification={requiresVerification}
+          requiresProfile={requiresProfile}
           requiredModule={requiredModule}
         >
           {element}
@@ -105,10 +103,10 @@ const DesktopRoutes = ({ user, authUser, profileLoading }) => {
               {renderProtectedRoute("/market", <MarketDesk user={user} />, { requiredModule: "moduloMarket" })}
               {renderProtectedRoute("/market/products/:id/edit", <ProdutoPage user={user} />, { requiredModule: "moduloMarket" })}
               {renderProtectedRoute("/app", <ApxDesk user={user} />, { requiresVerification: true })}
-              {renderProtectedRoute("/perfil", <ProfileDesk user={user} />)}
-              {renderProtectedRoute("/meuperfil", <ProfileDeskSingular user={user} />)}
-              {renderProtectedRoute("/editar-perfil", <EditProfileDesk user={user} />)}
-              {renderProtectedRoute("/editar-meuperfil", <EditProfileDeskSingular user={user} />)}
+              {renderProtectedRoute("/perfil", <AccountProfileRoute user={user} />, { requiresProfile: true })}
+              {renderProtectedRoute("/editar-perfil", <AccountEditProfileRoute user={user} />, { requiresProfile: true })}
+              <Route path="/meuperfil" element={<Navigate to="/perfil" replace />} />
+              <Route path="/editar-meuperfil" element={<Navigate to="/editar-perfil" replace />} />
               {renderProtectedRoute("/cotacoes", <CotacoesDesk user={user} />, { requiresVerification: true })}
               {renderProtectedRoute("/minhas-cotacoes", <SentStoreQuotesDesk userId={authUser?.uid} />)}
               {renderProtectedRoute("/cotacao", <NovaCotacaoDesk user={user} />, { requiredModule: "moduloSMS" })}

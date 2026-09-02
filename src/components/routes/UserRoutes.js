@@ -12,7 +12,6 @@ import PublicarCotacao from '../PublicarCotacao';
 import CotacaoDetalhes from '../CotacaoDetalhes';
 import EnviarProposta from '../EnviarProposta';
 import Explore from '../Explore';
-import Profile from '../Profile';
 import Apx from '../Apx';
 import Faturacao from '../Faturacao';
 import Feed from '../Feed';
@@ -23,7 +22,7 @@ import CotacoesPDF from '../pdf/CotacoesPDF';
 import Inbox from '../Inbox';
 import ListaDeServicos from '../ListaDeServicos';
 import CompanyProfile from '../CompanyProfile';
-import EditProfile from '../EditProfile';
+import { AccountEditProfileRoute, AccountProfileRoute } from './AccountProfileRoute';
 import Terms from '../Termos';
 import CriarProforma from '../CriarProfoma';
 import Analytics from '../Analytics';
@@ -99,9 +98,11 @@ const UserRoutes = ({ user }) => {
       <Route path="/post" element={<PostInput user={user} />} />
 
       {/* Perfil */}
-      <Route path="/profile" element={<Profile user={user} />} />
-      <Route path="/perfil" element={<Profile user={user} />} />
-      <Route path="/editar-perfil" element={<EditProfile user={user} />} />
+      <Route path="/profile" element={<Navigate to="/perfil" replace />} />
+      <Route path="/perfil" element={<AccountProfileRoute user={user} />} />
+      <Route path="/meuperfil" element={<Navigate to="/perfil" replace />} />
+      <Route path="/editar-perfil" element={<AccountEditProfileRoute user={user} />} />
+      <Route path="/editar-meuperfil" element={<Navigate to="/editar-perfil" replace />} />
       <Route path="/vperfil/:id" element={<CompanyProfile user={user} />} />
       <Route path="/empresa/:id" element={<CompanyProfile user={user} />} />
 

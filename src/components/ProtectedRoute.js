@@ -10,6 +10,7 @@ const ProtectedRoute = ({
   children,
   requiresAuth = true,
   requiresVerification = false,
+  requiresProfile = false,
   requiredModule = null,
 }) => {
   const location = useLocation();
@@ -22,6 +23,19 @@ const ProtectedRoute = ({
 
   if (mustBeAuthenticated && !authUser) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  if (requiresProfile && profileLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="50vh">
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Carregando perfil...</Typography>
+      </Box>
+    );
+  }
+
+  if (requiresProfile && !profile) {
+    return <Navigate to="/select-account-type" replace />;
   }
 
   if (mustBeVerified && profileLoading) {

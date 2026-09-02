@@ -42,11 +42,29 @@ const ChangePassword = () => {
       return;
     }
 
+    if (newPassword.length < 8) {
+      setFeedback({ message: t('password.error.weak'), error: true });
+      return;
+    }
+
+    if (newPassword === currentPassword) {
+      setFeedback({ message: t('password.error.same'), error: true });
+      return;
+    }
+
     setLoading(true);
     const user = auth.currentUser;
 
     if (!user) {
       setFeedback({ message: t('password.error.unauthenticated'), error: true });
+      setLoading(false);
+      return;
+    }
+
+    const supportsPassword = !user.providerData || user.providerData.length === 0
+      || user.providerData?.some(({ providerId }) => providerId === 'password');
+    if (!user.email || !supportsPassword) {
+      setFeedback({ message: t('password.error.provider'), error: true });
       setLoading(false);
       return;
     }
@@ -66,8 +84,13 @@ const ChangePassword = () => {
       });
     } catch (error) {
       console.error("Erro ao atualizar senha:", error.message);
+      const errorKey = ['auth/wrong-password', 'auth/invalid-credential'].includes(error.code)
+        ? 'password.error.current'
+        : error.code === 'auth/too-many-requests'
+          ? 'password.error.changeTooMany'
+          : 'password.error.generic';
       setFeedback({ 
-        message: t('password.error.generic'),
+        message: t(errorKey),
         error: true 
       });
     } finally {
@@ -117,6 +140,7 @@ const ChangePassword = () => {
               variant="outlined"
               autoComplete="new-password"
               inputProps={{ 'aria-label': t('auth.newPassword') }}
+              helperText={t('password.requirements')}
             />
             
             <TextField
@@ -142,7 +166,7 @@ const ChangePassword = () => {
               type="submit"
               variant="contained"
               size="large"
-              disabled={loading}
+              disabled={loading || !formData.currentPassword || !formData.newPassword || !formData.confirmPassword}
               sx={{ mt: 2 }}
               endIcon={loading && <CircularProgress size={24} />}
             >
