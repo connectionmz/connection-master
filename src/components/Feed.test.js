@@ -34,8 +34,8 @@ describe('Feed', () => {
     render(<Feed user={{ id: 'viewer' }} />);
 
     act(() => mockEmitPosts({ val: () => ({
-      older: { description: '<b>Projeto antigo</b>', timestamp: 100, company: { id: 'a', name: 'Empresa A' } },
-      newer: { description: 'Projeto recente', timestamp: 200 },
+      older: { description: '<b>Projeto antigo</b>', timestamp: 100, status: 'aprovado', company: { id: 'a', name: 'Empresa A' } },
+      newer: { description: 'Projeto recente', timestamp: 200, status: 'aprovado' },
     }) }));
 
     const cards = screen.getAllByRole('button', { name: /feed.openPost/i });
@@ -50,8 +50,8 @@ describe('Feed', () => {
   it('filtra publicações pela empresa selecionada', () => {
     render(<Feed />);
     act(() => mockEmitPosts({ val: () => ({
-      first: { description: 'Primeiro', company: { id: 'a', name: 'Empresa A' } },
-      second: { description: 'Segundo', company: { id: 'b', name: 'Empresa B' } },
+      first: { description: 'Primeiro', status: 'aprovado', company: { id: 'a', name: 'Empresa A' } },
+      second: { description: 'Segundo', status: 'aprovado', company: { id: 'b', name: 'Empresa B' } },
     }) }));
 
     fireEvent.click(screen.getByRole('button', { name: 'feed.companyFilter: Empresa A' }));

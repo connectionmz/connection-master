@@ -28,9 +28,10 @@ describe('normalizePostDetail', () => {
 describe('normalizeCompanyPosts', () => {
   it('mantém apenas a empresa solicitada, recupera ids e ordena por data', () => {
     expect(normalizeCompanyPosts({
-      old: { timestamp: 1, company: { id: 'company-1' } },
-      ignored: { timestamp: 3, company: { id: 'company-2' } },
-      new: { timestamp: 2, company: { id: 'company-1' } },
+      old: { timestamp: 1, status: 'aprovado', company: { id: 'company-1' } },
+      ignored: { timestamp: 3, status: 'aprovado', company: { id: 'company-2' } },
+      blocked: { timestamp: 4, status: 'bloqueado', company: { id: 'company-1' } },
+      new: { timestamp: 2, status: 'aprovado', company: { id: 'company-1' } },
     }, 'company-1').map(post => post.id)).toEqual(['new', 'old']);
   });
 });

@@ -149,6 +149,10 @@ const KEYFRAMES = `
 // Configurações
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const isSafeCompanyName = value => {
+  const name = String(value || '').trim();
+  return name.length >= 2 && name.length <= 150 && !/<[^>]*>|javascript:|onerror\s*=|onload\s*=/i.test(name);
+};
 
 // Passos do formulário
 const steps = [
@@ -572,7 +576,7 @@ const CompanyDataFormDesk = () => {
           companyData.nuel?.length >= 9 &&
           companyData.nrContriuinte?.length >= 9
         );
-        return companyData.nome && fiscalFieldsValid;
+        return isSafeCompanyName(companyData.nome) && fiscalFieldsValid;
       case 2:
         return (
           companyData.endereco &&
@@ -613,6 +617,7 @@ const CompanyDataFormDesk = () => {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Usuário não autenticado");
+      if (!isSafeCompanyName(companyData.nome)) throw new Error('O nome da empresa contém conteúdo inválido. Use apenas o nome comercial em texto simples.');
 
       const companiesSnapshot = await get(ref(db, "company"));
       let duplicates = [];
