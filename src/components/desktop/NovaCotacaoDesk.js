@@ -275,6 +275,8 @@ const handleSubmit = async (e) => {
       timestamp: new Date().toISOString(),
       datalimite: new Date(formData.deadline).toISOString(),
       status: 'open',
+      lifecycleStatus: 'open',
+      moderationStatus: 'pending',
       link: linkDoPedido,
       proposalLimit: formData.proposalLimit || null,
     };

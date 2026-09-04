@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ref, onValue, increment, update, push, set, get } from 'firebase/database';
 import { db } from '../../fb';
+import { isQuoteVisibleTo } from '../../utils/commerceVisibility';
 import AdsClick from '@mui/icons-material/AdsClick';
 import Inbox from '@mui/icons-material/Inbox';
 import RemoveRedEye from '@mui/icons-material/RemoveRedEye';
@@ -163,6 +164,11 @@ const CotacaoDetalhesDesk = ({ user }) => {
       const unsubscribe = onValue(cotacaoRef, (snapshot) => {
         const data = snapshot.val();
         if (!data) {
+          setLoading(false);
+          return;
+        }
+        if (!isQuoteVisibleTo(data, user?.id)) {
+          setCotacao(null);
           setLoading(false);
           return;
         }
