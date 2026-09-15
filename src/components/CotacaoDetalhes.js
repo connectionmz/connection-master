@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../fb';
 import { ref, onValue, increment, update } from 'firebase/database';
-import { AdsClick, Inbox, RemoveRedEye, Share, FileDownload } from '@mui/icons-material';
+import AdsClick from '@mui/icons-material/AdsClick';
+import Inbox from '@mui/icons-material/Inbox';
+import RemoveRedEye from '@mui/icons-material/RemoveRedEye';
+import Share from '@mui/icons-material/Share';
+import FileDownload from '@mui/icons-material/FileDownload';
 
 const CotacaoDetalhes = () => {
   const { id, companyId } = useParams();

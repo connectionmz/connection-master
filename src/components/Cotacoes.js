@@ -3,19 +3,19 @@ import { getDatabase, ref, onValue, update, remove } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../fb'; 
 import { onAuthStateChanged } from 'firebase/auth';
-import PaySMSCheckout from './PaySMSCheckout';
+import { useActiveModules } from '../context/ActiveModulesContext';
 
 
-const Cotacoes = ({ user, onModuleActivation }) => {
+const Cotacoes = ({ user }) => {
     const [cotacoes, setCotacoes] = useState([]);
     const [activeTab, setActiveTab] = useState('recentes');
     const [loggedInUser, setLoggedInUser] = useState(null); 
     const [snackbarMessage, setSnackbarMessage] = useState(''); 
     const [snackbarOpen, setSnackbarOpen] = useState(false); 
-    const [isPaying, setIsPaying] = useState(false); 
     const navigate = useNavigate();
+    const { isModuleActive } = useActiveModules();
 
-    const hasModuleSMS = user?.activeModules?.moduloSMS?.status === 'active';
+    const hasModuleSMS = isModuleActive('moduloSMS');
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -197,44 +197,22 @@ const Cotacoes = ({ user, onModuleActivation }) => {
         }
     };
 
-    const handlePaymentSuccess = (paymentDetails) => {
-        const userRef = ref(db, `company/${user.id}/activeModules/moduloSMS`);
-        update(userRef, { status: 'active', activatedAt: new Date().toISOString(), paymentDetails })
-            .then(() => {
-                alert('Módulo SMS ativado com sucesso!');
-                if (onModuleActivation) onModuleActivation(); 
-
-                window.location.reload();
-  
-            })
-            .catch((error) => {
-                console.error('Erro ao ativar o módulo SMS: ', error);
-            });
-    };
-
     return (
         <div className="p-4">
-            {!hasModuleSMS && !isPaying && (
+            {!hasModuleSMS && (
                 <div className="mb-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
                     <p>
                         O módulo <strong>SMS</strong> está inativo. Para usar este serviço, ative o módulo SMS.
                     </p>
                     <button 
                         className="mt-2 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                        onClick={() => setIsPaying(true)}>
+                        onClick={() => navigate('/pagar/moduloSMS', { state: { from: '/cotacao' } })}>
                         Ativar Módulo SMS
                     </button>
                 </div>
             )}
 
-            {isPaying && (
-                <PaySMSCheckout 
-                    user={user} 
-                    onPaymentSuccess={handlePaymentSuccess} 
-                />
-            )}
-
-            {!isPaying && (
+            {hasModuleSMS && (
                 <>
                     <div className="flex justify-between items-center mb-4">
                         <h1 className="text-xl font-semibold">Cotações</h1>

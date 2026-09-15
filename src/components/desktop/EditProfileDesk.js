@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ref, update } from 'firebase/database';
 import { db } from '../../fb';
 import Snackbar from '@mui/material/Snackbar';
@@ -15,12 +15,12 @@ import {
   Typography,
   Paper,
   Container,
-  Divider,
   Chip,
   Card,
   CardContent,
   Fade,
-  Zoom
+  Zoom,
+  useTheme,
 } from '@mui/material';
 import { EditorText } from '../../utils/formUtils';
 import ChangePassword from '../password/ChangePassword';
@@ -51,27 +51,33 @@ import {
   AlertCircle,
   Eye
 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
+import { createProfileThemeTokens } from '../../utils/profileTheme';
+import { plainText } from '../../utils/postData';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
-const T = {
-  navy:     '#08192E',
-  navyMid:  '#0E2849',
-  navyLight:'#183A63',
-  gold:     '#C8903A',
-  goldLight:'#E8B96A',
-  goldPale: '#FDF3E3',
-  cream:    '#FAFAF7',
-  white:    '#FFFFFF',
-  text:     '#0F1C2D',
-  textMid:  '#3D5A7A',
-  textSub:  '#6B89A5',
-  border:   '#E0E8F0',
-  borderMid:'#C5D4E3',
-  surface:  '#F4F7FB',
+const createTokens = (theme) => {
+  const tokens = createProfileThemeTokens(theme);
+  return {
+    navy: tokens.primaryDark,
+    navyMid: tokens.primary,
+    navyLight: tokens.primaryLight,
+    gold: tokens.primary,
+    goldLight: tokens.primaryLight,
+    goldPale: tokens.selected,
+    cream: tokens.background,
+    white: tokens.surface,
+    text: tokens.text,
+    textMid: tokens.textSecondary,
+    textSub: tokens.textSecondary,
+    border: tokens.divider,
+    borderMid: tokens.divider,
+    surface: tokens.surface,
+  };
 };
 
 /* ── Keyframes (mesmos da hero) ───────────────────────────────────────── */
-const KEYFRAMES = `
+const KEYFRAMES = (T) => `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
   @keyframes fadeUp {
@@ -123,7 +129,7 @@ const KEYFRAMES = `
   }
 `;
 
-const InputField = ({ label, name, value, onChange, type = "text", disabled = false, endAdornment, placeholder, icon }) => (
+const InputField = ({ label, name, value, onChange, type = "text", disabled = false, endAdornment, placeholder, icon, tokens: T }) => (
   <div className="mb-4 animate-fade-up">
     <TextField
       label={label}
@@ -171,10 +177,11 @@ const InputField = ({ label, name, value, onChange, type = "text", disabled = fa
   </div>
 );
 
-const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
+const SocialMediaForm = ({ formData, handleInputChange, handleSubmit, tokens: T, t }) => (
   <Fade in={true}>
     <form onSubmit={handleSubmit} className="space-y-4">
       <InputField 
+        tokens={T}
         label="Facebook" 
         name="facebook" 
         value={formData.facebook} 
@@ -183,6 +190,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
         icon={<FacebookIcon sx={{ color: '#1877F2' }} />}
       />
       <InputField 
+        tokens={T}
         label="WhatsApp" 
         name="whatsapp" 
         value={formData.whatsapp} 
@@ -191,6 +199,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
         icon={<WhatsAppIcon sx={{ color: '#25D366' }} />}
       />
       <InputField 
+        tokens={T}
         label="Instagram" 
         name="instagram" 
         value={formData.instagram} 
@@ -199,6 +208,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
         icon={<InstagramIcon sx={{ color: '#C13584' }} />}
       />
       <InputField 
+        tokens={T}
         label="LinkedIn" 
         name="linkedin" 
         value={formData.linkedin} 
@@ -207,6 +217,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
         icon={<LinkedInIcon sx={{ color: '#0077b5' }} />}
       />
       <InputField 
+        tokens={T}
         label="X (Twitter)" 
         name="x" 
         value={formData.x} 
@@ -215,6 +226,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
         icon={<XIcon sx={{ color: '#000000' }} />}
       />
       <InputField
+        tokens={T}
         label="Website"
         name="website"
         value={formData.website}
@@ -223,6 +235,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
         icon={<LanguageIcon sx={{ color: '#4285F4' }} />}
       />
       <InputField
+        tokens={T}
         label="YouTube Video"
         name="youtubeVideo"
         value={formData.youtubeVideo}
@@ -242,7 +255,7 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
         }
       />
       <Typography variant="caption" sx={{ color: T.textSub, display: 'block', mt: -2, mb: 2, fontSize: '0.75rem' }}>
-        Cole o link completo do vídeo do YouTube que deseja destacar
+        {t('profileEdit.youtubeHelp')}
       </Typography>
       
       <Button 
@@ -262,16 +275,19 @@ const SocialMediaForm = ({ formData, handleInputChange, handleSubmit }) => (
           mt: 2
         }}
       >
-        Salvar Redes Sociais
+        {t('profileEdit.saveSocial')}
       </Button>
     </form>
   </Fade>
 );
 
 const EditProfileDesk = ({ user }) => {
+  const theme = useTheme();
+  const T = createTokens(theme);
+  const { t } = useLanguage();
 
   // Estado inicial com tratamento adequado
-  const getInitialData = () => {
+  const getInitialData = useCallback(() => {
     if (!user) return {};
     
     return {
@@ -294,19 +310,18 @@ const EditProfileDesk = ({ user }) => {
       website: user.social?.website || '',
       youtubeVideo: user.social?.youtubeVideo || '',
     };
-  };
+  }, [user]);
 
   const [formData, setFormData] = useState(getInitialData);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [tabIndex, setTabIndex] = useState(0);
   const [bioLength, setBioLength] = useState(0);
   const isMobile = useMediaQuery('(max-width:600px)');
-  const isTablet = useMediaQuery('(max-width:960px)');
 
   // Atualizar formData quando user mudar
   useEffect(() => {
     setFormData(getInitialData());
-  }, [user]);
+  }, [getInitialData]);
 
   // Atualizar bioLength quando bio mudar
   useEffect(() => {
@@ -363,7 +378,7 @@ const EditProfileDesk = ({ user }) => {
     e.preventDefault();
     
     if (!user?.id) {
-      setSnackbar({ open: true, message: 'Erro: Usuário não encontrado.', severity: 'error' });
+      setSnackbar({ open: true, message: t('profileEdit.userMissing'), severity: 'error' });
       return;
     }
 
@@ -372,12 +387,12 @@ const EditProfileDesk = ({ user }) => {
       // Dados básicos
       nome: formData.nome || '',
       sigla: formData.sigla || '',
-      bio: formData.bio || '',
+      bio: plainText(formData.bio).slice(0, MAX_BIO_LENGTH),
       contacto: formData.contacto || '',
       endereco: formData.endereco || '',
       capacidadeDeProducao: formData.capacidadeDeProducao || '',
       provincia: formData.provincia || '',
-      missaoVisaoValores: formData.missaoVisaoValores || '',
+      missaoVisaoValores: plainText(formData.missaoVisaoValores).slice(0, 2000),
       
       // Redes sociais - garantir estrutura correta
       social: {
@@ -393,9 +408,9 @@ const EditProfileDesk = ({ user }) => {
 
     try {
       await update(ref(db, `company/${user.id}`), companyUpdate);
-      setSnackbar({ open: true, message: 'Dados atualizados com sucesso!', severity: 'success' });
+      setSnackbar({ open: true, message: t('profileEdit.saveSuccess'), severity: 'success' });
     } catch (error) {
-      setSnackbar({ open: true, message: 'Erro ao atualizar os dados.', severity: 'error' });
+      setSnackbar({ open: true, message: t('profileEdit.saveError'), severity: 'error' });
     }
   };
 
@@ -404,7 +419,8 @@ const EditProfileDesk = ({ user }) => {
   // Função para extrair o ID do vídeo do YouTube para preview (opcional)
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
-    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    const youtubePattern = new RegExp('(?:youtube\\.com/(?:.*[?&]v=|embed/)|youtu\\.be/)([^"&?/\\s]{11})');
+    const match = url.match(youtubePattern);
     return match ? match[1] : null;
   };
 
@@ -422,7 +438,7 @@ const EditProfileDesk = ({ user }) => {
           fontFamily: '"Plus Jakarta Sans", sans-serif'
         }}
       >
-        <style>{KEYFRAMES}</style>
+        <style>{KEYFRAMES(T)}</style>
         <Box sx={{ textAlign: 'center' }}>
           <Box
             sx={{
@@ -435,7 +451,7 @@ const EditProfileDesk = ({ user }) => {
               mb: 2
             }}
           />
-          <Typography sx={{ color: T.textSub }}>Carregando editor de perfil...</Typography>
+          <Typography sx={{ color: T.textSub }}>{t('profileEdit.loading')}</Typography>
         </Box>
       </Box>
     );
@@ -450,7 +466,7 @@ const EditProfileDesk = ({ user }) => {
         py: 4
       }}
     >
-      <style>{KEYFRAMES}</style>
+      <style>{KEYFRAMES(T)}</style>
       
       <Container maxWidth="lg">
         {/* Header com design da hero */}
@@ -492,10 +508,10 @@ const EditProfileDesk = ({ user }) => {
                   mb: 1
                 }}
               >
-                Editar Perfil
+                {t('profileEdit.title')}
               </Typography>
               <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                Gerencie as informações da sua empresa
+                {t('profileEdit.description')}
               </Typography>
             </Box>
           </Box>
@@ -538,11 +554,11 @@ const EditProfileDesk = ({ user }) => {
               },
             }}
           >
-            <Tab icon={<Edit size={18} />} iconPosition="start" label="Editar Perfil" />
-            <Tab icon={<Lock size={18} />} iconPosition="start" label="Mudar Senha" />
-            <Tab icon={<CreditCard size={18} />} iconPosition="start" label="Dados Bancários" />
-            <Tab icon={<Share size={18} />} iconPosition="start" label="Redes Sociais" />
-            <Tab icon={<Store size={18} />} iconPosition="start" label="Vitrine" />
+            <Tab icon={<Edit size={18} />} iconPosition="start" label={t('profileEdit.tabs.profile')} />
+            <Tab icon={<Lock size={18} />} iconPosition="start" label={t('profileEdit.tabs.password')} />
+            <Tab icon={<CreditCard size={18} />} iconPosition="start" label={t('profileEdit.tabs.bank')} />
+            <Tab icon={<Share size={18} />} iconPosition="start" label={t('profileEdit.tabs.social')} />
+            <Tab icon={<Store size={18} />} iconPosition="start" label={t('profileEdit.tabs.showcase')} />
           </Tabs>
 
           <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -550,7 +566,8 @@ const EditProfileDesk = ({ user }) => {
               <Fade in={true}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <InputField 
-                    label="Nome da Empresa" 
+                    tokens={T}
+                    label={t('profileEdit.companyName')}
                     name="nome" 
                     value={formData.nome} 
                     onChange={handleInputChange}
@@ -558,7 +575,8 @@ const EditProfileDesk = ({ user }) => {
                   />
                   
                   <InputField 
-                    label="Sigla" 
+                    tokens={T}
+                    label={t('profileEdit.acronym')}
                     name="sigla" 
                     value={formData.sigla} 
                     onChange={handleInputChange}
@@ -567,7 +585,7 @@ const EditProfileDesk = ({ user }) => {
                   
                   <div className="mb-4">
                     <Typography variant="body2" sx={{ color: T.textSub, mb: 1, fontWeight: 500 }}>
-                      Bio (máximo {MAX_BIO_LENGTH} caracteres) 
+                      {t('profileEdit.bio', { count: MAX_BIO_LENGTH })}
                       <Chip 
                         label={`${bioLength}/${MAX_BIO_LENGTH}`}
                         size="small"
@@ -607,13 +625,14 @@ const EditProfileDesk = ({ user }) => {
                         onChange={handleBioChange}
                         modules={bioModules}
                         formats={bioFormats}
-                        placeholder="Escreva uma breve descrição sobre sua empresa..."
+                        placeholder={t('profileEdit.bioPlaceholder')}
                       />
                     </Paper>
                   </div>
                   
                   <InputField 
-                    label="Contacto" 
+                    tokens={T}
+                    label={t('profile.contact')}
                     name="contacto" 
                     value={formData.contacto} 
                     onChange={handleInputChange}
@@ -621,7 +640,8 @@ const EditProfileDesk = ({ user }) => {
                   />
                   
                   <InputField 
-                    label="Endereço" 
+                    tokens={T}
+                    label={t('profile.address')}
                     name="endereco" 
                     value={formData.endereco} 
                     onChange={handleInputChange}
@@ -629,7 +649,8 @@ const EditProfileDesk = ({ user }) => {
                   />
                   
                   <InputField 
-                    label="Província" 
+                    tokens={T}
+                    label={t('profileEdit.province')}
                     name="provincia" 
                     value={formData.provincia} 
                     onChange={handleInputChange}
@@ -637,7 +658,8 @@ const EditProfileDesk = ({ user }) => {
                   />
                   
                   <InputField
-                    label="Capacidade de Produção da actividade Principal"
+                    tokens={T}
+                    label={t('profileEdit.productionCapacity')}
                     name="capacidadeDeProducao"
                     value={formData.capacidadeDeProducao}
                     onChange={handleInputChange}
@@ -646,7 +668,7 @@ const EditProfileDesk = ({ user }) => {
 
                   <div className="mb-4">
                     <Typography variant="body2" sx={{ color: T.textSub, mb: 1, fontWeight: 500 }}>
-                      Missão, Visão e Valores
+                      {t('profile.mission')}
                     </Typography>
                     <Paper sx={{ 
                       border: `1px solid ${T.border}`,
@@ -677,7 +699,7 @@ const EditProfileDesk = ({ user }) => {
                       mt: 3
                     }}
                   >
-                    Salvar Alterações
+                    {t('profileEdit.save')}
                   </Button>
                 </form>
               </Fade>
@@ -702,6 +724,8 @@ const EditProfileDesk = ({ user }) => {
             {tabIndex === 3 && (
               <Box>
                 <SocialMediaForm 
+                  tokens={T}
+                  t={t}
                   formData={formData} 
                   handleInputChange={handleInputChange} 
                   handleSubmit={handleSubmit} 
@@ -732,7 +756,7 @@ const EditProfileDesk = ({ user }) => {
                             mb: 2
                           }}
                         >
-                          <YouTubeIcon sx={{ color: '#FF0000' }} /> Preview do Vídeo:
+                          <YouTubeIcon sx={{ color: '#FF0000' }} /> {t('profileEdit.videoPreview')}
                         </Typography>
                         <Box sx={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
                           <iframe

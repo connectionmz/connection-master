@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   getStorage,
   ref as storageRef,
   uploadBytesResumable,
   getDownloadURL,
+  deleteObject,
 } from "firebase/storage";
 import {
   Alert,
@@ -29,10 +30,8 @@ import {
   AccordionDetails,
   AlertTitle,
 } from "@mui/material";
-import { push, ref, set, get, onValue } from "firebase/database";
+import { push, ref, set, get } from "firebase/database";
 import { db } from "../../fb";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
 import CloseIcon from "@mui/icons-material/Close";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -40,11 +39,14 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import InfoIcon from '@mui/icons-material/Info';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { subscribeToCompanyPosts } from '../../services/posts';
 
 // Constants
 const MAX_POSTS = 5;
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const plainText = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+const safeFileName = (value = 'image') => value.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_');
 
 const PostInputDesk = ({ user }) => {
   const [newPhotos, setNewPhotos] = useState([]);
@@ -57,36 +59,25 @@ const PostInputDesk = ({ user }) => {
   const [errorMessages, setErrorMessages] = useState([]);
   const [userPostCount, setUserPostCount] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
+  const previewUrlsRef = useRef({});
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  // Quill editor configuration
-  const quillModules = {
-    toolbar: [
-      [{ header: [1, 2, false] }],
-      ['bold', 'italic', 'underline'],
-      [{ list: 'ordered' }, { list: 'bullet' }],
-      ['link'],
-      ['clean']
-    ]
-  };
+  useEffect(() => {
+    previewUrlsRef.current = photoPreviews;
+  }, [photoPreviews]);
+
+  useEffect(() => () => {
+    Object.values(previewUrlsRef.current).forEach(URL.revokeObjectURL);
+  }, []);
 
   // Monitor user's post count
   useEffect(() => {
-    const postsRef = ref(db, 'posts');
-    const unsubscribe = onValue(postsRef, (snapshot) => {
-      const data = snapshot.val();
-      let count = 0;
-
-      if (data) {
-        Object.values(data).forEach(post => {
-          if (post.company?.id === user?.id) {
-            count++;
-          }
-        });
-      }
-
-      setUserPostCount(count);
-      setLimitReached(count >= MAX_POSTS);
+    const unsubscribe = subscribeToCompanyPosts(user?.id, (companyPosts) => {
+      setUserPostCount(companyPosts.length);
+      setLimitReached(companyPosts.length >= MAX_POSTS);
+    }, (error) => {
+      console.error('Erro ao contar publicações:', error);
+      setErrorMessages(['Não foi possível verificar o limite de publicações.']);
     });
 
     return () => unsubscribe();
@@ -115,7 +106,7 @@ const PostInputDesk = ({ user }) => {
     // Validate each file
     newPhotos.forEach(photo => {
       if (photo.size > MAX_FILE_SIZE) {
-        errors.push(`A foto "${photo.name}" excede o tamanho máximo de 25MB`);
+        errors.push(`A foto "${photo.name}" excede o tamanho máximo de 10MB`);
       }
       
       if (!ALLOWED_FILE_TYPES.includes(photo.type)) {
@@ -159,7 +150,7 @@ const PostInputDesk = ({ user }) => {
 
   // Handle photo upload and post creation
   const handleSavePublishedPhotos = useCallback(async () => {
-    if (!validateData()) return;
+    if (isUploading || !validateData()) return;
 
     setIsUploading(true);
     setErrorMessages([]);
@@ -168,8 +159,10 @@ const PostInputDesk = ({ user }) => {
 
     try {
       await Promise.all(newPhotos.map(async (photo) => {
+        let fileRef;
         try {
-          const fileRef = storageRef(storage, `published/${user.id}/${Date.now()}_${photo.name}`);
+          const storagePath = `published/${user.id}/${Date.now()}_${safeFileName(photo.name)}`;
+          fileRef = storageRef(storage, storagePath);
           const uploadTask = uploadBytesResumable(fileRef, photo);
 
           const url = await new Promise((resolve, reject) => {
@@ -196,14 +189,23 @@ const PostInputDesk = ({ user }) => {
               sector: user.sector,
               provincia: user.provincia,
             },
-            description: photoDescriptions[photo.name] || "",
+            description: plainText(photoDescriptions[photo.name]).slice(0, 2000),
             url,
+            storagePath,
             timestamp: Date.now(),
+            status: 'pendente',
           });
 
           await sendNotificationToConnections(newPostRef.key);
         } catch (error) {
           console.error(`Erro ao carregar ${photo.name}:`, error);
+          if (fileRef) {
+            try {
+              await deleteObject(fileRef);
+            } catch (cleanupError) {
+              console.error(`Erro ao limpar o ficheiro ${photo.name}:`, cleanupError);
+            }
+          }
           uploadErrors.push(`Falha ao publicar "${photo.name}": ${error.message}`);
         }
       }));
@@ -219,13 +221,14 @@ const PostInputDesk = ({ user }) => {
     } finally {
       setIsUploading(false);
     }
-  }, [newPhotos, photoDescriptions, user, validateData, sendNotificationToConnections]);
+  }, [newPhotos, photoDescriptions, user, validateData, sendNotificationToConnections, isUploading]);
 
   // Reset form after successful upload
   useEffect(() => {
     if (uploadSuccess) {
       setSnackbarOpen(true);
       const timer = setTimeout(() => {
+        Object.values(photoPreviews).forEach(URL.revokeObjectURL);
         setNewPhotos([]);
         setPhotoPreviews({});
         setPhotoDescriptions({});
@@ -235,11 +238,12 @@ const PostInputDesk = ({ user }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [uploadSuccess]);
+  }, [uploadSuccess, photoPreviews]);
 
   // Handle file selection
   const handleFileChange = (event) => {
-    const files = Array.from(event.target.files);
+    const selectedNames = new Set(newPhotos.map((photo) => `${photo.name}:${photo.size}:${photo.lastModified}`));
+    const files = Array.from(event.target.files).filter((file) => !selectedNames.has(`${file.name}:${file.size}:${file.lastModified}`));
     if (!files.length) return;
 
     // Check remaining slots
@@ -263,7 +267,7 @@ const PostInputDesk = ({ user }) => {
 
     files.forEach(file => {
       if (file.size > MAX_FILE_SIZE) {
-        newErrors.push(`"${file.name}" excede 25MB`);
+        newErrors.push(`"${file.name}" excede 10MB`);
         return;
       }
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
@@ -392,7 +396,7 @@ const PostInputDesk = ({ user }) => {
                   <strong>Limite de {MAX_POSTS} publicações</strong> - Mantenha apenas seus melhores trabalhos
                 </Box>
                 <Box component="li">
-                  <strong>Tamanho máximo</strong> - 25MB por imagem (JPEG, PNG ou WEBP)
+                  <strong>Tamanho máximo</strong> - 10MB por imagem (JPEG, PNG ou WEBP)
                 </Box>
               </Box>
             </Alert>
@@ -531,17 +535,16 @@ const PostInputDesk = ({ user }) => {
                         </IconButton>
                       </Box>
 
-                      <ReactQuill
+                      <TextField
+                        fullWidth
+                        multiline
+                        minRows={isMobile ? 3 : 4}
                         value={photoDescriptions[photo.name] || ""}
-                        onChange={(value) => handleDescriptionChange(value, photo.name)}
-                        placeholder="Adicione uma descrição para sua foto..."
-                        modules={quillModules}
-                        style={{ 
-                          height: isMobile ? '120px' : '140px', 
-                          marginBottom: '12px',
-                          fontSize: '0.875rem'
-                        }}
-                        theme="snow"
+                        onChange={(event) => handleDescriptionChange(event.target.value.slice(0, 2000), photo.name)}
+                        placeholder="Adicione uma descrição para a imagem..."
+                        inputProps={{ maxLength: 2000 }}
+                        helperText={`${(photoDescriptions[photo.name] || '').length}/2000`}
+                        sx={{ mb: 1.5 }}
                       />
 
                       <Box sx={{ 

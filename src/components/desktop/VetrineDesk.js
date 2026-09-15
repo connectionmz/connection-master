@@ -1,182 +1,143 @@
-import React, { useState, useEffect } from 'react';
-import { ref, onValue, update, get, remove } from 'firebase/database';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import DescriptionIcon from '@mui/icons-material/Description';
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import ImageIcon from '@mui/icons-material/Image';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
-import ArchiveIcon from '@mui/icons-material/Archive';
-import DOMPurify from 'dompurify';
-import { db } from '../../fb';
+import { useEffect, useState } from 'react';
+import { onValue, ref, remove, runTransaction } from 'firebase/database';
+import { deleteObject, ref as storageRef } from 'firebase/storage';
+import {
+  Alert, Box, Button, Card, CardActions, CardContent, CircularProgress,
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+  Snackbar, Stack, Typography,
+} from '@mui/material';
+import {
+  Archive, DeleteOutline, Description, Download, Image, InsertDriveFile,
+  PictureAsPdf, VideoLibrary,
+} from '@mui/icons-material';
+import { db, storage } from '../../fb';
+import { useLanguage } from '../../context/LanguageContext';
 
-const getFileTypeIcon = (fileType) => {
-    if (fileType.includes('pdf')) return <PictureAsPdfIcon style={{ color: 'red' }} />;
-    if (fileType.includes('word') || fileType.includes('doc')) return <DescriptionIcon style={{ color: 'blue' }} />;
-    if (fileType.includes('excel') || fileType.includes('xls')) return <InsertDriveFileIcon style={{ color: 'green' }} />;
-    if (fileType.includes('image')) return <ImageIcon style={{ color: 'purple' }} />;
-    if (fileType.includes('video')) return <VideoLibraryIcon style={{ color: 'orange' }} />;
-    if (fileType.includes('zip') || fileType.includes('rar')) return <ArchiveIcon style={{ color: 'brown' }} />;
-    return <InsertDriveFileIcon style={{ color: 'gray' }} />;
+const FileIcon = ({ type = '' }) => {
+  if (type.includes('pdf')) return <PictureAsPdf color="error" />;
+  if (type.includes('word') || type.includes('doc')) return <Description color="primary" />;
+  if (type.includes('excel') || type.includes('sheet') || type.includes('xls')) return <InsertDriveFile color="success" />;
+  if (type.includes('image')) return <Image color="secondary" />;
+  if (type.includes('video')) return <VideoLibrary color="warning" />;
+  if (type.includes('zip') || type.includes('rar')) return <Archive />;
+  return <InsertDriveFile />;
 };
 
-const VetrineDesk = ({ id , userId}) => {
-    const [files, setFiles] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-    const [fileToDelete, setFileToDelete] = useState(null);
+const VetrineDesk = ({ id, userId }) => {
+  const { language, t } = useLanguage();
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteFile, setDeleteFile] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
 
-    useEffect(() => {
-        const filesRef = ref(db, `vitrine/${id}`);
+  useEffect(() => {
+    if (!id) {
+      setFiles([]);
+      setLoading(false);
+      return undefined;
+    }
+    setLoading(true);
+    return onValue(ref(db, `vitrine/${id}`), (snapshot) => {
+      const data = snapshot.val() || {};
+      setFiles(Object.entries(data).map(([fileId, value]) => ({
+        id: fileId,
+        description: value.description || '',
+        fileType: value.fileType || 'application/octet-stream',
+        fileName: value.fileName || '',
+        timestamp: value.timestamp || 0,
+        url: value.url || '',
+        ownerId: value.company?.id || id,
+        storagePath: value.storagePath || null,
+      })).sort((a, b) => b.timestamp - a.timestamp));
+      setLoading(false);
+    }, (error) => {
+      console.error('Erro ao carregar documentos da montra:', error);
+      setFeedback({ open: true, message: t('showcase.loadError'), severity: 'error' });
+      setLoading(false);
+    });
+  }, [id, t]);
 
-        onValue(filesRef, (snapshot) => {
-            const data = snapshot.val();
-            setLoading(false);
+  const handleDownload = async (file) => {
+    if (!file.url) return;
+    window.open(file.url, '_blank', 'noopener,noreferrer');
+    try {
+      const countRef = ref(db, `download/${id}/${file.id}`);
+      await runTransaction(countRef, (current) => ({
+        ...(current || {}),
+        totalDownloads: (current?.totalDownloads || 0) + 1,
+      }));
+    } catch (error) {
+      console.error('Erro ao atualizar contador de downloads:', error);
+    }
+  };
 
-            if (!data) {
-                setFiles([]);
-                return;
-            }
-
-            const fileList = Object.keys(data).map((key) => ({
-                id: key,
-                description: data[key].description || 'Sem descrição',
-                fileType: data[key].fileType || 'application/octet-stream',
-                timestamp: new Date(data[key].timestamp).toLocaleString(),
-                url: data[key].url || '#',
-                ownerId: data[key].company.id,
-            }));
-
-            setFiles(fileList);
-        }, (error) => {
-            setLoading(false);
-            setError('Erro ao buscar arquivos');
-            console.error('Erro ao buscar arquivos:', error);
-        });
-    }, [id]);
-
-    const updateDownloadCount = async (fileId) => {
-        const downloadRef = ref(db, `download/${id}/${fileId}`);
-
+  const handleDelete = async () => {
+    if (!deleteFile || deleteFile.ownerId !== userId) return;
+    setDeleting(true);
+    try {
+      if (deleteFile.storagePath) {
         try {
-            const snapshot = await get(downloadRef);
-            const currentData = snapshot.val();
-            const totalDownloads = currentData?.totalDownloads || 0;
-
-            await update(downloadRef, { totalDownloads: totalDownloads + 1 });
+          await deleteObject(storageRef(storage, deleteFile.storagePath));
         } catch (error) {
-            console.error('Erro ao atualizar contador de downloads:', error);
+          if (error.code !== 'storage/object-not-found') throw error;
         }
-    };
+      }
+      await remove(ref(db, `vitrine/${id}/${deleteFile.id}`));
+      setFeedback({ open: true, message: t('showcase.deleteSuccess'), severity: 'success' });
+      setDeleteFile(null);
+    } catch (error) {
+      console.error('Erro ao eliminar documento:', error);
+      setFeedback({ open: true, message: t('showcase.deleteError'), severity: 'error' });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-    const handleDownload = async (url, description, fileId) => {
-        try {
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', description || 'arquivo');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+  if (loading) return <Box sx={{ py: 6, display: 'grid', placeItems: 'center' }}><CircularProgress aria-label={t('showcase.loading')} /></Box>;
 
-            await updateDownloadCount(fileId);
-            setError(null);
-        } catch (error) {
-            setError('Erro ao baixar o arquivo');
-            console.error('Erro ao baixar o arquivo:', error);
-        }
-    };
+  return (
+    <Box component="section" aria-labelledby="showcase-title">
+      <Typography id="showcase-title" component="h2" variant="h5" fontWeight={700} gutterBottom>{t('showcase.title')}</Typography>
+      <Typography color="text.secondary" sx={{ mb: 3 }}>{t('showcase.description')}</Typography>
 
-    const handleDeleteConfirmation = (fileId) => {
-        setFileToDelete(fileId);
-        setOpenDeleteDialog(true);
-    };
+      {!files.length ? <Alert severity="info">{t('showcase.empty')}</Alert> : (
+        <Stack spacing={2}>
+          {files.map((file) => (
+            <Card key={file.id} variant="outlined">
+              <CardContent>
+                <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <Box sx={{ mt: 0.25 }}><FileIcon type={file.fileType} /></Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography fontWeight={700} sx={{ overflowWrap: 'anywhere' }}>{file.fileName || t('showcase.document')}</Typography>
+                    <Typography color="text.secondary" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{file.description || t('showcase.noDescription')}</Typography>
+                    {file.timestamp > 0 && <Typography variant="caption" color="text.secondary">{new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'pt-PT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(file.timestamp))}</Typography>}
+                  </Box>
+                </Stack>
+              </CardContent>
+              <CardActions sx={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <Button startIcon={<Download />} onClick={() => handleDownload(file)} disabled={!file.url}>{t('showcase.download')}</Button>
+                {file.ownerId === userId && <Button color="error" startIcon={<DeleteOutline />} onClick={() => setDeleteFile(file)}>{t('common.delete')}</Button>}
+              </CardActions>
+            </Card>
+          ))}
+        </Stack>
+      )}
 
-    const handleDelete = async () => {
-        if (!fileToDelete) return;
-        try {
-            const fileRef = ref(db, `vitrine/${id}/${fileToDelete}`);
-            await remove(fileRef);
-            setOpenDeleteDialog(false);
-            alert('Arquivo excluído com sucesso!');
-        } catch (error) {
-            setOpenDeleteDialog(false);
-            setError('Erro ao excluir o arquivo');
-            console.error('Erro ao excluir o arquivo:', error);
-        }
-    };
+      <Dialog open={Boolean(deleteFile)} onClose={() => !deleting && setDeleteFile(null)} aria-labelledby="showcase-delete-title">
+        <DialogTitle id="showcase-delete-title">{t('showcase.deleteTitle')}</DialogTitle>
+        <DialogContent><DialogContentText>{t('showcase.deleteDescription')}</DialogContentText></DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteFile(null)} disabled={deleting}>{t('common.cancel')}</Button>
+          <Button onClick={handleDelete} color="error" variant="contained" disabled={deleting}>{deleting ? t('showcase.deleting') : t('common.delete')}</Button>
+        </DialogActions>
+      </Dialog>
 
-    const handleCloseDialog = () => {
-        setOpenDeleteDialog(false);
-        setFileToDelete(null);
-    };
-
-    return (
-        <>
-            {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
-            {loading ? (
-                <div>Carregando...</div>
-            ) : (
-                <TableContainer component={Paper}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell><strong>Arquivo</strong></TableCell>
-                                <TableCell><strong>Publicado Em</strong></TableCell>
-                                <TableCell><strong>Ação</strong></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {files.length > 0 ? (
-                                files.map((file) => (
-                                    <TableRow key={file.id}>
-                                        <TableCell style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            {getFileTypeIcon(file.fileType)}
-                                            <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(file.description) }} />
-                                        </TableCell>
-                                        <TableCell>{file.timestamp}</TableCell>
-                                        <TableCell>
-                                            <Button
-                                                variant="contained"
-                                                color="primary"
-                                                onClick={() => handleDownload(file.url, file.description, file.id)}>
-                                                Baixar
-                                            </Button>
-                                            {file.ownerId === userId && (
-                                                <Button
-                                                    variant="contained"
-                                                    color="secondary"
-                                                    onClick={() => handleDeleteConfirmation(file.id)}>
-                                                    Excluir
-                                                </Button>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={3} align="center">
-                                        Nenhum arquivo disponível
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            )}
-
-            <Dialog open={openDeleteDialog} onClose={handleCloseDialog}>
-                <DialogTitle>Excluir Arquivo</DialogTitle>
-                <DialogContent>
-                    <p>Tem certeza de que deseja excluir o arquivo ?</p>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog} color="primary">Cancelar</Button>
-                    <Button onClick={handleDelete} color="secondary">Excluir</Button>
-                </DialogActions>
-            </Dialog>
-        </>
-    );
+      <Snackbar open={feedback.open} autoHideDuration={5000} onClose={() => setFeedback((current) => ({ ...current, open: false }))}>
+        <Alert severity={feedback.severity} variant="filled">{feedback.message}</Alert>
+      </Snackbar>
+    </Box>
+  );
 };
 
 export default VetrineDesk;

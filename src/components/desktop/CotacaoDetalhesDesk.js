@@ -2,12 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ref, onValue, increment, update, push, set, get } from 'firebase/database';
 import { db } from '../../fb';
-import { 
-  AdsClick, Inbox, RemoveRedEye, Share, FileDownload, 
-  Timelapse, CalendarToday, AccessTime, Report, CheckCircle,
-  Business, Storefront, Description, AttachMoney, 
-  Inventory, LocalShipping, Schedule, Verified
-} from '@mui/icons-material';
+import { isQuoteVisibleTo } from '../../utils/commerceVisibility';
+import AdsClick from '@mui/icons-material/AdsClick';
+import Inbox from '@mui/icons-material/Inbox';
+import RemoveRedEye from '@mui/icons-material/RemoveRedEye';
+import Share from '@mui/icons-material/Share';
+import FileDownload from '@mui/icons-material/FileDownload';
+import Timelapse from '@mui/icons-material/Timelapse';
+import CalendarToday from '@mui/icons-material/CalendarToday';
+import AccessTime from '@mui/icons-material/AccessTime';
+import Report from '@mui/icons-material/Report';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Business from '@mui/icons-material/Business';
+import Storefront from '@mui/icons-material/Storefront';
+import Description from '@mui/icons-material/Description';
+import AttachMoney from '@mui/icons-material/AttachMoney';
+import Inventory from '@mui/icons-material/Inventory';
+import LocalShipping from '@mui/icons-material/LocalShipping';
+import Schedule from '@mui/icons-material/Schedule';
+import Verified from '@mui/icons-material/Verified';
 import {
   Card,
   CardContent,
@@ -31,7 +44,8 @@ import {
 } from '@mui/material';
 import BackButton from '../BackButton';
 import { formatPrice } from '../../utils/utils';
-import { Info, AlertCircle, Clock, Eye, MessageSquare, Award, Star } from 'lucide-react';
+import { Info, AlertCircle, Clock, Eye, MessageSquare, Award } from 'lucide-react';
+import Star from 'lucide-react/icons/star';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -150,6 +164,11 @@ const CotacaoDetalhesDesk = ({ user }) => {
       const unsubscribe = onValue(cotacaoRef, (snapshot) => {
         const data = snapshot.val();
         if (!data) {
+          setLoading(false);
+          return;
+        }
+        if (!isQuoteVisibleTo(data, user?.id)) {
+          setCotacao(null);
           setLoading(false);
           return;
         }

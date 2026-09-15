@@ -19,6 +19,7 @@ import HandymanOutlinedIcon   from "@mui/icons-material/HandymanOutlined";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import ArrowForwardIcon       from "@mui/icons-material/ArrowForward";
 import { formatPrice } from "../../utils/utils";
+import { isStorePublic } from '../../utils/commerceVisibility';
 
 /* ── Design tokens ──────────────────────────────────────────────────────── */
 const T = {
@@ -287,7 +288,7 @@ const StoresDesk = ({ user }) => {
           id, ...s,
           products: s.products || {},
           settings: s.settings || { showPrices:true },
-        }));
+        })).filter(isStorePublic);
         const filtered = userProvince
           ? data.filter(s => s.company?.provincia === userProvince)
           : data;

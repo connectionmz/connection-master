@@ -30,20 +30,18 @@ import {
   DialogTitle,
   Divider
 } from '@mui/material';
-import {
-  Search,
-  FilterList,
-  Print,
-  ArrowBack,
-  PictureAsPdf,
-  Download,
-  DateRange,
-  Add,
-  Image,
-  Receipt,
-  Event,
-  CalendarToday
-} from '@mui/icons-material';
+import Search from '@mui/icons-material/Search';
+import FilterList from '@mui/icons-material/FilterList';
+import Print from '@mui/icons-material/Print';
+import ArrowBack from '@mui/icons-material/ArrowBack';
+import PictureAsPdf from '@mui/icons-material/PictureAsPdf';
+import Download from '@mui/icons-material/Download';
+import DateRange from '@mui/icons-material/DateRange';
+import Add from '@mui/icons-material/Add';
+import Image from '@mui/icons-material/Image';
+import Receipt from '@mui/icons-material/Receipt';
+import Event from '@mui/icons-material/Event';
+import CalendarToday from '@mui/icons-material/CalendarToday';
 import { useTheme } from '@mui/material/styles';
 import { Document, Page, PDFDownloadLink, StyleSheet, Text, View } from '@react-pdf/renderer';
 

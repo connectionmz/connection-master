@@ -30,28 +30,26 @@ import {
   Badge,
   alpha,
 } from "@mui/material";
-import {
-  Search as SearchIcon,
-  Clear as ClearIcon,
-  Inventory as InventoryIcon,
-  LocationOn,
-  Category,
-  Verified,
-  ArrowBack,
-  TrendingUp,
-  Star,
-  StarBorder,
-  Handyman,
-  Storefront,
-  Image as ImageIcon,
-  Business,
-  Schedule,
-  LocalOffer,
-  ThumbUp,
-  TrendingDown,
-  AccessTime,
-  StorefrontOutlined,
-} from "@mui/icons-material";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import LocationOn from "@mui/icons-material/LocationOn";
+import Category from "@mui/icons-material/Category";
+import Verified from "@mui/icons-material/Verified";
+import ArrowBack from "@mui/icons-material/ArrowBack";
+import TrendingUp from "@mui/icons-material/TrendingUp";
+import Star from "@mui/icons-material/Star";
+import Handyman from "@mui/icons-material/Handyman";
+import Storefront from "@mui/icons-material/Storefront";
+import ImageIcon from "@mui/icons-material/Image";
+import Business from "@mui/icons-material/Business";
+import Schedule from "@mui/icons-material/Schedule";
+import LocalOffer from "@mui/icons-material/LocalOffer";
+import ThumbUp from "@mui/icons-material/ThumbUp";
+import AccessTime from "@mui/icons-material/AccessTime";
+import StorefrontOutlined from "@mui/icons-material/StorefrontOutlined";
+import StarBorder from "@mui/icons-material/StarBorder";
+import TrendingDown from "@mui/icons-material/TrendingDown";
 import { formatPrice } from "../utils/utils";
 import { db } from "../fb";
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../fb';
 import { ref, onValue } from 'firebase/database';
 import {
@@ -16,6 +16,8 @@ import {
 import BackButton from './BackButton';
 import PagamentoAccordion from '../according/PagamentoAccordion';
 import { useLanguage } from '../context/LanguageContext';
+import { useActiveModules } from '../context/ActiveModulesContext';
+import { getPaymentErrorKey, getSafeReturnPath, validatePaymentResponse } from './paymentFlow';
 
 const PagamentoModulo = () => {
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -29,8 +31,15 @@ const PagamentoModulo = () => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isLoadingModules, setIsLoadingModules] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isModuleActive } = useActiveModules();
   const { language, t } = useLanguage();
   const numberLocale = language === 'pt' ? 'pt-MZ' : 'en-US';
+  const returnPath = getSafeReturnPath(
+    location.state,
+    moduleKey === 'moduloMarket' ? '/market' : '/app',
+  );
+  const moduleActivated = isModuleActive(moduleKey);
 
   useEffect(() => {
     const modulesRef = ref(db, 'modules/modulos');
@@ -156,20 +165,21 @@ const PagamentoModulo = () => {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Falha ao processar pagamento');
+        const paymentError = new Error(data.message || data.error || 'Falha ao processar pagamento');
+        paymentError.status = response.status;
+        throw paymentError;
+      }
+
+      const validation = validatePaymentResponse(data, moduleKey);
+      if (!validation.valid) {
+        throw new Error(validation.message);
       }
 
       setPaymentSuccess(true);
       
     } catch (err) {
       
-      if (err.message.includes('blocked') || err.code === 'auth/requests-blocked') {
-        setError('payment.error.connection');
-      } else if (err.code?.startsWith('auth/')) {
-        setError('payment.error.authentication');
-      } else {
-        setError('payment.error.generic');
-      }
+      setError(getPaymentErrorKey(err));
     } finally {
       setLoading(false);
     }
@@ -329,16 +339,17 @@ const PagamentoModulo = () => {
             </Box>
           ) : (
             <Box sx={{ width: '100%' }}>
-              <Alert severity="success" sx={{ mb: 2 }}>
-                {t('payment.success')}
+              <Alert severity={moduleActivated ? 'success' : 'info'} sx={{ mb: 2 }}>
+                {moduleActivated ? t('payment.success') : t('payment.confirmingActivation')}
               </Alert>
               <Button
                 variant="contained"
                 size="large"
                 fullWidth
-                onClick={() => navigate(moduleKey === 'moduloMarket' ? '/market' : '/app')}
+                disabled={!moduleActivated}
+                onClick={() => navigate(returnPath, { replace: true })}
               >
-                {t('payment.continue')}
+                {moduleActivated ? t('payment.continue') : t('payment.waitingActivation')}
               </Button>
             </Box>
           )}

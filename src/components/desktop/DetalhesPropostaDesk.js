@@ -46,11 +46,11 @@ import {
   Email,
   Lock,
   Info,
-  Print,
   Share,
   AccessTime
 } from '@mui/icons-material';
-import {sendEmail} from '../sms/SendMail';
+import Print from '@mui/icons-material/Print';
+import { sendEmailWithAuth } from '../sms/SendMail';
 
 // Status configuration
 const STATUS_CONFIG = {
@@ -234,7 +234,7 @@ const DetalhesPropostaDesk = ({ user }) => {
           </p>
         </div>`;  
         
-      await sendEmail({
+      await sendEmailWithAuth({
         to: email,
         subject,
         html: emailContent

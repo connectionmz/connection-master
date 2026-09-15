@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ref, get, push, update } from 'firebase/database';
 import { auth, db } from '../../fb';
+import { isStorePublic } from '../../utils/commerceVisibility';
 import ProductGridDesk from './ProductGridDesk';
 import { 
   Box, 
@@ -225,6 +226,10 @@ const StoreDetailDesk = ({ user }) => {
 
                 if (storeSnapshot.exists()) {
                     const storeData = storeSnapshot.val();
+                    if (!isStorePublic(storeData) && user?.id !== storeId) {
+                        setStore(null);
+                        return;
+                    }
 
                     const companyData = companySnapshot.exists() ? companySnapshot.val() : {};
                     const productsData = productsSnapshot.exists() ? productsSnapshot.val() : {};
@@ -284,7 +289,7 @@ const StoreDetailDesk = ({ user }) => {
             }
         };
         fetchStoreDetails();
-    }, [storeId]);
+    }, [storeId, user?.id]);
 
     // Detectar scroll para mostrar botão voltar ao topo
     useEffect(() => {

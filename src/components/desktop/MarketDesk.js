@@ -16,14 +16,12 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import { 
-  Storefront as StoreIcon,
-  ShoppingBag as ShoppingBagIcon,
-  AddCircle as AddIcon,
-  CheckCircle as CheckIcon,
-  Business as BusinessIcon,
-  ArrowBack as ArrowBackIcon
-} from '@mui/icons-material';
+import StoreIcon from '@mui/icons-material/Storefront';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import AddIcon from '@mui/icons-material/AddCircle';
+import CheckIcon from '@mui/icons-material/CheckCircle';
+import BusinessIcon from '@mui/icons-material/Business';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CreateStoreFormDesk from '../market/CreateStoreFormDesk';
 import ManageStoreDesk from '../market/ManageStoreDesk';
 import BackButton from '../BackButton';
