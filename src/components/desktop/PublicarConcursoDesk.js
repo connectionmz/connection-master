@@ -14,6 +14,7 @@ import { Close, AttachFile, CloudUpload, CheckCircle, Error } from '@mui/icons-m
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { sendEmailConcurso } from '../sms/SendMail';
+import { filterActiveModules } from '../../context/ActiveModulesContext';
 
 // Initialize Firebase Storage
 const storage = getStorage();
@@ -375,27 +376,12 @@ const sendNotifications = useCallback(async (concursoId) => {
         if (key === user.id) continue;
         if (!empresa.contacto && !empresa.email) continue;
 
-        // Verificar assinatura SMS
-        let hasActiveSMS = false;
-        try {
-          const subscriptionRef = ref(db, `subscriptions/${key}`);
-          const subscriptionSnapshot = await get(subscriptionRef);
-          
-          if (subscriptionSnapshot.exists()) {
-            const subscriptionData = subscriptionSnapshot.val();
-            
-            if (subscriptionData.moduloSMS) {
-              const smsModule = subscriptionData.moduloSMS;
-              const now = new Date().getTime();
-              
-              if (smsModule.isActive && smsModule.end > now) {
-                hasActiveSMS = true;
-              }
-            }
-          }
-        } catch (error) {
-          console.error(`Erro ao verificar assinatura para empresa ${key}:`, error);
-        }
+        // Verificar módulo SMS ativo (alerta ativo) — lido diretamente do
+        // registo da empresa já carregado (company/{id}/activeModules/moduloSMS),
+        // com a mesma lógica de expiração que ActiveModulesContext usa no
+        // resto do app. "subscriptions/{id}" é um node órfão que ninguém
+        // mais escreve.
+        const hasActiveSMS = Boolean(filterActiveModules(empresa.activeModules).moduloSMS);
 
         // Só processar se tiver módulo SMS ativo
         if (!hasActiveSMS) continue;

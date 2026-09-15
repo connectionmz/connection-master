@@ -29,6 +29,7 @@ import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUti
 import BackButton from '../BackButton';
 import {sendEmail} from '../sms/SendMail';
 import { formatarMoeda, formatCurrency } from '../../utils/utils';
+import { filterActiveModules } from '../../context/ActiveModulesContext';
 
 const NovaCotacao = ({ user }) => {
   const theme = useTheme();
@@ -336,24 +337,12 @@ const handleSubmit = async (e) => {
         // Ignorar a própria empresa
         if (key === user.id) continue;
 
-        // Verificar assinatura SMS
-        let hasActiveSMS = false;
-        const subscriptionRef = ref(db, `subscriptions/${key}`);
-        const subscriptionSnapshot = await get(subscriptionRef);
-        
-        if (subscriptionSnapshot.exists()) {
-          const subscriptionData = subscriptionSnapshot.val();
-          
-          // Verificar módulo SMS
-          if (subscriptionData.moduloSMS) {
-            const smsModule = subscriptionData.moduloSMS;
-            const now = new Date().getTime();
-            
-            if (smsModule.isActive && smsModule.end > now) {
-              hasActiveSMS = true;
-            }
-          }
-        }
+        // Verificar módulo SMS ativo (alerta ativo) — lido diretamente do
+        // registo da empresa já carregado (company/{id}/activeModules/moduloSMS),
+        // com a mesma lógica de expiração que ActiveModulesContext usa no
+        // resto do app. "subscriptions/{id}" é um node órfão que ninguém
+        // mais escreve.
+        const hasActiveSMS = Boolean(filterActiveModules(empresa.activeModules).moduloSMS);
 
         // Processar apenas empresas com SMS ativo
         if (hasActiveSMS) {
