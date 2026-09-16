@@ -8,6 +8,7 @@ import FeedOutlined from '@mui/icons-material/FeedOutlined';
 import ImageOutlined from '@mui/icons-material/ImageOutlined';
 import { db } from '../fb';
 import { useLanguage } from '../context/LanguageContext';
+import { isPostPublic } from '../utils/postData';
 
 const stripHtml = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -57,7 +58,10 @@ const Feed = ({ user }) => {
       (snapshot) => {
         const value = snapshot.val();
         const nextPosts = value && typeof value === 'object'
-          ? Object.entries(value).map(([postId, post]) => normalizePost(postId, post)).sort((a, b) => b.timestamp - a.timestamp)
+          ? Object.entries(value)
+            .filter(([, post]) => isPostPublic(post))
+            .map(([postId, post]) => normalizePost(postId, post))
+            .sort((a, b) => b.timestamp - a.timestamp)
           : [];
         setPosts(nextPosts);
         setLoading(false);

@@ -1,858 +1,147 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { get, ref } from 'firebase/database';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
+import { alpha, useTheme } from '@mui/material/styles';
 import {
-  Grid,
-  Card,
-  Typography,
-  TextField,
-  Select,
-  MenuItem,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
-  Box,
-  Avatar,
-  useMediaQuery,
-  Pagination,
-  Chip,
-  Container,
-  IconButton,
+  Alert, Avatar, Box, Button, Card, CardActionArea, Chip, CircularProgress,
+  Container, Dialog, DialogActions, DialogContent, DialogTitle, Grid,
+  IconButton, MenuItem, Pagination, Stack, TextField, Typography,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import TuneIcon from '@mui/icons-material/Tune';
-import BusinessIcon from '@mui/icons-material/Business';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import CategoryIcon from '@mui/icons-material/Category';
-import CloseIcon from '@mui/icons-material/Close';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { Business, Category, Close, LocationOn, Search, Tune } from '@mui/icons-material';
 import { db } from '../../fb';
+import { useLanguage } from '../../context/LanguageContext';
+import { filterCompanyDirectory } from '../../utils/companyDirectory';
+import { loadPublicCompanyDirectory } from '../../services/companyDirectory';
 
-/* ─── Design tokens ─────────────────────────────────────────────────────── */
-const T = {
-  navy:    '#0B1F3A',
-  navyMid: '#162E52',
-  accent:  '#C8953A',       // amber-gold
-  accentLight: '#F5E6C8',
-  steel:   '#4A6080',
-  muted:   '#8A9BB0',
-  border:  '#DDE3EC',
-  surface: '#F7F9FC',
-  white:   '#FFFFFF',
-  text:    '#1C2D40',
-  textSub: '#56708A',
-};
+const EMPTY_FILTERS = { sector: '', subsector: '', province: '', district: '', entityType: '' };
+const PAGE_SIZE = 24;
+const createExploreTokens = (theme) => ({
+  navy: '#08192E', navyMid: '#0E2849', navyLight: '#183A63',
+  gold: '#C8903A', goldLight: '#E8B96A', goldPale: theme.palette.mode === 'dark' ? alpha('#C8903A', 0.16) : '#FDF3E3',
+  white: '#FFFFFF', text: theme.palette.text.primary, textSub: theme.palette.text.secondary,
+  borderMid: theme.palette.divider, surface: theme.palette.background.default,
+  card: theme.palette.background.paper,
+});
+const KEYFRAMES = (T) => `
+  @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .afu{animation:fadeUp .65s cubic-bezier(.22,1,.36,1) both}.afi{animation:fadeIn .5s ease both}
+  .d1{animation-delay:.10s}.d2{animation-delay:.22s}.d3{animation-delay:.34s}.d4{animation-delay:.46s}
+  .feature-card{transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+  .feature-card:hover,.feature-card:focus-within{transform:translateY(-4px);border-color:${T.gold}!important;box-shadow:0 16px 48px rgba(8,25,46,.15)!important}
+  .cta-btn{transition:background .2s,transform .2s}.cta-btn:hover{background:${T.goldLight}!important;transform:translateY(-1px)}
+  @media(prefers-reduced-motion:reduce){.afu,.afi,.feature-card,.cta-btn{animation:none!important;transition:none!important;transform:none!important}}
+`;
 
-const cardSx = {
-  height: '100%',
-  border: `1px solid ${T.border}`,
-  borderRadius: '14px',
-  background: T.white,
-  transition: 'box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease',
-  cursor: 'pointer',
-  overflow: 'hidden',
-  '&:hover': {
-    borderColor: T.accent,
-    boxShadow: `0 8px 32px rgba(11,31,58,0.12)`,
-    transform: 'translateY(-3px)',
-  },
-};
-
-/* ─── Component ─────────────────────────────────────────────────────────── */
-const Explore = React.memo(() => {
+const ExploreDesk = () => {
+  const theme = useTheme();
+  const T = useMemo(() => createExploreTokens(theme), [theme]);
+  const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [companies, setCompanies] = useState([]);
+  const [references, setReferences] = useState({ provinces: [], sectors: [], entityTypes: [] });
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, sector: searchParams.get('sector') || '' }));
+  const [draft, setDraft] = useState(EMPTY_FILTERS);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSector, setSelectedSector] = useState('');
-  const [selectedSubsector, setSelectedSubsector] = useState('');
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [selectedTipoEntidade, setSelectedTipoEntidade] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [provincias, setProvincias] = useState([]);
-  const [sectores, setSectores] = useState([]);
-  const [subsectores, setSubsectores] = useState([]);
-  const [distritos, setDistritos] = useState([]);
-  const [tiposEntidades, setTiposEntidades] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(24);
-  const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width:600px)');
-
-  /* fetch ----------------------------------------------------------------- */
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const snapshot = await get(ref(db, 'company'));
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          setCompanies(
-            Object.keys(data)
-              .map((key) => ({ id: key, ...data[key] }))
-              .filter((e) => e.type !== 'singular')
-          );
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchRefs = async () => {
-      try {
-        const [pSnap, sSnap, tSnap] = await Promise.all([
-          get(ref(db, 'provincias')),
-          get(ref(db, 'sectores_de_atividade')),
-          get(ref(db, 'tipos_entidades')),
-        ]);
-        if (pSnap.exists()) setProvincias(pSnap.val() || []);
-        if (sSnap.exists()) setSectores(sSnap.val() || []);
-        if (tSnap.exists()) setTiposEntidades(tSnap.val() || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchCompanies();
-    fetchRefs();
-  }, []);
+  const [filterLoading, setFilterLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (selectedSector) {
-      const found = sectores.find((s) => s.setor === selectedSector);
-      setSubsectores(found ? found.subsectores : []);
-    } else {
-      setSubsectores([]);
-    }
-    setSelectedSubsector('');
-  }, [selectedSector, sectores]);
+    let active = true;
+    Promise.all([loadPublicCompanyDirectory(db), get(ref(db, 'provincias')), get(ref(db, 'sectores_de_atividade')), get(ref(db, 'tipos_entidades'))])
+      .then(([directory, provincesSnap, sectorsSnap, typesSnap]) => {
+        if (!active) return;
+        setCompanies(directory);
+        setReferences({ provinces: provincesSnap.val() || [], sectors: sectorsSnap.val() || [], entityTypes: typesSnap.val() || [] });
+      })
+      .catch((loadError) => { console.error('Erro ao carregar diretório:', loadError); if (active) setError(t('explore.loadError')); })
+      .finally(() => { if (active) { setLoading(false); setFilterLoading(false); } });
+    return () => { active = false; };
+  }, [t]);
 
+  const subsectors = useMemo(() => references.sectors.find(({ setor }) => setor === draft.sector)?.subsectores || [], [draft.sector, references.sectors]);
+  const districts = useMemo(() => references.provinces.find(({ provincia }) => provincia === draft.province)?.distritos || [], [draft.province, references.provinces]);
+  const filtered = useMemo(() => filterCompanyDirectory(companies, { ...filters, search }), [companies, filters, search]);
+  const pages = Math.ceil(filtered.length / PAGE_SIZE);
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const activeCount = Object.values(filters).filter(Boolean).length;
+
+  useEffect(() => setPage(1), [search, filters]);
   useEffect(() => {
-    if (selectedProvince) {
-      const found = provincias.find((p) => p.provincia === selectedProvince);
-      setDistritos(found ? found.distritos : []);
-    } else {
-      setDistritos([]);
-    }
-    setSelectedDistrict('');
-  }, [selectedProvince, provincias]);
+    const sector = searchParams.get('sector') || '';
+    setFilters((current) => current.sector === sector ? current : { ...current, sector, subsector: '' });
+  }, [searchParams]);
 
-  useEffect(() => { setCurrentPage(1); }, [
-    searchTerm, selectedSector, selectedSubsector,
-    selectedProvince, selectedDistrict, selectedTipoEntidade,
-  ]);
+  const openFilters = () => { setDraft(filters); setDialogOpen(true); };
+  const clearFilters = () => { setFilters(EMPTY_FILTERS); setDraft(EMPTY_FILTERS); setSearch(''); setSearchParams({}); };
+  const setDraftField = (name, value) => setDraft((current) => ({
+    ...current, [name]: value,
+    ...(name === 'sector' ? { subsector: '' } : {}),
+    ...(name === 'province' ? { district: '' } : {}),
+  }));
 
-  /* filter / paginate ----------------------------------------------------- */
-  const filteredCompanies = useMemo(() => {
-    const q = searchTerm.toLowerCase();
-    return companies.filter((c) => {
-      const matchSearch = !q ||
-        c.nome?.toLowerCase().includes(q) ||
-        c.sigla?.toLowerCase().includes(q) ||
-        c.descricao?.toLowerCase().includes(q) ||
-        c.sector?.toLowerCase().includes(q);
-      return (
-        matchSearch &&
-        (!selectedSector      || c.sector       === selectedSector) &&
-        (!selectedSubsector   || c.subsectores?.some((s) => s === selectedSubsector)) &&
-        (!selectedProvince    || c.provincia     === selectedProvince) &&
-        (!selectedDistrict    || c.distrito      === selectedDistrict) &&
-        (!selectedTipoEntidade || c.tipoEntidade === selectedTipoEntidade)
-      );
-    });
-  }, [companies, searchTerm, selectedSector, selectedSubsector, selectedProvince, selectedDistrict, selectedTipoEntidade]);
+  if (loading) return <Box sx={{ minHeight: '55vh', display: 'grid', placeItems: 'center' }}><CircularProgress aria-label={t('explore.loading')} /></Box>;
 
-  const currentCompanies = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredCompanies.slice(start, start + itemsPerPage);
-  }, [filteredCompanies, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
-  const hasActiveFilters = !!(selectedSector || selectedSubsector || selectedProvince || selectedDistrict || selectedTipoEntidade || searchTerm);
-
-  const handleSearch    = useCallback((e) => setSearchTerm(e.target.value), []);
-  const handleClick     = useCallback((id) => navigate(`/empresa/${id}`), [navigate]);
-  const openModal       = useCallback(() => setIsModalOpen(true), []);
-  const closeModal      = useCallback(() => setIsModalOpen(false), []);
-  const resetFilters    = useCallback(() => {
-    setSelectedSector(''); setSelectedSubsector('');
-    setSelectedProvince(''); setSelectedDistrict('');
-    setSelectedTipoEntidade(''); setSearchTerm('');
-  }, []);
-
-  /* loading --------------------------------------------------------------- */
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh" bgcolor={T.surface}>
-        <Box textAlign="center">
-          <CircularProgress size={36} thickness={4} sx={{ color: T.accent }} />
-          <Typography variant="body2" sx={{ mt: 2, color: T.muted, fontFamily: '"DM Sans", sans-serif' }}>
-            A carregar empresas…
-          </Typography>
-        </Box>
-      </Box>
-    );
-  }
-
-  /* render ---------------------------------------------------------------- */
   return (
-    <Box sx={{ backgroundColor: T.surface, minHeight: '100vh', fontFamily: '"DM Sans", sans-serif' }}>
-
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <Box
-        sx={{
-          background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyMid} 60%, #1E3A5F 100%)`,
-          pt: { xs: 6, md: 10 },
-          pb: { xs: 5, md: 8 },
-          px: 2,
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `radial-gradient(circle at 80% 20%, rgba(200,149,58,0.15) 0%, transparent 50%),
-                              radial-gradient(circle at 10% 80%, rgba(200,149,58,0.08) 0%, transparent 40%)`,
-            pointerEvents: 'none',
-          },
-          // subtle grid texture
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
-            backgroundSize: '48px 48px',
-            pointerEvents: 'none',
-          },
-        }}
-      >
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
-          {/* eyebrow */}
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 1,
-              px: 2,
-              py: 0.5,
-              mb: 2.5,
-              border: `1px solid rgba(200,149,58,0.4)`,
-              borderRadius: '100px',
-              background: 'rgba(200,149,58,0.1)',
-            }}
-          >
-            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: T.accent }} />
-            <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', color: T.accent, textTransform: 'uppercase' }}>
-              Diretório Nacional de Empresas
-            </Typography>
-          </Box>
-
-          <Typography
-            component="h1"
-            sx={{
-              fontSize: { xs: '2rem', md: '2.8rem' },
-              fontWeight: 700,
-              fontFamily: '"DM Serif Display", Georgia, serif',
-              color: T.white,
-              lineHeight: 1.15,
-              mb: 1.5,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Encontre Empresas,<br />
-            <Box component="span" sx={{ color: T.accent }}>Bens e Serviços</Box>
-          </Typography>
-
-          <Typography
-            sx={{
-              color: 'rgba(255,255,255,0.62)',
-              fontSize: '1rem',
-              mb: 4,
-              maxWidth: 480,
-              lineHeight: 1.7,
-              fontFamily: '"DM Sans", sans-serif',
-            }}
-          >
-            Aceda ao maior diretório empresarial de Moçambique. Pesquise por nome, setor ou localização.
-          </Typography>
-
-          {/* Search bar */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              background: T.white,
-              borderRadius: '12px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-              border: `1px solid rgba(255,255,255,0.1)`,
-              overflow: 'hidden',
-              maxWidth: 680,
-            }}
-          >
-            <Box sx={{ pl: 2, display: 'flex', alignItems: 'center' }}>
-              <SearchIcon sx={{ color: T.muted, fontSize: 22 }} />
-            </Box>
-            <TextField
-              placeholder="Nome da empresa, setor ou descrição…"
-              value={searchTerm}
-              onChange={handleSearch}
-              variant="standard"
-              fullWidth
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  px: 1.5,
-                  py: 0.5,
-                  fontSize: '0.95rem',
-                  fontFamily: '"DM Sans", sans-serif',
-                  color: T.text,
-                  '& input::placeholder': { color: T.muted, opacity: 1 },
-                },
-              }}
-            />
-            <Box
-              sx={{
-                height: 48,
-                width: '1px',
-                bgcolor: T.border,
-                my: 'auto',
-                flexShrink: 0,
-              }}
-            />
-            <Button
-              startIcon={<TuneIcon sx={{ fontSize: '18px !important' }} />}
-              onClick={openModal}
-              sx={{
-                px: 2.5,
-                height: 56,
-                borderRadius: 0,
-                color: hasActiveFilters ? T.accent : T.steel,
-                fontFamily: '"DM Sans", sans-serif',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                whiteSpace: 'nowrap',
-                minWidth: 'auto',
-                '&:hover': { bgcolor: T.surface },
-              }}
-            >
-              {!isMobile && 'Filtros'}
-              {hasActiveFilters && (
-                <Box
-                  sx={{
-                    ml: 1,
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    bgcolor: T.accent,
-                    color: T.white,
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {[selectedSector, selectedSubsector, selectedProvince, selectedDistrict, selectedTipoEntidade].filter(Boolean).length}
-                </Box>
-              )}
-            </Button>
-          </Box>
-
-          {/* Active filter chips */}
-          {hasActiveFilters && (
-            <Box sx={{ mt: 2.5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {[
-                { label: searchTerm && `"${searchTerm}"`, clear: () => setSearchTerm('') },
-                { label: selectedSector, clear: () => setSelectedSector('') },
-                { label: selectedSubsector, clear: () => setSelectedSubsector('') },
-                { label: selectedProvince, clear: () => setSelectedProvince('') },
-                { label: selectedDistrict, clear: () => setSelectedDistrict('') },
-                { label: selectedTipoEntidade, clear: () => setSelectedTipoEntidade('') },
-              ]
-                .filter((f) => f.label)
-                .map((f, i) => (
-                  <Chip
-                    key={i}
-                    label={f.label}
-                    onDelete={f.clear}
-                    size="small"
-                    deleteIcon={<CloseIcon style={{ fontSize: 14 }} />}
-                    sx={{
-                      bgcolor: 'rgba(200,149,58,0.15)',
-                      color: T.accentLight,
-                      border: `1px solid rgba(200,149,58,0.3)`,
-                      borderRadius: '8px',
-                      fontFamily: '"DM Sans", sans-serif',
-                      fontSize: '0.78rem',
-                      '& .MuiChip-deleteIcon': { color: 'rgba(200,149,58,0.7)' },
-                    }}
-                  />
-                ))}
-              <Chip
-                label="Limpar tudo"
-                onClick={resetFilters}
-                size="small"
-                sx={{
-                  bgcolor: 'transparent',
-                  color: 'rgba(255,255,255,0.45)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '8px',
-                  fontFamily: '"DM Sans", sans-serif',
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
-                }}
-              />
-            </Box>
-          )}
+    <Box sx={{ minHeight: '100vh', bgcolor: T.surface }}>
+      <style>{KEYFRAMES(T)}</style>
+      <Box sx={{ py: { xs: 6, md: 9 }, background: `linear-gradient(160deg,${T.navy} 0%,${T.navyMid} 55%,${T.navyLight} 100%)`, color: T.white }}>
+        <Container maxWidth="lg">
+          <Typography className="afu" variant="overline" sx={{ color: T.goldLight }}>{t('explore.eyebrow')}</Typography>
+          <Typography className="afu d1" component="h1" variant="h3" fontWeight={800} sx={{ maxWidth: 720 }}>{t('explore.title')}</Typography>
+          <Typography className="afu d2" sx={{ mt: 1.5, mb: 3, opacity: 0.8, maxWidth: 650 }}>{t('explore.description')}</Typography>
+          <Stack className="afu d3" direction={{ xs: 'column', sm: 'row' }} spacing={1.5} maxWidth={760}>
+            <TextField fullWidth value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('explore.searchPlaceholder')} inputProps={{ 'aria-label': t('explore.searchLabel') }} InputProps={{ startAdornment: <Search sx={{ mr: 1, color: T.textSub }} /> }} sx={{ bgcolor: T.card, borderRadius: 1 }} />
+            <Button className="cta-btn" variant="contained" startIcon={<Tune />} onClick={openFilters} sx={{ bgcolor: T.gold, color: T.white }}>{t('explore.filters')}{activeCount ? ` (${activeCount})` : ''}</Button>
+          </Stack>
+          {(search || activeCount > 0) && <Button onClick={clearFilters} color="inherit" size="small" sx={{ mt: 1.5 }}>{t('explore.clear')}</Button>}
         </Container>
       </Box>
 
-      {/* ── RESULTS AREA ─────────────────────────────────────────────────── */}
       <Container maxWidth="lg" sx={{ py: 5 }}>
-
-        {/* Result count bar */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 3,
-            pb: 2.5,
-            borderBottom: `1px solid ${T.border}`,
-          }}
-        >
-          <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.9rem', color: T.textSub }}>
-            {filteredCompanies.length > 0
-              ? <>Mostrando <strong style={{ color: T.text }}>{currentCompanies.length}</strong> de <strong style={{ color: T.text }}>{filteredCompanies.length}</strong> empresas</>
-              : 'Nenhuma empresa encontrada'}
-          </Typography>
-          {totalPages > 1 && (
-            <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.85rem', color: T.muted }}>
-              Pág. {currentPage} / {totalPages}
-            </Typography>
-          )}
-        </Box>
-
-        {filteredCompanies.length === 0 ? (
-          /* ── EMPTY STATE ─────────────────────────────────────────────── */
-          <Box
-            sx={{
-              textAlign: 'center',
-              py: 12,
-              px: 3,
-              border: `1px dashed ${T.border}`,
-              borderRadius: '16px',
-              background: T.white,
-            }}
-          >
-            <Box
-              sx={{
-                width: 72,
-                height: 72,
-                borderRadius: '18px',
-                bgcolor: T.surface,
-                border: `1px solid ${T.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mx: 'auto',
-                mb: 3,
-              }}
-            >
-              <BusinessIcon sx={{ fontSize: 32, color: T.muted }} />
-            </Box>
-            <Typography
-              variant="h6"
-              sx={{ fontFamily: '"DM Serif Display", Georgia, serif', color: T.text, mb: 1 }}
-            >
-              Nenhum resultado encontrado
-            </Typography>
-            <Typography sx={{ fontFamily: '"DM Sans", sans-serif', color: T.textSub, fontSize: '0.9rem', mb: 3 }}>
-              Tente ajustar os filtros ou alterar o termo de pesquisa.
-            </Typography>
-            {hasActiveFilters && (
-              <Button
-                onClick={resetFilters}
-                variant="outlined"
-                sx={{
-                  borderColor: T.border,
-                  color: T.steel,
-                  borderRadius: '8px',
-                  fontFamily: '"DM Sans", sans-serif',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  '&:hover': { borderColor: T.navy, color: T.navy, bgcolor: 'transparent' },
-                }}
-              >
-                Limpar todos os filtros
-              </Button>
-            )}
-          </Box>
-        ) : (
-          <>
-            {/* ── GRID ─────────────────────────────────────────────────── */}
-            <Grid container spacing={2.5}>
-              {currentCompanies.map((company) => (
-                <Grid item key={company.id} xs={12} sm={6} md={4} lg={3}>
-                  <Card elevation={0} sx={cardSx} onClick={() => handleClick(company.slug)}>
-                    {/* Accent bar on top */}
-                    <Box
-                      sx={{
-                        height: 3,
-                        background: `linear-gradient(90deg, ${T.accent} 0%, rgba(200,149,58,0) 100%)`,
-                        opacity: 0,
-                        transition: 'opacity 0.22s',
-                        '.MuiCard-root:hover &': { opacity: 1 },
-                      }}
-                    />
-                    <Box sx={{ p: 2.5 }}>
-                      {/* Header */}
-                      <Box display="flex" alignItems="flex-start" gap={1.5} mb={2}>
-                        <Avatar
-                          src={company.logoUrl}
-                          alt={company.nome}
-                          variant="rounded"
-                          sx={{
-                            width: 44,
-                            height: 44,
-                            bgcolor: T.surface,
-                            border: `1px solid ${T.border}`,
-                            borderRadius: '10px',
-                            flexShrink: 0,
-                            fontSize: '1.1rem',
-                            fontWeight: 700,
-                            color: T.navy,
-                            fontFamily: '"DM Serif Display", serif',
-                          }}
-                        >
-                          {(company.sigla || company.nome || '?')[0]}
-                        </Avatar>
-                        <Box sx={{ minWidth: 0, flex: 1, pt: 0.25 }}>
-                          <Typography
-                            sx={{
-                              fontFamily: '"DM Sans", sans-serif',
-                              fontWeight: 700,
-                              fontSize: '0.9rem',
-                              color: T.text,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            {company.sigla || company.nome}
-                          </Typography>
-                          {company.sigla && company.nome && (
-                            <Typography
-                              sx={{
-                                fontFamily: '"DM Sans", sans-serif',
-                                fontSize: '0.72rem',
-                                color: T.muted,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                lineHeight: 1.4,
-                              }}
-                            >
-                              {company.nome}
-                            </Typography>
-                          )}
-                        </Box>
-                      </Box>
-
-                      {/* Divider */}
-                      <Box sx={{ height: '1px', bgcolor: T.border, mb: 2 }} />
-
-                      {/* Meta */}
-                      <Box display="flex" flexDirection="column" gap={0.8}>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <CategoryIcon sx={{ fontSize: 14, color: T.muted, flexShrink: 0 }} />
-                          <Typography
-                            sx={{
-                              fontFamily: '"DM Sans", sans-serif',
-                              fontSize: '0.78rem',
-                              color: T.textSub,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {company.sector || 'Setor não especificado'}
-                          </Typography>
-                        </Box>
-
-                        {(company.provincia || company.distrito) && (
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <LocationOnIcon sx={{ fontSize: 14, color: T.muted, flexShrink: 0 }} />
-                            <Typography
-                              sx={{
-                                fontFamily: '"DM Sans", sans-serif',
-                                fontSize: '0.78rem',
-                                color: T.textSub,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {company.provincia}
-                              {company.distrito && ` · ${company.distrito}`}
-                            </Typography>
-                          </Box>
-                        )}
-
-                        {company.tipoEntidade && (
-                          <Box sx={{ mt: 0.5 }}>
-                            <Box
-                              component="span"
-                              sx={{
-                                display: 'inline-block',
-                                px: 1.2,
-                                py: 0.35,
-                                borderRadius: '6px',
-                                bgcolor: T.surface,
-                                border: `1px solid ${T.border}`,
-                                fontSize: '0.7rem',
-                                fontFamily: '"DM Sans", sans-serif',
-                                fontWeight: 600,
-                                color: T.steel,
-                                letterSpacing: '0.02em',
-                              }}
-                            >
-                              {company.tipoEntidade}
-                            </Box>
-                          </Box>
-                        )}
-                      </Box>
-
-                      {/* CTA row */}
-                      <Box
-                        sx={{
-                          mt: 2,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'flex-end',
-                          opacity: 0,
-                          transition: 'opacity 0.2s',
-                          '.MuiCard-root:hover &': { opacity: 1 },
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: '0.75rem',
-                            fontFamily: '"DM Sans", sans-serif',
-                            fontWeight: 600,
-                            color: T.accent,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.4,
-                          }}
-                        >
-                          Ver perfil <ArrowForwardIcon sx={{ fontSize: 13 }} />
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-
-            {/* ── PAGINATION ───────────────────────────────────────────── */}
-            {totalPages > 1 && (
-              <Box display="flex" justifyContent="center" mt={7}>
-                <Pagination
-                  count={totalPages}
-                  page={currentPage}
-                  onChange={(_, val) => setCurrentPage(val)}
-                  shape="rounded"
-                  size={isMobile ? 'small' : 'medium'}
-                  sx={{
-                    '& .MuiPaginationItem-root': {
-                      fontFamily: '"DM Sans", sans-serif',
-                      fontWeight: 500,
-                      color: T.steel,
-                      border: `1px solid ${T.border}`,
-                      borderRadius: '8px',
-                      '&:hover': { bgcolor: T.surface, borderColor: T.navy },
-                      '&.Mui-selected': {
-                        bgcolor: T.navy,
-                        color: T.white,
-                        borderColor: T.navy,
-                        fontWeight: 700,
-                        '&:hover': { bgcolor: T.navyMid },
-                      },
-                    },
-                  }}
-                />
-              </Box>
-            )}
-          </>
+        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        <Typography color="text.secondary" sx={{ mb: 3 }}>{t('explore.results', { count: filtered.length })}</Typography>
+        {!visible.length ? <Alert severity="info" icon={<Business />}>{t('explore.empty')}</Alert> : (
+          <Grid container spacing={2.5}>
+            {visible.map((company) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={company.id}>
+                <Card className="feature-card" variant="outlined" sx={{ height: '100%', bgcolor: T.card, borderColor: T.borderMid }}>
+                  <CardActionArea component={RouterLink} to={`/empresa/${company.id}`} sx={{ height: '100%', p: 2.5 }} aria-label={t('explore.openCompany', { name: company.nome })}>
+                    <Stack direction="row" spacing={1.5} alignItems="center" mb={2}>
+                      <Avatar src={company.logoUrl} alt="" sx={{ width: 56, height: 56, bgcolor: T.goldPale, color: T.gold }}><Business /></Avatar>
+                      <Box minWidth={0}><Typography fontWeight={750} noWrap>{company.sigla || company.nome}</Typography>{company.sigla && <Typography variant="body2" color="text.secondary" noWrap>{company.nome}</Typography>}</Box>
+                    </Stack>
+                    <Stack spacing={1} color="text.secondary">
+                      <Stack direction="row" spacing={1}><Category fontSize="small" /><Typography variant="body2" noWrap>{company.sector || t('explore.noSector')}</Typography></Stack>
+                      {(company.provincia || company.distrito) && <Stack direction="row" spacing={1}><LocationOn fontSize="small" /><Typography variant="body2" noWrap>{[company.provincia, company.distrito].filter(Boolean).join(' · ')}</Typography></Stack>}
+                      {company.tipoEntidade && <Box><Chip label={company.tipoEntidade} size="small" /></Box>}
+                    </Stack>
+                  </CardActionArea>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         )}
+        {pages > 1 && <Pagination count={pages} page={page} onChange={(_, value) => { setPage(value); window.scrollTo({ top: 0, behavior: 'smooth' }); }} sx={{ mt: 5, display: 'flex', justifyContent: 'center' }} />}
       </Container>
 
-      {/* ── FILTER MODAL ─────────────────────────────────────────────────── */}
-      <Dialog
-        open={isModalOpen}
-        onClose={closeModal}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: '16px',
-            fontFamily: '"DM Sans", sans-serif',
-            overflow: 'hidden',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.18)',
-          },
-        }}
-      >
-        {/* Modal header */}
-        <DialogTitle
-          sx={{
-            px: 3,
-            py: 2.5,
-            borderBottom: `1px solid ${T.border}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            bgcolor: T.navy,
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1.5}>
-            <TuneIcon sx={{ color: T.accent, fontSize: 20 }} />
-            <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: T.white, fontFamily: '"DM Sans", sans-serif' }}>
-              Filtros Avançados
-            </Typography>
-          </Box>
-          <IconButton onClick={closeModal} size="small" sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: T.white } }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ p: 3, bgcolor: T.white }}>
-          <Box display="flex" flexDirection="column" gap={3.5}>
-
-            {/* Localização */}
-            <Box>
-              <Box display="flex" alignItems="center" gap={1} mb={1.5}>
-                <LocationOnIcon sx={{ fontSize: 16, color: T.accent }} />
-                <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontWeight: 700, fontSize: '0.82rem', color: T.text, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Localização
-                </Typography>
-              </Box>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.78rem', color: T.textSub, mb: 0.75 }}>Província</Typography>
-                  <Select value={selectedProvince} onChange={(e) => setSelectedProvince(e.target.value)} displayEmpty fullWidth size="small"
-                    sx={{ borderRadius: '8px', fontFamily: '"DM Sans", sans-serif', fontSize: '0.88rem', '& fieldset': { borderColor: T.border } }}>
-                    <MenuItem value="">Todas as províncias</MenuItem>
-                    {provincias.map((p) => <MenuItem key={p.provincia} value={p.provincia}>{p.provincia}</MenuItem>)}
-                  </Select>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.78rem', color: T.textSub, mb: 0.75 }}>Distrito</Typography>
-                  <Select value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)} disabled={!selectedProvince} displayEmpty fullWidth size="small"
-                    sx={{ borderRadius: '8px', fontFamily: '"DM Sans", sans-serif', fontSize: '0.88rem', '& fieldset': { borderColor: T.border } }}>
-                    <MenuItem value="">Todos os distritos</MenuItem>
-                    {distritos.map((d, i) => <MenuItem key={i} value={d}>{d}</MenuItem>)}
-                  </Select>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* Atividade */}
-            <Box>
-              <Box display="flex" alignItems="center" gap={1} mb={1.5}>
-                <CategoryIcon sx={{ fontSize: 16, color: T.accent }} />
-                <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontWeight: 700, fontSize: '0.82rem', color: T.text, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Atividade
-                </Typography>
-              </Box>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.78rem', color: T.textSub, mb: 0.75 }}>Setor</Typography>
-                  <Select value={selectedSector} onChange={(e) => setSelectedSector(e.target.value)} displayEmpty fullWidth size="small"
-                    sx={{ borderRadius: '8px', fontFamily: '"DM Sans", sans-serif', fontSize: '0.88rem', '& fieldset': { borderColor: T.border } }}>
-                    <MenuItem value="">Todos os setores</MenuItem>
-                    {sectores.map((s) => <MenuItem key={s.setor} value={s.setor}>{s.setor}</MenuItem>)}
-                  </Select>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.78rem', color: T.textSub, mb: 0.75 }}>Subsector</Typography>
-                  <Select value={selectedSubsector} onChange={(e) => setSelectedSubsector(e.target.value)} disabled={!selectedSector} displayEmpty fullWidth size="small"
-                    sx={{ borderRadius: '8px', fontFamily: '"DM Sans", sans-serif', fontSize: '0.88rem', '& fieldset': { borderColor: T.border } }}>
-                    <MenuItem value="">Todos os subsectores</MenuItem>
-                    {subsectores.map((s, i) => <MenuItem key={i} value={s}>{s}</MenuItem>)}
-                  </Select>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* Tipo de Entidade */}
-            <Box>
-              <Box display="flex" alignItems="center" gap={1} mb={1.5}>
-                <BusinessIcon sx={{ fontSize: 16, color: T.accent }} />
-                <Typography sx={{ fontFamily: '"DM Sans", sans-serif', fontWeight: 700, fontSize: '0.82rem', color: T.text, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Tipo de Entidade
-                </Typography>
-              </Box>
-              <Select value={selectedTipoEntidade} onChange={(e) => setSelectedTipoEntidade(e.target.value)} displayEmpty fullWidth size="small"
-                sx={{ borderRadius: '8px', fontFamily: '"DM Sans", sans-serif', fontSize: '0.88rem', '& fieldset': { borderColor: T.border } }}>
-                <MenuItem value="">Todos os tipos</MenuItem>
-                {tiposEntidades.map((e) => <MenuItem key={e.tipo} value={e.tipo}>{e.tipo}</MenuItem>)}
-              </Select>
-            </Box>
-          </Box>
-        </DialogContent>
-
-        <DialogActions
-          sx={{
-            px: 3,
-            py: 2.5,
-            borderTop: `1px solid ${T.border}`,
-            gap: 1.5,
-            bgcolor: T.surface,
-          }}
-        >
-          <Button
-            onClick={resetFilters}
-            sx={{
-              color: T.textSub,
-              fontFamily: '"DM Sans", sans-serif',
-              fontWeight: 600,
-              textTransform: 'none',
-              borderRadius: '8px',
-              '&:hover': { bgcolor: T.border, color: T.text },
-            }}
-          >
-            Limpar filtros
-          </Button>
-          <Button
-            variant="contained"
-            onClick={closeModal}
-            disableElevation
-            sx={{
-              bgcolor: T.navy,
-              color: T.white,
-              borderRadius: '8px',
-              px: 3.5,
-              fontFamily: '"DM Sans", sans-serif',
-              fontWeight: 700,
-              textTransform: 'none',
-              fontSize: '0.9rem',
-              '&:hover': { bgcolor: T.navyMid },
-            }}
-          >
-            Aplicar filtros
-          </Button>
-        </DialogActions>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>{t('explore.filterTitle')}<IconButton onClick={() => setDialogOpen(false)} aria-label={t('common.close')}><Close /></IconButton></DialogTitle>
+        <DialogContent dividers><Stack spacing={2.5} sx={{ pt: 1 }}>
+          {filterLoading && <CircularProgress size={24} />}
+          <TextField select label={t('explore.province')} value={draft.province} onChange={(e) => setDraftField('province', e.target.value)}><MenuItem value="">{t('explore.all')}</MenuItem>{references.provinces.map((item) => <MenuItem key={item.provincia} value={item.provincia}>{item.provincia}</MenuItem>)}</TextField>
+          <TextField select disabled={!draft.province} label={t('explore.district')} value={draft.district} onChange={(e) => setDraftField('district', e.target.value)}><MenuItem value="">{t('explore.all')}</MenuItem>{districts.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
+          <TextField select label={t('explore.sector')} value={draft.sector} onChange={(e) => setDraftField('sector', e.target.value)}><MenuItem value="">{t('explore.all')}</MenuItem>{references.sectors.map((item) => <MenuItem key={item.setor} value={item.setor}>{item.setor}</MenuItem>)}</TextField>
+          <TextField select disabled={!draft.sector} label={t('explore.subsector')} value={draft.subsector} onChange={(e) => setDraftField('subsector', e.target.value)}><MenuItem value="">{t('explore.all')}</MenuItem>{subsectors.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
+          <TextField select label={t('explore.entityType')} value={draft.entityType} onChange={(e) => setDraftField('entityType', e.target.value)}><MenuItem value="">{t('explore.all')}</MenuItem>{references.entityTypes.map((item) => <MenuItem key={item.tipo} value={item.tipo}>{item.tipo}</MenuItem>)}</TextField>
+        </Stack></DialogContent>
+        <DialogActions><Button onClick={() => setDraft(EMPTY_FILTERS)}>{t('explore.clearFilters')}</Button><Button variant="contained" onClick={() => { setFilters(draft); setSearchParams(draft.sector ? { sector: draft.sector } : {}); setDialogOpen(false); }}>{t('explore.apply')}</Button></DialogActions>
       </Dialog>
     </Box>
   );
-});
+};
 
-export default Explore;
+export default ExploreDesk;

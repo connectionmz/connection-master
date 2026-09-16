@@ -29,6 +29,7 @@ import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUti
 import BackButton from '../BackButton';
 import {sendEmail} from '../sms/SendMail';
 import { formatarMoeda, formatCurrency } from '../../utils/utils';
+import { filterActiveModules } from '../../context/ActiveModulesContext';
 
 const NovaCotacao = ({ user }) => {
   const theme = useTheme();
@@ -275,6 +276,8 @@ const handleSubmit = async (e) => {
       timestamp: new Date().toISOString(),
       datalimite: new Date(formData.deadline).toISOString(),
       status: 'open',
+      lifecycleStatus: 'open',
+      moderationStatus: 'pending',
       link: linkDoPedido,
       proposalLimit: formData.proposalLimit || null,
     };
@@ -282,10 +285,11 @@ const handleSubmit = async (e) => {
     // Guardar cotação na base de dados
     await set(ref(db, `cotacoes/${cotacaoId}`), cotacaoData);
 
-    setSnackbarMessage('Cotação publicada com sucesso!');
+    setSnackbarMessage('Cotação publicada com sucesso! Está em análise e só ficará visível às empresas após aprovação.');
     setSnackbarSeverity('success');
     setOpenSnackbar(true);
 
+    try {
     // Buscar empresas do mesmo setor
     const empresasRef = ref(db, 'company');
     const setorQuery = query(empresasRef, orderByChild('sector'), equalTo(formData.sector.trim()));
@@ -328,6 +332,11 @@ const handleSubmit = async (e) => {
       };
 
       const emailsToSend = [];
+      const targetProvinces = (Array.isArray(formData.provincia) ? formData.provincia : [formData.provincia])
+        .map(value => String(value || '').trim().toLowerCase())
+        .filter(Boolean);
+      const isNationalTarget = targetProvinces.length === 0
+        || targetProvinces.some(value => ['todas', 'todo país', 'nacional'].includes(value));
 
       // Notificar empresas com módulo SMS ativo
       for (const key in empresas) {
@@ -336,24 +345,22 @@ const handleSubmit = async (e) => {
         // Ignorar a própria empresa
         if (key === user.id) continue;
 
-        // Verificar assinatura SMS
-        let hasActiveSMS = false;
-        const subscriptionRef = ref(db, `subscriptions/${key}`);
-        const subscriptionSnapshot = await get(subscriptionRef);
-        
-        if (subscriptionSnapshot.exists()) {
-          const subscriptionData = subscriptionSnapshot.val();
-          
-          // Verificar módulo SMS
-          if (subscriptionData.moduloSMS) {
-            const smsModule = subscriptionData.moduloSMS;
-            const now = new Date().getTime();
-            
-            if (smsModule.isActive && smsModule.end > now) {
-              hasActiveSMS = true;
-            }
-          }
-        }
+const companyProvince = String(empresa.provincia || empresa.province || '').trim().toLowerCase();
+if (!isNationalTarget && (!companyProvince || !targetProvinces.includes(companyProvince))) continue;
+
+// Verificar módulo SMS ativo (alerta ativo) — lido diretamente do
+// registo da empresa já carregado (company/{id}/activeModules/moduloSMS),
+// com a mesma lógica de expiração que ActiveModulesContext usa no
+// resto do app. "subscriptions/{id}" é um node órfão que ninguém
+// mais escreve.
+let hasActiveSMS = false;
+if (empresa.activeModules) {
+  const activeModules = filterActiveModules(empresa.activeModules);
+  if (activeModules.moduloSMS) {
+    hasActiveSMS = true;
+  }
+}
+
 
         // Processar apenas empresas com SMS ativo
         if (hasActiveSMS) {
@@ -392,6 +399,14 @@ const handleSubmit = async (e) => {
             });
           }
         }
+
+        const companyEmails = Array.isArray(empresa.email) ? empresa.email : [empresa.email];
+        companyEmails.forEach(email => {
+          const normalizedEmail = String(email || '').trim().toLowerCase();
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            emailsToSend.push({ email: normalizedEmail, message: mailMessage });
+          }
+        });
       }
 
       // Guardar estrutura de envio SMS se houver contatos
@@ -401,8 +416,31 @@ const handleSubmit = async (e) => {
       }
 
       // Enviar emails (em produção, descomente esta parte)
-    if (emailsToSend.length > 0) {
-      await Promise.all(emailsToSend.map(item => sendEmail(item.email, item.message)));
+      const uniqueEmails = [...new Map(emailsToSend.map(item => [item.email, item])).values()];
+      if (uniqueEmails.length > 0) {
+        const results = await Promise.allSettled(uniqueEmails.map(item => sendEmail(item.email, item.message)));
+        const delivered = results.filter(result => result.status === 'fulfilled' && result.value !== false).length;
+        const failed = results.length - delivered;
+        try {
+          await set(ref(db, `notificationDeliveries/quotes/${cotacaoId}`), {
+            channel: 'email', targetCount: uniqueEmails.length, delivered, failed,
+            createdAt: Date.now(), createdBy: user.id || null,
+          });
+        } catch (deliveryLogError) {
+          console.error('Erro ao registar o resultado das notificações:', deliveryLogError);
+        }
+        if (failed > 0) {
+          setSnackbarMessage(`Cotação publicada e está em análise. ${delivered} email(s) enviado(s) e ${failed} falharam.`);
+          setSnackbarSeverity('warning');
+          setOpenSnackbar(true);
+        }
+      }
+    }
+    } catch (notificationError) {
+      console.error('Cotação publicada, mas a notificação falhou:', notificationError);
+      setSnackbarMessage('Cotação publicada e está em análise, mas algumas notificações não puderam ser processadas.');
+      setSnackbarSeverity('warning');
+      setOpenSnackbar(true);
     }
 
      setFormData({
@@ -416,8 +454,6 @@ const handleSubmit = async (e) => {
         provincia: [],
         selectedSubsector: [],
       });
-
-    }
   } catch (error) {
     console.error('Erro ao publicar a cotação:', error);
     setSnackbarMessage('Erro ao publicar a cotação. Tente novamente.');
@@ -836,7 +872,7 @@ const handleSubmit = async (e) => {
       
       <Snackbar
         open={openSnackbar}
-        autoHideDuration={6000}
+        autoHideDuration={8000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >

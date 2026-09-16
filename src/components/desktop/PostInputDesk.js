@@ -193,6 +193,7 @@ const PostInputDesk = ({ user }) => {
             url,
             storagePath,
             timestamp: Date.now(),
+            status: 'pendente',
           });
 
           await sendNotificationToConnections(newPostRef.key);

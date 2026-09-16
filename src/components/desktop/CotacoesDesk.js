@@ -69,6 +69,7 @@ import {
 import { ref, onValue, update, remove, set, get, push } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../fb';
+import { isQuoteVisibleTo } from '../../utils/commerceVisibility';
 import EditarCotacao from './EditarCotacao'; 
 import { useActiveModules } from '../../context/ActiveModulesContext';
 import { buildQuoteResponseUpdates, validateQuoteResponse } from '../market/quoteResponse';
@@ -232,7 +233,7 @@ const CotacoesDesk = ({ user, onModuleActivation }) => {
                             isClicked: prevClickedCotacoes[id] || false,
                             type: 'published_quote'
                         };
-                    });
+                    }).filter(cotacao => isQuoteVisibleTo(cotacao, user?.id));
                     
                     const filteredCotacoes = activeTab === 'minhas' 
                         ? cotacoesArray.filter(cotacao => 

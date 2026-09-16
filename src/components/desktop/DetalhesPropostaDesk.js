@@ -90,6 +90,11 @@ const DetalhesPropostaDesk = ({ user }) => {
     [CUSTOM_URL, id, propostaId]
   );
   const cotacaoConcluida = useMemo(() => cotacao?.status === 'Concluída', [cotacao]);
+  // Só a empresa dona da cotação pode aceitar/recusar propostas. Sem esta
+  // verificação, qualquer empresa autenticada que soubesse/adivinhasse o id
+  // da cotação e da proposta (visível nos links de notificação) conseguia
+  // aceitar ou recusar negócios de terceiros.
+  const isOwner = useMemo(() => Boolean(cotacao && user?.id && cotacao.company?.id === user.id), [cotacao, user?.id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -176,29 +181,33 @@ const DetalhesPropostaDesk = ({ user }) => {
     try {
       const proposalsRef = ref(db, `cotacoes/${id}/proposals`);
       const snapshot = await get(proposalsRef);
-      
-      if (!snapshot.exists()) return;
+
+      if (!snapshot.exists()) return [];
 
       const updates = {};
       const proposals = snapshot.val();
-      
+      const rejected = [];
+
       Object.keys(proposals).forEach(proposalId => {
         if (proposalId !== acceptedProposalId && proposals[proposalId].status !== 'Recusada') {
           updates[`${proposalId}/status`] = 'Recusada';
           updates[`${proposalId}/rejectedAt`] = new Date().toISOString();
           updates[`${proposalId}/updatedBy`] = user.id;
+          rejected.push({ proposalId, from: proposals[proposalId].from });
         }
       });
-      
+
       if (Object.keys(updates).length > 0) {
         await update(proposalsRef, updates);
       }
+      return rejected;
     } catch (error) {
       handleError(error, 'Erro ao recusar outras propostas');
+      return [];
     }
   }, [id, user.id, handleError]);
 
-  const sendNotification = useCallback(async (recipientId, messageText) => {
+  const sendNotification = useCallback(async (recipientId, messageText, targetPropostaId = propostaId) => {
     try {
       const notification = {
         type: 'cotation_reply',
@@ -207,7 +216,7 @@ const DetalhesPropostaDesk = ({ user }) => {
         fromUserName: user.nome,
         timestamp: new Date().toISOString(),
         status: 'unread',
-        link: `minha_proposta/cotacao/${id}/proposta/${propostaId}`,
+        link: `/minha_proposta/cotacao/${id}/proposta/${targetPropostaId}`,
         isImportant: true
       };
       await saveContentToInbox(recipientId, notification);
@@ -216,15 +225,19 @@ const DetalhesPropostaDesk = ({ user }) => {
     }
   }, [id, propostaId, user.id, user.nome, handleError]);
 
-  const sendEmailNotification = useCallback(async (email, subject, messageText) => {
+  const sendEmailNotification = useCallback(async (email, subject, messageText, targetPropostaId = propostaId) => {
     try {
+      // Aponta sempre para a página de leitura do proponente (/minha_proposta/...),
+      // nunca para /cotacao/.../proposta/... — essa é a página de gestão do dono
+      // da cotação, com os botões de aceitar/recusar.
+      const recipientLink = `https://${CUSTOM_URL}minha_proposta/cotacao/${id}/proposta/${targetPropostaId}`;
       const emailContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6;">
           <h2>${subject}</h2>
           <p>${messageText}</p>
-          <p>Você pode visualizar os detalhes acessando: <a href="${proposalLink}">${proposalLink}</a></p>
-          ${subject.includes('aceita') ? 
-            '<p><strong>Por favor, entre em contato com o comprador para os próximos passos.</strong></p>' : 
+          <p>Você pode visualizar os detalhes acessando: <a href="${recipientLink}">${recipientLink}</a></p>
+          ${subject.includes('aceita') ?
+            '<p><strong>Por favor, entre em contato com o comprador para os próximos passos.</strong></p>' :
             '<p>Agradecemos seu interesse e esperamos contar com você em futuras cotações.</p>'
           }
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
@@ -232,8 +245,8 @@ const DetalhesPropostaDesk = ({ user }) => {
             Atenciosamente,<br>
             Equipe Connection Mozambique
           </p>
-        </div>`;  
-        
+        </div>`;
+
       await sendEmailWithAuth({
         to: email,
         subject,
@@ -242,10 +255,15 @@ const DetalhesPropostaDesk = ({ user }) => {
     } catch (error) {
       handleError(error, 'Erro ao enviar e-mail de notificação');
     }
-  }, [proposalLink, handleError]);
+  }, [id, propostaId, handleError]);
 
   const handleAcceptProposal = useCallback(async () => {
     try {
+      if (!isOwner) {
+        showMessage('Só a empresa dona da cotação pode aceitar propostas', 'error');
+        return;
+      }
+
       if (cotacaoConcluida) {
         showMessage('Esta cotação já foi concluída com outra proposta', 'error');
         return;
@@ -254,7 +272,7 @@ const DetalhesPropostaDesk = ({ user }) => {
       const success = await updateProposalStatus('Aceite');
       if (!success) return;
 
-      await rejectOtherProposals(propostaId);
+      const rejectedProposals = await rejectOtherProposals(propostaId);
 
       if (proposta.from?.id) {
         await sendNotification(
@@ -271,6 +289,26 @@ const DetalhesPropostaDesk = ({ user }) => {
         );
       }
 
+      // Avisar também os concorrentes automaticamente recusados — antes,
+      // só o vencedor era notificado e os demais só descobriam ao reabrir a página.
+      await Promise.all(rejectedProposals.map(async ({ proposalId, from }) => {
+        if (from?.id) {
+          await sendNotification(
+            from.id,
+            `Sua proposta para a cotação #${cotacaoIdShort} foi recusada por ${user.nome}`,
+            proposalId
+          );
+        }
+        if (from?.email) {
+          await sendEmailNotification(
+            from.email,
+            `Sua proposta foi recusada - Cotação #${cotacaoIdShort}`,
+            `Infelizmente sua proposta para a cotação foi recusada por ${user.nome}.`,
+            proposalId
+          );
+        }
+      }));
+
       await update(ref(db, `cotacoes/${id}`), {
         status: 'Concluída',
         selectedProposal: propostaId,
@@ -282,6 +320,7 @@ const DetalhesPropostaDesk = ({ user }) => {
       handleError(error, 'Erro ao processar a aceitação');
     }
   }, [
+    isOwner,
     proposta,
     updateProposalStatus,
     rejectOtherProposals,
@@ -299,13 +338,18 @@ const DetalhesPropostaDesk = ({ user }) => {
 
   const handleRejectProposal = useCallback(async () => {
     try {
+      if (!isOwner) {
+        showMessage('Só a empresa dona da cotação pode recusar propostas', 'error');
+        return;
+      }
+
       if (cotacaoConcluida) {
         showMessage('Não é possível recusar propostas de uma cotação concluída', 'error');
         return;
       }
 
       await updateProposalStatus('Recusada');
-      
+
       if (proposta.from?.id) {
         await sendNotification(
           proposta.from.id,
@@ -324,6 +368,7 @@ const DetalhesPropostaDesk = ({ user }) => {
       handleError(error, 'Erro ao recusar proposta');
     }
   }, [
+    isOwner,
     proposta,
     updateProposalStatus,
     sendNotification,
@@ -519,8 +564,8 @@ const DetalhesPropostaDesk = ({ user }) => {
         />
       )}
 
-      {currentStatus !== 'Recusada' && (
-        <ActionButtonsSection 
+      {isOwner && currentStatus !== 'Recusada' && (
+        <ActionButtonsSection
           currentStatus={currentStatus}
           confirmDialog={confirmDialog}
           showAcceptConfirmation={showAcceptConfirmation}

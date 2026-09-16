@@ -1,5 +1,7 @@
 const plainText = (value = '') => String(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
+const isPostPublic = (post) => post?.status === 'aprovado';
+
 const normalizePostDetail = (data, postId, companyFallback = '') => {
   if (!data) return null;
   return {
@@ -25,7 +27,7 @@ const postTime = (post) => {
 
 const normalizeCompanyPosts = (data, companyId) => Object.entries(data || {})
   .map(([id, post]) => ({ ...post, id: post?.id || id }))
-  .filter(post => post?.company?.id === companyId)
+  .filter(post => post?.company?.id === companyId && isPostPublic(post))
   .sort((a, b) => postTime(b) - postTime(a));
 
-export { normalizeCompanyPosts, normalizePostDetail, plainText };
+export { isPostPublic, normalizeCompanyPosts, normalizePostDetail, plainText };
