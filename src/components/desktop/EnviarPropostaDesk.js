@@ -37,6 +37,7 @@ const EnviarPropostaDesk = ({ user }) => {
   const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [hasProposal, setHasProposal] = useState(false);
+  const [cotacao, setCotacao] = useState(null);
   const [successAlert, setSuccessAlert] = useState(false);
   const [errorAlert, setErrorAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -75,38 +76,35 @@ const EnviarPropostaDesk = ({ user }) => {
   }, [user.id]);
 
   useEffect(() => {
-    const checkProposal = async () => {
-      const cotacaoRef = ref(db, `cotacoes/${id}`);
-      try {
-        onValue(cotacaoRef, (cotacaoSnapshot) => {
-          const cotacaoData = cotacaoSnapshot.val();
-          const companyEmail = cotacaoData?.company?.email;
+    const cotacaoRef = ref(db, `cotacoes/${id}`);
+    const unsubscribeCotacao = onValue(cotacaoRef, (cotacaoSnapshot) => {
+      const cotacaoData = cotacaoSnapshot.val();
+      setCotacao(cotacaoData);
+      setCompanyEmail(cotacaoData?.company?.email);
+    }, (error) => {
+      console.error('Erro ao carregar cotação:', error);
+      setErrorMessage('Erro ao carregar dados da cotação.');
+      setErrorAlert(true);
+    });
 
-          setCompanyEmail(companyEmail);
-          
-          // Encode the email to make it Firebase path-safe
-          const encodedUserEmail = encodeURIComponent(user.email).replace(/[.$#[\]%]/g, '_');
-          
-          const proposalsRef = ref(db, `cotacoes/${id}/proposals/${encodedUserEmail}`);
-          onValue(proposalsRef, (snapshot) => {
-            const proposals = snapshot.val();
-            const userProposal = Object.values(proposals || {});
-            setHasProposal(userProposal.length > 0);
-          });
-        });
-      } catch (error) {
-        console.error('Erro ao verificar proposta:', error);
-        setErrorMessage('Erro ao verificar proposta existente.');
-        setErrorAlert(true);
-      }
-    };
-  
-    checkProposal();
-  
+    // A proposta é gravada em cotacoes/{id}/proposals/{uid da empresa proponente}
+    // — verificar aqui pelo mesmo caminho, não por um email codificado que
+    // nunca correspondia a nada gravado.
+    const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
+    const unsubscribeProposal = onValue(proposalsRef, (snapshot) => {
+      setHasProposal(snapshot.exists());
+    }, (error) => {
+      console.error('Erro ao verificar proposta:', error);
+      setErrorMessage('Erro ao verificar proposta existente.');
+      setErrorAlert(true);
+    });
+
     return () => {
+      unsubscribeCotacao();
+      unsubscribeProposal();
       setHasProposal(false);
     };
-  }, [id]);
+  }, [id, user.id]);
   
 
   const handleAnexoChange = (e) => {
@@ -163,6 +161,25 @@ const EnviarPropostaDesk = ({ user }) => {
       return;
     }
 
+    if (cotacao?.company?.id === user.id) {
+      setErrorMessage('Não é possível enviar uma proposta para a sua própria cotação.');
+      setErrorAlert(true);
+      setUploading(false);
+      return;
+    }
+
+    const proposalLimit = Number(cotacao?.proposalLimit || cotacao?.maxProposals || 0);
+    if (proposalLimit > 0) {
+      const existingSnapshot = await get(ref(db, `cotacoes/${id}/proposals`));
+      const existingCount = existingSnapshot.exists() ? Object.keys(existingSnapshot.val()).length : 0;
+      if (existingCount >= proposalLimit) {
+        setErrorMessage('Esta cotação já atingiu o limite de propostas.');
+        setErrorAlert(true);
+        setUploading(false);
+        return;
+      }
+    }
+
     const proposalsRef = ref(db, `cotacoes/${id}/proposals/${user.id}`);
     const newProposalRef = push(proposalsRef);
     const proposalId = newProposalRef.key;
@@ -170,21 +187,26 @@ const EnviarPropostaDesk = ({ user }) => {
     const newProposal = {
       id: proposalId,
       cotacaoId: id,
+      // Firebase Realtime Database rejeita set() se qualquer campo vier
+      // undefined (ex: empresas sem logo carregado, campo opcional que fica
+      // ausente do perfil) — por isso cada campo tem um fallback null.
+      // Sem isto, o envio falhava silenciosamente para qualquer empresa sem
+      // um destes campos preenchidos.
       from: {
-        nome: user.nome,
-        logo: user.logoUrl,
-        provincia: user.provincia,
-        distrito: user.distrito,
+        nome: user.nome || null,
+        logo: user.logoUrl || null,
+        provincia: user.provincia || null,
+        distrito: user.distrito || null,
         id: user.id,
-        email: user.email,
-        contacto:user.contacto,
+        email: user.email || null,
+        contacto: user.contacto || null,
       },
       proposal: description,
-      fileUrl,
+      fileUrl: fileUrl || null,
       selectedProducts: selectedProducts.map((product) => ({
-        id: product.id,
-        name: product.name,
-        price: product.price,
+        id: product.id || null,
+        name: product.name || null,
+        price: product.price || null,
         url: `/product/${product.id}/store/${user.id}`,
       })),
       submittedAt: new Date().toISOString(),
@@ -203,10 +225,11 @@ const notification = {
   proposalId: proposalId,
 };
 
-  await set(newProposalRef, newProposal);
-
     try {
-     
+      // A proposta vive diretamente em cotacoes/{id}/proposals/{uid}, não
+      // aninhada sob uma push key — o push() acima só serve para gerar um
+      // id único; escrever também em newProposalRef seria imediatamente
+      // sobrescrito por este set() e nunca seria lido por ninguém.
       await set(proposalsRef, newProposal);
      
       saveContentToInbox(companyId, notification);

@@ -53,6 +53,7 @@ const MinhaPropostaDesk = ({ user }) => {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const isMobile = useMediaQuery('(max-width:600px)');
   const navigate = useNavigate();
+  const isOwnProposal = Boolean(proposta && user?.id && proposta.from?.id === user.id);
 
   // Status colors mapping
   const statusColors = {
@@ -95,6 +96,14 @@ const MinhaPropostaDesk = ({ user }) => {
   };
 
   const handleDeleteProposal = async () => {
+    // Só a própria empresa proponente pode cancelar a sua proposta — sem isto,
+    // qualquer empresa autenticada que conhecesse o id da proposta conseguia
+    // apagar a proposta de um concorrente.
+    if (!proposta || proposta.from?.id !== user?.id) {
+      showMessage('Não é possível eliminar uma proposta que não é sua', 'error');
+      setDeleteDialog(false);
+      return;
+    }
     try {
       await remove(ref(db, `cotacoes/${id}/proposals/${propostaId}`));
       showMessage('Proposta eliminada com sucesso!');
@@ -164,14 +173,16 @@ const MinhaPropostaDesk = ({ user }) => {
     }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <BackButton />
-        <IconButton
-          color="error"
-          onClick={() => setDeleteDialog(true)}
-          disabled={proposta.status}
-          sx={{ ml: 'auto' }}
-        >
-          <Delete />
-        </IconButton>
+        {isOwnProposal && (
+          <IconButton
+            color="error"
+            onClick={() => setDeleteDialog(true)}
+            disabled={proposta.status}
+            sx={{ ml: 'auto' }}
+          >
+            <Delete />
+          </IconButton>
+        )}
       </Box>
 
       {/* Header */}
@@ -391,16 +402,18 @@ const MinhaPropostaDesk = ({ user }) => {
         >
           Voltar
         </Button>
-        <Button
-          onClick={() => setDeleteDialog(true)}
-          startIcon={<Delete />}
-          variant="contained"
-          color="error"
-          sx={{ px: 4, py: 1.5, borderRadius: 2 }}
-          disabled={proposta.status} // desabilita se status for true
-        >
-          Eliminar Proposta
-        </Button>
+        {isOwnProposal && (
+          <Button
+            onClick={() => setDeleteDialog(true)}
+            startIcon={<Delete />}
+            variant="contained"
+            color="error"
+            sx={{ px: 4, py: 1.5, borderRadius: 2 }}
+            disabled={proposta.status} // desabilita se status for true
+          >
+            Eliminar Proposta
+          </Button>
+        )}
       </Box>
       {/* Message Snackbar */}
       <Snackbar

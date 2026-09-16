@@ -285,7 +285,7 @@ const handleSubmit = async (e) => {
     // Guardar cotação na base de dados
     await set(ref(db, `cotacoes/${cotacaoId}`), cotacaoData);
 
-    setSnackbarMessage('Cotação publicada com sucesso!');
+    setSnackbarMessage('Cotação publicada com sucesso! Está em análise e só ficará visível às empresas após aprovação.');
     setSnackbarSeverity('success');
     setOpenSnackbar(true);
 
@@ -430,7 +430,7 @@ if (empresa.activeModules) {
           console.error('Erro ao registar o resultado das notificações:', deliveryLogError);
         }
         if (failed > 0) {
-          setSnackbarMessage(`Cotação publicada. ${delivered} email(s) enviado(s) e ${failed} falharam.`);
+          setSnackbarMessage(`Cotação publicada e está em análise. ${delivered} email(s) enviado(s) e ${failed} falharam.`);
           setSnackbarSeverity('warning');
           setOpenSnackbar(true);
         }
@@ -438,7 +438,7 @@ if (empresa.activeModules) {
     }
     } catch (notificationError) {
       console.error('Cotação publicada, mas a notificação falhou:', notificationError);
-      setSnackbarMessage('Cotação publicada, mas algumas notificações não puderam ser processadas.');
+      setSnackbarMessage('Cotação publicada e está em análise, mas algumas notificações não puderam ser processadas.');
       setSnackbarSeverity('warning');
       setOpenSnackbar(true);
     }
@@ -872,7 +872,7 @@ if (empresa.activeModules) {
       
       <Snackbar
         open={openSnackbar}
-        autoHideDuration={6000}
+        autoHideDuration={8000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
