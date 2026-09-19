@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import CotacoesDesk from '../desktop/CotacoesDesk';
+import ConcursosPublicosDesk from '../desktop/ConcursosPublicosDesk';
 import NovaCotacaoDesk from '../desktop/NovaCotacaoDesk';
 import CompanyProfileDesk from '../desktop/CompanyProfileDesk';
 import ExploreDesk from '../desktop/ExploreDesk';
@@ -108,6 +109,7 @@ const DesktopRoutes = ({ user, authUser, profileLoading }) => {
               <Route path="/meuperfil" element={<Navigate to="/perfil" replace />} />
               <Route path="/editar-meuperfil" element={<Navigate to="/editar-perfil" replace />} />
               {renderProtectedRoute("/cotacoes", <CotacoesDesk user={user} />, { requiresVerification: true })}
+              {renderProtectedRoute("/concursos", <ConcursosPublicosDesk />, { requiresVerification: true })}
               {renderProtectedRoute("/minhas-cotacoes", <SentStoreQuotesDesk userId={authUser?.uid} />)}
               {renderProtectedRoute("/cotacao", <NovaCotacaoDesk user={user} />, { requiredModule: "moduloSMS" })}
               {renderProtectedRoute("/cotacaoPdf/:id", <CotacoesPDF user={user}/>, { requiredModule: "moduloSMS" })}
