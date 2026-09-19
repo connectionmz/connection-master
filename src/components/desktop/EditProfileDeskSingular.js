@@ -5,6 +5,7 @@ import { db } from '../../fb';
 import { useLanguage } from '../../context/LanguageContext';
 import BackButton from '../BackButton';
 import ChangePassword from '../password/ChangePassword';
+import { isSafePlainName } from '../../utils/sanitizeText';
 
 const getInitialData = (user) => ({
   nome: user?.nome || '',
@@ -30,6 +31,11 @@ const EditProfileDeskSingular = ({ user }) => {
     event.preventDefault();
     if (!user?.id || saving) {
       if (!user?.id) setSnackbar({ open: true, message: t('profileEdit.userMissing'), severity: 'error' });
+      return;
+    }
+
+    if (!isSafePlainName(formData.nome)) {
+      setSnackbar({ open: true, message: t('profileEdit.invalidName'), severity: 'error' });
       return;
     }
 

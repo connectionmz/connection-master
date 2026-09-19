@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ref as dbRef, set } from 'firebase/database';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../fb';
+import { isSafePlainName } from '../../utils/sanitizeText';
 import {
   Box,
   Button,
@@ -202,6 +203,13 @@ const CreateStoreFormDesk = ({ storeId, user }) => {
 
     if (!store.name.trim()) {
       setError('Indique o nome da loja.');
+      setIsLoading(false);
+      setStep(1);
+      return;
+    }
+
+    if (!isSafePlainName(store.name)) {
+      setError('O nome da loja contém conteúdo inválido. Use apenas texto simples.');
       setIsLoading(false);
       setStep(1);
       return;

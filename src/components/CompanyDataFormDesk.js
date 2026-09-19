@@ -59,6 +59,7 @@ import {
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { useLanguage } from '../context/LanguageContext';
+import { isSafePlainName } from '../utils/sanitizeText';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const T = {
@@ -149,11 +150,6 @@ const KEYFRAMES = `
 // Configurações
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const isSafeCompanyName = value => {
-  const name = String(value || '').trim();
-  return name.length >= 2 && name.length <= 150 && !/<[^>]*>|javascript:|onerror\s*=|onload\s*=/i.test(name);
-};
-
 // Passos do formulário
 const steps = [
   { 
@@ -265,6 +261,13 @@ const StyledTextField = ({ label, name, value, onChange, error, helperText, icon
         '&.Mui-focused fieldset': {
           borderColor: T.gold,
           borderWidth: '2px',
+        },
+      },
+      '& .MuiInputBase-input': {
+        color: T.text,
+        '&::placeholder': {
+          color: T.textSub,
+          opacity: 1,
         },
       },
       '& .MuiInputLabel-root': {
@@ -576,7 +579,7 @@ const CompanyDataFormDesk = () => {
           companyData.nuel?.length >= 9 &&
           companyData.nrContriuinte?.length >= 9
         );
-        return isSafeCompanyName(companyData.nome) && fiscalFieldsValid;
+        return isSafePlainName(companyData.nome) && fiscalFieldsValid;
       case 2:
         return (
           companyData.endereco &&
@@ -617,7 +620,7 @@ const CompanyDataFormDesk = () => {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Usuário não autenticado");
-      if (!isSafeCompanyName(companyData.nome)) throw new Error('O nome da empresa contém conteúdo inválido. Use apenas o nome comercial em texto simples.');
+      if (!isSafePlainName(companyData.nome)) throw new Error('O nome da empresa contém conteúdo inválido. Use apenas o nome comercial em texto simples.');
 
       const companiesSnapshot = await get(ref(db, "company"));
       let duplicates = [];
@@ -1301,16 +1304,17 @@ const CompanyDataFormDesk = () => {
         <Paper
           className="animate-fade-up delay-1"
           sx={{
-            p: 4,
+            p: { xs: 2, sm: 3, md: 4 },
             borderRadius: '24px',
             border: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper',
+            overflow: 'hidden',
           }}
         >
-          <Box sx={{ mb: 4 }}>
-            <Stepper 
-              activeStep={activeStep} 
+          <Box sx={{ mb: 4, display: { xs: 'none', sm: 'block' } }}>
+            <Stepper
+              activeStep={activeStep}
               alternativeLabel
               sx={{
                 '& .MuiStepLabel-root .Mui-completed': {
