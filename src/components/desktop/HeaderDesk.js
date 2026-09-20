@@ -292,6 +292,13 @@ const HeaderDesk = ({ user }) => {
       requiresVerify: true,
     },
     {
+      to: "/concursos-empresas",
+      icon: <GavelIcon />,
+      label: t('nav.companyTenders'),
+      requiresAuth: true,
+      requiresVerify: false,
+    },
+    {
       to: "/minhas-cotacoes",
       icon: <ReceiptLongIcon />,
       label: t('nav.sentQuotes'),

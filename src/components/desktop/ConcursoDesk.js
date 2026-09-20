@@ -203,7 +203,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
 
     const handlePublishConcurso = () => {
         if (!user) {
-            navigate('/login', { state: { from: '/concurso' } });
+            navigate('/auth', { state: { from: '/concurso' } });
             return;
         }
         navigate('/concurso');
@@ -394,7 +394,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                 <>
                     <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: 'white' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h5" fontWeight="bold">Concursos Públicos</Typography>
+                            <Typography variant="h5" fontWeight="bold">Concursos entre Empresas</Typography>
                             {isModuleActive && user && (
                                 <Button
                                     variant="contained"
