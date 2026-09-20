@@ -9,27 +9,68 @@ import {
     Alert,
     Box,
     CircularProgress,
-    List,
-    ListItem,
-    ListItemAvatar,
-    ListItemText,
-    Divider,
     IconButton,
     Paper,
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions,
-    useMediaQuery
+    useMediaQuery,
+    Container,
+    Stack,
 } from '@mui/material';
-import { Delete, AccessTime, CheckCircle, History, Edit } from '@mui/icons-material';
+import { Delete, AccessTime, CheckCircle, History, Edit, Add, CalendarToday, AttachMoney, Warning, Close } from '@mui/icons-material';
 import { ref, onValue, update, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../fb';
 import AnunciosDesk from './AnunciosDesk';
-import EditarConcurso from './EditarConcurso'; 
+import EditarConcurso from './EditarConcurso';
 import { formatPrice } from '../../utils/utils';
 import { useActiveModules } from '../../context/ActiveModulesContext';
+
+/* ── Design tokens (mesmos de CotacoesDesk.js, para manter o visual consistente) ── */
+const T = {
+    navy:        '#08192E',
+    navyCard:    '#0D2240',
+    gold:        '#C8903A',
+    goldLight:   '#E8B96A',
+    white:       '#FFFFFF',
+    darkBorder:  'rgba(255,255,255,0.08)',
+    darkText:    'rgba(255,255,255,0.88)',
+    darkTextSub: 'rgba(255,255,255,0.52)',
+    darkMuted:   'rgba(255,255,255,0.30)',
+    warning:     '#f59e0b',
+};
+
+const KEYFRAMES = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(20px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+    .fade-up {
+        animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .concurso-card {
+        background: ${T.navyCard};
+        border: 1px solid ${T.darkBorder};
+        border-radius: 16px;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .concurso-card:hover {
+        transform: translateY(-2px);
+        border-color: ${T.gold} !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2) !important;
+    }
+    .concurso-card.unread {
+        border-left: 3px solid ${T.gold};
+    }
+`;
+
+const BG_GRID = {
+    position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.02,
+    backgroundImage: `linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+    backgroundSize: '56px 56px',
+};
 
 const ConcursosDesk = ({ user, onModuleActivation }) => {
     const [concursos, setConcursos] = useState([]);
@@ -280,201 +321,270 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
         if (loading) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-                    <CircularProgress />
+                    <CircularProgress sx={{ color: T.gold }} />
                 </Box>
             );
         }
-    
+
         const concursosFiltrados = filteredConcursos();
         if (concursosFiltrados.length === 0) {
             return (
-                <Typography textAlign="center" sx={{ p: 2 }}>
-                    Nenhum concurso disponível.
-                </Typography>
+                <Paper sx={{
+                    p: 6,
+                    textAlign: 'center',
+                    bgcolor: T.navyCard,
+                    border: `1px solid ${T.darkBorder}`,
+                    borderRadius: 3,
+                }}>
+                    <Box sx={{ mb: 2 }}>
+                        <Warning sx={{ fontSize: 48, color: T.darkMuted }} />
+                    </Box>
+                    <Typography sx={{ color: T.darkText, fontSize: '1.1rem' }}>
+                        Nenhum concurso disponível.
+                    </Typography>
+                </Paper>
             );
         }
-    
+
         return (
-            <List>
+            <Stack spacing={2} className="fade-up">
                 {concursosFiltrados.map((concurso) => (
-                    <Box key={concurso.id}>
-                        <ListItem
-                            alignItems="flex-start"
-                            sx={{ 
-                                cursor: 'pointer', 
-                                '&:hover': { backgroundColor: '#fafafa' },
-                                fontWeight: clickedConcursos[concurso.id] ? 'normal' : 'bold'
-                            }}
-                            onClick={() => handleConcursoClick(concurso.id)}
-                        >
-                            <ListItemAvatar>
-                                <Avatar src={concurso.company?.logoUrl || ''} alt="Logo" />
-                            </ListItemAvatar>
-                            <ListItemText
-                                primary={
-                                    <Typography 
-                                        component="span" 
-                                        variant="body1" 
-                                        fontWeight={!concurso.isClicked && user ? 'bold' : 'normal'}
-                                    >
-                                        {concurso.titulo}
+                    <Box
+                        key={concurso.id}
+                        className={`concurso-card ${!clickedConcursos[concurso.id] && user ? 'unread' : ''}`}
+                        sx={{ p: { xs: 2, sm: 3 }, cursor: 'pointer' }}
+                        onClick={() => handleConcursoClick(concurso.id)}
+                    >
+                        <Stack direction="row" spacing={2} alignItems="flex-start">
+                            <Avatar src={concurso.company?.logoUrl || ''} alt="Logo" sx={{ border: `2px solid ${T.gold}` }} />
+                            <Box sx={{ flex: 1 }}>
+                                <Typography
+                                    sx={{
+                                        fontFamily: '"Playfair Display", serif',
+                                        fontWeight: !concurso.isClicked && user ? 700 : 600,
+                                        color: T.white,
+                                        fontSize: '1.05rem',
+                                        mb: 1,
+                                    }}
+                                >
+                                    {concurso.titulo}
+                                </Typography>
+                                <Stack spacing={0.75}>
+                                    <Typography variant="body2" sx={{ color: T.darkTextSub }}>
+                                        Nº Ref: {concurso.numeroReferencia}
                                     </Typography>
-                                }
-                                secondary={
-                                    <>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Nº Ref: {concurso.numeroReferencia}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        <CalendarToday sx={{ fontSize: 16, color: T.gold }} />
+                                        <Typography variant="body2" sx={{ color: T.darkTextSub }}>
                                             Publicado em: {new Date(concurso.timestamp).toLocaleDateString('pt-PT')}
                                         </Typography>
-                                        <Typography 
-                                            variant="body2" 
-                                            color={isPrazoValido(concurso.prazo) ? 'primary' : 'error'}
-                                            sx={{ 
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 0.5
-                                            }}
-                                        >
-                                            {isPrazoValido(concurso.prazo) ? (
-                                                <CheckCircle fontSize="small" color="primary" />
-                                            ) : (
-                                                <History fontSize="small" color="error" />
-                                            )}
+                                    </Stack>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        {isPrazoValido(concurso.prazo) ? (
+                                            <CheckCircle sx={{ fontSize: 16, color: T.gold }} />
+                                        ) : (
+                                            <History sx={{ fontSize: 16, color: '#ef4444' }} />
+                                        )}
+                                        <Typography variant="body2" sx={{ color: isPrazoValido(concurso.prazo) ? T.darkTextSub : '#ef4444' }}>
                                             Prazo: {new Date(concurso.prazo).toLocaleDateString('pt-PT')}
                                         </Typography>
-                                        <Typography variant="body2">
+                                    </Stack>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                        <AttachMoney sx={{ fontSize: 16, color: T.gold }} />
+                                        <Typography variant="body2" sx={{ color: T.darkTextSub }}>
                                             Valor: {concurso.valorEstimado ? formatPrice(concurso.valorEstimado) : 'N/A'}
                                         </Typography>
-                                    </>
-                                }
-                            />
+                                    </Stack>
+                                </Stack>
+                            </Box>
                             {user && isModuleActive && concurso?.company?.id === user.id && (
-                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Stack direction="row" spacing={0.5}>
                                     <IconButton
-                                        color="error"
+                                        size="small"
+                                        sx={{ color: '#ef4444' }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             deleteConcurso(concurso.id);
                                         }}
                                     >
-                                        <Delete />
+                                        <Delete fontSize="small" />
                                     </IconButton>
                                     <IconButton
-                                        color="primary"
+                                        size="small"
+                                        sx={{ color: T.gold }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleEditClick(concurso);
                                         }}
                                     >
-                                        <Edit />
+                                        <Edit fontSize="small" />
                                     </IconButton>
-                                </Box>
+                                </Stack>
                             )}
-                        </ListItem>
-                        <Divider variant="inset" component="li" />
+                        </Stack>
                     </Box>
                 ))}
-            </List>
+            </Stack>
         );
     };
 
     if (modulesLoading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <CircularProgress />
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: T.navy }}>
+                <CircularProgress size={48} thickness={4} sx={{ color: T.gold }} />
             </Box>
         );
     }
 
     return (
-        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>          
-            {!isPaying && (
-                <>
-                    <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: 'white' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h5" fontWeight="bold">Concursos entre Empresas</Typography>
+        <Box sx={{
+            backgroundColor: T.navy,
+            minHeight: '100vh',
+            fontFamily: '"Plus Jakarta Sans", sans-serif',
+            position: 'relative',
+        }}>
+            <style>{KEYFRAMES}</style>
+            <Box sx={BG_GRID} />
+
+            <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 4 }}>
+                {!isPaying && (
+                    <>
+                        <Paper sx={{
+                            p: 3,
+                            mb: 3,
+                            bgcolor: T.navyCard,
+                            border: `1px solid ${T.darkBorder}`,
+                            borderRadius: 3,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                        }}>
+                            <Typography
+                                variant="h4"
+                                sx={{
+                                    fontFamily: '"Playfair Display", serif',
+                                    fontWeight: 800,
+                                    color: T.white,
+                                    fontSize: { xs: '1.5rem', sm: '2rem' },
+                                }}
+                            >
+                                Concursos entre Empresas
+                            </Typography>
                             {isModuleActive && user && (
                                 <Button
                                     variant="contained"
-                                    color="primary"
-                                    onClick={handlePublishConcurso}>
+                                    startIcon={<Add />}
+                                    onClick={handlePublishConcurso}
+                                    sx={{
+                                        bgcolor: T.gold,
+                                        color: T.navy,
+                                        '&:hover': { bgcolor: T.goldLight },
+                                        borderRadius: '10px',
+                                        px: 3,
+                                        py: 1.2,
+                                        fontFamily: '"Plus Jakarta Sans", sans-serif',
+                                        fontWeight: 600,
+                                        textTransform: 'none',
+                                    }}
+                                >
                                     Publicar Concurso
                                 </Button>
                             )}
-                        </Box>
-                    </Paper>
-                    <AnunciosDesk campanhas={campanhasAtivas} user={user} local="Concursos"/>
-                  {user && !isModuleActive && (
-  <Alert
-    severity="warning"
-    icon={false}
-    sx={{
-      mb: 2,
-      border: '1px solidrgb(0, 135, 245)',
-      backgroundColor: '#fff3e0',
-      color: '#e65100',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      p: 2,
-      borderRadius: '1px',
-    }}
-    action={
-      <Button
-        variant="contained"
-        size="medium"
-        onClick={() => window.location = '/pagamento-modulo/moduloSMS'}
-        sx={{
-          backgroundColor: '#f57c00',
-          color: 'white',
-          fontWeight: 'bold',
-          '&:hover': {
-            backgroundColor: '#ef6c00',
-          },
-        }}>
-        Ativar Módulo Alerta
-      </Button>
-    }>
-   O módulo <strong>Alerta</strong> está inativo. Ative-o agora para acessar todos os recursos!
-  </Alert>
-)}
-                    {/* Concursos tabs and list for users with active module */}
-                    {isModuleActive && user && (
-                        <>
-                            <Paper elevation={1} sx={{ mb: 2, backgroundColor: 'white' }}>
-                                <Tabs
-                                    value={activeTab}
-                                    onChange={(_, newValue) => setActiveTab(newValue)}
-                                    indicatorColor="primary"
-                                    textColor="primary"
-                                    variant="scrollable"
-                                    scrollButtons="auto"
-                                    allowScrollButtonsMobile
-                                >
-                                    <Tab value="recentes" label="Recentes" icon={<AccessTime />} />
-                                    <Tab value="expiradas" label="Expiradas" icon={<History />} />
-                                    <Tab value="fechada" label="Fechada" icon={<CheckCircle />} />
-                                    <Tab
-                                        value="minhas"
-                                        label="Meus"
-                                        icon={
-                                            <Avatar
-                                                src={user?.logoUrl}
-                                                sx={{ width: 24, height: 24 }}
-                                            />
-                                        }
-                                    />
-                                </Tabs>
-                            </Paper>
-                            <Paper elevation={1} sx={{ flex: 1, overflowY: 'auto', p: 2, backgroundColor: 'white' }}>
-                                {renderConcursos()}
-                            </Paper>
-                        </>
-                    )}
-                </>
-            )}
+                        </Paper>
+
+                        <AnunciosDesk campanhas={campanhasAtivas} user={user} local="Concursos"/>
+
+                        {user && !isModuleActive && (
+                            <Alert
+                                severity="warning"
+                                icon={<Warning />}
+                                sx={{
+                                    mb: 3,
+                                    mt: 2,
+                                    bgcolor: 'rgba(245,158,11,0.12)',
+                                    color: T.warning,
+                                    border: '1px solid rgba(245,158,11,0.25)',
+                                    borderRadius: '12px',
+                                    '& .MuiAlert-icon': { color: T.warning },
+                                }}
+                                action={
+                                    <Button
+                                        variant="contained"
+                                        size="medium"
+                                        onClick={() => window.location = '/pagamento-modulo/moduloSMS'}
+                                        sx={{
+                                            bgcolor: T.warning,
+                                            color: T.navy,
+                                            fontWeight: 700,
+                                            '&:hover': { bgcolor: '#e67e22' },
+                                            borderRadius: '8px',
+                                        }}
+                                    >
+                                        Ativar Módulo Alerta
+                                    </Button>
+                                }
+                            >
+                                O módulo <strong>Alerta</strong> está inativo. Ative-o agora para acessar todos os recursos!
+                            </Alert>
+                        )}
+
+                        {/* Concursos tabs and list for users with active module */}
+                        {isModuleActive && user && (
+                            <>
+                                <Paper sx={{
+                                    mt: 3,
+                                    mb: 3,
+                                    bgcolor: T.navyCard,
+                                    border: `1px solid ${T.darkBorder}`,
+                                    borderRadius: 2,
+                                    overflow: 'hidden',
+                                }}>
+                                    <Tabs
+                                        value={activeTab}
+                                        onChange={(_, newValue) => setActiveTab(newValue)}
+                                        variant={isMobile ? 'scrollable' : 'standard'}
+                                        scrollButtons="auto"
+                                        allowScrollButtonsMobile
+                                        sx={{
+                                            '& .MuiTab-root': {
+                                                color: T.darkTextSub,
+                                                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                                                fontWeight: 600,
+                                                textTransform: 'none',
+                                                fontSize: '0.9rem',
+                                                minHeight: 56,
+                                                '&.Mui-selected': { color: T.gold },
+                                            },
+                                            '& .MuiTabs-indicator': { bgcolor: T.gold },
+                                        }}
+                                    >
+                                        <Tab value="recentes" label="Recentes" icon={<AccessTime sx={{ fontSize: 18 }} />} iconPosition="start" />
+                                        <Tab value="expiradas" label="Expiradas" icon={<History sx={{ fontSize: 18 }} />} iconPosition="start" />
+                                        <Tab value="fechada" label="Fechada" icon={<CheckCircle sx={{ fontSize: 18 }} />} iconPosition="start" />
+                                        <Tab
+                                            value="minhas"
+                                            label="Meus"
+                                            icon={<Avatar src={user?.logoUrl} sx={{ width: 20, height: 20 }} />}
+                                            iconPosition="start"
+                                        />
+                                    </Tabs>
+                                </Paper>
+                                <Paper sx={{
+                                    p: { xs: 2, sm: 3 },
+                                    bgcolor: T.navyCard,
+                                    border: `1px solid ${T.darkBorder}`,
+                                    borderRadius: 3,
+                                    minHeight: '60vh',
+                                }}>
+                                    {renderConcursos()}
+                                </Paper>
+                            </>
+                        )}
+                    </>
+                )}
+            </Container>
 
             {/* Edit Dialog */}
             {user && isModuleActive && (
@@ -483,13 +593,26 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                     onClose={handleCloseEditDialog}
                     fullWidth
                     maxWidth="md"
+                    PaperProps={{ sx: { bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: '16px' } }}
                 >
-                    <DialogTitle>Editar Concurso</DialogTitle>
-                    <DialogContent>
+                    <DialogTitle sx={{
+                        color: T.white,
+                        fontFamily: '"Playfair Display", serif',
+                        borderBottom: `1px solid ${T.darkBorder}`,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                    }}>
+                        Editar Concurso
+                        <IconButton onClick={handleCloseEditDialog} sx={{ color: T.darkMuted }}>
+                            <Close />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent sx={{ pt: 3 }}>
                         {selectedConcurso && (
-                            <EditarConcurso 
-                                concurso={selectedConcurso} 
-                                user={user} 
+                            <EditarConcurso
+                                concurso={selectedConcurso}
+                                user={user}
                                 onClose={handleCloseEditDialog}
                                 onSuccess={() => {
                                     setSnackbar({ open: true, message: 'Concurso atualizado com sucesso!', severity: 'success' });
@@ -501,9 +624,6 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                             />
                         )}
                     </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleCloseEditDialog}>Cancelar</Button>
-                    </DialogActions>
                 </Dialog>
             )}
 
