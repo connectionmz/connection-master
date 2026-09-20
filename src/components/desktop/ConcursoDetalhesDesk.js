@@ -2,33 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db } from '../../fb';
 import { ref, onValue, increment, update, push, set, get } from 'firebase/database';
-import { 
-  RemoveRedEye, 
-  Share, 
-  FileDownload, 
+import {
+  RemoveRedEye,
+  Share,
+  FileDownload,
   Report,
-  Business,
   Email,
   Phone,
   CalendarToday,
-  AccessTime,
-  Description,
   CheckCircle,
   History,
-  Send,
-  Image,
   PictureAsPdf,
   Download
 } from '@mui/icons-material';
 import {
-  Card,
-  CardContent,
-  CardActions,
   Typography,
   Button,
   Grid,
   Avatar,
   Box,
+  Container,
+  Paper,
   Modal,
   Dialog, DialogActions, DialogContent, DialogTitle,
   Chip,
@@ -40,8 +34,55 @@ import {
   IconButton,
 } from '@mui/material';
 import BackButton from '../BackButton';
-import { formatarValor, formatPrice } from '../../utils/utils';
+import { formatarValor } from '../../utils/utils';
 import { Link2 } from 'lucide-react';
+
+/* ── Design tokens (mesmos de ConcursoDesk.js / CotacoesDesk.js, para manter o visual consistente) ── */
+const T = {
+  navy:        '#08192E',
+  navyCard:    '#0D2240',
+  gold:        '#C8903A',
+  goldLight:   '#E8B96A',
+  white:       '#FFFFFF',
+  darkBorder:  'rgba(255,255,255,0.08)',
+  darkText:    'rgba(255,255,255,0.88)',
+  darkTextSub: 'rgba(255,255,255,0.52)',
+  darkMuted:   'rgba(255,255,255,0.30)',
+  success:     '#10b981',
+  error:       '#ef4444',
+  warning:     '#f59e0b',
+};
+
+const KEYFRAMES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .detail-section {
+    background: ${T.navyCard};
+    border: 1px solid ${T.darkBorder};
+    border-radius: 16px;
+  }
+  .anexo-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid ${T.darkBorder};
+    border-radius: 12px;
+    transition: border-color 0.2s ease;
+  }
+  .anexo-card:hover {
+    border-color: ${T.gold};
+  }
+`;
+
+const BG_GRID = {
+  position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.02,
+  backgroundImage: `linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundSize: '56px 56px',
+};
 
 const ConcursoDetalhesDesk = ({ user }) => {
   const { id } = useParams();
@@ -200,505 +241,387 @@ const ConcursoDetalhesDesk = ({ user }) => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography align="center" color="textSecondary">Carregando...</Typography>
+      <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Typography sx={{ color: T.darkTextSub, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Carregando...</Typography>
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography align="center" color="error">{error}</Typography>
+      <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Typography sx={{ color: T.error, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{error}</Typography>
       </Box>
     );
   }
 
   if (!concurso) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography align="center" color="error">Concurso não encontrado</Typography>
+      <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Typography sx={{ color: T.error, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Concurso não encontrado</Typography>
       </Box>
     );
   }
 
+const statusInfo = concurso.status === 'Fechada' || isConcursoExpirado()
+  ? isConcursoExpirado()
+    ? { label: 'Expirado', color: T.warning }
+    : { label: 'Fechado', color: T.error }
+  : { label: 'Aberto', color: T.success };
+
+const sectionTitleSx = {
+  fontFamily: '"Playfair Display", serif',
+  fontWeight: 700,
+  color: T.white,
+  mb: 1.5,
+};
+
+const renderHtmlSection = (title, html) => (
+  <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+    <Typography variant="h6" sx={sectionTitleSx}>{title}</Typography>
+    <Divider sx={{ borderColor: T.darkBorder, mb: 2 }} />
+    <Typography
+      component="div"
+      dangerouslySetInnerHTML={{ __html: html || '<p>Não especificado</p>' }}
+      sx={{ lineHeight: 1.7, color: T.darkText, fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+    />
+  </Paper>
+);
+
+const detailField = (label, value) => (
+  <Grid item xs={12} sm={6}>
+    <Typography variant="subtitle2" sx={{ color: T.darkTextSub, fontWeight: 600, mb: 0.5 }}>
+      {label}
+    </Typography>
+    <Typography sx={{ color: T.darkText }}>{value || 'Não especificado'}</Typography>
+  </Grid>
+);
+
 return (
-  <Box width="100%" maxWidth="1200px" mx="auto" p={isMobile ? 1 : 3}>
-    <BackButton sx={{ mb: 2 }} />
-    
-    {/* Main Card */}
-    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-      <CardContent>
-        <Grid container spacing={2} alignItems="center">
+  <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", sans-serif', position: 'relative' }}>
+    <style>{KEYFRAMES}</style>
+    <Box sx={BG_GRID} />
+
+    <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, py: 4 }}>
+      <BackButton sx={{ mb: 2, color: T.darkTextSub }} />
+
+      {/* Header */}
+      <Paper className="detail-section fade-up" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+        <Grid container spacing={2} alignItems="flex-start">
           <Grid item>
             <Link to={`/perfil/${concurso.company.id}`}>
               <Avatar
                 src={concurso.company.logoUrl || 'default-logo.png'}
                 alt={concurso.company.nome}
-                sx={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64 }}
+                sx={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64, border: `2px solid ${T.gold}` }}
               />
             </Link>
           </Grid>
           <Grid item xs>
-            <Typography variant={isMobile ? "h6" : "h5"} gutterBottom fontWeight="bold">
-              {concurso.company.nome || 'N/A'} 
+            <Typography sx={{ color: T.gold, fontWeight: 600, fontSize: '0.9rem', mb: 0.5 }}>
+              {concurso.company.nome || 'N/A'}
             </Typography>
-            <Typography variant={isMobile ? "h6" : "h5"} gutterBottom fontWeight="bold">
-              {concurso.titulo || 'Concurso sem título'} 
+            <Typography
+              variant={isMobile ? 'h6' : 'h5'}
+              sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 800, color: T.white, mb: 1 }}
+            >
+              {concurso.titulo || 'Concurso sem título'}
             </Typography>
             <Chip
-              label={
-                concurso.status === 'Fechada' || isConcursoExpirado()
-                  ? isConcursoExpirado() 
-                    ? 'Expirado' 
-                    : 'Fechado'
-                  : 'Aberto'
-              }
-              color={
-                concurso.status === 'Fechada' || isConcursoExpirado()
-                  ? isConcursoExpirado() 
-                    ? 'warning' 
-                    : 'error'
-                  : 'success'
-              }
+              label={statusInfo.label}
               size="small"
-              sx={{ mb: 1 }}
+              sx={{
+                mb: 1.5,
+                bgcolor: `${statusInfo.color}20`,
+                color: statusInfo.color,
+                fontWeight: 700,
+                border: `1px solid ${statusInfo.color}40`,
+              }}
             />
-            
-            <Box display="flex" flexWrap="wrap" gap={1} mb={1}>
-              <Typography 
-                color="primary"
-                sx={{ 
-                  cursor: 'pointer', 
-                  display: 'flex', 
+
+            <Box display="flex" flexWrap="wrap" gap={2} mb={1}>
+              <Typography
+                sx={{
+                  cursor: 'pointer',
+                  display: 'flex',
                   alignItems: 'center',
-                  fontSize: isMobile ? '0.8rem' : '1rem'
+                  color: T.gold,
+                  fontSize: isMobile ? '0.8rem' : '0.9rem',
                 }}
                 onClick={() => setViewsModalOpen(true)}
               >
-                <RemoveRedEye color="primary" sx={{ mr: 0.5 }} /> 
+                <RemoveRedEye sx={{ mr: 0.5, fontSize: 18 }} />
                 {Object.keys(concurso.views || {}).length || 0} visualizações
               </Typography>
             </Box>
-            
-            <Box display="flex" flexWrap="wrap" gap={1}>
-              <Typography 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  fontSize: isMobile ? '0.8rem' : '1rem'
-                }}
+
+            <Box display="flex" flexWrap="wrap" gap={2}>
+              <Typography
+                sx={{ display: 'flex', alignItems: 'center', color: T.darkTextSub, fontSize: isMobile ? '0.8rem' : '0.9rem' }}
               >
-                <CalendarToday sx={{ mr: 0.5 }} /> 
+                <CalendarToday sx={{ mr: 0.5, fontSize: 18, color: T.gold }} />
                 Publicado em {new Date(concurso.timestamp).toLocaleDateString('pt-PT')}
               </Typography>
-              
-              <Typography 
-                variant="body2" 
-                color={isPrazoValido(concurso.prazo) ? 'primary' : 'error'}
-                sx={{ 
+
+              <Typography
+                sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 0.5
+                  gap: 0.5,
+                  color: isPrazoValido(concurso.prazo) ? T.darkTextSub : T.error,
+                  fontSize: isMobile ? '0.8rem' : '0.9rem',
                 }}
               >
                 {isPrazoValido(concurso.prazo) ? (
-                  <CheckCircle fontSize="small" color="primary" />
+                  <CheckCircle sx={{ fontSize: 18, color: T.success }} />
                 ) : (
-                  <History fontSize="small" color="error" />
+                  <History sx={{ fontSize: 18, color: T.error }} />
                 )}
                 Prazo: {new Date(concurso.prazo).toLocaleDateString('pt-PT')}
               </Typography>
             </Box>
           </Grid>
         </Grid>
-      </CardContent>
-      
-      <Divider />
-      
-<CardActions sx={{ p: isMobile ? 1 : 2 }}>
-  <Stack 
-    direction={isMobile ? 'column' : 'row'} 
-    spacing={isMobile ? 1 : 2} 
-    width="100%"
-  >
-      <Button 
-        variant="contained" 
-        color="primary" 
-        onClick={handleBaixarEdital} 
-        startIcon={<FileDownload />}
-        size={isMobile ? 'small' : 'medium'}
-        fullWidth={isMobile}
-      >
-        {isMobile ? 'Baixar Anexos' : 'Baixar Documentos Anexos'}
-      </Button>
 
-    <Button 
-      variant="outlined" 
-      onClick={handlePartilhar} 
-      startIcon={<Share />}
-      size={isMobile ? 'small' : 'medium'}
-      fullWidth={isMobile}
-    >
-      Partilhar
-    </Button>
+        <Divider sx={{ borderColor: T.darkBorder, my: 2 }} />
 
-    {concurso.company.id != user.id && (
-      <Button 
-        variant="outlined" 
-        color="error" 
-        onClick={handleAbrirDenunciaModal} 
-        startIcon={<Report />}
-        size={isMobile ? 'small' : 'medium'}
-        fullWidth={isMobile}
-      >
-        Denunciar
-      </Button>
-    )}
+        <Stack direction={isMobile ? 'column' : 'row'} spacing={isMobile ? 1 : 2} flexWrap="wrap" useFlexGap>
+          <Button
+            variant="contained"
+            onClick={handleBaixarEdital}
+            startIcon={<FileDownload />}
+            size={isMobile ? 'small' : 'medium'}
+            fullWidth={isMobile}
+            sx={{ bgcolor: T.gold, color: T.navy, '&:hover': { bgcolor: T.goldLight }, fontWeight: 600, textTransform: 'none', borderRadius: '10px' }}
+          >
+            {isMobile ? 'Baixar Anexos' : 'Baixar Documentos Anexos'}
+          </Button>
 
-    {concurso.linkDeSubmissao && (
-      <Button
-        variant="contained"
-        color="success"
-        startIcon={<Link2 />}
-        href={concurso.linkDeSubmissao}
-        target="_blank"
-        size={isMobile ? 'small' : 'medium'}
-        fullWidth={isMobile}
-      >
-        Submeter Proposta
-      </Button>
-    )}
+          <Button
+            variant="outlined"
+            onClick={handlePartilhar}
+            startIcon={<Share />}
+            size={isMobile ? 'small' : 'medium'}
+            fullWidth={isMobile}
+            sx={{ color: T.darkText, borderColor: T.darkBorder, textTransform: 'none', borderRadius: '10px', '&:hover': { borderColor: T.gold, color: T.gold } }}
+          >
+            Partilhar
+          </Button>
 
-    {concurso.email && (
-      <Button
-        variant="outlined"
-        color="secondary"
-        startIcon={<Email />}
-        href={`mailto:${concurso.email}`}
-        size={isMobile ? 'small' : 'medium'}
-        fullWidth={isMobile}>
-        {isMobile ? 'Email' : 'Enviar Email'}
-      </Button>
-    )}
-    {concurso.contacto && (
-      <Button
-        variant="outlined"
-        color="secondary"
-        startIcon={<Phone />}
-        href={`tel:${concurso.contacto}`}
-        size={isMobile ? 'small' : 'medium'}
-        fullWidth={isMobile}
-      >
-        {isMobile ? 'Ligar' : 'Contactar'}
-      </Button>
-    )}
-  </Stack>
-</CardActions>
-    </Card>
-
-    {/* Object Card */}
-    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          Objeto do Concurso
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Typography 
-          variant="body1" 
-          dangerouslySetInnerHTML={{ __html: concurso.objeto || '<p>Não especificado</p>' }} 
-          sx={{ lineHeight: 1.6 }}
-        />
-      </CardContent>
-    </Card>
-
-    {/* Conditions Card */}
-    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          Condições do Concurso
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Typography 
-          variant="body1" 
-          dangerouslySetInnerHTML={{ __html: concurso.condicoes || '<p>Não especificado</p>' }} 
-          sx={{ lineHeight: 1.6 }}
-        />
-      </CardContent>
-    </Card>
-
-    {/* Criteria Card */}
-    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          Critérios de Avaliação
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Typography 
-          variant="body1" 
-          dangerouslySetInnerHTML={{ __html: concurso.criterios || '<p>Não especificado</p>' }} 
-          sx={{ lineHeight: 1.6 }}
-        />
-      </CardContent>
-    </Card>
-
-    {/* Documentation Card */}
-    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          Documentação Necessária
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Typography 
-          variant="body1" 
-          dangerouslySetInnerHTML={{ __html: concurso.documentacao || '<p>Não especificado</p>' }} 
-          sx={{ lineHeight: 1.6 }}
-        />
-      </CardContent>
-    </Card>
-
-    {/* Technical Requirements Card */}
-    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          Requisitos Técnicos
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Typography 
-          variant="body1" 
-          dangerouslySetInnerHTML={{ __html: concurso.requisitosTecnicos || '<p>Não especificado</p>' }} 
-          sx={{ lineHeight: 1.6 }}
-        />
-      </CardContent>
-    </Card>
-
-    {/* Concurso Details Card */}
-    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          Detalhes do Concurso
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Número de Referência:
-            </Typography>
-            <Typography>{concurso.numeroReferencia || 'Não especificado'}</Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Modalidade:
-            </Typography>
-            <Typography>{concurso.modalidade || 'Não especificado'}</Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Setor:
-            </Typography>
-            <Typography>{concurso.setor || 'Não especificado'}</Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Províncias:
-            </Typography>
-            <Typography>
-              {concurso.provincia && concurso.provincia.length > 0 
-                ? concurso.provincia.join(', ') 
-                : 'Não especificado'}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Local de Entrega:
-            </Typography>
-            <Typography>{concurso.localEntrega || 'Não especificado'}</Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Data de Abertura:
-            </Typography>
-            <Typography>
-              {concurso.dataAbertura 
-                ? new Date(concurso.dataAbertura).toLocaleDateString('pt-PT') 
-                : 'Não especificado'}
-            </Typography>
-          </Grid>
-
-                 <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Data de Limite:
-            </Typography>
-            <Typography>
-              {concurso.dataLimite 
-                ? new Date(concurso.dataLimite).toLocaleDateString('pt-PT') 
-                : 'Não especificado'}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Valor Estimado:
-            </Typography>
-            <Typography>
-              {concurso.valorEstimado 
-                ? formatarValor(concurso.valorEstimado) + ' MT' 
-                : 'Não especificado'}
-            </Typography>
-          </Grid>
-          
-        </Grid>
-      </CardContent>
-    </Card>
-    {concurso.anexos && concurso.anexos.length > 0 && (
-      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
-            Documentos Anexos
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-      <Grid container spacing={2}>
-  {concurso.anexos.map((anexo) => (
-    <Grid item xs={12} sm={6} key={anexo.id}>
-      <Card variant="outlined">
-        <CardContent sx={{ display: 'flex', alignItems: 'center' }}>
-          {anexo.tipo.startsWith('image/') ? (
-            <Box
-              sx={{ 
-                width: 48, 
-                height: 48, 
-                mr: 2, 
-                borderRadius: 1, 
-                overflow: 'hidden', 
-                flexShrink: 0,
-                cursor: 'pointer' 
-              }}
-              onClick={() => window.open(anexo.url, '_blank')}
+          {concurso.company.id != user.id && (
+            <Button
+              variant="outlined"
+              onClick={handleAbrirDenunciaModal}
+              startIcon={<Report />}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+              sx={{ color: T.error, borderColor: 'rgba(239,68,68,0.4)', textTransform: 'none', borderRadius: '10px', '&:hover': { borderColor: T.error, bgcolor: 'rgba(239,68,68,0.08)' } }}
             >
-              <img
-                src={anexo.url}
-                alt={anexo.nome}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </Box>
-          ) : (
-            <PictureAsPdf sx={{ mr: 2, color: 'error.main' }} />
+              Denunciar
+            </Button>
           )}
 
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" noWrap>
-              {anexo.nome}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {(anexo.tamanho / 1024).toFixed(2)} KB
-            </Typography>
-          </Box>
+          {concurso.linkDeSubmissao && (
+            <Button
+              variant="contained"
+              startIcon={<Link2 />}
+              href={concurso.linkDeSubmissao}
+              target="_blank"
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+              sx={{ bgcolor: T.success, color: T.white, '&:hover': { bgcolor: '#0da271' }, textTransform: 'none', borderRadius: '10px' }}
+            >
+              Submeter Proposta
+            </Button>
+          )}
 
-          <IconButton 
-            onClick={() => window.open(anexo.url, '_blank')}
-            color="primary"
-          >
-            <Download />
-          </IconButton>
-        </CardContent>
-      </Card>
-    </Grid>
-  ))}
-</Grid>
+          {concurso.email && (
+            <Button
+              variant="outlined"
+              startIcon={<Email />}
+              href={`mailto:${concurso.email}`}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+              sx={{ color: T.darkText, borderColor: T.darkBorder, textTransform: 'none', borderRadius: '10px', '&:hover': { borderColor: T.gold, color: T.gold } }}
+            >
+              {isMobile ? 'Email' : 'Enviar Email'}
+            </Button>
+          )}
+          {concurso.contacto && (
+            <Button
+              variant="outlined"
+              startIcon={<Phone />}
+              href={`tel:${concurso.contacto}`}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth={isMobile}
+              sx={{ color: T.darkText, borderColor: T.darkBorder, textTransform: 'none', borderRadius: '10px', '&:hover': { borderColor: T.gold, color: T.gold } }}
+            >
+              {isMobile ? 'Ligar' : 'Contactar'}
+            </Button>
+          )}
+        </Stack>
+      </Paper>
 
-        </CardContent>
-      </Card>
-    )}
+      {renderHtmlSection('Objeto do Concurso', concurso.objeto)}
+      {renderHtmlSection('Condições do Concurso', concurso.condicoes)}
+      {renderHtmlSection('Critérios de Avaliação', concurso.criterios)}
+      {renderHtmlSection('Documentação Necessária', concurso.documentacao)}
+      {renderHtmlSection('Requisitos Técnicos', concurso.requisitosTecnicos)}
 
-    {/* Observations Section */}
-    {concurso.observacoes && (
-      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
-            Observações
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Typography variant="body1">
-            {concurso.observacoes}
-          </Typography>
-        </CardContent>
-      </Card>
-    )}
+      {/* Concurso Details */}
+      <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+        <Typography variant="h6" sx={sectionTitleSx}>Detalhes do Concurso</Typography>
+        <Divider sx={{ borderColor: T.darkBorder, mb: 2 }} />
+        <Grid container spacing={2}>
+          {detailField('Número de Referência:', concurso.numeroReferencia)}
+          {detailField('Modalidade:', concurso.modalidade)}
+          {detailField('Setor:', concurso.setor)}
+          {detailField('Províncias:', concurso.provincia && concurso.provincia.length > 0 ? concurso.provincia.join(', ') : null)}
+          {detailField('Local de Entrega:', concurso.localEntrega)}
+          {detailField('Data de Abertura:', concurso.dataAbertura ? new Date(concurso.dataAbertura).toLocaleDateString('pt-PT') : null)}
+          {detailField('Data de Limite:', concurso.dataLimite ? new Date(concurso.dataLimite).toLocaleDateString('pt-PT') : null)}
+          {detailField('Valor Estimado:', concurso.valorEstimado ? formatarValor(concurso.valorEstimado) + ' MT' : null)}
+        </Grid>
+      </Paper>
 
-    {/* Views Modal */}
-    <Modal open={viewsModalOpen} onClose={() => setViewsModalOpen(false)}>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          bgcolor: 'background.paper',
-          boxShadow: 24,
-          p: isMobile ? 2 : 4,
-          borderRadius: 2,
-          width: isMobile ? '90%' : '80%',
-          maxWidth: 600,
-          maxHeight: '80%',
-          overflowY: 'auto',
-        }}
-      >
-        <Typography variant="h6" gutterBottom fontWeight="bold">
-          Empresas que visualizaram este concurso
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        {Object.keys(concurso.views || {}).length > 0 ? (
-          <Typography color="textSecondary">
-            {Object.keys(concurso.views).length} visualizações registradas
-          </Typography>
-        ) : (
-          <Typography color="textSecondary">Nenhuma visualização registrada até o momento.</Typography>
-        )}
-        <Box mt={3} textAlign="right">
-          <Button variant="contained" onClick={() => setViewsModalOpen(false)} size={isMobile ? 'small' : 'medium'}>
-            Fechar
-          </Button>
-        </Box>
-      </Box>
-    </Modal>
+      {concurso.anexos && concurso.anexos.length > 0 && (
+        <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+          <Typography variant="h6" sx={sectionTitleSx}>Documentos Anexos</Typography>
+          <Divider sx={{ borderColor: T.darkBorder, mb: 2 }} />
+          <Grid container spacing={2}>
+            {concurso.anexos.map((anexo) => (
+              <Grid item xs={12} sm={6} key={anexo.id}>
+                <Box className="anexo-card" sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+                  {anexo.tipo.startsWith('image/') ? (
+                    <Box
+                      sx={{ width: 48, height: 48, mr: 2, borderRadius: 1, overflow: 'hidden', flexShrink: 0, cursor: 'pointer' }}
+                      onClick={() => window.open(anexo.url, '_blank')}
+                    >
+                      <img
+                        src={anexo.url}
+                        alt={anexo.nome}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  ) : (
+                    <PictureAsPdf sx={{ mr: 2, color: T.error }} />
+                  )}
 
-    {/* Report Modal */}
-    <Dialog open={denunciaModalOpen} onClose={handleFecharDenunciaModal} fullScreen={isMobile}>
-      <DialogTitle>Denunciar Concurso</DialogTitle>
-      <DialogContent>
-        <Typography variant="body1" gutterBottom>
-          Por favor, descreva o motivo da denúncia. Sua contribuição nos ajuda a manter a plataforma segura e confiável.
-        </Typography>
-        <TextField
-          fullWidth
-          multiline
-          rows={isMobile ? 3 : 4}
-          label="Motivo da Denúncia"
-          value={motivoDenuncia}
-          onChange={(e) => setMotivoDenuncia(e.target.value)}
-          sx={{ mt: 2 }}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleFecharDenunciaModal} size={isMobile ? 'small' : 'medium'}>
-          Cancelar
-        </Button>
-        <Button 
-          onClick={handleDenunciar} 
-          color="error" 
-          size={isMobile ? 'small' : 'medium'}
-          disabled={!motivoDenuncia.trim()}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle2" noWrap sx={{ color: T.darkText }}>
+                      {anexo.nome}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: T.darkTextSub }}>
+                      {(anexo.tamanho / 1024).toFixed(2)} KB
+                    </Typography>
+                  </Box>
+
+                  <IconButton onClick={() => window.open(anexo.url, '_blank')} sx={{ color: T.gold }}>
+                    <Download />
+                  </IconButton>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      )}
+
+      {concurso.observacoes && (
+        <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+          <Typography variant="h6" sx={sectionTitleSx}>Observações</Typography>
+          <Divider sx={{ borderColor: T.darkBorder, mb: 2 }} />
+          <Typography sx={{ color: T.darkText }}>{concurso.observacoes}</Typography>
+        </Paper>
+      )}
+
+      {/* Views Modal */}
+      <Modal open={viewsModalOpen} onClose={() => setViewsModalOpen(false)}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            bgcolor: T.navyCard,
+            border: `1px solid ${T.darkBorder}`,
+            boxShadow: 24,
+            p: isMobile ? 2 : 4,
+            borderRadius: '16px',
+            width: isMobile ? '90%' : '80%',
+            maxWidth: 600,
+            maxHeight: '80%',
+            overflowY: 'auto',
+          }}
         >
-          Enviar Denúncia
-        </Button>
-      </DialogActions>
-    </Dialog>
+          <Typography variant="h6" sx={sectionTitleSx}>Empresas que visualizaram este concurso</Typography>
+          <Divider sx={{ borderColor: T.darkBorder, mb: 2 }} />
+          {Object.keys(concurso.views || {}).length > 0 ? (
+            <Typography sx={{ color: T.darkTextSub }}>
+              {Object.keys(concurso.views).length} visualizações registradas
+            </Typography>
+          ) : (
+            <Typography sx={{ color: T.darkTextSub }}>Nenhuma visualização registrada até o momento.</Typography>
+          )}
+          <Box mt={3} textAlign="right">
+            <Button
+              variant="contained"
+              onClick={() => setViewsModalOpen(false)}
+              size={isMobile ? 'small' : 'medium'}
+              sx={{ bgcolor: T.gold, color: T.navy, '&:hover': { bgcolor: T.goldLight }, textTransform: 'none' }}
+            >
+              Fechar
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      {/* Report Modal */}
+      <Dialog
+        open={denunciaModalOpen}
+        onClose={handleFecharDenunciaModal}
+        fullScreen={isMobile}
+        PaperProps={{ sx: { bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: isMobile ? 0 : '16px' } }}
+      >
+        <DialogTitle sx={{ color: T.white, fontFamily: '"Playfair Display", serif', borderBottom: `1px solid ${T.darkBorder}` }}>
+          Denunciar Concurso
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography sx={{ color: T.darkTextSub, mb: 2 }}>
+            Por favor, descreva o motivo da denúncia. Sua contribuição nos ajuda a manter a plataforma segura e confiável.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={isMobile ? 3 : 4}
+            label="Motivo da Denúncia"
+            value={motivoDenuncia}
+            onChange={(e) => setMotivoDenuncia(e.target.value)}
+            InputLabelProps={{ sx: { color: T.darkTextSub } }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                color: T.darkText,
+                '& fieldset': { borderColor: T.darkBorder },
+                '&:hover fieldset': { borderColor: T.gold },
+                '&.Mui-focused fieldset': { borderColor: T.gold },
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ borderTop: `1px solid ${T.darkBorder}`, p: 2 }}>
+          <Button onClick={handleFecharDenunciaModal} size={isMobile ? 'small' : 'medium'} sx={{ color: T.darkTextSub, textTransform: 'none' }}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDenunciar}
+            size={isMobile ? 'small' : 'medium'}
+            disabled={!motivoDenuncia.trim()}
+            sx={{ color: T.error, textTransform: 'none' }}
+          >
+            Enviar Denúncia
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   </Box>
 );
 };

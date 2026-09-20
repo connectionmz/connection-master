@@ -116,7 +116,7 @@ const DesktopRoutes = ({ user, authUser, profileLoading }) => {
               {renderProtectedRoute("/concursos", <ConcursosPublicosDesk />, { requiresVerification: true })}
               {renderProtectedRoute("/concursos-empresas", <ConcursosDesk user={user} />)}
               {renderProtectedRoute("/concurso", <PublicarConcursoDesk user={user} />, { requiredModule: "moduloSMS" })}
-              {renderProtectedRoute("/concurso/:id", <ConcursoDetalhesDesk user={user} />)}
+              {renderProtectedRoute("/concurso/:id", <ConcursoDetalhesDesk user={user} />, { requiresProfile: true })}
               {renderProtectedRoute("/concursoPdf/:id", <EditalConcursoPDF user={user} />)}
               {renderProtectedRoute("/minhas-cotacoes", <SentStoreQuotesDesk userId={authUser?.uid} />)}
               {renderProtectedRoute("/cotacao", <NovaCotacaoDesk user={user} />, { requiredModule: "moduloSMS" })}
