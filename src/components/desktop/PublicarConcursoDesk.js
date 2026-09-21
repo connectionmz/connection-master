@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../fb';
 import {
   Container, TextField, Select, MenuItem, FormControl, InputLabel,
-  Button, Snackbar, Alert, Typography, Box, CircularProgress,
+  Button, Snackbar, Alert, Typography, Box, CircularProgress, Paper,
   ListItemIcon, Checkbox, Divider, ListItemText, Chip, Grid, IconButton,
   LinearProgress
 } from '@mui/material';
@@ -18,6 +18,76 @@ import { filterActiveModules } from '../../context/ActiveModulesContext';
 
 // Initialize Firebase Storage
 const storage = getStorage();
+
+/* ── Design tokens (mesmos de ConcursoDesk.js / CotacoesDesk.js, para manter o visual consistente) ── */
+const T = {
+  navy:        '#08192E',
+  navyCard:    '#0D2240',
+  gold:        '#C8903A',
+  goldLight:   '#E8B96A',
+  white:       '#FFFFFF',
+  darkBorder:  'rgba(255,255,255,0.08)',
+  darkText:    'rgba(255,255,255,0.88)',
+  darkTextSub: 'rgba(255,255,255,0.52)',
+  darkMuted:   'rgba(255,255,255,0.30)',
+  success:     '#10b981',
+  error:       '#ef4444',
+};
+
+const KEYFRAMES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  .detail-section {
+    background: ${T.navyCard};
+    border: 1px solid ${T.darkBorder};
+    border-radius: 16px;
+  }
+  .anexo-row {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid ${T.darkBorder};
+    border-radius: 12px;
+  }
+  .ql-toolbar.ql-snow {
+    background: ${T.white};
+    border-color: ${T.darkBorder} !important;
+    border-radius: 8px 8px 0 0;
+  }
+  .ql-container.ql-snow {
+    background: ${T.white};
+    border-color: ${T.darkBorder} !important;
+    border-radius: 0 0 8px 8px;
+  }
+  .ql-editor.ql-blank::before {
+    color: rgba(0,0,0,0.4);
+  }
+`;
+
+const BG_GRID = {
+  position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.02,
+  backgroundImage: `linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundSize: '56px 56px',
+};
+
+// Estilo partilhado para TextField / Select no tema navy
+const fieldSx = {
+  '& .MuiInputLabel-root': { color: T.darkTextSub },
+  '& .MuiInputLabel-root.Mui-focused': { color: T.gold },
+  '& .MuiOutlinedInput-root': {
+    color: T.darkText,
+    '& fieldset': { borderColor: T.darkBorder },
+    '&:hover fieldset': { borderColor: T.gold },
+    '&.Mui-focused fieldset': { borderColor: T.gold },
+  },
+  '& .MuiSelect-icon': { color: T.darkTextSub },
+  '& .MuiFormHelperText-root': { color: T.darkMuted },
+  '& input[type="date"]::-webkit-calendar-picker-indicator': { filter: 'invert(0.7)' },
+};
+
+const sectionTitleSx = {
+  fontFamily: '"Playfair Display", serif',
+  fontWeight: 700,
+  color: T.white,
+  mb: 2,
+};
 
 // Quill editor configuration
 const quillModules = {
@@ -519,520 +589,528 @@ const sendNotifications = useCallback(async (concursoId) => {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box 
-        component="form" 
-        onSubmit={handleSubmit} 
-        sx={{ 
-          mt: 3, 
-          p: 3, 
-          bgcolor: 'background.paper', 
-          borderRadius: 2,
-          boxShadow: 1
-        }}
-      >
-        <BackButton sx={{ mb: 2 }} />
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          Publicar Novo Concurso
-        </Typography>
+    <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", sans-serif', position: 'relative' }}>
+      <style>{KEYFRAMES}</style>
+      <Box sx={BG_GRID} />
 
-        {/* Basic Information Section */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ mt: 2, color: 'text.secondary' }}>
-            Informações Básicas
-          </Typography>
-          
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                label="Título do Concurso"
-                name="titulo"
-                value={formData.titulo}
-                onChange={handleChange}
-                required
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Número de Referência"
-                name="numeroReferencia"
-                value={formData.numeroReferencia}
-                onChange={handleChange}
-                margin="normal"
-              />
-            </Grid>
-          </Grid>
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, py: 4 }}>
+        <BackButton sx={{ mb: 2, color: T.darkTextSub }} />
 
-          {/* Adicione isso após o campo "Link de Submissão" */}
-<Grid container spacing={2} sx={{ mt: 1 }}>
-  <Grid item xs={12} md={6}>
-    <TextField
-      fullWidth
-      label="Contacto para informações"
-      name="contacto"
-      value={formData.contacto}
-      onChange={handleChange}
-      required
-      margin="normal"
-      inputProps={{
-        pattern: "[0-9]{9}",
-        title: "Insira um número de 9 dígitos"
-      }}
-      helperText="Número de telefone (9 dígitos)"
-    />
-  </Grid>
-  <Grid item xs={12} md={6}>
-    <TextField
-      fullWidth
-      label="Email para informações"
-      name="email"
-      type="email"
-      value={formData.email}
-      onChange={handleChange}
-      required
-      margin="normal"
-      inputProps={{
-        pattern: "[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$",
-        title: "Insira um email válido"
-      }}
-    />
-  </Grid>
-</Grid>
+        <Box component="form" onSubmit={handleSubmit}>
+          <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+            <Typography
+              variant="h4"
+              sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 800, color: T.white, fontSize: { xs: '1.5rem', sm: '2rem' } }}
+            >
+              Publicar Novo Concurso
+            </Typography>
+          </Paper>
 
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Prazo de Submissão"
-                type="date"
-                name="prazo"
-                value={formatDateForInput(formData.prazo)}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  prazo: parseDateFromInput(e.target.value)
-                }))}
-                InputLabelProps={{ shrink: true }}
-                required
-                inputProps={{
-                  min: formatDateForInput(new Date())
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Data de Abertura"
-                type="date"
-                name="dataAbertura"
-                value={formatDateForInput(formData.dataAbertura)}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  dataAbertura: parseDateFromInput(e.target.value)
-                }))}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  min: formatDateForInput(new Date()) 
-                }}
-              />
-            </Grid>
-          </Grid>
+          {/* Basic Information Section */}
+          <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Informações Básicas
+            </Typography>
 
-          <TextField
-            fullWidth
-            label="Local de Entrega"
-            name="localEntrega"
-            value={formData.localEntrega}
-            onChange={handleChange}
-            required
-            margin="normal"
-            sx={{ mt: 2 }}
-          />
-
-          <TextField
-            fullWidth
-            label="Link de Submissão"
-            name="linkDeSubmissao"
-            value={formData.linkDeSubmissao}
-            onChange={handleChange}
-            margin="normal"
-          />
-        </Box>
-
-        {/* Classification Section */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Classificação
-          </Typography>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal" required>
-                <InputLabel>Setor de Atividade</InputLabel>
-                <Select
-                  multiple
-                  name="setor"
-                  value={selectedSectores}
-                  onChange={handleSectorChange}
-                  open={openSectorSelect}
-                  onOpen={() => setOpenSectorSelect(true)}
-                  onClose={() => setOpenSectorSelect(false)}
-                  label="Setor de Atividade *"
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )}
-                  disabled={!dataLoaded}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
-                    <Button size="small" onClick={handleSelectAll('setor')}>
-                      Selecionar Todos
-                    </Button>
-                    <Button size="small" onClick={handleDeselectAll('setor')}>
-                      Desmarcar Todos
-                    </Button>
-                  </Box>
-                  <Divider />
-                  {sectores.map((sector, index) => (
-                    <MenuItem key={index} value={sector.setor}>
-                      <Checkbox checked={selectedSectores.includes(sector.setor)} />
-                      <ListItemText primary={sector.setor} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal" required>
-                <InputLabel>Modalidade</InputLabel>
-                <Select
-                  name="modalidade"
-                  value={formData.modalidade}
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={8}>
+                <TextField
+                  fullWidth
+                  label="Título do Concurso"
+                  name="titulo"
+                  value={formData.titulo}
                   onChange={handleChange}
-                  label="Modalidade *"
-                >
-                  <MenuItem value="">Selecione a Modalidade</MenuItem>
-                  <MenuItem value="Concurso Público">Concurso Público</MenuItem>
-                  <MenuItem value="Concurso Limitado">Concurso Limitado</MenuItem>
-                  <MenuItem value="Ajuste Direto">Ajuste Direto</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-
-          <TextField
-            fullWidth
-            label="Valor Estimado"
-            name="valorEstimado"
-            value={formData.valorEstimado}
-            type="number"
-            onChange={handleChange}
-            margin="normal"
-            InputProps={{
-              endAdornment: <Typography sx={{ mr: 1 }}>MT</Typography>
-            }}
-          />
-        </Box>
-
-        {/* Coverage Section */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Abrangência
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Província(s)</InputLabel>
-                <Select
-                  multiple
-                  name="provincia"
-                  value={selectedProvincias}
-                  onChange={handleProvinciaChange}
-                  open={openProvinciaSelect}
-                  onOpen={() => setOpenProvinciaSelect(true)}
-                  onClose={() => setOpenProvinciaSelect(false)}
-                  label="Província(s)"
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )}
-                  disabled={!dataLoaded}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
-                    <Button size="small" onClick={handleSelectAll('provincia')}>
-                      Selecionar Todos
-                    </Button>
-                    <Button size="small" onClick={handleDeselectAll('provincia')}>
-                      Desmarcar Todos
-                    </Button>
-                  </Box>
-                  <Divider />
-                  {provincias.map((provincia, index) => (
-                    <MenuItem key={index} value={provincia.provincia}>
-                      <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
-                      <ListItemText primary={provincia.provincia} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Tipo de Entidade</InputLabel>
-                <Select
-                  multiple
-                  name="tipoEntidade"
-                  value={formData.tipoEntidade}
-                  onChange={handleTipoEntidadeChange}
-                  open={openTipoEntidadeSelect}
-                  onOpen={() => setOpenTipoEntidadeSelect(true)}
-                  onClose={() => setOpenTipoEntidadeSelect(false)}
-                  label="Tipo de Entidade"
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
-                      ))}
-                    </Box>
-                  )}
-                  disabled={!dataLoaded}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
-                    <Button size="small" onClick={handleSelectAll('tipoEntidade')}>
-                      Selecionar Todos
-                    </Button>
-                    <Button size="small" onClick={handleDeselectAll('tipoEntidade')}>
-                      Desmarcar Todos
-                    </Button>
-                  </Box>
-                  <Divider />
-                  {tiposEntidades.map((tipo, index) => (
-                    <MenuItem key={index} value={tipo.tipo}>
-                      <Checkbox checked={formData.tipoEntidade.includes(tipo.tipo)} />
-                      <ListItemText primary={tipo.tipo} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </Box>
-
-        {/* Rich Text Sections */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Objeto do Concurso *
-          </Typography>
-          <ReactQuill
-            theme="snow"
-            value={richTextData.objeto}
-            onChange={(value) => handleRichTextChange('objeto', value)}
-            modules={quillModules}
-            style={{ height: '200px', marginBottom: '40px' }}
-            placeholder="Descreva o objeto do concurso..."
-          />
-
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Condições de Participação *
-          </Typography>
-          <ReactQuill
-            theme="snow"
-            value={richTextData.condicoes}
-            onChange={(value) => handleRichTextChange('condicoes', value)}
-            modules={quillModules}
-            style={{ height: '200px', marginBottom: '40px' }}
-            placeholder="Descreva as condições de participação..."
-          />
-
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Documentação Necessária *
-          </Typography>
-          <ReactQuill
-            theme="snow"
-            value={richTextData.documentacao}
-            onChange={(value) => handleRichTextChange('documentacao', value)}
-            modules={quillModules}
-            style={{ height: '200px', marginBottom: '40px' }}
-            placeholder="Liste a documentação necessária..."
-          />
-
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Critérios de Avaliação *
-          </Typography>
-          <ReactQuill
-            theme="snow"
-            value={richTextData.criterios}
-            onChange={(value) => handleRichTextChange('criterios', value)}
-            modules={quillModules}
-            style={{ height: '200px', marginBottom: '40px' }}
-            placeholder="Descreva os critérios de avaliação..."
-          />
-
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Requisitos Técnicos
-          </Typography>
-          <ReactQuill
-            theme="snow"
-            value={richTextData.requisitosTecnicos}
-            onChange={(value) => handleRichTextChange('requisitosTecnicos', value)}
-            modules={quillModules}
-            style={{ height: '200px', marginBottom: '40px' }}
-            placeholder="Descreva os requisitos técnicos..."
-          />
-        </Box>
-
-        {/* Attachments Section */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
-            Anexos
-          </Typography>
-          
-          <Button
-            variant="outlined"
-            component="label"
-            startIcon={<AttachFile />}
-            sx={{ mb: 2 }}
-            disabled={loading}
-          >
-            Adicionar Anexos
-            <input
-              type="file"
-              multiple
-              hidden
-              onChange={(e) => {
-                if (e.target.files.length > 0) {
-                  setFormData(prev => ({
-                    ...prev,
-                    anexos: [...prev.anexos, ...Array.from(e.target.files)]
-                  }));
-                }
-              }}
-            />
-          </Button>
-    {formData.anexos.length > 0 && (
-  <Box sx={{ mt: 2 }}>
-    {formData.anexos.map((anexo, index) => {
-      const uploadState = uploadStates[anexo.name] || { status: 'pending', progress: 0 };
-      const isImage = anexo.type?.startsWith('image/');
-      return (
-        <Box 
-          key={index} 
-          sx={{ 
-            mb: 2,
-            p: 2,
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box sx={{ mr: 2 }}>
-              {renderFileStatusIcon(uploadState.status)}
-            </Box>
-            {isImage && (
-              <Box sx={{ mr: 2 }}>
-                <img 
-                  src={URL.createObjectURL(anexo)} 
-                  alt={anexo.name} 
-                  style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
+                  required
+                  margin="normal"
+                  sx={fieldSx}
                 />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Número de Referência"
+                  name="numeroReferencia"
+                  value={formData.numeroReferencia}
+                  onChange={handleChange}
+                  margin="normal"
+                  sx={fieldSx}
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Contacto para informações"
+                  name="contacto"
+                  value={formData.contacto}
+                  onChange={handleChange}
+                  required
+                  margin="normal"
+                  inputProps={{
+                    pattern: "[0-9]{9}",
+                    title: "Insira um número de 9 dígitos"
+                  }}
+                  helperText="Número de telefone (9 dígitos)"
+                  sx={fieldSx}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Email para informações"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  margin="normal"
+                  inputProps={{
+                    pattern: "[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$",
+                    title: "Insira um email válido"
+                  }}
+                  sx={fieldSx}
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Prazo de Submissão"
+                  type="date"
+                  name="prazo"
+                  value={formatDateForInput(formData.prazo)}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    prazo: parseDateFromInput(e.target.value)
+                  }))}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  inputProps={{
+                    min: formatDateForInput(new Date())
+                  }}
+                  sx={fieldSx}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Data de Abertura"
+                  type="date"
+                  name="dataAbertura"
+                  value={formatDateForInput(formData.dataAbertura)}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    dataAbertura: parseDateFromInput(e.target.value)
+                  }))}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{
+                    min: formatDateForInput(new Date())
+                  }}
+                  sx={fieldSx}
+                />
+              </Grid>
+            </Grid>
+
+            <TextField
+              fullWidth
+              label="Local de Entrega"
+              name="localEntrega"
+              value={formData.localEntrega}
+              onChange={handleChange}
+              required
+              margin="normal"
+              sx={{ ...fieldSx, mt: 2 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Link de Submissão"
+              name="linkDeSubmissao"
+              value={formData.linkDeSubmissao}
+              onChange={handleChange}
+              margin="normal"
+              sx={fieldSx}
+            />
+          </Paper>
+
+          {/* Classification Section */}
+          <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Classificação
+            </Typography>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal" required sx={fieldSx}>
+                  <InputLabel>Setor de Atividade</InputLabel>
+                  <Select
+                    multiple
+                    name="setor"
+                    value={selectedSectores}
+                    onChange={handleSectorChange}
+                    open={openSectorSelect}
+                    onOpen={() => setOpenSectorSelect(true)}
+                    onClose={() => setOpenSectorSelect(false)}
+                    label="Setor de Atividade *"
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} size="small" sx={{ bgcolor: `${T.gold}20`, color: T.gold }} />
+                        ))}
+                      </Box>
+                    )}
+                    disabled={!dataLoaded}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+                      <Button size="small" onClick={handleSelectAll('setor')}>
+                        Selecionar Todos
+                      </Button>
+                      <Button size="small" onClick={handleDeselectAll('setor')}>
+                        Desmarcar Todos
+                      </Button>
+                    </Box>
+                    <Divider />
+                    {sectores.map((sector, index) => (
+                      <MenuItem key={index} value={sector.setor}>
+                        <Checkbox checked={selectedSectores.includes(sector.setor)} />
+                        <ListItemText primary={sector.setor} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal" required sx={fieldSx}>
+                  <InputLabel>Modalidade</InputLabel>
+                  <Select
+                    name="modalidade"
+                    value={formData.modalidade}
+                    onChange={handleChange}
+                    label="Modalidade *"
+                  >
+                    <MenuItem value="">Selecione a Modalidade</MenuItem>
+                    <MenuItem value="Concurso Público">Concurso Público</MenuItem>
+                    <MenuItem value="Concurso Limitado">Concurso Limitado</MenuItem>
+                    <MenuItem value="Ajuste Direto">Ajuste Direto</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <TextField
+              fullWidth
+              label="Valor Estimado"
+              name="valorEstimado"
+              value={formData.valorEstimado}
+              type="number"
+              onChange={handleChange}
+              margin="normal"
+              InputProps={{
+                endAdornment: <Typography sx={{ mr: 1, color: T.darkTextSub }}>MT</Typography>
+              }}
+              sx={fieldSx}
+            />
+          </Paper>
+
+          {/* Coverage Section */}
+          <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Abrangência
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal" sx={fieldSx}>
+                  <InputLabel>Província(s)</InputLabel>
+                  <Select
+                    multiple
+                    name="provincia"
+                    value={selectedProvincias}
+                    onChange={handleProvinciaChange}
+                    open={openProvinciaSelect}
+                    onOpen={() => setOpenProvinciaSelect(true)}
+                    onClose={() => setOpenProvinciaSelect(false)}
+                    label="Província(s)"
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} size="small" sx={{ bgcolor: `${T.gold}20`, color: T.gold }} />
+                        ))}
+                      </Box>
+                    )}
+                    disabled={!dataLoaded}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+                      <Button size="small" onClick={handleSelectAll('provincia')}>
+                        Selecionar Todos
+                      </Button>
+                      <Button size="small" onClick={handleDeselectAll('provincia')}>
+                        Desmarcar Todos
+                      </Button>
+                    </Box>
+                    <Divider />
+                    {provincias.map((provincia, index) => (
+                      <MenuItem key={index} value={provincia.provincia}>
+                        <Checkbox checked={selectedProvincias.includes(provincia.provincia)} />
+                        <ListItemText primary={provincia.provincia} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth margin="normal" sx={fieldSx}>
+                  <InputLabel>Tipo de Entidade</InputLabel>
+                  <Select
+                    multiple
+                    name="tipoEntidade"
+                    value={formData.tipoEntidade}
+                    onChange={handleTipoEntidadeChange}
+                    open={openTipoEntidadeSelect}
+                    onOpen={() => setOpenTipoEntidadeSelect(true)}
+                    onClose={() => setOpenTipoEntidadeSelect(false)}
+                    label="Tipo de Entidade"
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} size="small" sx={{ bgcolor: `${T.gold}20`, color: T.gold }} />
+                        ))}
+                      </Box>
+                    )}
+                    disabled={!dataLoaded}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
+                      <Button size="small" onClick={handleSelectAll('tipoEntidade')}>
+                        Selecionar Todos
+                      </Button>
+                      <Button size="small" onClick={handleDeselectAll('tipoEntidade')}>
+                        Desmarcar Todos
+                      </Button>
+                    </Box>
+                    <Divider />
+                    {tiposEntidades.map((tipo, index) => (
+                      <MenuItem key={index} value={tipo.tipo}>
+                        <Checkbox checked={formData.tipoEntidade.includes(tipo.tipo)} />
+                        <ListItemText primary={tipo.tipo} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Paper>
+
+          {/* Rich Text Sections */}
+          <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Objeto do Concurso *
+            </Typography>
+            <ReactQuill
+              theme="snow"
+              value={richTextData.objeto}
+              onChange={(value) => handleRichTextChange('objeto', value)}
+              modules={quillModules}
+              style={{ height: '200px', marginBottom: '40px', borderRadius: '8px', overflow: 'hidden' }}
+              placeholder="Descreva o objeto do concurso..."
+            />
+
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Condições de Participação *
+            </Typography>
+            <ReactQuill
+              theme="snow"
+              value={richTextData.condicoes}
+              onChange={(value) => handleRichTextChange('condicoes', value)}
+              modules={quillModules}
+              style={{ height: '200px', marginBottom: '40px', borderRadius: '8px', overflow: 'hidden' }}
+              placeholder="Descreva as condições de participação..."
+            />
+
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Documentação Necessária *
+            </Typography>
+            <ReactQuill
+              theme="snow"
+              value={richTextData.documentacao}
+              onChange={(value) => handleRichTextChange('documentacao', value)}
+              modules={quillModules}
+              style={{ height: '200px', marginBottom: '40px', borderRadius: '8px', overflow: 'hidden' }}
+              placeholder="Liste a documentação necessária..."
+            />
+
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Critérios de Avaliação *
+            </Typography>
+            <ReactQuill
+              theme="snow"
+              value={richTextData.criterios}
+              onChange={(value) => handleRichTextChange('criterios', value)}
+              modules={quillModules}
+              style={{ height: '200px', marginBottom: '40px', borderRadius: '8px', overflow: 'hidden' }}
+              placeholder="Descreva os critérios de avaliação..."
+            />
+
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Requisitos Técnicos
+            </Typography>
+            <ReactQuill
+              theme="snow"
+              value={richTextData.requisitosTecnicos}
+              onChange={(value) => handleRichTextChange('requisitosTecnicos', value)}
+              modules={quillModules}
+              style={{ height: '200px', marginBottom: '40px', borderRadius: '8px', overflow: 'hidden' }}
+              placeholder="Descreva os requisitos técnicos..."
+            />
+          </Paper>
+
+          {/* Attachments Section */}
+          <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" sx={sectionTitleSx}>
+              Anexos
+            </Typography>
+
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<AttachFile />}
+              sx={{ mb: 2, color: T.darkText, borderColor: T.darkBorder, textTransform: 'none', borderRadius: '10px', '&:hover': { borderColor: T.gold, color: T.gold } }}
+              disabled={loading}
+            >
+              Adicionar Anexos
+              <input
+                type="file"
+                multiple
+                hidden
+                onChange={(e) => {
+                  if (e.target.files.length > 0) {
+                    setFormData(prev => ({
+                      ...prev,
+                      anexos: [...prev.anexos, ...Array.from(e.target.files)]
+                    }));
+                  }
+                }}
+              />
+            </Button>
+            {formData.anexos.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                {formData.anexos.map((anexo, index) => {
+                  const uploadState = uploadStates[anexo.name] || { status: 'pending', progress: 0 };
+                  const isImage = anexo.type?.startsWith('image/');
+                  return (
+                    <Box
+                      key={index}
+                      className="anexo-row"
+                      sx={{ mb: 2, p: 2, position: 'relative', overflow: 'hidden' }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ mr: 2 }}>
+                          {renderFileStatusIcon(uploadState.status)}
+                        </Box>
+                        {isImage && (
+                          <Box sx={{ mr: 2 }}>
+                            <img
+                              src={URL.createObjectURL(anexo)}
+                              alt={anexo.name}
+                              style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }}
+                            />
+                          </Box>
+                        )}
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500, color: T.darkText }}>
+                            {anexo.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: T.darkTextSub }}>
+                            {(anexo.size / 1024).toFixed(2)} KB • {
+                              uploadState.status === 'pending' ? 'Pendente' :
+                              uploadState.status === 'uploading' ? 'Enviando...' :
+                              uploadState.status === 'completed' ? 'Enviado' :
+                              'Erro no envio'
+                            }
+                          </Typography>
+                          {uploadState.error && (
+                            <Typography variant="caption" sx={{ color: T.error }}>
+                              {uploadState.error}
+                            </Typography>
+                          )}
+                          {uploadState.status === 'uploading' && (
+                            <LinearProgress
+                              variant="determinate"
+                              value={uploadState.progress}
+                              sx={{ mt: 1 }}
+                            />
+                          )}
+                        </Box>
+
+                        {!loading && (
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveAnexo(index)}
+                            disabled={uploadState.status === 'uploading'}
+                            sx={{ color: T.darkMuted, '&:hover': { color: T.error } }}
+                          >
+                            <Close fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Box>
+                  );
+                })}
               </Box>
             )}
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {anexo.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {(anexo.size / 1024).toFixed(2)} KB • {
-                  uploadState.status === 'pending' ? 'Pendente' :
-                  uploadState.status === 'uploading' ? 'Enviando...' :
-                  uploadState.status === 'completed' ? 'Enviado' :
-                  'Erro no envio'
-                }
-              </Typography>
-              {uploadState.error && (
-                <Typography variant="caption" color="error">
-                  {uploadState.error}
-                </Typography>
-              )}
-              {uploadState.status === 'uploading' && (
-                <LinearProgress 
-                  variant="determinate" 
-                  value={uploadState.progress} 
-                  sx={{ mt: 1 }}
-                />
-              )}
-            </Box>
+          </Paper>
 
-            {!loading && (
-              <IconButton 
-                size="small" 
-                onClick={() => handleRemoveAnexo(index)}
-                disabled={uploadState.status === 'uploading'}
-              >
-                <Close fontSize="small" />
-              </IconButton>
-            )}
+          {/* Submit Button */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={loading || !dataLoaded}
+              sx={{
+                minWidth: '200px',
+                py: 1.5,
+                fontSize: '1rem',
+                bgcolor: T.gold,
+                color: T.navy,
+                fontWeight: 700,
+                textTransform: 'none',
+                borderRadius: '10px',
+                '&:hover': { bgcolor: T.goldLight },
+                '&.Mui-disabled': { bgcolor: 'rgba(200,144,58,0.35)', color: 'rgba(8,25,46,0.6)' },
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={24} sx={{ color: T.navy }} />
+              ) : !dataLoaded ? (
+                'Carregando dados...'
+              ) : (
+                'Publicar Concurso'
+              )}
+            </Button>
           </Box>
         </Box>
-      );
-    })}
-  </Box>
-)}
 
-        </Box>
-
-        {/* Submit Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={loading || !dataLoaded}
-            sx={{ 
-              minWidth: '200px',
-              py: 1.5,
-              fontSize: '1rem'
-            }}
-          >
-            {loading ? (
-              <CircularProgress size={24} />
-            ) : !dataLoaded ? (
-              'Carregando dados...'
-            ) : (
-              'Publicar Concurso'
-            )}
-          </Button>
-        </Box>
-      </Box>
-      
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
           onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-          elevation={6}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+            elevation={6}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </Box>
   );
 };
 

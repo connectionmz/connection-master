@@ -34,6 +34,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import StoreMallDirectoryIcon from "@mui/icons-material/StoreMallDirectory";
 import DomainIcon from "@mui/icons-material/Domain";
 import DescriptionIcon from "@mui/icons-material/Description";
+import GavelIcon from "@mui/icons-material/Gavel";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DownloadIcon from "@mui/icons-material/Download";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -282,6 +283,20 @@ const HeaderDesk = ({ user }) => {
       badge: pendingQuotes,
       requiresAuth: true,
       requiresVerify: true,
+    },
+    {
+      to: "/concursos",
+      icon: <GavelIcon />,
+      label: t('nav.tenders'),
+      requiresAuth: true,
+      requiresVerify: true,
+    },
+    {
+      to: "/concursos-empresas",
+      icon: <GavelIcon />,
+      label: t('nav.companyTenders'),
+      requiresAuth: true,
+      requiresVerify: false,
     },
     {
       to: "/minhas-cotacoes",

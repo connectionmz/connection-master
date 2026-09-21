@@ -54,6 +54,7 @@ import {
 import { useLanguage } from '../../context/LanguageContext';
 import { createProfileThemeTokens } from '../../utils/profileTheme';
 import { plainText } from '../../utils/postData';
+import { isSafePlainName } from '../../utils/sanitizeText';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
 const createTokens = (theme) => {
@@ -379,6 +380,11 @@ const EditProfileDesk = ({ user }) => {
     
     if (!user?.id) {
       setSnackbar({ open: true, message: t('profileEdit.userMissing'), severity: 'error' });
+      return;
+    }
+
+    if (!isSafePlainName(formData.nome)) {
+      setSnackbar({ open: true, message: t('profileEdit.invalidName'), severity: 'error' });
       return;
     }
 

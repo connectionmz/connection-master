@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ref, get, onValue, remove, update } from 'firebase/database';
 import { db, storage } from '../../fb';
+import { isSafePlainName } from '../../utils/sanitizeText';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -650,6 +651,11 @@ const ManageStoreDesk = ({ storeId, storeData: initialStoreData }) => {
   const handleStoreUpdate = async () => {
     if (!storeData.name.trim()) {
       showFeedback('O nome da loja é obrigatório.', 'error');
+      return;
+    }
+
+    if (!isSafePlainName(storeData.name)) {
+      showFeedback('O nome da loja contém conteúdo inválido. Use apenas texto simples.', 'error');
       return;
     }
 
