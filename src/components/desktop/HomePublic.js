@@ -117,9 +117,10 @@ const HomePublic = () => {
               Object.keys(campanhasInternas).forEach((subKey) => {
                 const campanha = campanhasInternas[subKey];
     
+                const effectiveProvincia = user?.provinciaTemp ?? user?.provincia ?? '';
                 if (
                   campanha.component === "home" &&
-                  (user.provinciaTemp || user.provincia) === campanha.company?.provincia
+                  (!effectiveProvincia || effectiveProvincia === campanha.company?.provincia)
                 ) {
                   campanhasArray.push({ id: subKey, ...campanha });
                 }

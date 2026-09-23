@@ -68,6 +68,22 @@ const STATUS_COLORS = {
 
 const PAGE_SIZE = 20;
 
+// O scraper grava o estado no momento da recolha; um concurso "aberto" cujo
+// prazo já passou tem de aparecer como expirado sem esperar por nova recolha.
+const effectiveStatus = (tender) => {
+  const deadline = tender.submissionDeadline ? new Date(tender.submissionDeadline).getTime() : NaN;
+  return tender.status === 'aberto' && deadline < Date.now() ? 'expirado' : tender.status;
+};
+
+// A UFSA por vezes publica datas de lançamento no futuro (erro de digitação),
+// o que fixaria esses concursos no topo para sempre. Um concurso não pode ter
+// sido publicado depois de o vermos pela primeira vez.
+const sortKey = (tender) => {
+  const release = new Date(tender.releaseDate || 0).getTime() || 0;
+  const seen = tender.firstSeenAt ? new Date(tender.firstSeenAt).getTime() : Infinity;
+  return Math.min(release, seen || Infinity);
+};
+
 const ConcursosPublicosDesk = () => {
   const { t, language } = useLanguage();
   const { isModuleActive } = useActiveModules();
@@ -83,8 +99,8 @@ const ConcursosPublicosDesk = () => {
     const tendersRef = ref(db, 'concursos_publicos');
     const unsubscribe = onValue(tendersRef, (snapshot) => {
       const data = snapshot.val() || {};
-      const list = Object.entries(data).map(([id, tender]) => ({ id, ...tender }));
-      list.sort((a, b) => new Date(b.releaseDate || 0) - new Date(a.releaseDate || 0));
+      const list = Object.entries(data).map(([id, tender]) => ({ id, ...tender, status: effectiveStatus(tender) }));
+      list.sort((a, b) => sortKey(b) - sortKey(a));
       setTenders(list);
       setLoading(false);
     }, () => {

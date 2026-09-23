@@ -26,7 +26,7 @@ import { CameraAlt, ExitToApp, Receipt, Save, ArrowForward, LocationOn } from "@
 const ApxDeskSingular = ({ user }) => {
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user.provincia);
+  const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp ?? user?.provincia ?? "");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();

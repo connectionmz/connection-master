@@ -66,11 +66,13 @@ const BannerDesk = ({ user }) => {
 
     if (!hasProvinciaFilter && !hasSectorFilter) return true;
 
-    const userProvincia = currentUser.provinciaTemp || currentUser.provincia || '';
+    // '' significa "Todas as províncias" escolhido explicitamente — por isso
+    // ?? em vez de ||, que faria '' cair para a província permanente.
+    const userProvincia = currentUser.provinciaTemp ?? currentUser.provincia ?? '';
     const userSector = currentUser.sector || '';
 
-    const provinciaMatch = !hasProvinciaFilter || 
-        bannerProvincias.some(provincia => 
+    const provinciaMatch = !hasProvinciaFilter || !userProvincia ||
+        bannerProvincias.some(provincia =>
             provincia.toLowerCase() === userProvincia.toLowerCase()
         );
 

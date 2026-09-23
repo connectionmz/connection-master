@@ -29,12 +29,13 @@ const MarqueeAnuncios = ({ user }) => {
       try {
         const data = await fetchAnuncios();
 
-        const anunciosFiltrados = user && (user.provinciaTemp || user.provincia)
-          ? data.filter(anuncio =>
-              anuncio.company?.provincia === user.provinciaTemp ||
-              anuncio.company?.provincia === user.provincia
-            )
-          : data; 
+        // provinciaTemp === '' significa "Todas as províncias" escolhido
+        // explicitamente — por isso ?? em vez de ||, que faria '' cair para a
+        // província permanente e continuar a filtrar quando não devia.
+        const effectiveProvincia = user?.provinciaTemp ?? user?.provincia ?? '';
+        const anunciosFiltrados = effectiveProvincia
+          ? data.filter(anuncio => anuncio.company?.provincia === effectiveProvincia)
+          : data;
 
         setAnuncios(anunciosFiltrados);
       } catch (error) {
