@@ -29,6 +29,7 @@ import { EditorText, Provincias, SectorDeActividades } from '../../utils/formUti
 import BackButton from '../BackButton';
 import {sendEmail} from '../sms/SendMail';
 import { formatarMoeda, formatCurrency } from '../../utils/utils';
+import { trackCotacaoPublicada } from '../../utils/analytics';
 import { filterActiveModules } from '../../context/ActiveModulesContext';
 
 const NovaCotacao = ({ user }) => {
@@ -284,6 +285,7 @@ const handleSubmit = async (e) => {
 
     // Guardar cotação na base de dados
     await set(ref(db, `cotacoes/${cotacaoId}`), cotacaoData);
+    trackCotacaoPublicada({ id: cotacaoId, sector: user.sector, tipo: formData.proposalLimit ? 'limitada' : 'aberta' });
 
     setSnackbarMessage('Cotação publicada com sucesso! Está em análise e só ficará visível às empresas após aprovação.');
     setSnackbarSeverity('success');

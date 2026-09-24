@@ -36,6 +36,7 @@ import {
 import BackButton from '../BackButton';
 import { formatarValor } from '../../utils/utils';
 import { Link2 } from 'lucide-react';
+import { trackConcursoVisualizado } from '../../utils/analytics';
 
 /* ── Design tokens (mesmos de ConcursoDesk.js / CotacoesDesk.js, para manter o visual consistente) ── */
 const T = {
@@ -111,6 +112,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
               [`views/${user.id}`]: true,
               viewCount: increment(1),
             });
+            trackConcursoVisualizado({ id, fonte: 'empresas' });
           } catch (error) {
             console.error("Erro ao atualizar visualizações:", error);
           }

@@ -9,6 +9,7 @@ import {
 } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 /**
  * ======================
@@ -44,6 +45,16 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 const storage = getStorage(app);
 
+// isSupported() faz async feature-detection (IndexedDB, cookies de terceiros,
+// etc.) — analytics fica null em browsers/contextos sem suporte (ex: alguns
+// in-app browsers) em vez de rebentar o resto da app.
+let analytics = null;
+isSupported()
+  .then((supported) => {
+    if (supported) analytics = getAnalytics(app);
+  })
+  .catch(() => {});
+
 // Configurar persistência de forma mais robusta
 const initializeAuthPersistence = async () => {
   try {
@@ -77,12 +88,13 @@ const emailProvider = EmailAuthProvider;
  * Exports
  * ======================
  */
-export { 
-  auth, 
-  googleProvider, 
-  emailProvider, 
-  db, 
+export {
+  auth,
+  googleProvider,
+  emailProvider,
+  db,
   storage,
+  analytics,
   initializeAuthPersistence
 };
 

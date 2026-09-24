@@ -9,6 +9,7 @@ import { OpenInNew, Description, Business, AccessTime, AttachMoney, Gavel } from
 import { Link as RouterLink } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useActiveModules } from '../../context/ActiveModulesContext';
+import { trackConcursoVisualizado } from '../../utils/analytics';
 
 /* ── Design tokens (mesmos de CotacoesDesk.js, para manter o visual consistente) ── */
 const T = {
@@ -351,6 +352,7 @@ const ConcursosPublicosDesk = () => {
                   rel="noopener noreferrer"
                   size="small"
                   endIcon={<OpenInNew fontSize="small" />}
+                  onClick={() => trackConcursoVisualizado({ id: tender.id, fonte: 'ufsa' })}
                   sx={{ color: T.gold, textTransform: 'none', fontWeight: 600, '&:hover': { color: T.goldLight } }}
                 >
                   {t('tenders.viewSource')}

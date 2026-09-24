@@ -38,6 +38,7 @@ import {
 } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
+import { trackSignUp } from '../utils/analytics';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
 import { useLanguage } from '../context/LanguageContext';
@@ -368,7 +369,8 @@ const AuthCreateDesk = () => {
         const result = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         await sendEmailVerification(result.user);
         await saveUserData(result.user);
-        
+        trackSignUp('email');
+
         setCreationAttempts(0);
         localStorage.removeItem('creationAttempts');
         localStorage.removeItem('creationLockout');
