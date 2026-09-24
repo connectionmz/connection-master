@@ -256,7 +256,9 @@ const StoresDesk = ({ user }) => {
   const [sharedProductId,  setSharedProductId]  = useState(null);
   const [snackbar, setSnackbar] = useState({ open:false, message:'', severity:'success' });
 
-  const userProvince = user?.provinciaTemp || user?.provincia || null;
+  // ?? (não ||): provinciaTemp === '' significa "Todas as províncias" escolhido
+  // explicitamente no dashboard — não deve cair para a província permanente.
+  const userProvince = user?.provinciaTemp ?? user?.provincia ?? null;
   const hasMarket    = activeModules?.moduloMarket || false;
 
   /* ── Snackbar helper ───────────────────────────────────────────── */

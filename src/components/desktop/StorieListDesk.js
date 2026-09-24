@@ -69,8 +69,10 @@ const KEYFRAMES = `
 `;
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
+// provinciaTemp === '' significa "Todas as províncias" escolhido explicitamente
+// no dashboard — nesse caso não deve cair para a província permanente/default.
 const getProvince = (user) =>
-  user?.provinciaTemp || user?.provincia || 'Cabo Delgado';
+  user?.provinciaTemp !== undefined ? user.provinciaTemp : (user?.provincia || 'Cabo Delgado');
 
 const shuffleAndSlice = (arr, n) =>
   [...arr].sort(() => Math.random() - 0.5).slice(0, n);
@@ -185,7 +187,7 @@ const StorieListDesk = ({ user }) => {
         .map(([id, data]) => ({ id, ...data }))
         .filter(
           (c) =>
-            c.provincia === province &&
+            (!province || c.provincia === province) &&
             !EXCLUDED_TYPES.includes(normalizeType(c.type))
         );
 

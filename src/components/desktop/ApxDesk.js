@@ -116,7 +116,7 @@ const KEYFRAMES = `
 const ApxDesk = ({ user }) => {
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp || user?.provincia || "");
+  const [provinceTemp, setProvinceTemp] = useState(user?.provinciaTemp ?? user?.provincia ?? "");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
@@ -128,7 +128,7 @@ const ApxDesk = ({ user }) => {
   useEffect(() => {
     if (user) {
       setUserData(user);
-      setProvinceTemp(user?.provinciaTemp || user?.provincia || "");
+      setProvinceTemp(user?.provinciaTemp ?? user?.provincia ?? "");
       setLoading(false);
     }
   }, [user]);
