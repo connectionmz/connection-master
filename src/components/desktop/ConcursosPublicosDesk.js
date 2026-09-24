@@ -75,14 +75,24 @@ const effectiveStatus = (tender) => {
   return tender.status === 'aberto' && deadline < Date.now() ? 'expirado' : tender.status;
 };
 
+const timeOf = (value, fallback) => {
+  const ms = value ? new Date(value).getTime() : NaN;
+  return Number.isFinite(ms) ? ms : fallback;
+};
+
 // A UFSA por vezes publica datas de lançamento no futuro (erro de digitação),
 // o que fixaria esses concursos no topo para sempre. Um concurso não pode ter
 // sido publicado depois de o vermos pela primeira vez.
-const sortKey = (tender) => {
-  const release = new Date(tender.releaseDate || 0).getTime() || 0;
-  const seen = tender.firstSeenAt ? new Date(tender.firstSeenAt).getTime() : Infinity;
-  return Math.min(release, seen || Infinity);
-};
+const releaseKey = (tender) => Math.min(timeOf(tender.releaseDate, 0), timeOf(tender.firstSeenAt, Infinity));
+
+// Novos primeiro: a UFSA data alguns concursos antes de os listar, por isso
+// ordenar só por data de lançamento enterrava-os a meio da lista. Dentro da
+// mesma recolha (mesmo firstSeenAt) ordena pela data de lançamento.
+const compareTenders = (a, b) =>
+  timeOf(b.firstSeenAt, 0) - timeOf(a.firstSeenAt, 0) || releaseKey(b) - releaseKey(a);
+
+const NEW_WINDOW_MS = 48 * 60 * 60 * 1000;
+const isNewTender = (tender) => Date.now() - timeOf(tender.firstSeenAt, 0) < NEW_WINDOW_MS;
 
 const ConcursosPublicosDesk = () => {
   const { t, language } = useLanguage();
@@ -100,7 +110,7 @@ const ConcursosPublicosDesk = () => {
     const unsubscribe = onValue(tendersRef, (snapshot) => {
       const data = snapshot.val() || {};
       const list = Object.entries(data).map(([id, tender]) => ({ id, ...tender, status: effectiveStatus(tender) }));
-      list.sort((a, b) => sortKey(b) - sortKey(a));
+      list.sort(compareTenders);
       setTenders(list);
       setLoading(false);
     }, () => {
@@ -254,6 +264,19 @@ const ConcursosPublicosDesk = () => {
                   <Typography sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700, color: T.white, fontSize: '1.1rem' }}>
                     {tender.title}
                   </Typography>
+                  {isNewTender(tender) && (
+                    <Chip
+                      size="small"
+                      label={t('tenders.new')}
+                      sx={{
+                        alignSelf: { xs: 'flex-start', sm: 'center' },
+                        bgcolor: `${T.gold}25`,
+                        color: T.goldLight,
+                        border: `1px solid ${T.gold}60`,
+                        fontWeight: 700,
+                      }}
+                    />
+                  )}
                   <Chip
                     size="small"
                     label={t(`tenders.status.${tender.status}`) || tender.status}
