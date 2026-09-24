@@ -40,6 +40,7 @@ import { signInWithEmailAndPassword, signInWithPopup, setPersistence, browserLoc
 import { ref, set, get } from 'firebase/database';
 import { auth, db, googleProvider } from '../fb';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorMessages';
+import { trackLogin } from '../utils/analytics';
 import logo from '../img/bg.png';
 import marketing from '../img/marketing.jpg';
 import { useLanguage } from '../context/LanguageContext';
@@ -812,6 +813,7 @@ const AuthDesk = () => {
         localStorage.removeItem('loginAttempts');
         localStorage.removeItem('loginLockout');
         await saveUserData(result.user);
+        trackLogin('email');
       });
 
     } catch (error) {
@@ -836,6 +838,7 @@ const AuthDesk = () => {
       localStorage.removeItem('loginAttempts');
       localStorage.removeItem('loginLockout');
       await saveUserData(result.user);
+      trackLogin('google');
 
     } catch (error) {
       console.error('Erro detalhado no login Google:', error);

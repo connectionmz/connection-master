@@ -10,10 +10,12 @@ import {
 } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import DesktopRoutes from './components/routes/DesktopRoutes';
+import PageViewTracker from './components/analytics/PageViewTracker';
 import { useUser } from './context/UserContext';
 import { useTheme as useColorMode } from './context/ThemeContext';
 import { useLanguage } from './context/LanguageContext';
 import { createAppTheme } from './theme/appTheme';
+import { identifyUser } from './utils/analytics';
 
 const App = () => {
   const {
@@ -38,6 +40,15 @@ const App = () => {
     });
   }, [sessionError, t]);
 
+  useEffect(() => {
+    if (!authUser) return;
+    identifyUser(authUser.uid, {
+      sector: profile?.sector || undefined,
+      provincia: profile?.provincia || undefined,
+      accountType: profile?.type || undefined,
+    });
+  }, [authUser, profile]);
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
@@ -61,6 +72,7 @@ const App = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <PageViewTracker />
         <DesktopRoutes
           user={profile}
           authUser={authUser}

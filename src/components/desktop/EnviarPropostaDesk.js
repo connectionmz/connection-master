@@ -26,6 +26,7 @@ import BackButton from '../BackButton';
 import { saveContentToInbox } from '../SaveToInbox';
 import { CheckCircle } from '@mui/icons-material';
 import sendEmailProposta from '../sms/SendMailProposal';
+import { trackPropostaEnviada } from '../../utils/analytics';
 
 const EnviarPropostaDesk = ({ user }) => {
   const { id, companyId } = useParams();
@@ -231,7 +232,11 @@ const notification = {
       // id único; escrever também em newProposalRef seria imediatamente
       // sobrescrito por este set() e nunca seria lido por ninguém.
       await set(proposalsRef, newProposal);
-     
+      trackPropostaEnviada({
+        cotacaoId: id,
+        valor: selectedProducts.reduce((total, product) => total + (Number(product.price) || 0), 0),
+      });
+
       saveContentToInbox(companyId, notification);
      
       sendEmailProposta(companyEmail, notification)

@@ -51,6 +51,7 @@ import {
 } from '@mui/icons-material';
 import Print from '@mui/icons-material/Print';
 import { sendEmailWithAuth } from '../sms/SendMail';
+import { trackPropostaAceite } from '../../utils/analytics';
 
 // Status configuration
 const STATUS_CONFIG = {
@@ -169,13 +170,19 @@ const DetalhesPropostaDesk = ({ user }) => {
       };
       
       await update(ref(db, `cotacoes/${id}/proposals/${propostaId}`), updates);
+      if (status === 'Aceite') {
+        trackPropostaAceite({
+          cotacaoId: id,
+          valor: (proposta?.selectedProducts || []).reduce((total, product) => total + (Number(product.price) || 0), 0),
+        });
+      }
       showMessage(`Proposta ${status.toLowerCase()} com sucesso!`);
       return true;
     } catch (error) {
       handleError(error, 'Erro ao atualizar status da proposta');
       return false;
     }
-  }, [id, propostaId, user.id, handleError, showMessage, cotacaoConcluida]);
+  }, [id, propostaId, user.id, handleError, showMessage, cotacaoConcluida, proposta]);
 
   const rejectOtherProposals = useCallback(async (acceptedProposalId) => {
     try {

@@ -15,6 +15,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { sendEmailConcurso } from '../sms/SendMail';
 import { filterActiveModules } from '../../context/ActiveModulesContext';
+import { trackConcursoPublicado } from '../../utils/analytics';
 
 // Initialize Firebase Storage
 const storage = getStorage();
@@ -551,6 +552,7 @@ const sendNotifications = useCallback(async (concursoId) => {
         ...sanitizedData,
         id: concursoId
       });
+      trackConcursoPublicado({ id: concursoId, setor: formData.setor, modalidade: formData.modalidade });
 
       // Send notifications
       await sendNotifications(concursoId);
