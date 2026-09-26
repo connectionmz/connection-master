@@ -354,16 +354,15 @@ const notification = {
           borderRadius: 2,
         }}
       >
-        <BackButton 
-          onClick={() => navigate(-1)}
-          sx={{ 
+        <BackButton
+          sx={{
             mb: 3,
             '&:hover': {
               backgroundColor: 'action.hover',
             }
-          }} 
+          }}
         />
-        
+
         <Typography
           variant="h4"
           align="center"

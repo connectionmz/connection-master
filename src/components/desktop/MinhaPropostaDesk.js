@@ -40,7 +40,6 @@ import {
   Email,
   LocationOn,
   AttachMoney,
-  ArrowBack,
   Description,
   AccessTime
 } from '@mui/icons-material';
@@ -150,13 +149,7 @@ const MinhaPropostaDesk = ({ user }) => {
         gap: 2
       }}>
         <Typography variant="h6">Proposta não encontrada</Typography>
-        <Button 
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(-1)}
-          variant="outlined"
-        >
-          Voltar
-        </Button>
+        <BackButton />
       </Box>
     );
   }
@@ -394,14 +387,7 @@ const MinhaPropostaDesk = ({ user }) => {
 
       {/* Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 4 }}>
-        <Button
-          onClick={() => navigate(-1)}
-          startIcon={<ArrowBack />}
-          variant="outlined"
-          sx={{ px: 4, py: 1.5, borderRadius: 2 }}
-        >
-          Voltar
-        </Button>
+        <BackButton sx={{ px: 4, py: 1.5, borderRadius: 2 }} />
         {isOwnProposal && (
           <Button
             onClick={() => setDeleteDialog(true)}
