@@ -40,8 +40,8 @@ const FAQ_ITEMS = [
   },
   {
     category: 'Concursos',
-    question: 'Qual a diferença entre "Concursos" e "Concursos (Empresas)"?',
-    answer: '"Concursos" mostra os concursos públicos oficiais publicados pela UFSA (Unidade Funcional de Supervisão das Aquisições), atualizados automaticamente. "Concursos (Empresas)" são concursos publicados diretamente por outras empresas na plataforma.',
+    question: 'Qual a diferença entre "Concursos" e "Pedidos de Propostas"?',
+    answer: '"Concursos" mostra os concursos públicos oficiais publicados pela UFSA (Unidade Funcional de Supervisão das Aquisições), atualizados automaticamente. "Pedidos de Propostas" são oportunidades publicadas diretamente por outras empresas na plataforma.',
   },
   {
     category: 'Concursos',
