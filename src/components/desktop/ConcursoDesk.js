@@ -251,15 +251,15 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
     };
 
     const deleteConcurso = (concursoId) => {
-        if (window.confirm('Tem certeza que deseja excluir este concurso?')) {
+        if (window.confirm('Tem certeza que deseja excluir este pedido de proposta?')) {
             const concursoRef = ref(db, `concursos/${concursoId}`);
             remove(concursoRef)
                 .then(() => {
-                    setSnackbar({ open: true, message: 'Concurso excluído com sucesso!', severity: 'success' });
+                    setSnackbar({ open: true, message: 'Pedido de proposta excluído com sucesso!', severity: 'success' });
                 })
                 .catch((error) => {
                     console.error('Erro ao excluir o concurso: ', error);
-                    setSnackbar({ open: true, message: 'Erro ao excluir o concurso.', severity: 'error' });
+                    setSnackbar({ open: true, message: 'Erro ao excluir o pedido de proposta.', severity: 'error' });
                 });
         }
     };
@@ -340,7 +340,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                         <Warning sx={{ fontSize: 48, color: T.darkMuted }} />
                     </Box>
                     <Typography sx={{ color: T.darkText, fontSize: '1.1rem' }}>
-                        Nenhum concurso disponível.
+                        Nenhum pedido de proposta disponível.
                     </Typography>
                 </Paper>
             );
@@ -470,7 +470,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                                     fontSize: { xs: '1.5rem', sm: '2rem' },
                                 }}
                             >
-                                Concursos entre Empresas
+                                Pedidos de Propostas
                             </Typography>
                             {isModuleActive && user && (
                                 <Button
@@ -489,7 +489,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                                         textTransform: 'none',
                                     }}
                                 >
-                                    Publicar Concurso
+                                    Publicar Pedido de Proposta
                                 </Button>
                             )}
                         </Paper>
@@ -603,7 +603,7 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                     }}>
-                        Editar Concurso
+                        Editar Pedido de Proposta
                         <IconButton onClick={handleCloseEditDialog} sx={{ color: T.darkMuted }}>
                             <Close />
                         </IconButton>
@@ -615,11 +615,11 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                                 user={user}
                                 onClose={handleCloseEditDialog}
                                 onSuccess={() => {
-                                    setSnackbar({ open: true, message: 'Concurso atualizado com sucesso!', severity: 'success' });
+                                    setSnackbar({ open: true, message: 'Pedido de proposta atualizado com sucesso!', severity: 'success' });
                                     handleCloseEditDialog();
                                 }}
                                 onError={(error) => {
-                                    setSnackbar({ open: true, message: `Erro ao atualizar concurso: ${error}`, severity: 'error' });
+                                    setSnackbar({ open: true, message: `Erro ao atualizar pedido de proposta: ${error}`, severity: 'error' });
                                 }}
                             />
                         )}

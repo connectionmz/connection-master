@@ -123,7 +123,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
         const data = snapshot.val();
         console.log(data)
         if (!data) {
-          setError('Concurso não encontrado');
+          setError('Pedido de proposta não encontrado');
           setLoading(false);
           return;
         }
@@ -188,11 +188,11 @@ const ConcursoDetalhesDesk = ({ user }) => {
   };
 
   const handleFecharConcurso = () => {
-    if (window.confirm("Tem certeza que deseja fechar este concurso?")) {
+    if (window.confirm("Tem certeza que deseja fechar este pedido de proposta?")) {
       update(ref(db, `concursos/${id}`), {
         status: "Fechada",
       }).then(() => {
-        alert("Concurso fechado com sucesso!");
+        alert("Pedido de proposta fechado com sucesso!");
       }).catch((error) => {
         console.error("Erro ao fechar o concurso:", error);
       });
@@ -215,7 +215,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
     
     get(denunciaUsuarioRef).then((snapshot) => {
       if (snapshot.exists()) {
-        alert("Você já denunciou este concurso. Não é possível denunciar novamente.");
+        alert("Você já denunciou este pedido de proposta. Não é possível denunciar novamente.");
         handleFecharDenunciaModal();
       } else {
         const novaDenunciaRef = push(denunciaUsuarioRef);
@@ -260,7 +260,7 @@ const ConcursoDetalhesDesk = ({ user }) => {
   if (!concurso) {
     return (
       <Box sx={{ backgroundColor: T.navy, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <Typography sx={{ color: T.error, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Concurso não encontrado</Typography>
+        <Typography sx={{ color: T.error, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>Pedido de proposta não encontrado</Typography>
       </Box>
     );
   }
@@ -327,7 +327,7 @@ return (
               variant={isMobile ? 'h6' : 'h5'}
               sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 800, color: T.white, mb: 1 }}
             >
-              {concurso.titulo || 'Concurso sem título'}
+              {concurso.titulo || 'Pedido de proposta sem título'}
             </Typography>
             <Chip
               label={statusInfo.label}
@@ -464,15 +464,15 @@ return (
         </Stack>
       </Paper>
 
-      {renderHtmlSection('Objeto do Concurso', concurso.objeto)}
-      {renderHtmlSection('Condições do Concurso', concurso.condicoes)}
+      {renderHtmlSection('Objeto do Pedido de Proposta', concurso.objeto)}
+      {renderHtmlSection('Condições do Pedido de Proposta', concurso.condicoes)}
       {renderHtmlSection('Critérios de Avaliação', concurso.criterios)}
       {renderHtmlSection('Documentação Necessária', concurso.documentacao)}
       {renderHtmlSection('Requisitos Técnicos', concurso.requisitosTecnicos)}
 
       {/* Concurso Details */}
       <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
-        <Typography variant="h6" sx={sectionTitleSx}>Detalhes do Concurso</Typography>
+        <Typography variant="h6" sx={sectionTitleSx}>Detalhes do Pedido de Proposta</Typography>
         <Divider sx={{ borderColor: T.darkBorder, mb: 2 }} />
         <Grid container spacing={2}>
           {detailField('Número de Referência:', concurso.numeroReferencia)}
@@ -555,7 +555,7 @@ return (
             overflowY: 'auto',
           }}
         >
-          <Typography variant="h6" sx={sectionTitleSx}>Empresas que visualizaram este concurso</Typography>
+          <Typography variant="h6" sx={sectionTitleSx}>Empresas que visualizaram este pedido de proposta</Typography>
           <Divider sx={{ borderColor: T.darkBorder, mb: 2 }} />
           {Object.keys(concurso.views || {}).length > 0 ? (
             <Typography sx={{ color: T.darkTextSub }}>
@@ -585,7 +585,7 @@ return (
         PaperProps={{ sx: { bgcolor: T.navyCard, border: `1px solid ${T.darkBorder}`, borderRadius: isMobile ? 0 : '16px' } }}
       >
         <DialogTitle sx={{ color: T.white, fontFamily: '"Playfair Display", serif', borderBottom: `1px solid ${T.darkBorder}` }}>
-          Denunciar Concurso
+          Denunciar Pedido de Proposta
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography sx={{ color: T.darkTextSub, mb: 2 }}>
