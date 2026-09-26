@@ -84,7 +84,7 @@ const EditarConcurso = ({ concurso, user, onClose, onSuccess, onError }) => {
             if (onSuccess) onSuccess();
         } catch (err) {
             console.error('Error updating concurso:', err);
-            setError('Erro ao atualizar o concurso. Tente novamente.');
+            setError('Erro ao atualizar o pedido de proposta. Tente novamente.');
             if (onError) onError(err.message);
         } finally {
             setLoading(false);
@@ -115,14 +115,14 @@ const EditarConcurso = ({ concurso, user, onClose, onSuccess, onError }) => {
 
     return (
         <Dialog open={true} onClose={onClose} fullWidth maxWidth="md">
-            <DialogTitle>Editar Concurso</DialogTitle>
+            <DialogTitle>Editar Pedido de Proposta</DialogTitle>
             <DialogContent>
                 <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
                     <Grid container spacing={2}>
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
-                                label="Título do Concurso"
+                                label="Título do Pedido de Proposta"
                                 name="titulo"
                                 value={formData.titulo}
                                 onChange={handleChange}
@@ -133,7 +133,7 @@ const EditarConcurso = ({ concurso, user, onClose, onSuccess, onError }) => {
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
-                                label="Objeto do Concurso"
+                                label="Objeto do Pedido de Proposta"
                                 name="objeto"
                                 value={formData.objeto}
                                 onChange={handleChange}
@@ -279,7 +279,7 @@ const EditarConcurso = ({ concurso, user, onClose, onSuccess, onError }) => {
 
                         {success && (
                             <Grid item xs={12}>
-                                <Alert severity="success">Concurso atualizado com sucesso!</Alert>
+                                <Alert severity="success">Pedido de proposta atualizado com sucesso!</Alert>
                             </Grid>
                         )}
                     </Grid>
