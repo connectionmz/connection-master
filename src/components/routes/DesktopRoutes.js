@@ -25,6 +25,7 @@ import ForgetPassword from '../password/ForgetPassword';
 import ChangePassword from '../password/ChangePassword';
 import Terms from '../Termos';
 import Politicas from '../desktop/Politicas';
+import Faq from '../desktop/Faq';
 import CompanyDataFormDesk from '../CompanyDataFormDesk';
 import AuthCreateDesk from '../AuthCreateDesk';
 import ProdutoPage from '../market/ProdutoPage';
@@ -91,6 +92,7 @@ const DesktopRoutes = ({ user, authUser, profileLoading }) => {
               <Route path="/empresa-nao-encontrada" element={<EmpresaNaoEncontrada />} />
               <Route path="/termos" element={<Terms />} />
               <Route path="/politicas" element={<Politicas />} />
+              <Route path="/faq" element={<Faq />} />
               <Route path="/auth" element={<GuestRoute user={authUser} loading={profileLoading} redirectTo={user?.type ? '/' : '/select-account-type'}><AuthDesk user={user} /></GuestRoute>} />
               <Route path="/create" element={<GuestRoute user={authUser} loading={profileLoading} redirectTo={user?.type ? '/' : '/select-account-type'}><AuthCreateDesk user={user} /></GuestRoute>} />
               {renderProtectedRoute("/select-account-type", <SelectAccountType />)}
