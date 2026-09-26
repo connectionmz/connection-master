@@ -1,4 +1,22 @@
-import { buildCustomerDecisionUpdates, buildQuoteResponseUpdates, validateQuoteResponse } from './quoteResponse';
+import { buildCustomerDecisionUpdates, buildQuoteResponseUpdates, countUnseenStoreQuotes, validateQuoteResponse } from './quoteResponse';
+
+describe('countUnseenStoreQuotes', () => {
+  test('conta só pedidos pendentes que a loja ainda não abriu', () => {
+    expect(countUnseenStoreQuotes({
+      novo: { status: 'pending', viewed: false },
+      semCampos: {},
+      aberto: { status: 'pending', viewed: true },
+      respondido: { status: 'answered', viewed: false },
+      aceite: { status: 'accepted', viewed: false },
+    })).toBe(2);
+  });
+
+  test('tolera lojas sem pedidos', () => {
+    expect(countUnseenStoreQuotes(null)).toBe(0);
+    expect(countUnseenStoreQuotes(undefined)).toBe(0);
+    expect(countUnseenStoreQuotes({})).toBe(0);
+  });
+});
 
 describe('quoteResponse', () => {
   test('rejeita resposta vazia, preço inválido e prazo fora do limite', () => {
