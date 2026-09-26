@@ -421,7 +421,7 @@ const sendNotifications = useCallback(async (concursoId) => {
       const formattedDeadline = formatDeadline(formData.prazo);
       const linkDoPedido = `https://www.connectionmozambique.com/concurso/${concursoId}`;
 
-      const message = `Novo Concurso: ${formData.titulo}\nData Limite: ${formattedDeadline}\nSetor: ${formData.setor}\nAcesse: ${linkDoPedido}`;
+      const message = `Novo Pedido de Proposta: ${formData.titulo}\nData Limite: ${formattedDeadline}\nSetor: ${formData.setor}\nAcesse: ${linkDoPedido}`;
 
       const mailMessage = {
         title: formData.titulo,
@@ -562,11 +562,11 @@ const sendNotifications = useCallback(async (concursoId) => {
       setRichTextData(initialRichTextData);
       setUploadStates({});
 
-      showSnackbar('Concurso publicado com sucesso!', 'success');
+      showSnackbar('Pedido de proposta publicado com sucesso!', 'success');
 
     } catch (error) {
       console.error('Erro ao publicar concurso:', error);
-      showSnackbar(`Erro ao publicar concurso: ${error.message}`, 'error');
+      showSnackbar(`Erro ao publicar pedido de proposta: ${error.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -604,7 +604,7 @@ const sendNotifications = useCallback(async (concursoId) => {
               variant="h4"
               sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 800, color: T.white, fontSize: { xs: '1.5rem', sm: '2rem' } }}
             >
-              Publicar Novo Concurso
+              Publicar Novo Pedido de Proposta
             </Typography>
           </Paper>
 
@@ -618,7 +618,7 @@ const sendNotifications = useCallback(async (concursoId) => {
               <Grid item xs={12} md={8}>
                 <TextField
                   fullWidth
-                  label="Título do Concurso"
+                  label="Título do Pedido de Proposta"
                   name="titulo"
                   value={formData.titulo}
                   onChange={handleChange}
@@ -908,7 +908,7 @@ const sendNotifications = useCallback(async (concursoId) => {
           {/* Rich Text Sections */}
           <Paper className="detail-section" sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
             <Typography variant="h6" sx={sectionTitleSx}>
-              Objeto do Concurso *
+              Objeto do Pedido de Proposta *
             </Typography>
             <ReactQuill
               theme="snow"
@@ -916,7 +916,7 @@ const sendNotifications = useCallback(async (concursoId) => {
               onChange={(value) => handleRichTextChange('objeto', value)}
               modules={quillModules}
               style={{ height: '200px', marginBottom: '40px', borderRadius: '8px', overflow: 'hidden' }}
-              placeholder="Descreva o objeto do concurso..."
+              placeholder="Descreva o objeto do pedido de proposta..."
             />
 
             <Typography variant="h6" sx={sectionTitleSx}>
@@ -1089,7 +1089,7 @@ const sendNotifications = useCallback(async (concursoId) => {
               ) : !dataLoaded ? (
                 'Carregando dados...'
               ) : (
-                'Publicar Concurso'
+                'Publicar Pedido de Proposta'
               )}
             </Button>
           </Box>
