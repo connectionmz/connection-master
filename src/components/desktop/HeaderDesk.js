@@ -48,30 +48,52 @@ import { db, auth } from "../../fb";
 import { signOut } from "firebase/auth";
 import { ShareIcon } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
+import { useTheme as useColorMode } from "../../context/ThemeContext";
 
-/* ── Design tokens — consistente com StoresDesk ─────────────────────── */
-const T = {
-  navy:        '#08192E',
-  navyMid:     '#0E2849',
-  navyLight:   '#183A63',
-  navyCard:    '#0D2240',
+/* ── Design tokens — consistente com StoresDesk. O cabeçalho respeita o
+   toggle de tema claro/escuro do site (ao contrário das páginas de
+   listagem tipo Cotações/Concursos, que são sempre navy/dourado por
+   design); DARK_T é a paleta original, LIGHT_T é o equivalente claro. ── */
+const BASE_T = {
   gold:        '#C8903A',
   goldLight:   '#E8B96A',
   goldPale:    '#FDF3E3',
-  white:       '#FFFFFF',
   text:        '#0F1C2D',
   textSub:     '#6B89A5',
   border:      '#E0E8F0',
   borderMid:   '#C5D4E3',
   surface:     '#F4F7FB',
+  success:     '#10b981',
+  error:       '#ef4444',
+  warning:     '#f59e0b',
+};
+
+const DARK_T = {
+  ...BASE_T,
+  navy:        '#08192E',
+  navyMid:     '#0E2849',
+  navyLight:   '#183A63',
+  navyCard:    '#0D2240',
+  white:       '#FFFFFF',
   darkBorder:  'rgba(255,255,255,0.08)',
   darkBorderMid:'rgba(255,255,255,0.14)',
   darkText:    'rgba(255,255,255,0.88)',
   darkTextSub: 'rgba(255,255,255,0.52)',
   darkMuted:   'rgba(255,255,255,0.30)',
-  success:     '#10b981',
-  error:       '#ef4444',
-  warning:     '#f59e0b',
+};
+
+const LIGHT_T = {
+  ...BASE_T,
+  navy:        '#FFFFFF',
+  navyMid:     '#FAFAF8',
+  navyLight:   BASE_T.surface,
+  navyCard:    '#FFFFFF',
+  white:       BASE_T.text,
+  darkBorder:  BASE_T.border,
+  darkBorderMid:BASE_T.borderMid,
+  darkText:    BASE_T.text,
+  darkTextSub: BASE_T.textSub,
+  darkMuted:   'rgba(15,28,45,0.35)',
 };
 
 const KEYFRAMES = `
@@ -85,11 +107,13 @@ const KEYFRAMES = `
   }
 `;
 
-const BG_GRID = {
+const getBgGrid = (mode) => ({
   position:'absolute', inset:0, pointerEvents:'none', opacity:0.02,
-  backgroundImage:`linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg, rgba(255,255,255,1) 1px,transparent 1px)`,
+  backgroundImage: mode === 'light'
+    ? `linear-gradient(rgba(0,0,0,1) 1px,transparent 1px),linear-gradient(90deg, rgba(0,0,0,1) 1px,transparent 1px)`
+    : `linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg, rgba(255,255,255,1) 1px,transparent 1px)`,
   backgroundSize:'56px 56px',
-};
+});
 
 const HeaderDesk = ({ user }) => {
   const [pendingQuotes, setPendingQuotes] = useState(0);
@@ -108,6 +132,9 @@ const HeaderDesk = ({ user }) => {
   const isMobile = useMediaQuery("(max-width:600px)");
   const isVerify = user?.subscriptions?.isverify === "true";
   const { t } = useLanguage();
+  const { mode } = useColorMode();
+  const T = mode === 'light' ? LIGHT_T : DARK_T;
+  const BG_GRID = getBgGrid(mode);
 
   // URLs
   const apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/connectionmz.firebasestorage.app/o/apk%2Fconnectionmozambique.apk?alt=media&token=427059df-2af4-43e1-b9f8-99e882580a2e";
@@ -361,7 +388,7 @@ const HeaderDesk = ({ user }) => {
                   alt="Logo"
                   style={{
                     width: isMobile ? "90px" : "120px",
-                    filter: 'brightness(1.2)',
+                    filter: mode === 'dark' ? 'brightness(1.2)' : 'none',
                   }}
                 />
               </Link>
