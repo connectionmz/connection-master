@@ -51,7 +51,6 @@ const T = {
   surface:  '#F4F7FB',
 };
 
-/* ── Keyframes ────────────────────────────────────────────────────────── */
 const KEYFRAMES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
@@ -141,15 +140,12 @@ const FooterDesk = () => {
     { label: t('footer.home'), path: "/", icon: <Business fontSize="small" /> },
     { label: t('footer.explore'), path: "/explorar", icon: <Storefront fontSize="small" /> },
     { label: t('nav.quotes'), path: "/cotacoes", icon: <RequestQuote fontSize="small" /> },
-    { label: t('footer.services'), path: "/servicos", icon: <Handyman fontSize="small" /> },
     { label: t('footer.aboutUs'), path: "/sobre", icon: <Users size={16} /> },
-    { label: t('footer.contact'), path: "/contacto", icon: <Phone fontSize="small" /> },
   ];
 
   const legalLinks = [
     { label: t('footer.termsConditions'), path: "/termos", icon: <Description fontSize="small" /> },
-    { label: t('footer.privacyPolicy'), path: "/privacidade", icon: <PrivacyTip fontSize="small" /> },
-    { label: t('footer.cookiesPolicy'), path: "/cookies", icon: <Security fontSize="small" /> },
+    { label: t('footer.privacyPolicy'), path: "/politicas", icon: <PrivacyTip fontSize="small" /> },
     { label: "FAQ", path: "/faq", icon: <Help fontSize="small" /> },
   ];
 
@@ -163,9 +159,8 @@ const FooterDesk = () => {
   const socialLinks = [
     { icon: <Facebook />, url: "https://facebook.com/connectionmozambique", label: "Facebook", color: "#1877F2" },
     { icon: <Instagram />, url: "https://instagram.com/connectionmozambique", label: "Instagram", color: "#E4405F" },
-    { icon: <LinkedIn />, url: "https://linkedin.com/company/connectionmozambique", label: "LinkedIn", color: "#0A66C2" },
-    { icon: <X />, url: "https://x.com/connectionmozambique", label: "X (Twitter)", color: "#000000" },
-    { icon: <WhatsApp />, url: "https://wa.me/25821123456", label: "WhatsApp", color: "#25D366" },
+    { icon: <LinkedIn />, url: "https://www.linkedin.com/in/connection-mozambique-306896376/", label: "LinkedIn", color: "#0A66C2" },
+    { icon: <WhatsApp />, url: "https://wa.me/2868536500", label: "WhatsApp", color: "#25D366" },
     { icon: <Language />, url: "https://connectionmozambique.co.mz", label: "Website", color: T.gold },
   ];
 
