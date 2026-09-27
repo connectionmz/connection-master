@@ -1,4 +1,6 @@
-const plainText = (value = '') => String(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+import { decodeEntities } from './richText';
+
+const plainText = (value = '') => decodeEntities(String(value).replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
 
 const isPostPublic = (post) => post?.status === 'aprovado';
 

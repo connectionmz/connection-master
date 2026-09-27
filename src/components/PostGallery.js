@@ -3,6 +3,7 @@ import { Box, Card, CardActionArea, CardMedia, Typography } from '@mui/material'
 import { Image as ImageIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import PhotoFade from './PhotoFade';
 
 const plainText = (value = '') => String(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -58,14 +59,17 @@ const PostGallery = ({ posts = [] }) => {
                   <ImageIcon aria-hidden="true" sx={{ fontSize: 46, opacity: 0.55 }} />
                 </Box>
               ) : (
-                <CardMedia
-                  component="img"
-                  src={post.url}
-                  alt={post.description || t('gallery.imageAlt', { company: companyName })}
-                  loading="lazy"
-                  onError={() => setFailedImages((current) => ({ ...current, [post.id]: true }))}
-                  sx={{ aspectRatio: '1 / 1', objectFit: 'cover' }}
-                />
+                <Box sx={{ position: 'relative', width: '100%' }}>
+                  <CardMedia
+                    component="img"
+                    src={post.url}
+                    alt={post.description || t('gallery.imageAlt', { company: companyName })}
+                    loading="lazy"
+                    onError={() => setFailedImages((current) => ({ ...current, [post.id]: true }))}
+                    sx={{ display: 'block', aspectRatio: '1 / 1', objectFit: 'cover' }}
+                  />
+                  <PhotoFade />
+                </Box>
               )}
               <Box sx={{ p: 1.5, width: '100%', flexGrow: 1 }}>
                 <Typography

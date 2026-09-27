@@ -7,26 +7,24 @@ const getAuthToken = async () => {
     throw new Error('Usuário não autenticado. Faça login novamente.');
   }
 
+  // O SDK usa o token em cache e só o renova quando expira; forçar a renovação
+  // em cada envio falha sempre que o pedido de renovação é bloqueado ou está offline.
   try {
-    // Forçar refresh do token
-    const token = await user.getIdToken(true);
-    return token;
+    return await user.getIdToken();
   } catch (tokenError) {
     console.error('❌ Erro ao obter token:', tokenError);
-    
-    if (tokenError.code === 'auth/requests-blocked') {
-      // Tentar obter token sem forçar refresh
-      try {
-        const token = await user.getIdToken(false);
-        return token;
-      } catch (fallbackError) {
-        console.error('❌ Falha no fallback:', fallbackError);
-        throw fallbackError;
-      }
-    }
     throw tokenError;
   }
 };
+
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const safeLink = (value = '') => (/^https?:\/\//i.test(value) ? value : '');
 
 // Função corrigida - usando o auth importado
 const sendEmailWithAuth = async (emailData) => {
@@ -38,11 +36,14 @@ const sendEmailWithAuth = async (emailData) => {
       throw new Error('Usuário não autenticado. Faça login novamente.');
     }
     
-    // Usar a função getAuthToken para obter o token
-    const token = await getAuthToken();
-    
-    
-    // Usar axios em vez de fetch para consistência
+    // Uma falha ao obter o token não deve, por si só, impedir o envio do email.
+    let token = null;
+    try {
+      token = await getAuthToken();
+    } catch (tokenError) {
+      console.warn('Envio de email sem token de autenticação:', tokenError.message);
+    }
+
     const response = await axios.post(
       'https://mohvi-sendmail.vercel.app/send-email',
       {
@@ -54,7 +55,7 @@ const sendEmailWithAuth = async (emailData) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       }
     );
@@ -112,69 +113,80 @@ const sendEmail = async (to, emailMessage) => {
   return await sendEmailWithAuth(emailData);
 };
 
+const CONTACT_LABELS = { whatsapp: 'WhatsApp', email: 'Email' };
+
 const sendEmailCotacaoDireta = async (to, emailMessage) => {
   if (!to) {
     console.error('❌ Email de destino não informado');
     return false;
   }
 
-  const link = emailMessage.link || '';
-  
-  // Versão em texto plano (fallback)
-  const textContent = `
-Você recebeu um novo pedido de cotação diretamente na sua loja.
+  const link = safeLink(emailMessage.link);
+  const items = Array.isArray(emailMessage.items) ? emailMessage.items : [];
+  const contactLabel = CONTACT_LABELS[emailMessage.contactPreference] || 'Contacto';
+  const contactValue = emailMessage.contactPreference === 'email'
+    ? emailMessage.customerEmail
+    : emailMessage.customerContact;
+  const itemLines = items.map(({ name, quantity }) => `${name || 'Item'}${quantity > 1 ? ` (x${quantity})` : ''}`);
 
-📌 Detalhes do pedido:
-• ${emailMessage.cliente || 'Produto/Serviço não especificado'}
+  const textContent = [
+    'Você recebeu um novo pedido de cotação diretamente na sua loja.',
+    '',
+    `Cliente: ${emailMessage.cliente || 'Cliente'}`,
+    ...(contactValue ? [`${contactLabel}: ${contactValue}`] : []),
+    '',
+    'Produtos/serviços pedidos:',
+    ...(itemLines.length ? itemLines.map((line) => `• ${line}`) : ['• Não especificado']),
+    '',
+    'Mensagem do cliente:',
+    emailMessage.message || 'Sem mensagem adicional',
+    '',
+    'Responder rapidamente aumenta as suas chances de fechar o negócio.',
+    ...(link ? ['', `Ver e responder: ${link}`] : []),
+    '',
+    '—',
+    'Connection Mozambique',
+  ].join('\n');
 
-💬 Mensagem do cliente:
-${emailMessage.message || "Sem mensagem adicional"}
-
-⚡ Este client está interessado nos seus serviços/produtos.
-Responder rapidamente aumenta suas chances de fechar o negócio.
-
-👉 Responda agora: ${link}
-
-Seja rápido — outros fornecedores podem ser contactados.
-
-—
-Connection Mozambique
-`;
-
-  // Versão em HTML com link clicável
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #333;">📩 Novo pedido de cotação para sua empresa</h2>
-      
+
       <p>Olá,</p>
-      
+
       <p>Você recebeu um novo pedido de cotação diretamente na sua loja.</p>
-      
+
       <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">📌 Detalhes do pedido:</h3>
-        <p><strong>${emailMessage.title || 'Produto/Serviço não especificado'}</strong></p>
-        
+        <p style="margin-top: 0;"><strong>Cliente:</strong> ${escapeHtml(emailMessage.cliente || 'Cliente')}</p>
+        ${contactValue ? `<p><strong>${contactLabel}:</strong> ${escapeHtml(contactValue)}</p>` : ''}
+
+        <h3>📌 Produtos/serviços pedidos:</h3>
+        <ul>
+          ${itemLines.length ? itemLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('') : '<li>Não especificado</li>'}
+        </ul>
+
         <h3>💬 Mensagem do cliente:</h3>
-        <p>${emailMessage.message || "Sem mensagem adicional"}</p>
+        <p>${escapeHtml(emailMessage.message || 'Sem mensagem adicional').replace(/\n/g, '<br>')}</p>
       </div>
-      
+
       <p>⚡ <strong>Este cliente está interessado nos seus serviços/produtos.</strong><br>
       Responder rapidamente aumenta suas chances de fechar o negócio.</p>
-      
+
+      ${link ? `
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${link}" 
-           style="background-color: #007bff; 
-                  color: white; 
-                  padding: 12px 24px; 
-                  text-decoration: none; 
-                  border-radius: 5px; 
+        <a href="${escapeHtml(link)}"
+           style="background-color: #007bff;
+                  color: white;
+                  padding: 12px 24px;
+                  text-decoration: none;
+                  border-radius: 5px;
                   display: inline-block;">
           👉 Responder Agora
         </a>
-      </div>
-      
+      </div>` : ''}
+
       <p style="font-size: 12px; color: #999;">Seja rápido — outros fornecedores podem ser contactados.</p>
-      
+
       <hr>
       <p style="font-size: 12px; color: #999;">— Connection Mozambique</p>
     </div>

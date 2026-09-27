@@ -53,7 +53,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { createProfileThemeTokens } from '../../utils/profileTheme';
-import { plainText } from '../../utils/postData';
+import { textToEditorHtml, toReadableText } from '../../utils/richText';
 import { isSafePlainName } from '../../utils/sanitizeText';
 
 /* ── Design Tokens (mesmos da hero) ───────────────────────────────────── */
@@ -295,12 +295,12 @@ const EditProfileDesk = ({ user }) => {
       // Dados básicos
       nome: user.nome || user.companyName || '',
       sigla: user.sigla || '',
-      bio: user.bio || '',
+      bio: textToEditorHtml(user.bio),
       contacto: user.contacto || '',
       endereco: user.endereco || '',
       capacidadeDeProducao: user.capacidadeDeProducao || '',
       provincia: user.provincia || user.provinciaTemp || '',
-      missaoVisaoValores: user.missaoVisaoValores || '',
+      missaoVisaoValores: textToEditorHtml(user.missaoVisaoValores),
       
       // Redes sociais - tratamento correto
       facebook: user.social?.facebook || '',
@@ -393,12 +393,12 @@ const EditProfileDesk = ({ user }) => {
       // Dados básicos
       nome: formData.nome || '',
       sigla: formData.sigla || '',
-      bio: plainText(formData.bio).slice(0, MAX_BIO_LENGTH),
+      bio: toReadableText(formData.bio).slice(0, MAX_BIO_LENGTH),
       contacto: formData.contacto || '',
       endereco: formData.endereco || '',
       capacidadeDeProducao: formData.capacidadeDeProducao || '',
       provincia: formData.provincia || '',
-      missaoVisaoValores: plainText(formData.missaoVisaoValores).slice(0, 2000),
+      missaoVisaoValores: toReadableText(formData.missaoVisaoValores).slice(0, 2000),
       
       // Redes sociais - garantir estrutura correta
       social: {

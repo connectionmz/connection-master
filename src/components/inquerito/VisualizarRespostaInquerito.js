@@ -72,9 +72,10 @@ const VisualizarRespostaInquerito = () => {
   }, [surveyId, companyId]);
 
   const handleBack = () => {
-    navigate(-1); // Volta para a página anterior
-    // Ou navega para uma rota específica:
-    // navigate(`/inqueritos/${surveyId}`);
+    // window.history.state.idx só existe quando há navegação prévia dentro do app.
+    // Sem histórico (ex: link direto), navegar para uma rota específica em vez de sair do site.
+    const hasInAppHistory = (window.history.state?.idx ?? 0) > 0;
+    navigate(hasInAppHistory ? -1 : `/inqueritos/${surveyId}`);
   };
 
   if (loading) {

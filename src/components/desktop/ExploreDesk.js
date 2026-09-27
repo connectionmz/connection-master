@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { get, ref } from 'firebase/database';
-import { Link as RouterLink, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigationType, useSearchParams } from 'react-router-dom';
 import { alpha, useTheme } from '@mui/material/styles';
 import {
   Alert, Avatar, Box, Button, Card, CardActionArea, Chip, CircularProgress,
@@ -15,6 +15,30 @@ import { loadPublicCompanyDirectory } from '../../services/companyDirectory';
 
 const EMPTY_FILTERS = { sector: '', subsector: '', province: '', district: '', entityType: '' };
 const PAGE_SIZE = 24;
+const shuffle = (arr) => {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
+const VIEW_STATE_KEY = 'explore-view-state';
+const readViewState = () => {
+  try { return JSON.parse(sessionStorage.getItem(VIEW_STATE_KEY)) || null; } catch { return null; }
+};
+const writeViewState = (state) => {
+  try { sessionStorage.setItem(VIEW_STATE_KEY, JSON.stringify(state)); } catch { /* sessionStorage indisponível ou cheio */ }
+};
+// Mantém a ordem aleatória já vista ao voltar; empresas novas entram no fim, embaralhadas.
+const applyOrder = (directory, savedOrder) => {
+  if (!savedOrder?.length) return shuffle(directory);
+  const rank = new Map(savedOrder.map((id, index) => [id, index]));
+  const known = directory.filter((company) => rank.has(company.id)).sort((a, b) => rank.get(a.id) - rank.get(b.id));
+  return [...known, ...shuffle(directory.filter((company) => !rank.has(company.id)))];
+};
+
 const createExploreTokens = (theme) => ({
   navy: '#08192E', navyMid: '#0E2849', navyLight: '#183A63',
   gold: '#C8903A', goldLight: '#E8B96A', goldPale: theme.palette.mode === 'dark' ? alpha('#C8903A', 0.16) : '#FDF3E3',
@@ -38,38 +62,73 @@ const ExploreDesk = () => {
   const T = useMemo(() => createExploreTokens(theme), [theme]);
   const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigationType = useNavigationType();
+  // Só restaura o ponto anterior ao voltar (POP); ao entrar por um link começa do zero.
+  const [restored] = useState(() => (navigationType === 'POP' ? readViewState() : null));
   const [companies, setCompanies] = useState([]);
   const [references, setReferences] = useState({ provinces: [], sectors: [], entityTypes: [] });
-  const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, sector: searchParams.get('sector') || '' }));
+  const [search, setSearch] = useState(() => restored?.search || '');
+  const [filters, setFilters] = useState(() => (restored?.filters
+    ? { ...EMPTY_FILTERS, ...restored.filters }
+    : { ...EMPTY_FILTERS, sector: searchParams.get('sector') || '' }));
   const [draft, setDraft] = useState(EMPTY_FILTERS);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filterLoading, setFilterLoading] = useState(true);
   const [error, setError] = useState('');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => restored?.page || 1);
+  const scrollYRef = useRef(0);
+  const latestView = useRef({ search, filters, page, companies });
+  latestView.current = { search, filters, page, companies };
+
+  const saveViewState = useCallback(() => {
+    const { search: s, filters: f, page: p, companies: list } = latestView.current;
+    if (!list.length) return;
+    writeViewState({ search: s, filters: f, page: p, order: list.map((company) => company.id), scrollY: scrollYRef.current });
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => { scrollYRef.current = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  useEffect(() => saveViewState, [saveViewState]);
+
+  useEffect(() => {
+    if (loading || !restored?.scrollY) return undefined;
+    const frame = requestAnimationFrame(() => window.scrollTo(0, restored.scrollY));
+    return () => cancelAnimationFrame(frame);
+  }, [loading, restored]);
 
   useEffect(() => {
     let active = true;
     Promise.all([loadPublicCompanyDirectory(db), get(ref(db, 'provincias')), get(ref(db, 'sectores_de_atividade')), get(ref(db, 'tipos_entidades'))])
       .then(([directory, provincesSnap, sectorsSnap, typesSnap]) => {
         if (!active) return;
-        setCompanies(directory);
+        setCompanies(applyOrder(directory, restored?.order));
         setReferences({ provinces: provincesSnap.val() || [], sectors: sectorsSnap.val() || [], entityTypes: typesSnap.val() || [] });
       })
       .catch((loadError) => { console.error('Erro ao carregar diretório:', loadError); if (active) setError(t('explore.loadError')); })
       .finally(() => { if (active) { setLoading(false); setFilterLoading(false); } });
     return () => { active = false; };
-  }, [t]);
+  }, [t, restored]);
 
   const subsectors = useMemo(() => references.sectors.find(({ setor }) => setor === draft.sector)?.subsectores || [], [draft.sector, references.sectors]);
   const districts = useMemo(() => references.provinces.find(({ provincia }) => provincia === draft.province)?.distritos || [], [draft.province, references.provinces]);
   const filtered = useMemo(() => filterCompanyDirectory(companies, { ...filters, search }), [companies, filters, search]);
   const pages = Math.ceil(filtered.length / PAGE_SIZE);
-  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const currentPage = Math.min(page, Math.max(pages, 1));
+  const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const activeCount = Object.values(filters).filter(Boolean).length;
 
-  useEffect(() => setPage(1), [search, filters]);
+  // Comparar com a chave anterior evita repor a página 1 na montagem (e no StrictMode) ao restaurar.
+  const filterKey = JSON.stringify([search, filters]);
+  const previousFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (previousFilterKey.current === filterKey) return;
+    previousFilterKey.current = filterKey;
+    setPage(1);
+  }, [filterKey]);
   useEffect(() => {
     const sector = searchParams.get('sector') || '';
     setFilters((current) => current.sector === sector ? current : { ...current, sector, subsector: '' });
@@ -109,7 +168,7 @@ const ExploreDesk = () => {
             {visible.map((company) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={company.id}>
                 <Card className="feature-card" variant="outlined" sx={{ height: '100%', bgcolor: T.card, borderColor: T.borderMid }}>
-                  <CardActionArea component={RouterLink} to={`/empresa/${company.id}`} sx={{ height: '100%', p: 2.5 }} aria-label={t('explore.openCompany', { name: company.nome })}>
+                  <CardActionArea component={RouterLink} to={`/empresa/${company.id}`} onClick={() => { scrollYRef.current = window.scrollY; saveViewState(); }} sx={{ height: '100%', p: 2.5 }} aria-label={t('explore.openCompany', { name: company.nome })}>
                     <Stack direction="row" spacing={1.5} alignItems="center" mb={2}>
                       <Avatar src={company.logoUrl} alt="" sx={{ width: 56, height: 56, bgcolor: T.goldPale, color: T.gold }}><Business /></Avatar>
                       <Box minWidth={0}><Typography fontWeight={750} noWrap>{company.sigla || company.nome}</Typography>{company.sigla && <Typography variant="body2" color="text.secondary" noWrap>{company.nome}</Typography>}</Box>
@@ -125,7 +184,7 @@ const ExploreDesk = () => {
             ))}
           </Grid>
         )}
-        {pages > 1 && <Pagination count={pages} page={page} onChange={(_, value) => { setPage(value); window.scrollTo({ top: 0, behavior: 'smooth' }); }} sx={{ mt: 5, display: 'flex', justifyContent: 'center' }} />}
+        {pages > 1 && <Pagination count={pages} page={currentPage} onChange={(_, value) => { setPage(value); window.scrollTo({ top: 0, behavior: 'smooth' }); }} sx={{ mt: 5, display: 'flex', justifyContent: 'center' }} />}
       </Container>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">

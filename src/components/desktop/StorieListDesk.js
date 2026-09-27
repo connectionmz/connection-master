@@ -173,7 +173,7 @@ const StorieListDesk = ({ user }) => {
   const [status,  setStatus]  = useState('loading'); // 'loading' | 'ok' | 'empty' | 'error'
   const navigate              = useNavigate();
   const isMobile              = useMediaQuery('(max-width:600px)');
-  const avatarSize            = isMobile ? 48 : 60;
+  const avatarSize            = isMobile ? 68 : 96;
   const labelWidth            = avatarSize + 16;
 
   const fetchCompanies = useCallback(async () => {
@@ -242,8 +242,8 @@ const StorieListDesk = ({ user }) => {
             role="button"
             tabIndex={0}
             aria-label={`Ver empresa ${store.nome}`}
-            onClick={() => navigate(`/empresa/${store.slug}`)}
-            onKeyDown={(e) => e.key === 'Enter' && navigate(`/empresa/${store.slug}`)}
+            onClick={() => navigate(`/empresa/${store.slug || store.id}`)}
+            onKeyDown={(e) => e.key === 'Enter' && navigate(`/empresa/${store.slug || store.id}`)}
             style={{ animationDelay: `${i * 0.05}s` }}
           >
             <StoryRing isActive={i === 0} size={avatarSize}>
