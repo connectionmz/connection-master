@@ -33,7 +33,8 @@ import { get, ref, update, push, set, onValue, remove, query, orderByChild, equa
 import { db } from '../../fb';
 import PostGallery from '../PostGallery';
 import { getCompanyPosts } from '../../services/posts';
-import { plainText } from '../../utils/postData';
+import { toReadableText } from '../../utils/richText';
+import CompanyAbout from './CompanyAbout';
 import {
   Box,
   Button,
@@ -685,9 +686,10 @@ const CompanyProfile = ({ user }) => {
                 {t('profile.aboutCompany')}
               </Typography>
               {userData?.missaoVisaoValores ? (
-                <Typography sx={{ color: T.darkTextSub, lineHeight: 1.8 }}>
-                  {plainText(userData.missaoVisaoValores)}
-                </Typography>
+                <CompanyAbout
+                  text={userData.missaoVisaoValores}
+                  colors={{ heading: T.white, body: T.darkTextSub, accent: T.gold, border: T.darkBorder, chipBg: T.goldPale }}
+                />
               ) : (
                 <Typography sx={{ color: T.darkMuted, fontStyle: 'italic' }}>
                   {t('profile.noInformation')}
@@ -716,7 +718,7 @@ const CompanyProfile = ({ user }) => {
                     <Box>
                       <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>{t('profile.location')}</Typography>
                       <Typography sx={{ color: T.darkText }}>
-                        {mCompany?.provincia || ''} {mCompany?.distrito ? `, ${mCompany.distrito}` : ''}
+                        {[mCompany?.provincia, mCompany?.distrito].filter(Boolean).join(', ') || t('profile.notProvided')}
                       </Typography>
                     </Box>
                     
@@ -758,9 +760,13 @@ const CompanyProfile = ({ user }) => {
                     <Box>
                       <Typography sx={{ color: T.darkMuted, fontSize: '0.8rem' }}>Contacto</Typography>
                       {mCompany?.contacto ? (
-                        <a href={`tel:${mCompany.contacto}`} style={{ color: T.gold, textDecoration: 'none' }}>
-                          {mCompany.contacto}
-                        </a>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1.5 }}>
+                          {String(mCompany.contacto).split(/\s*[/,;]\s*|\s+e\s+/i).filter(Boolean).map((phone) => (
+                            <a key={phone} href={`tel:${phone.replace(/[^\d+]/g, '')}`} style={{ color: T.gold, textDecoration: 'none' }}>
+                              {phone}
+                            </a>
+                          ))}
+                        </Box>
                       ) : (
                         <Typography sx={{ color: T.darkMuted }}>{t('profile.notProvided')}</Typography>
                       )}
@@ -974,8 +980,10 @@ const CompanyProfile = ({ user }) => {
                   borderRadius: 2,
                   border: `1px solid ${T.darkBorder}`,
                   lineHeight: 1.8,
+                  whiteSpace: 'pre-line',
+                  overflowWrap: 'anywhere',
                 }}>
-                {plainText(userData.bio)}
+                {toReadableText(userData.bio)}
               </Typography>
             )}
 

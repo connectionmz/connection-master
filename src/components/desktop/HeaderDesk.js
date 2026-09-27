@@ -48,6 +48,7 @@ import { db, auth } from "../../fb";
 import { signOut } from "firebase/auth";
 import { ShareIcon } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
+import { countUnseenStoreQuotes } from "../market/quoteResponse";
 import { useTheme as useColorMode } from "../../context/ThemeContext";
 
 /* ── Design tokens — consistente com StoresDesk. O cabeçalho respeita o
@@ -117,6 +118,7 @@ const getBgGrid = (mode) => ({
 
 const HeaderDesk = ({ user }) => {
   const [pendingQuotes, setPendingQuotes] = useState(0);
+  const [newDirectQuotes, setNewDirectQuotes] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
@@ -184,6 +186,19 @@ const HeaderDesk = ({ user }) => {
       listenersRef.current = [];
     };
   }, [user?.id, user?.sector, handlePendingQuotes]);
+
+  // Pedidos de cotação diretos à loja (quotes/{loja}) ainda por abrir — o dono não tinha nenhum aviso.
+  useEffect(() => {
+    if (!user?.id) {
+      setNewDirectQuotes(0);
+      return undefined;
+    }
+    return onValue(
+      ref(db, `quotes/${user.id}`),
+      (snapshot) => setNewDirectQuotes(countUnseenStoreQuotes(snapshot.val())),
+      () => setNewDirectQuotes(0),
+    );
+  }, [user?.id]);
 
   const toggleDrawer = useCallback((open) => (event) => {
     if (event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
@@ -307,7 +322,7 @@ const HeaderDesk = ({ user }) => {
       to: "/cotacoes",
       icon: <DescriptionIcon />,
       label: t('nav.quotes'),
-      badge: pendingQuotes,
+      badge: pendingQuotes + newDirectQuotes,
       requiresAuth: true,
       requiresVerify: true,
     },

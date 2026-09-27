@@ -8,6 +8,8 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import { AiFillSetting } from 'react-icons/ai';
 import { getCompanyPosts } from '../../services/posts';
 import { plainText } from '../../utils/postData';
+import { toReadableText } from '../../utils/richText';
+import CompanyAbout from './CompanyAbout';
 import { Grid, Card, CardContent, Typography, Box, Link, CircularProgress, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions, Container, Paper, Divider, Chip, Fade } from "@mui/material";
 import {
   Button,
@@ -652,9 +654,10 @@ const ProfileDesk = () => {
                     {t('profile.mission')}
                   </Typography>
                   <Divider sx={{ mb: 3 }} />
-                  <Typography sx={{ color: T.textMid, lineHeight: 1.8 }}>
-                    {plainText(userData.missaoVisaoValores)}
-                  </Typography>
+                  <CompanyAbout
+                    text={userData.missaoVisaoValores}
+                    colors={{ heading: T.text, body: T.textMid, accent: T.gold, border: T.border, chipBg: T.goldPale }}
+                  />
                 </Paper>
               )}
 
@@ -677,8 +680,8 @@ const ProfileDesk = () => {
                     {t('profile.aboutCompany')}
                   </Typography>
                   <Divider sx={{ mb: 3 }} />
-                  <Typography sx={{ color: T.textMid, lineHeight: 1.8 }}>
-                    {plainText(userData.bio)}
+                  <Typography sx={{ color: T.textMid, lineHeight: 1.8, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                    {toReadableText(userData.bio)}
                   </Typography>
                 </Paper>
               )}

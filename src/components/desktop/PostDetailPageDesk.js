@@ -48,6 +48,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import WarningIcon from '@mui/icons-material/Warning';
 import BackButton from '../BackButton';
+import PhotoFade from '../PhotoFade';
 import { formatDistanceToNow } from 'date-fns';
 import { enGB, pt } from 'date-fns/locale';
 import EditPostDialog from './EditPostDialog';
@@ -639,11 +640,12 @@ const PostDetailPageDesk = ({ user }) => {
                 image={post.url}
                 alt={post.description || t('postDetail.imageAlt', { company: post.companyName })}
                 onError={() => setImageFailed(true)}
-                sx={{ 
+                sx={{
                   objectFit: 'cover',
                   width: '100%'
                 }}
               />
+              <PhotoFade sx={{ background: 'linear-gradient(to top, rgba(8,25,46,0.5) 0%, rgba(8,25,46,0) 40%)' }} />
             </Box> : (
               <Box sx={{ height: isMobile ? 250 : 400, display: 'grid', placeItems: 'center', bgcolor: 'action.hover' }}>
                 <Box sx={{ textAlign: 'center', color: 'text.secondary', px: 2 }}>

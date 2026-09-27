@@ -476,16 +476,18 @@ const StoreDetailDesk = ({ user }) => {
                 specifications: item.specifications || ''
             }));
 
+            const customerName = user?.nome || user?.companyName || currentUser.displayName || null;
+
             const quoteData = {
                 id: quoteId,
                 storeId: storeId,
                 storeName: store.name,
                 storeContact: store.contacto,
                 storeEmail: store.email,
-                
+
                 // Dados do cliente
                 customerId: currentUser.uid,
-                customerName: currentUser?.displayName || null,
+                customerName,
                 customerEmail: customerEmail || currentUser?.email || null,
                 customerContact: customerContact || null,
                 
@@ -518,13 +520,19 @@ const StoreDetailDesk = ({ user }) => {
 
             await update(ref(db), quoteUpdates);
 
+            // O pedido já está guardado e a loja vê-o na plataforma (contador em "Cotações");
+            // o email é um aviso extra, mas uma falha não pode passar despercebida.
+            let emailDelivered = false;
             try {
-                await sendEmailCotacaoDireta(store.email, {
-                    title: 'Novo Pedido de Cotação Disponível',
-                    cliente: currentUser?.displayName || 'Cliente',
+                emailDelivered = (await sendEmailCotacaoDireta(store.email, {
+                    cliente: customerName || currentUser.email || 'Cliente',
                     message: quoteForm.message,
+                    items: itemsList.map(({ productName, quantity }) => ({ name: productName, quantity })),
+                    contactPreference: quoteForm.contactPreference,
+                    customerContact,
+                    customerEmail: customerEmail || currentUser.email || '',
                     link: `${window.location.origin}/cotacoes`
-                });
+                })) !== false;
             } catch (emailError) {
                 console.error('Cotação guardada, mas a notificação por email falhou:', emailError);
             }
@@ -532,8 +540,10 @@ const StoreDetailDesk = ({ user }) => {
             handleCloseQuoteDialog();
             setQuoteFeedback({
                 open: true,
-                severity: 'success',
-                message: `Cotação #${quoteId} enviada. A loja ${store.name} responderá pelos contactos indicados.`
+                severity: emailDelivered ? 'success' : 'warning',
+                message: emailDelivered
+                    ? `Cotação #${quoteId} enviada. A loja ${store.name} responderá pelos contactos indicados.`
+                    : `Cotação #${quoteId} enviada e visível para a loja ${store.name} na plataforma, mas não foi possível enviar o email de aviso.`
             });
             
         } catch (error) {

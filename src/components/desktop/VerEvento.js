@@ -20,11 +20,10 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import { 
+import {
   CalendarToday,
   LocationOn,
   AccessTime,
-  ArrowBack,
   OpenInNew,
   Phone,
   Email,
@@ -36,8 +35,9 @@ import {
   CopyAll
 } from '@mui/icons-material';
 import { ref, onValue } from 'firebase/database';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { db } from '../../fb';
+import BackButton from '../BackButton';
 
 const VerEvento = () => {
   const [evento, setEvento] = useState(null);
@@ -46,7 +46,6 @@ const VerEvento = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { id } = useParams();
-  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -188,14 +187,7 @@ const VerEvento = () => {
           <Typography variant="body1" sx={{ mb: 3 }}>
             O evento que procura não existe ou foi removido.
           </Typography>
-          <Button 
-            variant="contained" 
-            onClick={() => navigate(-1)}
-            startIcon={<ArrowBack />}
-            sx={{ mt: 2 }}
-          >
-            Voltar
-          </Button>
+          <BackButton variant="contained" sx={{ mt: 2 }} />
         </Paper>
       </Container>
     );
@@ -205,13 +197,7 @@ const VerEvento = () => {
     <Container maxWidth="lg" sx={{ py: 4 }}>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Button 
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(-1)}
-          variant="outlined"
-        >
-          Voltar
-        </Button>
+        <BackButton />
         
         <Button
           startIcon={<Share />}

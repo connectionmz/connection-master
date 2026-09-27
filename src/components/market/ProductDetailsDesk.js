@@ -358,7 +358,7 @@ const ProductDetailsDesk = ({ user }) => {
                 </Badge>
 
                 <Box sx={{ flex:1 }}>
-                  <Link to={`/empresa/${storeInfo.company.slug}`} style={{ textDecoration:'none' }}>
+                  <Link to={`/empresa/${storeInfo.company.slug || store}`} style={{ textDecoration:'none' }}>
                     <Typography sx={{ fontWeight:700, color:T.gold,
                       fontFamily:'"Plus Jakarta Sans", sans-serif',
                       '&:hover':{ color:T.goldLight } }}>

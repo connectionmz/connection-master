@@ -1,3 +1,7 @@
+// Pedidos diretos à loja que o dono ainda não abriu nem respondeu.
+export const countUnseenStoreQuotes = (quotes) => Object.values(quotes || {})
+  .filter((quote) => quote && !quote.viewed && (quote.status || 'pending') === 'pending').length;
+
 export const validateQuoteResponse = ({ message = '', totalPrice = '', validityDays = '' } = {}) => {
   const errors = {};
   const priceText = String(totalPrice).trim().replace(/\s/g, '');

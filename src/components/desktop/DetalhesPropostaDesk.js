@@ -42,7 +42,6 @@ import {
   Phone,
   Description,
   AttachFile,
-  ArrowBack,
   Email,
   Lock,
   Info,
@@ -480,13 +479,7 @@ const DetalhesPropostaDesk = ({ user }) => {
         gap: 2
       }}>
         <Typography variant="h6">Proposta não encontrada</Typography>
-        <Button 
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(-1)}
-          variant="outlined"
-        >
-          Voltar
-        </Button>
+        <BackButton />
       </Box>
     );
   }
