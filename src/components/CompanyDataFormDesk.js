@@ -1163,8 +1163,8 @@ const CompanyDataFormDesk = () => {
                 }
                 label={
                   <Typography variant="body2" sx={{ color: T.text }}>
-                    Eu li e concordo com os <Link to="/termos" style={{ color: T.gold, textDecoration: 'none', fontWeight: 600 }}>Termos de Serviço</Link> e{' '}
-                    <Link to="/privacidade" style={{ color: T.gold, textDecoration: 'none', fontWeight: 600 }}>Política de Privacidade</Link>
+                    Eu li e concordo com os <Link to="/termos" target="_blanc" style={{ color: T.gold, textDecoration: 'none', fontWeight: 600 }}>Termos de Serviço</Link> e{' '}
+                    <Link to="/privacidade" target="_blanc" style={{ color: T.gold, textDecoration: 'none', fontWeight: 600 }}>Política de Privacidade</Link>
                   </Typography>
                 }
               />
