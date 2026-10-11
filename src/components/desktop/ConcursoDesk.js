@@ -22,7 +22,6 @@ import { Delete, AccessTime, CheckCircle, History, Edit, Add, CalendarToday, Att
 import { ref, onValue, update, remove, set } from 'firebase/database';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../fb';
-import AnunciosDesk from './AnunciosDesk';
 import EditarConcurso from './EditarConcurso';
 import { formatPrice } from '../../utils/utils';
 import { useActiveModules } from '../../context/ActiveModulesContext';
@@ -493,8 +492,6 @@ const ConcursosDesk = ({ user, onModuleActivation }) => {
                                 </Button>
                             )}
                         </Paper>
-
-                        <AnunciosDesk campanhas={campanhasAtivas} user={user} local="Concursos"/>
 
                         {user && !isModuleActive && (
                             <Alert
